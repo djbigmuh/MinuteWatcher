@@ -77,6 +77,7 @@ object SimUtils {
             default
         }
 
+    @Suppress("AppBundleLocaleChanges")
     private fun getLocalizedContext(context: Context): Context {
         val appLocales =
             androidx.appcompat.app.AppCompatDelegate

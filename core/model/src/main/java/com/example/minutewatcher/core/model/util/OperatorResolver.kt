@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.model.util
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.example.minutewatcher.core.model.R
 import org.json.JSONObject
@@ -36,6 +37,7 @@ object OperatorResolver {
         }
     }
 
+    @SuppressLint("DiscouragedApi")
     fun resolve(
         context: Context,
         operatorName: String,

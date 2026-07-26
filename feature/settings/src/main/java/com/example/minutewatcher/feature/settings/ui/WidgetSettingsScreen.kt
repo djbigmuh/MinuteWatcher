@@ -90,7 +90,7 @@ fun WidgetSettingsScreen(
                     onClick = onSave,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(id = R.string.save_settings))
+                    Text(stringResource(id = R.string.save_button))
                 }
             }
         },
@@ -273,7 +273,7 @@ fun SimSettingsSection(
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Text(
-                text = if (index == 0) stringResource(id = R.string.sim_card_1) else stringResource(id = R.string.sim_card_2),
+                text = stringResource(id = R.string.sim_card_generic, index + 1),
                 style = MaterialTheme.typography.titleSmall,
             )
 

@@ -1,99 +1,26 @@
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="app_name">MinuteWatcher</string>
-    <string name="reset_label">Reset</string>
-    <string name="theme_switch">Switch Theme</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- General UI -->
+    <string name="app_name" translatable="false">MinuteWatcher</string>
     <string name="sim_cards_title">SIM Cards</string>
     <string name="no_sim_card">No SIM card detected</string>
-    <string name="insert_sim">Insert a SIM card to track minutes</string>
-    <string name="limit_button">Limit</string>
-    <string name="reset_counters">Reset counters</string>
-    <string name="auto_reset_day_suffix">day of month</string>
-    <string name="widget_display_settings">Widget Display Settings</string>
-    <string name="background_transparency">Background Transparency</string>
-    <string name="display_minutes">Show minutes</string>
-    <string name="display_minutes_limit">Show minutes limit</string>
-    <string name="display_traffic">Show traffic</string>
-    <string name="display_traffic_limit">Show traffic limit</string>
-    <string name="display_name">Show name</string>
-    <string name="display_icon">Show icon</string>
-    <string name="save_settings">Save</string>
-    <string name="sim_icon_content_desc">SIM card icon</string>
-    <string name="sim_card_1">SIM 1</string>
-    <string name="sim_card_2">SIM 2</string>
-    <string name="display_minutes_sim1">Show minutes for SIM 1</string>
-    <string name="display_minutes_limit_sim1">Show minutes limit for SIM 1</string>
-    <string name="display_traffic_sim1">Show traffic for SIM 1</string>
-    <string name="display_traffic_limit_sim1">Show traffic limit for SIM 1</string>
-    <string name="display_name_sim1">Show name for SIM 1</string>
-    <string name="display_icon_sim1">Show icon for SIM 1</string>
-    <string name="display_minutes_sim2">Show minutes for SIM 2</string>
-    <string name="display_minutes_limit_sim2">Show minutes limit for SIM 2</string>
-    <string name="display_traffic_sim2">Show traffic for SIM 2</string>
-    <string name="display_traffic_limit_sim2">Show traffic limit for SIM 2</string>
-    <string name="display_name_sim2">Show name for SIM 2</string>
-    <string name="display_icon_sim2">Show icon for SIM 2</string>
-    <string name="add_widget_button">Add Widget</string>
-    <string name="widget_settings_content_desc">Widget Settings</string>
-    <string name="theme_switch_emoji">Theme</string>
-    <string name="choose_reset_day">Choose the day of the month for automatic reset:</string>
-    <string name="cancel_button">Cancel</string>
-    <string name="save_button">Save</string>
-    <string name="set_minutes_limit">Set monthly minutes limit:</string>
-    <string name="minutes_limit_hint">Minutes limit</string>
-    <string name="set_traffic_limit">Set monthly traffic limit (GB):</string>
-    <string name="font_size">Font Size</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">normal</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="preview">Preview</string>
-    <string name="layout_mode_prompt">Choose layout mode</string>
-    <string name="sim_arrangement_prompt">Choose SIM arrangement</string>
-    <string name="remaining_text">Remaining: </string>
-    <string name="minutes_abbr"> min.</string>
-    <string name="traffic_remaining_text">Traffic remaining: </string>
-    <string name="gb_abbr"> GB</string>
-    <string name="color_background">Background color:</string>
-    <string name="click_to_choose">Click to choose:</string>
-    <string name="layout_mode_title">Layout mode</string>
-    <string name="notifications_title">Notifications</string>
-    <string name="notify_low_minutes_title">Notify about low minutes remaining</string>
-    <string name="notify_low_traffic_title">Notify about low traffic remaining</string>
-    <string name="choose_color_content_desc">Choose background color</string>
-    <string name="traffic_limit_gb_hint_dialog">Traffic limit in GB</string>
-    <string name="choose_reset_day_dialog_title">Choose reset day</string>
-    <string name="limits_for_operator">Limits for %1$s</string>
-    <string name="set_button">Set</string>
-    <string name="reset_limits_button">Reset limits</string>
-    <string name="notification_channel_name">Usage Monitoring</string>
-    <string name="notification_channel_desc">Tracking minutes and traffic usage</string>
-    <string name="notification_minutes_title">Minutes usage %1$s</string>
-    <string name="notification_minutes_body">%1$s minutes usage! Left %2$s (%3$d). Month ends in %4$s.</string>
-    <string name="notification_traffic_title">Traffic usage %1$s</string>
-    <string name="notification_traffic_body">%1$s traffic usage! Left %2$.1f GB (%3$d). Month ends in %4$s.</string>
-    <plurals name="minutes_plurals">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <plurals name="days_plurals">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
-    </plurals>
-    <string name="no_data">No data</string>
-    <string name="dynamic_preview">Dynamic Preview</string>
-    <string name="widget_already_added">Widget already added to the home screen</string>
-    <string name="settings_saved_toast">Settings saved</string>
-    <string name="settings_widget_title">Widget Settings</string>
-    <string name="dual_sim_traffic_note">* Note: Traffic tracking for Dual SIM may be inaccurate due to Android limitations.</string>
-    <string name="error">Error</string>
-    <string name="notification_minutes_exhausted_body">Minutes package for the period has ended.</string>
-    <string name="notification_traffic_exhausted_body">Traffic package for the period has ended.</string>
-    <string name="used_text">Used</string>
-    <string name="limit_text">Limit</string>
-    <string name="traffic_label">Traffic</string>
+    <string name="insert_sim">Insert a SIM card to track usage</string>
     <string name="no_sim_found">SIM cards not found</string>
     <string name="check_permissions_sim">Check permissions and SIM presence</string>
+    <string name="no_data">No data</string>
+    <string name="error">Error</string>
+    <string name="status_on">on</string>
+    <string name="status_off">off</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Reset</string>
+    <string name="theme_switch">Switch Theme</string>
+    <string name="limit_button">Limit</string>
+    <string name="add_widget_button">Add Widget</string>
+    <string name="theme_switch_emoji">Theme</string>
+    <string name="sim_card_generic" translatable="false">SIM %1$d</string>
+
+    <!-- Settings: General -->
+    <string name="settings_saved_toast">Settings saved</string>
     <string name="language_system">System</string>
     <string name="language_en">English</string>
     <string name="language_ru">Russian</string>
@@ -104,59 +31,136 @@
     <string name="language_ja">Japanese</string>
     <string name="language_zh">Chinese</string>
     <string name="language_hi">Hindi</string>
-    <string name="adjustment_mark"> *adj</string>
-    <string name="status_on">on</string>
-    <string name="status_off">off</string>
-    <string name="custom_color">Custom&#8230;</string>
-    <string name="show_sim_checkbox">Show this SIM card</string>
     <string name="call_tracking_title">Call Tracking</string>
-    <string name="divider_text"> | </string>
-    <string name="language_system_icon" translatable="false">🌐</string>
-    <string name="theme_light_icon" translatable="false">☀️</string>
-    <string name="theme_dark_icon" translatable="false">🌙</string>
-    <string name="fraction_format" translatable="false">/%1$s</string>
-    <string name="placeholder_dash" translatable="false">-</string>
+    <string name="usage_access_rationale">MinuteWatcher needs usage access to track mobile data usage accurately. Please enable it in the next screen.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Widget Settings</string>
+    <string name="widget_display_settings">Widget Display Settings</string>
+    <string name="background_transparency">Background Transparency</string>
+    <string name="display_minutes">Show minutes</string>
+    <string name="display_minutes_limit">Show minutes limit</string>
+    <string name="display_traffic">Show traffic</string>
+    <string name="display_traffic_limit">Show traffic limit</string>
+    <string name="display_name">Show name</string>
+    <string name="display_icon">Show icon</string>
+    <string name="show_sim_checkbox">Show this SIM card</string>
+    <string name="preview">Preview</string>
+    <string name="layout_mode_title">Layout mode</string>
+    <string name="layout_mode_prompt">Choose layout mode</string>
+    <string name="sim_arrangement_prompt">Choose SIM arrangement</string>
+    <string name="color_background">Background color:</string>
+    <string name="custom_color">Custom&#8230;</string>
+    <string name="font_size">Font Size</string>
+    <string name="font_size_small">-2</string>
+    <string name="font_size_medium">-1</string>
+    <string name="font_size_normal">normal</string>
+    <string name="font_size_large">+1</string>
+    <string name="font_size_xlarge">+2</string>
+    <string name="dual_sim_traffic_note">* Note: Traffic tracking for Dual SIM may be inaccurate due to Android limitations.</string>
+    <string name="dynamic_preview">Dynamic Preview</string>
+    <string name="widget_already_added">Widget already added to the home screen</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">Cancel</string>
+    <string name="save_button">Save</string>
+    <string name="set_button">Set</string>
+    <string name="reset_limits_button">Reset limits</string>
+    <string name="reset_counters">Reset counters</string>
+    <string name="click_to_choose">Click to choose:</string>
+    <string name="choose_reset_day">Choose the day of the month for automatic reset:</string>
+    <string name="choose_reset_day_dialog_title">Choose reset day</string>
+    <string name="set_minutes_limit">Set monthly minutes limit:</string>
+    <string name="minutes_limit_hint">Minutes limit</string>
+    <string name="set_traffic_limit">Set monthly traffic limit (GB):</string>
+    <string name="traffic_limit_gb_hint_dialog">Traffic limit in GB</string>
+    <string name="limits_for_operator">Limits for %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notify_low_minutes_title">Notify about low minutes remaining</string>
+    <string name="notify_low_traffic_title">Notify about low traffic remaining</string>
+    <string name="notification_channel_name">Usage Monitoring</string>
+    <string name="notification_channel_desc">Tracking minutes and traffic usage</string>
+    <string name="notification_minutes_title">Minutes usage %1$s</string>
+    <string name="notification_minutes_body">%1$s minutes usage! Left %2$s (%3$d). Month ends in %4$s.</string>
+    <string name="notification_traffic_title">Traffic usage %1$s</string>
+    <string name="notification_traffic_body">%1$s traffic usage! Left %2$.1f GB (%3$d). Month ends in %4$s.</string>
+    <string name="notification_minutes_exhausted_body">Minutes package for the period has ended.</string>
+    <string name="notification_traffic_exhausted_body">Traffic package for the period has ended.</string>
     <string name="usage_level_low">LOW</string>
     <string name="usage_level_critical">CRITICAL LOW</string>
 
-    <string name="operator_mts">MTS</string>
-    <string name="operator_megafon">MegaFon</string>
-    <string name="operator_beeline">Beeline</string>
-    <string name="operator_tele2">Tele2</string>
-    <string name="operator_mgts">MGTS</string>
-    <string name="operator_yota">Yota</string>
-    <string name="operator_vodafone">Vodafone</string>
-    <string name="operator_t_mobile">T-Mobile</string>
-    <string name="operator_orange">Orange</string>
-    <string name="operator_o2">O2</string>
-    <string name="operator_att">AT&amp;T</string>
-    <string name="operator_verizon">Verizon</string>
-    <string name="operator_tim">TIM</string>
-    <string name="operator_vodafone_it">Vodafone IT</string>
-    <string name="operator_windtre">WindTre</string>
-    <string name="operator_sfr">SFR</string>
-    <string name="operator_bouygues">Bouygues</string>
-    <string name="operator_telekom">Telekom</string>
-    <string name="operator_ntt_docomo">NTT Docomo</string>
-    <string name="operator_softbank">SoftBank</string>
-    <string name="operator_kddi">KDDI</string>
-    <string name="operator_china_mobile">China Mobile</string>
-    <string name="operator_china_unicom">China Unicom</string>
-    <string name="operator_china_telecom">China Telecom</string>
-    <string name="operator_jio">Jio</string>
-    <string name="operator_airtel">Airtel</string>
-    <string name="operator_vi">Vi</string>
-    <string name="operator_stc">STC</string>
-    <string name="operator_mobily">Mobily</string>
-    <string name="operator_zain">Zain</string>
-    <string name="operator_etisalat">Etisalat</string>
-    <string name="operator_du">du</string>
-    <string name="operator_generic">Operator %1$d</string>
-    <string name="operator_with_mcc">Operator (%1$s)</string>
-    <string name="usage_access_rationale">MinuteWatcher needs usage access to track mobile data usage accurately. Please enable it in the next screen.</string>
+    <!-- Data & Units -->
+    <string name="remaining_text">Remaining: </string>
+    <string name="used_text">Used</string>
+    <string name="limit_text">Limit</string>
+    <string name="minutes_abbr"> min.</string>
+    <string name="traffic_label">Traffic</string>
+    <string name="traffic_remaining_text">Traffic remaining: </string>
+    <string name="gb_abbr"> GB</string>
+    <string name="auto_reset_day_suffix">day of month</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">SIM card icon</string>
+    <string name="widget_settings_content_desc">Widget Settings</string>
+    <string name="choose_color_content_desc">Choose background color</string>
     <string name="sim_card_details_content_desc">%1$s SIM card details</string>
     <string name="adjust_minutes_content_desc">Adjust remaining minutes</string>
     <string name="adjust_traffic_content_desc">Adjust remaining traffic</string>
     <string name="change_auto_reset_day_content_desc">Change auto-reset day</string>
     <string name="toggle_auto_reset_content_desc">Enable or disable auto-reset</string>
+
+    <!-- Brands & Technical (Non-translatable) -->
+    <string name="operator_mts" translatable="false">MTS</string>
+    <string name="operator_megafon" translatable="false">MegaFon</string>
+    <string name="operator_beeline" translatable="false">Beeline</string>
+    <string name="operator_tele2" translatable="false">Tele2</string>
+    <string name="operator_mgts" translatable="false">MGTS</string>
+    <string name="operator_yota" translatable="false">Yota</string>
+    <string name="operator_vodafone" translatable="false">Vodafone</string>
+    <string name="operator_t_mobile" translatable="false">T-Mobile</string>
+    <string name="operator_orange" translatable="false">Orange</string>
+    <string name="operator_o2" translatable="false">O2</string>
+    <string name="operator_att" translatable="false">AT&amp;T</string>
+    <string name="operator_verizon" translatable="false">Verizon</string>
+    <string name="operator_tim" translatable="false">TIM</string>
+    <string name="operator_vodafone_it" translatable="false">Vodafone IT</string>
+    <string name="operator_windtre" translatable="false">WindTre</string>
+    <string name="operator_sfr" translatable="false">SFR</string>
+    <string name="operator_bouygues" translatable="false">Bouygues</string>
+    <string name="operator_telekom" translatable="false">Telekom</string>
+    <string name="operator_ntt_docomo" translatable="false">NTT Docomo</string>
+    <string name="operator_softbank" translatable="false">SoftBank</string>
+    <string name="operator_kddi" translatable="false">KDDI</string>
+    <string name="operator_china_mobile" translatable="false">China Mobile</string>
+    <string name="operator_china_unicom" translatable="false">China Unicom</string>
+    <string name="operator_china_telecom" translatable="false">China Telecom</string>
+    <string name="operator_jio" translatable="false">Jio</string>
+    <string name="operator_airtel" translatable="false">Airtel</string>
+    <string name="operator_vi" translatable="false">Vi</string>
+    <string name="operator_stc" translatable="false">STC</string>
+    <string name="operator_mobily" translatable="false">Mobily</string>
+    <string name="operator_zain" translatable="false">Zain</string>
+    <string name="operator_etisalat" translatable="false">Etisalat</string>
+    <string name="operator_du" translatable="false">du</string>
+    <string name="operator_generic" translatable="false">Operator %1$d</string>
+    <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
+
+    <string name="language_system_icon" translatable="false">🌐</string>
+    <string name="theme_light_icon" translatable="false">☀️</string>
+    <string name="theme_dark_icon" translatable="false">🌙</string>
+    <string name="fraction_format" translatable="false">/%1$s</string>
+    <string name="placeholder_dash" translatable="false">-</string>
+    <string name="divider_text" translatable="false"> | </string>
+    <string name="adjustment_mark" translatable="false"> *adj</string>
 </resources>

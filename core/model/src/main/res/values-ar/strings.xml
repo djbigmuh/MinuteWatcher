@@ -1,13 +1,39 @@
-<resources>
-    <string name="app_name">MinuteWatcher</string>
-    <string name="reset_label">إعادة ضبط</string>
-    <string name="theme_switch">تبديل السمة</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- General UI -->
     <string name="sim_cards_title">بطاقات SIM</string>
     <string name="no_sim_card">لم يتم اكتشاف بطاقة SIM</string>
-    <string name="insert_sim">أدخل بطاقة SIM لتتبع الدقائق</string>
+    <string name="insert_sim">أدخل بطاقة SIM لتتبع الاستخدام</string>
+    <string name="no_sim_found">لم يتم العثور على بطاقات SIM</string>
+    <string name="check_permissions_sim">تحقق من الأذونات ووجود بطاقة SIM</string>
+    <string name="no_data">لا توجد بيانات</string>
+    <string name="error">خطأ</string>
+    <string name="status_on">مفعل</string>
+    <string name="status_off">معطل</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">إعادة ضبط</string>
+    <string name="theme_switch">تبديل السمة</string>
     <string name="limit_button">الحد</string>
-    <string name="reset_counters">إعادة ضبط العدادات</string>
-    <string name="auto_reset_day_suffix">يوم من الشهر</string>
+    <string name="add_widget_button">إضافة قطعة</string>
+    <string name="theme_switch_emoji">السمة</string>
+
+    <!-- Settings: General -->
+    <string name="settings_saved_toast">تم حفظ الإعدادات</string>
+    <string name="language_system">النظام</string>
+    <string name="language_en">الإنجليزية</string>
+    <string name="language_ru">الروسية</string>
+    <string name="language_de">الألمانية</string>
+    <string name="language_fr">الفرنسية</string>
+    <string name="language_ar">العربية</string>
+    <string name="language_es">الإسبانية</string>
+    <string name="language_ja">اليابانية</string>
+    <string name="language_zh">الصينية</string>
+    <string name="language_hi">الهندية</string>
+    <string name="call_tracking_title">تتبع المكالمات</string>
+    <string name="usage_access_rationale">يحتاج MinuteWatcher إلى الوصول إلى بيانات الاستخدام لتتبع استخدام البيانات بدقة. يرجى تفعيله في الشاشة التالية.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">إعدادات القطعة</string>
     <string name="widget_display_settings">إعدادات عرض القطعة</string>
     <string name="background_transparency">شفافية الخلفية</string>
     <string name="display_minutes">إظهار الدقائق</string>
@@ -16,62 +42,63 @@
     <string name="display_traffic_limit">إظهار حد حركة البيانات</string>
     <string name="display_name">إظهار الاسم</string>
     <string name="display_icon">إظهار الأيقونة</string>
-    <string name="save_settings">حفظ</string>
-    <string name="sim_icon_content_desc">أيقونة بطاقة SIM</string>
-    <string name="sim_card_1">SIM 1</string>
-    <string name="sim_card_2">SIM 2</string>
-    <string name="display_minutes_sim1">إظهار الدقائق لـ SIM 1</string>
-    <string name="display_minutes_limit_sim1">إظهار حد الدقائق لـ SIM 1</string>
-    <string name="display_traffic_sim1">إظهار حركة البيانات لـ SIM 1</string>
-    <string name="display_traffic_limit_sim1">إظهار حد حركة البيانات لـ SIM 1</string>
-    <string name="display_name_sim1">إظهار الاسم لـ SIM 1</string>
-    <string name="display_icon_sim1">إظهار الأيقونة لـ SIM 1</string>
-    <string name="display_minutes_sim2">إظهار الدقائق لـ SIM 2</string>
-    <string name="display_minutes_limit_sim2">إظهار حد الدقائق لـ SIM 2</string>
-    <string name="display_traffic_sim2">إظهار حركة البيانات لـ SIM 2</string>
-    <string name="display_traffic_limit_sim2">إظهار حد حركة البيانات لـ SIM 2</string>
-    <string name="display_name_sim2">إظهار الاسم لـ SIM 2</string>
-    <string name="display_icon_sim2">إظهار الأيقونة لـ SIM 2</string>
-    <string name="add_widget_button">إضافة قطعة</string>
-    <string name="widget_settings_content_desc">إعدادات القطعة</string>
-    <string name="theme_switch_emoji">السمة</string>
-    <string name="choose_reset_day">اختر يوم الشهر لإعادة الضبط التلقائي:</string>
-    <string name="cancel_button">إلغاء</string>
-    <string name="save_button">حفظ</string>
-    <string name="set_minutes_limit">تعيين حد الدقائق الشهري:</string>
-    <string name="minutes_limit_hint">حد الدقائق</string>
-    <string name="set_traffic_limit">تعيين حد حركة البيانات الشهري (جيجابايت):</string>
+    <string name="show_sim_checkbox">إظهار هذه البطاقة</string>
+    <string name="preview">معاينة</string>
+    <string name="layout_mode_title">وضع التخطيط</string>
+    <string name="layout_mode_prompt">اختر وضع التخطيط</string>
+    <string name="sim_arrangement_prompt">اختر ترتيب SIM</string>
+    <string name="color_background">لون الخلفية:</string>
+    <string name="custom_color">مخصص&#8230;</string>
     <string name="font_size">حجم الخط</string>
     <string name="font_size_small">-2</string>
     <string name="font_size_medium">-1</string>
     <string name="font_size_normal">عادي</string>
     <string name="font_size_large">+1</string>
     <string name="font_size_xlarge">+2</string>
-    <string name="preview">معاينة</string>
-    <string name="layout_mode_prompt">اختر وضع التخطيط</string>
-    <string name="sim_arrangement_prompt">اختر ترتيب SIM</string>
-    <string name="remaining_text">المتبقي: </string>
-    <string name="minutes_abbr"> دقيقة</string>
-    <string name="traffic_remaining_text">حركة البيانات المتبقية: </string>
-    <string name="gb_abbr"> جيجابايت</string>
-    <string name="color_background">لون الخلفية:</string>
+    <string name="dual_sim_traffic_note">* ملاحظة: قد يكون تتبع حركة البيانات لبطاقتي SIM غير دقيق بسبب قيود أندرويد.</string>
+    <string name="dynamic_preview">معاينة ديناميكية</string>
+    <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">إلغاء</string>
+    <string name="save_button">حفظ</string>
+    <string name="set_button">تعيين</string>
+    <string name="reset_limits_button">إعادة ضبط الحدود</string>
+    <string name="reset_counters">إعادة ضبط العدادات</string>
     <string name="click_to_choose">انقر للاختيار:</string>
-    <string name="layout_mode_title">وضع التخطيط</string>
+    <string name="choose_reset_day">اختر يوم الشهر لإعادة الضبط التلقائي:</string>
+    <string name="choose_reset_day_dialog_title">اختر يوم إعادة الضبط</string>
+    <string name="set_minutes_limit">تعيين حد الدقائق الشهري:</string>
+    <string name="minutes_limit_hint">حد الدقائق</string>
+    <string name="set_traffic_limit">تعيين حد حركة البيانات الشهري (جيجابايت):</string>
+    <string name="traffic_limit_gb_hint_dialog">حد حركة البيانات بالجيجابايت</string>
+    <string name="limits_for_operator">الحدود لـ %1$s</string>
+
+    <!-- Notifications -->
     <string name="notifications_title">التنبيهات</string>
     <string name="notify_low_minutes_title">تنبيه عند انخفاض الدقائق المتبقية</string>
     <string name="notify_low_traffic_title">تنبيه عند انخفاض حركة البيانات المتبقية</string>
-    <string name="choose_color_content_desc">اختر لون الخلفية</string>
-    <string name="traffic_limit_gb_hint_dialog">حد حركة البيانات بالجيجابايت</string>
-    <string name="choose_reset_day_dialog_title">اختر يوم إعادة الضبط</string>
-    <string name="limits_for_operator">الحدود لـ %1$s</string>
-    <string name="set_button">تعيين</string>
-    <string name="reset_limits_button">إعادة ضبط الحدود</string>
     <string name="notification_channel_name">مراقبة الاستخدام</string>
     <string name="notification_channel_desc">تتبع استخدام الدقائق وحركة البيانات</string>
     <string name="notification_minutes_title">استخدام الدقائق %1$s</string>
     <string name="notification_minutes_body">%1$s استخدام الدقائق! المتبقي %2$s (%3$d). ينتهي الشهر خلال %4$s.</string>
     <string name="notification_traffic_title">استخدام البيانات %1$s</string>
     <string name="notification_traffic_body">%1$s استخدام البيانات! المتبقي %2$.1f جيجابايت (%3$d). ينتهي الشهر خلال %4$s.</string>
+    <string name="notification_minutes_exhausted_body">انتهت باقة الدقائق للفترة.</string>
+    <string name="notification_traffic_exhausted_body">انتهت باقة البيانات للفترة.</string>
+    <string name="usage_level_low">منخفض</string>
+    <string name="usage_level_critical">منخفض للغاية</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">المتبقي: </string>
+    <string name="used_text">المستخدم</string>
+    <string name="limit_text">الحد</string>
+    <string name="minutes_abbr"> دقيقة</string>
+    <string name="traffic_label">البيانات</string>
+    <string name="traffic_remaining_text">حركة البيانات المتبقية: </string>
+    <string name="gb_abbr"> جيجابايت</string>
+    <string name="auto_reset_day_suffix">يوم من الشهر</string>
+
     <plurals name="minutes_plurals">
         <item quantity="zero">%1$d دقيقة</item>
         <item quantity="one">دقيقة واحدة</item>
@@ -88,37 +115,14 @@
         <item quantity="many">%1$d يوماً</item>
         <item quantity="other">%1$d يوم</item>
     </plurals>
-    <string name="no_data">لا توجد بيانات</string>
-    <string name="dynamic_preview">معاينة ديناميكية</string>
-    <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
-    <string name="settings_saved_toast">تم حفظ الإعدادات</string>
-    <string name="settings_widget_title">إعدادات القطعة</string>
-    <string name="dual_sim_traffic_note">* ملاحظة: قد يكون تتبع حركة البيانات لبطاقتي SIM غير دقيق بسبب قيود أندرويد.</string>
-    <string name="error">خطأ</string>
-    <string name="notification_minutes_exhausted_body">انتهت باقة الدقائق للفترة.</string>
-    <string name="notification_traffic_exhausted_body">انتهت باقة البيانات للفترة.</string>
-    <string name="used_text">المستخدم</string>
-    <string name="limit_text">الحد</string>
-    <string name="traffic_label">البيانات</string>
-    <string name="no_sim_found">لم يتم العثور على بطاقات SIM</string>
-    <string name="check_permissions_sim">تحقق من الأذونات ووجود بطاقة SIM</string>
-    <string name="language_system">النظام</string>
-    <string name="language_en">الإنجليزية</string>
-    <string name="language_ru">الروسية</string>
-    <string name="language_de">الألمانية</string>
-    <string name="language_fr">الفرنسية</string>
-    <string name="language_ar">العربية</string>
-    <string name="language_es">الإسبانية</string>
-    <string name="language_ja">اليابانية</string>
-    <string name="language_zh">الصينية</string>
-    <string name="language_hi">الهندية</string>
-    <string name="adjustment_mark"> *تعديل</string>
-    <string name="status_on">مفعل</string>
-    <string name="status_off">معطل</string>
-    <string name="custom_color">مخصص&#8230;</string>
-    <string name="show_sim_checkbox">إظهار هذه البطاقة</string>
-    <string name="call_tracking_title">تتبع المكالمات</string>
-    <string name="divider_text"> | </string>
-    <string name="usage_level_low">منخفض</string>
-    <string name="usage_level_critical">منخفض للغاية</string>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">أيقونة بطاقة SIM</string>
+    <string name="widget_settings_content_desc">إعدادات القطعة</string>
+    <string name="choose_color_content_desc">اختر لون الخلفية</string>
+    <string name="sim_card_details_content_desc">تفاصيل بطاقة SIM %1$s</string>
+    <string name="adjust_minutes_content_desc">تعديل الدقائق المتبقية</string>
+    <string name="adjust_traffic_content_desc">تعديل حركة البيانات المتبقية</string>
+    <string name="change_auto_reset_day_content_desc">تغيير يوم إعادة الضبط التلقائي</string>
+    <string name="toggle_auto_reset_content_desc">تفعيل أو تعطيل إعادة الضبط التلقائي</string>
 </resources>

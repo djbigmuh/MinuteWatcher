@@ -50,6 +50,12 @@ configure<ApplicationExtension> {
         buildConfig = true
     }
 
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     lint {
         abortOnError = true
         checkReleaseBuilds = true
