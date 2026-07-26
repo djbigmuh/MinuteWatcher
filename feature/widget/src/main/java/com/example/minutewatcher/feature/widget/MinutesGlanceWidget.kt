@@ -14,6 +14,7 @@ import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.example.minutewatcher.core.data.WidgetSettingsRepository
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -26,7 +27,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.first
 
 class MinutesGlanceWidget : GlanceAppWidget() {
     @EntryPoint
@@ -37,6 +37,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         fun settingsRepository(): SettingsRepository
 
         fun simRepository(): SimRepository
+
+        fun widgetSettingsRepository(): WidgetSettingsRepository
     }
 
     override suspend fun provideGlance(
@@ -58,42 +60,15 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                 WidgetEntryPoint::class.java,
             )
         val usageRepository = entryPoint.usageStateRepository()
-        val settingsRepository = entryPoint.settingsRepository()
-        val simRepository = entryPoint.simRepository()
+        val widgetSettingsRepository = entryPoint.widgetSettingsRepository()
 
         val snapshot = usageRepository.observeSnapshot().value
-        val settings = settingsRepository.observeAppSettings().value
-
-        val simStates = mutableListOf<com.example.minutewatcher.core.model.SimSettingsState>()
-        for (i in 0..1) {
-            val identity = simRepository.getIdentity(i)
-            simStates.add(
-                com.example.minutewatcher.core.model.SimSettingsState(
-                    showSim = simRepository.getShowSim(identity).first(),
-                    showIcon = simRepository.getShowSimIcon(identity).first(),
-                    showName = simRepository.getShowSimName(identity).first(),
-                    showMinutes = simRepository.getShowMinutes(identity).first(),
-                    showMinutesLimit = simRepository.getShowMinutesLimit(identity).first(),
-                    showTraffic = simRepository.getShowTraffic(identity).first(),
-                    showTrafficLimit = simRepository.getShowTrafficLimit(identity).first(),
-                ),
-            )
-        }
+        val settingsState = widgetSettingsRepository.load()
 
         return WidgetUiMapper.mapFromSnapshot(
             context,
             snapshot,
-            com.example.minutewatcher.core.model.WidgetSettingsState(
-                layoutMode = settings.widgetLayoutMode,
-                simArrangement = settings.widgetSimArrangement,
-                transparency = settings.widgetTransparency,
-                fontSize = settings.widgetFontSize,
-                backgroundColor = settings.widgetBackgroundColor,
-                notifyLowMinutes = settings.notifyLowMinutes,
-                notifyLowTraffic = settings.notifyLowTraffic,
-                callTrackingEnabled = settings.callTrackingEnabled,
-                simStates = simStates,
-            ),
+            settingsState,
         )
     }
 

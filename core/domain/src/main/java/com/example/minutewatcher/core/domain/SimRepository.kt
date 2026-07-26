@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.domain
 
 import com.example.minutewatcher.core.model.SimIdentity
+import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.Flow
 
@@ -102,6 +103,9 @@ interface SimRepository {
         day: Int,
         enabled: Boolean,
     )
+
+    // Combined settings for performance
+    fun getSimSettings(identity: String): Flow<SimSettingsState>
 
     // Visibility settings (moved from SettingsRepository)
     fun getShowSim(identity: String): Flow<Boolean>

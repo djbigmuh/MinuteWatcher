@@ -2,13 +2,11 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background_rounded">
+    android:padding="8dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <ProgressBar
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:layout_gravity="center"
-        android:text="@string/no_data"
-        android:textColor="@color/white"
-        android:textSize="14sp" />
+        android:indeterminate="true" />
 </FrameLayout>

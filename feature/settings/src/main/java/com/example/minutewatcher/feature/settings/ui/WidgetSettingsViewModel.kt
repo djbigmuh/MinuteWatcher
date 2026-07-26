@@ -29,8 +29,7 @@ class WidgetSettingsViewModel
         val uiState: StateFlow<WidgetUiState?> =
             _settingsState
                 .filterNotNull()
-                .map { state ->
-                    val snapshot = usageStateRepository.observeSnapshot().value
+                .combine(usageStateRepository.observeSnapshot()) { state, snapshot ->
                     WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 

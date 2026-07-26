@@ -22,15 +22,7 @@ class WidgetSettingsRepository
             val simStates =
                 (0..1).map { i ->
                     val identity = simRepository.getIdentity(i)
-                    SimSettingsState(
-                        showSim = simRepository.getShowSim(identity).first(),
-                        showIcon = simRepository.getShowSimIcon(identity).first(),
-                        showName = simRepository.getShowSimName(identity).first(),
-                        showMinutes = simRepository.getShowMinutes(identity).first(),
-                        showMinutesLimit = simRepository.getShowMinutesLimit(identity).first(),
-                        showTraffic = simRepository.getShowTraffic(identity).first(),
-                        showTrafficLimit = simRepository.getShowTrafficLimit(identity).first(),
-                    )
+                    simRepository.getSimSettings(identity).first()
                 }
             return WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,

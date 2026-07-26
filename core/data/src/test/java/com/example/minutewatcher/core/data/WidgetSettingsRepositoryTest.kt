@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -49,13 +50,17 @@ class WidgetSettingsRepositoryTest {
                 )
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
             whenever(simRepository.getIdentity(any())).thenReturn("test_sim")
-            whenever(simRepository.getShowSim(any())).thenReturn(flowOf(true))
-            whenever(simRepository.getShowSimIcon(any())).thenReturn(flowOf(true))
-            whenever(simRepository.getShowSimName(any())).thenReturn(flowOf(true))
-            whenever(simRepository.getShowMinutes(any())).thenReturn(flowOf(true))
-            whenever(simRepository.getShowMinutesLimit(any())).thenReturn(flowOf(false))
-            whenever(simRepository.getShowTraffic(any())).thenReturn(flowOf(true))
-            whenever(simRepository.getShowTrafficLimit(any())).thenReturn(flowOf(false))
+            
+            val simSettings = SimSettingsState(
+                showSim = true,
+                showIcon = true,
+                showName = true,
+                showMinutes = true,
+                showMinutesLimit = false,
+                showTraffic = true,
+                showTrafficLimit = false
+            )
+            whenever(simRepository.getSimSettings(any())).thenReturn(flowOf(simSettings))
 
             // Act
             val result = repository.load()
@@ -72,6 +77,7 @@ class WidgetSettingsRepositoryTest {
             assertEquals(2, result.simStates.size)
 
             verify(settingsRepository).getAppSettings()
+            verify(simRepository, times(2)).getSimSettings(any())
         }
 
     @Test
@@ -90,7 +96,7 @@ class WidgetSettingsRepositoryTest {
                     callTrackingEnabled = false,
                     simStates =
                         listOf(
-                            com.example.minutewatcher.core.model.SimSettingsState(
+                            SimSettingsState(
                                 showSim = true,
                                 showIcon = false,
                                 showName = true,
@@ -99,7 +105,7 @@ class WidgetSettingsRepositoryTest {
                                 showTraffic = true,
                                 showTrafficLimit = false,
                             ),
-                            com.example.minutewatcher.core.model.SimSettingsState(
+                            SimSettingsState(
                                 showSim = false,
                                 showIcon = true,
                                 showName = true,

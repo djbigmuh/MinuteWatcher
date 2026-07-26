@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
+import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.PermissionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -206,6 +207,19 @@ class SimRepositoryImpl
                     autoReset = prefs[autoResetKey(identity)] ?: false,
                     autoResetDay = prefs[autoResetDayKey(identity)] ?: 1,
                     lastResetDate = prefs[lastResetDateKey(identity)] ?: 0L,
+                )
+            }
+
+        override fun getSimSettings(identity: String): Flow<SimSettingsState> =
+            dataStore.data.map { prefs ->
+                SimSettingsState(
+                    showSim = prefs[SettingsKeys.showSimKey(identity)] ?: true,
+                    showIcon = prefs[SettingsKeys.showSimIconKey(identity)] ?: true,
+                    showName = prefs[SettingsKeys.showSimNameKey(identity)] ?: true,
+                    showMinutes = prefs[SettingsKeys.showMinutesKey(identity)] ?: true,
+                    showMinutesLimit = prefs[SettingsKeys.showMinutesLimitKey(identity)] ?: false,
+                    showTraffic = prefs[SettingsKeys.showTrafficKey(identity)] ?: true,
+                    showTrafficLimit = prefs[SettingsKeys.showTrafficLimitKey(identity)] ?: false,
                 )
             }
 
