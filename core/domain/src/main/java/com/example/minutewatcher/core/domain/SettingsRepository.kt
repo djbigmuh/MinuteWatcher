@@ -61,17 +61,17 @@ interface SettingsRepository {
 
     suspend fun setLastDataSubId(subId: Int)
 
-    fun getCallStartTime(): Flow<Long>
+    fun getCallStartTime(subId: Int): Flow<Long>
 
-    suspend fun setCallStartTime(time: Long)
+    suspend fun setCallStartTime(subId: Int, time: Long)
 
-    fun getBootTime(): Flow<Long>
+    fun getBootTime(subId: Int): Flow<Long>
 
-    suspend fun setBootTime(time: Long)
+    suspend fun setBootTime(subId: Int, time: Long)
 
-    fun getLastCallSubId(): Flow<Int>
+    fun getCallIdentity(subId: Int): Flow<String?>
 
-    suspend fun setLastCallSubId(subId: Int)
+    suspend fun setCallIdentity(subId: Int, identity: String?)
 
     fun getSimIdentitySeed(): Flow<String>
 

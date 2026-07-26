@@ -28,7 +28,7 @@ interface UsageStateRepository {
     fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>>
 
     /**
-     * Forces a refresh of the current usage data.
+     * Forces a refresh of the current usage data and returns the updated snapshot.
      */
-    suspend fun refresh()
+    suspend fun refresh(): GlobalSnapshot
 }

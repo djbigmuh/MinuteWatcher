@@ -1,5 +1,7 @@
 package com.example.minutewatcher.core.data
 
+import android.Manifest
+import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
@@ -7,6 +9,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,9 +20,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.Shadows
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -41,6 +47,10 @@ class UsageCheckWorkerModuleTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
+        
+        // Grant permission for Robolectric
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        Shadows.shadowOf(application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
         val emptySnapshot =
             GlobalSnapshot(
@@ -49,7 +59,10 @@ class UsageCheckWorkerModuleTest {
                 simSnapshots = emptyList(),
                 capabilities = emptyList(),
             )
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(emptySnapshot))
+        runTest {
+            whenever(usageStateRepository.refresh()).thenReturn(emptySnapshot)
+            whenever(settingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
+        }
     }
 
     @Test
@@ -81,5 +94,8 @@ class UsageCheckWorkerModuleTest {
 
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.success(), result)
+            
+            // Verify refresh was called twice as per checkUsageAndNotify logic
+            verify(usageStateRepository, times(2)).refresh()
         }
 }

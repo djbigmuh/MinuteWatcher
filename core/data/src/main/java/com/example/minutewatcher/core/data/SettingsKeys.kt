@@ -14,10 +14,13 @@ object SettingsKeys {
     val NOTIFY_LOW_TRAFFIC = booleanPreferencesKey("notify_low_traffic")
     val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
     val LAST_DATA_SUB_ID = intPreferencesKey("last_data_sub_id")
-    val CALL_START_TIME = longPreferencesKey("call_start_time")
-    val BOOT_TIME = longPreferencesKey("boot_time")
-    val LAST_CALL_SUB_ID = intPreferencesKey("last_call_sub_id")
     val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")
+
+    fun callStartTimeKey(subId: Int) = longPreferencesKey("call_start_time_$subId")
+
+    fun bootTimeKey(subId: Int) = longPreferencesKey("boot_time_$subId")
+
+    fun callIdentityKey(subId: Int) = stringPreferencesKey("call_identity_$subId")
 
     fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
 

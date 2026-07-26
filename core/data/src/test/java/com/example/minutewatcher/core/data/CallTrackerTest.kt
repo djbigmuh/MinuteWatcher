@@ -5,7 +5,6 @@ import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.util.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -32,18 +31,13 @@ class CallTrackerTest {
 
     private lateinit var callTracker: CallTracker
 
-    private val callStartTimeFlow = MutableStateFlow(0L)
-    private val callTrackingEnabledFlow = MutableStateFlow(true)
-    private val lastCallSubIdFlow = MutableStateFlow(-1)
-    private val bootTimeFlow = MutableStateFlow(0L)
-
     @Before
     fun setup() =
         runTest {
-            whenever(settingsRepository.getCallTrackingEnabled()).thenReturn(callTrackingEnabledFlow)
-            whenever(settingsRepository.getCallStartTime()).thenReturn(callStartTimeFlow)
-            whenever(settingsRepository.getBootTime()).thenReturn(bootTimeFlow)
-            whenever(settingsRepository.getLastCallSubId()).thenReturn(lastCallSubIdFlow)
+            whenever(settingsRepository.getCallTrackingEnabled()).thenReturn(flowOf(true))
+            whenever(settingsRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
+            whenever(settingsRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            whenever(settingsRepository.getCallIdentity(any())).thenReturn(flowOf(null))
 
             whenever(simRepository.getIdentity(0)).thenReturn("id_0")
             whenever(simRepository.getIdentity(1)).thenReturn("id_1")
@@ -61,37 +55,34 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `test call start saves state`() =
+    fun `test call start saves state for specific subId`() =
         runTest {
             callTracker.onCallStarted(subId = 1)
 
-            verify(settingsRepository).setCallStartTime(any())
-            verify(settingsRepository).setLastCallSubId(1)
-        }
-
-    @Test
-    fun `test call end with different subId is ignored`() =
-        runTest {
-            // Prepare: start call on subId 1
-            callStartTimeFlow.value = 1000L
-            lastCallSubIdFlow.value = 1
-
-            // Act: end call on subId 2
-            callTracker.onCallEnded(subId = 2)
-
-            // Assert: state should not be cleared for subId 1
-            verify(settingsRepository, never()).setCallStartTime(0)
+            verify(settingsRepository).setCallStartTime(eq(1), any())
+            verify(settingsRepository).setCallIdentity(eq(1), anyOrNull())
         }
 
     @Test
     fun `test call end with same subId clears state`() =
         runTest {
-            callStartTimeFlow.value = 1000L
-            lastCallSubIdFlow.value = 1
+            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
 
             callTracker.onCallEnded(subId = 1)
 
-            verify(settingsRepository).setCallStartTime(0)
-            verify(settingsRepository).setLastCallSubId(-1)
+            verify(settingsRepository).setCallStartTime(1, 0)
+            verify(settingsRepository).setBootTime(1, 0)
         }
+        
+    @Test
+    fun `test dual SIM concurrent call tracking`() = runTest {
+        // Start call on subId 1
+        callTracker.onCallStarted(subId = 1)
+        verify(settingsRepository).setCallStartTime(eq(1), any())
+        
+        // Start call on subId 2
+        callTracker.onCallStarted(subId = 2)
+        verify(settingsRepository).setCallStartTime(eq(2), any())
+    }
 }

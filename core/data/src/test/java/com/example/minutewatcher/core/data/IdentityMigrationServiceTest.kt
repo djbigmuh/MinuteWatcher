@@ -1,16 +1,13 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -62,4 +59,17 @@ class IdentityMigrationServiceTest {
             assertEquals(123, prefs[newKey])
             assertEquals(null, prefs[legacyKey])
         }
+
+    @Test
+    fun testHasLegacyData() = testScope.runTest {
+        val service = IdentityMigrationService(appDataStore, simDataStore)
+        
+        assertFalse(service.hasLegacyData())
+        
+        appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
+        assertTrue(service.hasLegacyData())
+        
+        service.migrateLegacyData(0, "some_id")
+        assertFalse(service.hasLegacyData())
+    }
 }

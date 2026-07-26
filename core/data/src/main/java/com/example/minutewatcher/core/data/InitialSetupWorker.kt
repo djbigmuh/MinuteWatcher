@@ -11,6 +11,10 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+
 @HiltWorker
 class InitialSetupWorker
     @AssistedInject
@@ -29,12 +33,33 @@ class InitialSetupWorker
                 // Perform one-time migration if needed
                 val migrationCompleted = settingsRepository.isMigrationV1Completed().first()
                 if (!migrationCompleted) {
-                    val identities = simRepository.getActiveIdentities().first()
-                    for (i in identities.indices) {
-                        migrationService.migrateLegacyData(i, identities[i])
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        applicationContext,
+                        Manifest.permission.READ_PHONE_STATE
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (!hasPermission) {
+                        if (migrationService.hasLegacyData()) {
+                            AppLogger.d("Migration V1 deferred: permission missing but legacy data exists")
+                            return Result.retry()
+                        } else {
+                            // No legacy data, we can safely mark as completed
+                            settingsRepository.setMigrationV1Completed(true)
+                            AppLogger.d("Migration V1 skipped: no legacy data found")
+                        }
+                    } else {
+                        val identities = simRepository.getActiveIdentities().first()
+                        if (identities.isEmpty()) {
+                            AppLogger.d("Migration V1 deferred: no active identities found")
+                            return Result.retry()
+                        }
+
+                        for (i in identities.indices) {
+                            migrationService.migrateLegacyData(i, identities[i])
+                        }
+                        settingsRepository.setMigrationV1Completed(true)
+                        AppLogger.d("Migration V1 completed in InitialSetupWorker")
                     }
-                    settingsRepository.setMigrationV1Completed(true)
-                    AppLogger.d("Migration V1 completed in InitialSetupWorker")
                 }
 
                 // Clear stale call session

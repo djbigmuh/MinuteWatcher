@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.*
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.model.util.AppLogger
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,21 +16,28 @@ class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
+        suspend fun hasLegacyData(): Boolean {
+            val appHasLegacy = appDataStore.data.first().asMap().keys.any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
+            val simHasLegacy = simDataStore.data.first().asMap().keys.any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
+            return appHasLegacy || simHasLegacy
+        }
+
+        /**
+         * Returns true if any data was migrated or no legacy data was found for this identity.
+         */
         suspend fun migrateLegacyData(
             slot: Int,
             identity: String,
-        ) {
-            if (identity == "sim_$slot") return
-
-            // We still need to allow migration if called for the first time for this identity
-            // But the main migration logic should be guarded globally.
-            // Actually, SimRepositoryImpl calls this for each SIM.
+        ): Boolean {
+            if (identity == "sim_$slot") return true
 
             val legacySuffix = "_sim_$slot"
             val newSuffix = "_$identity"
 
-            migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
-            migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
+            val appMigrated = migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
+            val simMigrated = migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
+            
+            return true // We return true to signify the attempt was made.
         }
 
         private suspend fun migrateDataStore(
@@ -39,11 +47,11 @@ class IdentityMigrationService
             storeName: String,
             slot: Int,
             identity: String,
-        ) {
+        ): Boolean {
+            var anyMigrated = false
             dataStore.edit { prefs ->
                 val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
-                var migrated = false
                 for (oldKey in keysToMigrate) {
                     val value = prefs[oldKey] ?: continue
                     val baseName = oldKey.name.substringBefore(legacySuffix)
@@ -51,50 +59,52 @@ class IdentityMigrationService
 
                     // Only migrate if the new key doesn't exist yet
                     // To avoid overwriting already established identity-based settings
-                    when (value) {
+                    val keyHandled = when (value) {
                         is Int -> {
                             val newKey = intPreferencesKey(newKeyName)
                             if (prefs[newKey] == null) {
                                 prefs[newKey] = value
-                                migrated = true
-                            }
+                                true
+                            } else false
                         }
                         is Float -> {
                             val newKey = floatPreferencesKey(newKeyName)
                             if (prefs[newKey] == null) {
                                 prefs[newKey] = value
-                                migrated = true
-                            }
+                                true
+                            } else false
                         }
                         is Long -> {
                             val newKey = longPreferencesKey(newKeyName)
                             if (prefs[newKey] == null) {
                                 prefs[newKey] = value
-                                migrated = true
-                            }
+                                true
+                            } else false
                         }
                         is Boolean -> {
                             val newKey = booleanPreferencesKey(newKeyName)
                             if (prefs[newKey] == null) {
                                 prefs[newKey] = value
-                                migrated = true
-                            }
+                                true
+                            } else false
                         }
                         is String -> {
                             val newKey = stringPreferencesKey(newKeyName)
                             if (prefs[newKey] == null) {
                                 prefs[newKey] = value
-                                migrated = true
-                            }
+                                true
+                            } else false
                         }
+                        else -> false
                     }
-                    // We keep the old key for safety for now, or we can remove it.
-                    // The audit suggested removal: prefs.remove(oldKey)
+                    
+                    if (keyHandled) anyMigrated = true
                     prefs.remove(oldKey)
                 }
-                if (migrated) {
-                    AppLogger.d("Migrated legacy data from $storeName for slot $slot to identity $identity")
-                }
             }
+            if (anyMigrated) {
+                AppLogger.d("Migrated legacy data from $storeName for slot $slot to identity $identity")
+            }
+            return anyMigrated
         }
     }

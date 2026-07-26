@@ -18,6 +18,18 @@ import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Tracks mobile traffic usage for the device.
+ * 
+ * IMPORTANT LIMITATION:
+ * Android's NetworkStatsManager (querySummaryForDevice) provides aggregate cellular traffic
+ * for the entire device. Since it doesn't always provide reliable per-subscription breakdown
+ * for the "Total Mobile" bucket without extra permissions (like READ_NETWORK_USAGE_HISTORY),
+ * this tracker attributes all mobile traffic to the CURRENT DEFAULT DATA SIM.
+ * 
+ * If the user swaps the default data SIM, the tracker detects the change and resets the 
+ * baseline to avoid mixing traffic from different providers.
+ */
 @Singleton
 class TrafficTracker
     @Inject
@@ -50,8 +62,10 @@ class TrafficTracker
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
                 val currentBytes = getCurrentMobileBytes()
-                simRepository.setLastTotalBytes(identity, currentBytes)
-                AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                if (currentBytes != -1L) {
+                    simRepository.setLastTotalBytes(identity, currentBytes)
+                    AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                }
             }
         }
 
@@ -77,6 +91,7 @@ class TrafficTracker
                         // First run or reboot/overflow
                         simRepository.setLastTotalBytes(targetIdentity, currentBytes)
                         AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
+                        settingsRepository.setLastDataSubId(currentDataSubId)
                         return
                     }
 
@@ -148,12 +163,17 @@ class TrafficTracker
 
             if (targetSim == -1) return null
 
-            // Проверка смены SIM для пропуска дельты
+            // Detect SIM change for baseline reset
             val savedLastDataSubId = lastDataSubId.value
             if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
-                AppLogger.d("Default data SIM changed, skipping traffic delta")
+                AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")
+                val identity = simRepository.getIdentity(targetSim)
+                val currentBytes = getCurrentMobileBytes()
+                if (currentBytes != -1L) {
+                    simRepository.setLastTotalBytes(identity, currentBytes)
+                }
                 settingsRepository.setLastDataSubId(currentDataSubId)
-                return null
+                return null // Skip delta for the swap event
             }
 
             return targetSim to currentDataSubId

@@ -120,8 +120,10 @@ class UsageStateRepositoryImpl
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = _snapshot
 
-        override suspend fun refresh() {
+        override suspend fun refresh(): GlobalSnapshot = coroutineScope {
+            val nextSnapshot = async { _snapshot.drop(1).first() }
             dataRefreshNotifier.notifyRefresh()
+            nextSnapshot.await()
         }
 
         private fun createEmptySnapshot() =

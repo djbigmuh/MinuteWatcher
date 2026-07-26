@@ -156,22 +156,37 @@ class SettingsRepositoryImpl
             dataStore.edit { it[SettingsKeys.LAST_DATA_SUB_ID] = subId }
         }
 
-        override fun getCallStartTime(): Flow<Long> = get(SettingsKeys.CALL_START_TIME, 0L)
+        override fun getCallStartTime(subId: Int): Flow<Long> = get(SettingsKeys.callStartTimeKey(subId), 0L)
 
-        override suspend fun setCallStartTime(time: Long) {
-            dataStore.edit { it[SettingsKeys.CALL_START_TIME] = time }
+        override suspend fun setCallStartTime(
+            subId: Int,
+            time: Long,
+        ) {
+            dataStore.edit { it[SettingsKeys.callStartTimeKey(subId)] = time }
         }
 
-        override fun getBootTime(): Flow<Long> = get(SettingsKeys.BOOT_TIME, 0L)
+        override fun getBootTime(subId: Int): Flow<Long> = get(SettingsKeys.bootTimeKey(subId), 0L)
 
-        override suspend fun setBootTime(time: Long) {
-            dataStore.edit { it[SettingsKeys.BOOT_TIME] = time }
+        override suspend fun setBootTime(
+            subId: Int,
+            time: Long,
+        ) {
+            dataStore.edit { it[SettingsKeys.bootTimeKey(subId)] = time }
         }
 
-        override fun getLastCallSubId(): Flow<Int> = get(SettingsKeys.LAST_CALL_SUB_ID, -1)
+        override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[SettingsKeys.callIdentityKey(subId)] }
 
-        override suspend fun setLastCallSubId(subId: Int) {
-            dataStore.edit { it[SettingsKeys.LAST_CALL_SUB_ID] = subId }
+        override suspend fun setCallIdentity(
+            subId: Int,
+            identity: String?,
+        ) {
+            dataStore.edit {
+                if (identity == null) {
+                    it.remove(SettingsKeys.callIdentityKey(subId))
+                } else {
+                    it[SettingsKeys.callIdentityKey(subId)] = identity
+                }
+            }
         }
 
         override fun getSimIdentitySeed(): Flow<String> = seedRepository.getSeed()

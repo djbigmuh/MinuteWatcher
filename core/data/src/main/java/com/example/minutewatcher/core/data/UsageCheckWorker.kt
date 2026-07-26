@@ -53,8 +53,7 @@ class UsageCheckWorker
 
         private suspend fun checkUsageAndNotify() {
             // Refresh usage data and get a fresh snapshot
-            usageStateRepository.refresh()
-            val snapshot = usageStateRepository.observeSnapshot().value
+            val snapshot = usageStateRepository.refresh()
 
             // Pass snapshot to reset manager to avoid redundant identity lookups
             resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
@@ -62,8 +61,7 @@ class UsageCheckWorker
             trafficTracker.updateTrafficUsage()
 
             // Refresh again after possible reset and traffic update to have latest values for notification check
-            usageStateRepository.refresh()
-            val finalSnapshot = usageStateRepository.observeSnapshot().value
+            val finalSnapshot = usageStateRepository.refresh()
 
             updateCoordinator.notifyDataChanged(applicationContext, updateWidget = true)
 
