@@ -11,7 +11,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "ru")
 class OperatorResolverTest {
-
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test

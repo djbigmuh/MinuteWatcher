@@ -20,15 +20,26 @@ object SettingsKeys {
     val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")
 
     fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
+
     fun showSimKey(identity: String) = booleanPreferencesKey("widget_show_sim_$identity")
+
     fun showSimIconKey(identity: String) = booleanPreferencesKey("widget_show_sim_icon_$identity")
+
     fun showSimNameKey(identity: String) = booleanPreferencesKey("widget_show_sim_name_$identity")
+
     fun showMinutesKey(identity: String) = booleanPreferencesKey("widget_show_minutes_$identity")
+
     fun showMinutesLimitKey(identity: String) = booleanPreferencesKey("widget_show_minutes_limit_$identity")
+
     fun showTrafficKey(identity: String) = booleanPreferencesKey("widget_show_traffic_$identity")
+
     fun showTrafficLimitKey(identity: String) = booleanPreferencesKey("widget_show_traffic_limit_$identity")
+
     fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("notified_low_minutes_$identity")
+
     fun notifiedLowTrafficKey(identity: String) = booleanPreferencesKey("notified_low_traffic_$identity")
+
     fun notifiedExhaustedMinutesKey(identity: String) = booleanPreferencesKey("notified_exhausted_minutes_$identity")
+
     fun notifiedExhaustedTrafficKey(identity: String) = booleanPreferencesKey("notified_exhausted_traffic_$identity")
 }

@@ -1,13 +1,12 @@
 package com.example.minutewatcher.core.model.util
 
 import java.time.Instant
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 
 object BillingPeriodCalculator {
-
     data class PeriodInfo(
         val startDate: Long,
         val endDate: Long,
@@ -15,12 +14,15 @@ object BillingPeriodCalculator {
         val progressPercentage: Int,
     )
 
-    fun calculate(resetDay: Int, nowMillis: Long = System.currentTimeMillis()): PeriodInfo {
+    fun calculate(
+        resetDay: Int,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): PeriodInfo {
         val zoneId = ZoneId.systemDefault()
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zoneId)
-        
+
         val currentYearMonth = YearMonth.from(now)
-        
+
         val startDate: ZonedDateTime
         if (now.dayOfMonth < resetDay) {
             // Period started last month
@@ -49,7 +51,7 @@ object BillingPeriodCalculator {
             startDate = startDate.toInstant().toEpochMilli(),
             endDate = endDate.toInstant().toEpochMilli(),
             daysRemaining = maxOf(0, daysRemaining),
-            progressPercentage = progress.coerceIn(0, 100)
+            progressPercentage = progress.coerceIn(0, 100),
         )
     }
 }

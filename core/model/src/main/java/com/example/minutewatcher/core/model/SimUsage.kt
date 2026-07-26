@@ -13,5 +13,5 @@ data class SimUsage(
     val trafficAdjustment: Float,
     val autoReset: Boolean,
     val autoResetDay: Int,
-    val lastResetDate: Long
+    val lastResetDate: Long,
 )

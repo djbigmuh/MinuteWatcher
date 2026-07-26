@@ -18,12 +18,12 @@ fun SimLimitComposeDialog(
     initialTrafficMb: Int,
     onDismiss: () -> Unit,
     onConfirm: (minutes: Int, trafficMb: Int) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
 ) {
     var minutesText by remember { mutableStateOf(if (initialMinutes > 0) initialMinutes.toString() else "") }
-    var trafficText by remember { 
+    var trafficText by remember {
         val gb = initialTrafficMb / Constants.MB_PER_GB
-        mutableStateOf(if (gb > 0) "%.1f".format(gb).replace(",", ".") else "") 
+        mutableStateOf(if (gb > 0) "%.1f".format(gb).replace(",", ".") else "")
     }
 
     AlertDialog(
@@ -37,7 +37,7 @@ fun SimLimitComposeDialog(
                     label = { Text(stringResource(id = R.string.set_minutes_limit)) },
                     placeholder = { Text(stringResource(id = R.string.minutes_limit_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = trafficText,
@@ -45,14 +45,14 @@ fun SimLimitComposeDialog(
                     label = { Text(stringResource(id = R.string.set_traffic_limit)) },
                     placeholder = { Text(stringResource(id = R.string.traffic_limit_gb_hint_dialog)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(
                     onClick = {
@@ -60,26 +60,26 @@ fun SimLimitComposeDialog(
                         val trafGb = trafficText.toFloatOrNull()?.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB) ?: 0f
                         onConfirm(min, (trafGb * Constants.MB_PER_GB).toInt())
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(id = R.string.set_button))
                 }
-                
+
                 OutlinedButton(
                     onClick = onReset,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(id = R.string.reset_limits_button))
                 }
 
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(id = R.string.cancel_button))
                 }
             }
         },
-        dismissButton = null
+        dismissButton = null,
     )
 }

@@ -9,7 +9,7 @@ data class WidgetSettingsState(
     val notifyLowMinutes: Boolean,
     val notifyLowTraffic: Boolean,
     val callTrackingEnabled: Boolean,
-    val simStates: List<SimSettingsState>
+    val simStates: List<SimSettingsState>,
 )
 
 data class SimSettingsState(
@@ -19,5 +19,5 @@ data class SimSettingsState(
     val showMinutes: Boolean,
     val showMinutesLimit: Boolean,
     val showTraffic: Boolean,
-    val showTrafficLimit: Boolean
+    val showTrafficLimit: Boolean,
 )

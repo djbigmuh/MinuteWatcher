@@ -26,13 +26,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerTest {
-
     private lateinit var context: Context
     private lateinit var simRepository: SimRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var subscriptionManager: SubscriptionManager
     private lateinit var permissionManager: PermissionManager
-    
+
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
     private val appScope = CoroutineScope(SupervisorJob() + testDispatcher)
@@ -53,14 +52,15 @@ class TrafficTrackerTest {
     }
 
     @Test
-    fun testInitialization() = testScope.runTest {
-        TrafficTracker(
-            context,
-            simRepository,
-            settingsRepository,
-            permissionManager,
-            appScope
-        )
-        // Basic sanity check
-    }
+    fun testInitialization() =
+        testScope.runTest {
+            TrafficTracker(
+                context,
+                simRepository,
+                settingsRepository,
+                permissionManager,
+                appScope,
+            )
+            // Basic sanity check
+        }
 }

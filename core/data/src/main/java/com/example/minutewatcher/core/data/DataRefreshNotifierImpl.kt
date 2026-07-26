@@ -8,16 +8,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DataRefreshNotifierImpl @Inject constructor() : DataRefreshNotifier {
-    private val _refreshFlow = MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(
-        replay = 1,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    ).apply { tryEmit(DataRefreshNotifier.RefreshEvent()) }
+class DataRefreshNotifierImpl
+    @Inject
+    constructor() : DataRefreshNotifier {
+        private val _refreshFlow =
+            MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(
+                replay = 1,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            ).apply { tryEmit(DataRefreshNotifier.RefreshEvent()) }
 
-    override val refreshFlow = _refreshFlow.asSharedFlow()
+        override val refreshFlow = _refreshFlow.asSharedFlow()
 
-    override suspend fun notifyRefresh(isManual: Boolean) {
-        _refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual))
+        override suspend fun notifyRefresh(isManual: Boolean) {
+            _refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual))
+        }
     }
-}

@@ -6,9 +6,9 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.data.di.ApplicationScope
-import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
@@ -17,73 +17,80 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ShortcutManager @Inject constructor(
-    @ApplicationContext private val context: Context,
-    @ApplicationScope private val scope: CoroutineScope
-) : AutoCloseable {
-
-    fun initialize(snapshotFlow: kotlinx.coroutines.flow.StateFlow<GlobalSnapshot>) {
-        scope.launch {
-            snapshotFlow.collectLatest { snapshot ->
-                updateShortcuts(snapshot)
-            }
-        }
-    }
-
-    override fun close() {
-        scope.cancel()
-    }
-
-    private fun updateShortcuts(snapshot: GlobalSnapshot) {
-        val shortcuts = mutableListOf<ShortcutInfoCompat>()
-        
-        // limit to 5 total shortcuts as per system limits
-        snapshot.simSnapshots.filter { it.isActive }.take(2).forEach { sim ->
-            val slot = sim.slot
-            val operator = sim.operator
-            val minutes = sim.entities[PackageType.MINUTES]
-            val traffic = sim.entities[PackageType.DATA]
-
-            minutes?.let {
-                if (it.limit > 0) { // Only show shortcut if limit is defined
-                    val label = "${it.remaining}${context.getString(R.string.minutes_abbr)}"
-                    val longLabel = "$operator: ${context.getString(R.string.remaining_text)} $label"
-                    val shortcut = ShortcutInfoCompat.Builder(context, "minutes_shortcut_$slot")
-                        .setShortLabel(label)
-                        .setLongLabel(longLabel)
-                        .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
-                        .setIntent(Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply { 
-                            action = Intent.ACTION_VIEW
-                            putExtra("sim_slot", slot)
-                        })
-                        .build()
-                    shortcuts.add(shortcut)
-                }
-            }
-
-            traffic?.let {
-                if (it.limit > 0) {
-                    val trafficGb = it.remaining.toFloat() / (1024 * 1024 * 1024)
-                    val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))
-                    val longLabel = "$operator: ${context.getString(R.string.remaining_text)} $label"
-                    val shortcut = ShortcutInfoCompat.Builder(context, "traffic_shortcut_$slot")
-                        .setShortLabel(label)
-                        .setLongLabel(longLabel)
-                        .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
-                        .setIntent(Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply { 
-                            action = Intent.ACTION_VIEW 
-                            putExtra("sim_slot", slot)
-                        })
-                        .build()
-                    shortcuts.add(shortcut)
+class ShortcutManager
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+        @ApplicationScope private val scope: CoroutineScope,
+    ) : AutoCloseable {
+        fun initialize(snapshotFlow: kotlinx.coroutines.flow.StateFlow<GlobalSnapshot>) {
+            scope.launch {
+                snapshotFlow.collectLatest { snapshot ->
+                    updateShortcuts(snapshot)
                 }
             }
         }
 
-        if (shortcuts.isNotEmpty()) {
-            ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts.take(5))
-        } else {
-            ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+        override fun close() {
+            scope.cancel()
+        }
+
+        private fun updateShortcuts(snapshot: GlobalSnapshot) {
+            val shortcuts = mutableListOf<ShortcutInfoCompat>()
+
+            // limit to 5 total shortcuts as per system limits
+            snapshot.simSnapshots.filter { it.isActive }.take(2).forEach { sim ->
+                val slot = sim.slot
+                val operator = sim.operator
+                val minutes = sim.entities[PackageType.MINUTES]
+                val traffic = sim.entities[PackageType.DATA]
+
+                minutes?.let {
+                    if (it.limit > 0) { // Only show shortcut if limit is defined
+                        val label = "${it.remaining}${context.getString(R.string.minutes_abbr)}"
+                        val longLabel = "$operator: ${context.getString(R.string.remaining_text)} $label"
+                        val shortcut =
+                            ShortcutInfoCompat
+                                .Builder(context, "minutes_shortcut_$slot")
+                                .setShortLabel(label)
+                                .setLongLabel(longLabel)
+                                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
+                                .setIntent(
+                                    Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+                                        action = Intent.ACTION_VIEW
+                                        putExtra("sim_slot", slot)
+                                    },
+                                ).build()
+                        shortcuts.add(shortcut)
+                    }
+                }
+
+                traffic?.let {
+                    if (it.limit > 0) {
+                        val trafficGb = it.remaining.toFloat() / (1024 * 1024 * 1024)
+                        val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))
+                        val longLabel = "$operator: ${context.getString(R.string.remaining_text)} $label"
+                        val shortcut =
+                            ShortcutInfoCompat
+                                .Builder(context, "traffic_shortcut_$slot")
+                                .setShortLabel(label)
+                                .setLongLabel(longLabel)
+                                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
+                                .setIntent(
+                                    Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+                                        action = Intent.ACTION_VIEW
+                                        putExtra("sim_slot", slot)
+                                    },
+                                ).build()
+                        shortcuts.add(shortcut)
+                    }
+                }
+            }
+
+            if (shortcuts.isNotEmpty()) {
+                ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts.take(5))
+            } else {
+                ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+            }
         }
     }
-}

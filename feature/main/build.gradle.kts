@@ -38,10 +38,10 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
-    
+
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
-    
+
     implementation(libs.androidxAppcompat)
     implementation(libs.googleMaterial)
     implementation(platform(libs.androidxComposeBom))
@@ -55,6 +55,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidxUiTestJunit4)
     androidTestImplementation(libs.androidxUiTestJunit4)
     debugImplementation(libs.androidxUiTestManifest)
     testImplementation(libs.mockingKotlin)

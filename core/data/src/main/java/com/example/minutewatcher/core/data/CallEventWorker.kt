@@ -9,21 +9,22 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
 @HiltWorker
-class CallEventWorker @AssistedInject constructor(
-    @Assisted appContext: Context,
-    @Assisted workerParams: WorkerParameters,
-    private val callTracker: CallTracker,
-) : CoroutineWorker(appContext, workerParams) {
+class CallEventWorker
+    @AssistedInject
+    constructor(
+        @Assisted appContext: Context,
+        @Assisted workerParams: WorkerParameters,
+        private val callTracker: CallTracker,
+    ) : CoroutineWorker(appContext, workerParams) {
+        override suspend fun doWork(): Result {
+            val state = inputData.getString("state")
+            val subId = inputData.getInt("subId", -1)
 
-    override suspend fun doWork(): Result {
-        val state = inputData.getString("state")
-        val subId = inputData.getInt("subId", -1)
+            when (state) {
+                TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId)
+                TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId)
+            }
 
-        when (state) {
-            TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId)
-            TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId)
+            return Result.success()
         }
-        
-        return Result.success()
     }
-}

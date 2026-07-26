@@ -6,7 +6,7 @@ data class WidgetConfig(
     val fontSize: Int,
     val transparency: Int,
     val backgroundColor: Int,
-    val simConfigs: List<SimWidgetConfig>
+    val simConfigs: List<SimWidgetConfig>,
 )
 
 data class SimWidgetConfig(
@@ -17,7 +17,7 @@ data class SimWidgetConfig(
     val showMinutes: Boolean,
     val showMinutesLimit: Boolean,
     val showTraffic: Boolean,
-    val showTrafficLimit: Boolean
+    val showTrafficLimit: Boolean,
 )
 
 data class WidgetUiState(
@@ -25,7 +25,7 @@ data class WidgetUiState(
     val simArrangement: Int,
     val backgroundColor: Int,
     val transparency: Int,
-    val simUiStates: List<SimUiState>
+    val simUiStates: List<SimUiState>,
 )
 
 data class SimUiState(
@@ -47,5 +47,5 @@ data class SimUiState(
     val trafficLimitText: String,
     val fontMultiplier: Float,
     val textColor: Int,
-    val secondaryTextColor: Int
+    val secondaryTextColor: Int,
 )

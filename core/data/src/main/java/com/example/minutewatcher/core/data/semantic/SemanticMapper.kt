@@ -6,11 +6,15 @@ import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 
 object SemanticMapper {
-
-    fun mapMinutes(slot: Int, operator: String, model: MinutesModel, resetDay: Int): SemanticEntity {
+    fun mapMinutes(
+        slot: Int,
+        operator: String,
+        model: MinutesModel,
+        resetDay: Int,
+    ): SemanticEntity {
         val totalLimit = model.limit.toLong() + model.manualAdjustment
         val (periodStart, periodEnd) = calculatePeriod(resetDay)
-        
+
         return SemanticEntity(
             id = "sim_${slot}_minutes",
             simSlot = slot,
@@ -25,11 +29,16 @@ object SemanticMapper {
             lastUpdateTime = System.currentTimeMillis(),
             sourceType = if (model.manualAdjustment != 0) DataSourceType.MANUAL else DataSourceType.SYSTEM,
             isStale = false,
-            metadata = mapOf("reset_day" to resetDay)
+            metadata = mapOf("reset_day" to resetDay),
         )
     }
 
-    fun mapTraffic(slot: Int, operator: String, model: TrafficModel, resetDay: Int): SemanticEntity {
+    fun mapTraffic(
+        slot: Int,
+        operator: String,
+        model: TrafficModel,
+        resetDay: Int,
+    ): SemanticEntity {
         val bytesPerMb = 1024L * 1024L
         val limitBytes = (model.limitMb * bytesPerMb) + (model.manualAdjustmentGb * 1024 * bytesPerMb).toLong()
         val usedBytes = (model.usedMb * bytesPerMb).toLong()
@@ -50,7 +59,7 @@ object SemanticMapper {
             lastUpdateTime = System.currentTimeMillis(),
             sourceType = if (model.manualAdjustmentGb != 0f) DataSourceType.MANUAL else DataSourceType.SYSTEM,
             isStale = false,
-            metadata = mapOf("reset_day" to resetDay)
+            metadata = mapOf("reset_day" to resetDay),
         )
     }
 

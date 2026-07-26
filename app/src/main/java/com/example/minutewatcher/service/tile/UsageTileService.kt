@@ -7,10 +7,10 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.core.service.quicksettings.PendingIntentActivityWrapper
 import androidx.core.service.quicksettings.TileServiceCompat
+import com.example.minutewatcher.core.data.di.ApplicationScope
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.feature.semantic.SemanticRepository
-import com.example.minutewatcher.core.data.di.ApplicationScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -19,20 +19,22 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class UsageTileService : TileService() {
-
     @Inject lateinit var semanticRepository: SemanticRepository
-    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
+
+    @Inject @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
     private var job: Job? = null
 
     override fun onStartListening() {
         super.onStartListening()
         updateTile()
         job?.cancel()
-        job = applicationScope.launch {
-            semanticRepository.snapshot.collect {
-                updateTile()
+        job =
+            applicationScope.launch {
+                semanticRepository.snapshot.collect {
+                    updateTile()
+                }
             }
-        }
     }
 
     override fun onStopListening() {
@@ -43,19 +45,25 @@ class UsageTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        val intent = Intent(this, com.example.minutewatcher.MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        val wrapper = PendingIntentActivityWrapper(
-            this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT, false
-        )
+        val intent =
+            Intent(this, com.example.minutewatcher.MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+        val wrapper =
+            PendingIntentActivityWrapper(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT,
+                false,
+            )
         TileServiceCompat.startActivityAndCollapse(this, wrapper)
     }
 
     private fun updateTile() {
         val tile = qsTile ?: return
         val snapshot = semanticRepository.snapshot.value
-        
+
         // Filter active SIMs and pick the one with most critical status or just slot 0
         val activeSims = snapshot.simSnapshots.filter { it.isActive }
         if (activeSims.isEmpty()) {
@@ -66,21 +74,23 @@ class UsageTileService : TileService() {
         }
 
         // Simple policy: show the first active SIM for now, or the one with lowest minutes
-        val activeSim = activeSims.minByOrNull { 
-            it.entities[PackageType.MINUTES]?.remaining ?: Long.MAX_VALUE 
-        } ?: activeSims[0]
+        val activeSim =
+            activeSims.minByOrNull {
+                it.entities[PackageType.MINUTES]?.remaining ?: Long.MAX_VALUE
+            } ?: activeSims[0]
 
         val minutes = activeSim.entities[PackageType.MINUTES]
-        
+
         tile.label = activeSim.operator
         if (minutes != null) {
             val remaining = minutes.remaining.toInt()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = resources.getQuantityString(
-                    R.plurals.minutes_plurals,
-                    remaining,
-                    remaining
-                )
+                tile.subtitle =
+                    resources.getQuantityString(
+                        R.plurals.minutes_plurals,
+                        remaining,
+                        remaining,
+                    )
             } else {
                 // For older versions, put info in label or content description
                 tile.label = "${activeSim.operator}: $remaining"
@@ -92,7 +102,7 @@ class UsageTileService : TileService() {
                 tile.subtitle = getString(R.string.no_data)
             }
         }
-        
+
         tile.updateTile()
     }
 

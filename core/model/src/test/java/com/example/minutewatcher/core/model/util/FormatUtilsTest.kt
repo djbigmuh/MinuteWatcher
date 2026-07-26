@@ -5,7 +5,6 @@ import org.junit.Test
 import java.util.Locale
 
 class FormatUtilsTest {
-
     @Test
     fun testFormatTrafficGb() {
         Locale.setDefault(Locale.US)

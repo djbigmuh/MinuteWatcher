@@ -12,17 +12,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SimIdentitySeedRepositoryImpl @Inject constructor(
-    @AppDataStore private val dataStore: DataStore<Preferences>
-) : SimIdentitySeedRepository {
+class SimIdentitySeedRepositoryImpl
+    @Inject
+    constructor(
+        @AppDataStore private val dataStore: DataStore<Preferences>,
+    ) : SimIdentitySeedRepository {
+        companion object {
+            private val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
+        }
 
-    companion object {
-        private val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
+        override fun getSeed(): Flow<String> = dataStore.data.map { it[SIM_IDENTITY_SEED] ?: "" }
+
+        override suspend fun setSeed(seed: String) {
+            dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
+        }
     }
-
-    override fun getSeed(): Flow<String> = dataStore.data.map { it[SIM_IDENTITY_SEED] ?: "" }
-
-    override suspend fun setSeed(seed: String) {
-        dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
-    }
-}

@@ -5,7 +5,6 @@ import com.example.minutewatcher.core.model.R
 import java.util.Locale
 
 object SimUtils {
-
     fun getOperatorIconResource(operatorName: String): Int {
         val cleanName = operatorName.lowercase(Locale.ROOT)
         return when {
@@ -19,10 +18,13 @@ object SimUtils {
         }
     }
 
-    fun getShortOperatorName(context: Context, operatorName: String): String {
+    fun getShortOperatorName(
+        context: Context,
+        operatorName: String,
+    ): String {
         val name = operatorName.lowercase(Locale.ROOT)
         val localizedContext = getLocalizedContext(context)
-        
+
         return try {
             when {
                 name.contains("mts") -> getStringSafe(localizedContext, R.string.operator_mts, "MTS")
@@ -32,7 +34,10 @@ object SimUtils {
                 name.contains("mgts") -> getStringSafe(localizedContext, R.string.operator_mgts, "MGTS")
                 name.contains("yota") -> getStringSafe(localizedContext, R.string.operator_yota, "Yota")
                 name.contains("vodafone") -> getStringSafe(localizedContext, R.string.operator_vodafone, "Vodafone")
-                name.contains("t-mobile") || name.contains("telekom") -> getStringSafe(localizedContext, R.string.operator_t_mobile, "T-Mobile")
+                name.contains(
+                    "t-mobile",
+                ) ||
+                    name.contains("telekom") -> getStringSafe(localizedContext, R.string.operator_t_mobile, "T-Mobile")
                 name.contains("orange") -> getStringSafe(localizedContext, R.string.operator_orange, "Orange")
                 name.contains("o2") -> "O2"
                 name.contains("at&t") -> getStringSafe(localizedContext, R.string.operator_att, "AT&T")
@@ -45,27 +50,37 @@ object SimUtils {
                 name.contains("claro") -> "Claro"
                 name.contains("airtel") -> "Airtel"
                 name.contains("jio") -> "Jio"
-                else -> if (operatorName.isNotEmpty()) {
-                    if (operatorName.length > 15) operatorName.take(12) + "..." else operatorName
-                } else localizedContext.getString(R.string.no_sim_found)
+                else ->
+                    if (operatorName.isNotEmpty()) {
+                        if (operatorName.length > 15) operatorName.take(12) + "..." else operatorName
+                    } else {
+                        localizedContext.getString(R.string.no_sim_found)
+                    }
             }
         } catch (_: Exception) {
             if (operatorName.isNotEmpty()) {
                 if (operatorName.length > 15) operatorName.take(12) + "..." else operatorName
-            } else "SIM"
+            } else {
+                "SIM"
+            }
         }
     }
 
-    private fun getStringSafe(context: Context, resId: Int, default: String): String {
-        return try {
+    private fun getStringSafe(
+        context: Context,
+        resId: Int,
+        default: String,
+    ): String =
+        try {
             context.getString(resId)
         } catch (_: Exception) {
             default
         }
-    }
 
     private fun getLocalizedContext(context: Context): Context {
-        val appLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+        val appLocales =
+            androidx.appcompat.app.AppCompatDelegate
+                .getApplicationLocales()
         if (!appLocales.isEmpty) {
             val locale = appLocales.get(0)
             if (locale != null) {
@@ -77,7 +92,5 @@ object SimUtils {
         return context
     }
 
-    fun isInactiveSim(operatorName: String?): Boolean {
-        return operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
-    }
+    fun isInactiveSim(operatorName: String?): Boolean = operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
 }

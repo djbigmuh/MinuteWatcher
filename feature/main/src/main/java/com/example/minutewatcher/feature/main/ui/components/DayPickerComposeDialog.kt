@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -15,68 +16,76 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.R
 
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-
 @Composable
 fun DayPickerComposeDialog(
     initialDay: Int,
     onDismiss: () -> Unit,
-    onDaySelected: (Int) -> Unit
+    onDaySelected: (Int) -> Unit,
 ) {
     val days = (1..31).toList()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (initialDay - 1).coerceAtLeast(0))
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.choose_reset_day_dialog_title)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    stringResource(id = R.string.choose_reset_day), 
+                    stringResource(id = R.string.choose_reset_day),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 16.dp),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
-                
+
                 Box(
-                    modifier = Modifier
-                        .height(200.dp)
-                        .width(100.dp),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .height(200.dp)
+                            .width(100.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     // Central highlight / Selector
                     Surface(
-                        modifier = Modifier
-                            .height(50.dp)
-                            .fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .height(50.dp)
+                                .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.medium,
                     ) {}
-                    
+
                     LazyColumn(
                         state = listState,
                         flingBehavior = snapFlingBehavior,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 75.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         itemsIndexed(days) { _, day ->
-                            val isSelected by remember { 
-                                derivedStateOf { listState.firstVisibleItemIndex == day - 1 } 
+                            val isSelected by remember {
+                                derivedStateOf { listState.firstVisibleItemIndex == day - 1 }
                             }
-                            
+
                             Text(
                                 text = day.toString(),
                                 fontSize = if (isSelected) 32.sp else 22.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                modifier = Modifier
-                                    .padding(vertical = 8.dp)
-                                    .fillMaxWidth(),
+                                color =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(
+                                            alpha = 0.5f,
+                                        )
+                                    },
+                                modifier =
+                                    Modifier
+                                        .padding(vertical = 8.dp)
+                                        .fillMaxWidth(),
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
-                                softWrap = false
+                                softWrap = false,
                             )
                         }
                     }
@@ -89,7 +98,7 @@ fun DayPickerComposeDialog(
                     val selectedDay = listState.firstVisibleItemIndex + 1
                     onDaySelected(selectedDay.coerceIn(1, 31))
                 },
-                modifier = Modifier.padding(horizontal = 8.dp)
+                modifier = Modifier.padding(horizontal = 8.dp),
             ) {
                 Text(stringResource(id = R.string.set_button))
             }
@@ -98,6 +107,6 @@ fun DayPickerComposeDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(id = R.string.cancel_button))
             }
-        }
+        },
     )
 }

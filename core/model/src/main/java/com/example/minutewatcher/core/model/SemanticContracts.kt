@@ -5,7 +5,7 @@ package com.example.minutewatcher.core.model
  */
 enum class PackageType {
     MINUTES,
-    DATA
+    DATA,
 }
 
 /**
@@ -13,7 +13,7 @@ enum class PackageType {
  */
 enum class MeasurementUnit {
     MINUTES,
-    BYTES
+    BYTES,
 }
 
 /**
@@ -21,7 +21,7 @@ enum class MeasurementUnit {
  */
 enum class DataSourceType {
     SYSTEM,
-    MANUAL
+    MANUAL,
 }
 
 /**
@@ -41,7 +41,7 @@ data class SemanticEntity(
     val lastUpdateTime: Long,
     val sourceType: DataSourceType,
     val isStale: Boolean,
-    val metadata: Map<String, Any> = emptyMap()
+    val metadata: Map<String, Any> = emptyMap(),
 )
 
 /**
@@ -50,7 +50,7 @@ data class SemanticEntity(
 data class AppCapability(
     val type: String,
     val isSupported: Boolean,
-    val description: String
+    val description: String,
 )
 
 /**
@@ -59,7 +59,7 @@ data class AppCapability(
 data class SchemaVersion(
     val major: Int,
     val minor: Int,
-    val patch: Int
+    val patch: Int,
 ) {
     override fun toString(): String = "$major.$minor.$patch"
 }
@@ -71,7 +71,7 @@ data class SimSnapshot(
     val slot: Int,
     val operator: String,
     val isActive: Boolean,
-    val entities: Map<PackageType, SemanticEntity>
+    val entities: Map<PackageType, SemanticEntity>,
 )
 
 /**
@@ -82,5 +82,5 @@ data class GlobalSnapshot(
     val timestamp: Long,
     val simSnapshots: List<SimSnapshot>,
     val capabilities: List<AppCapability>,
-    val isManualUpdate: Boolean = false
+    val isManualUpdate: Boolean = false,
 )

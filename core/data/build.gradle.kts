@@ -41,12 +41,12 @@ dependencies {
     implementation(libs.androidxMaterial3)
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
-    
+
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
     implementation(libs.androidxHiltWorker)
     ksp(libs.androidxHiltCompilerWorker)
-    
+
     implementation(libs.androidxDatastorePreferences)
     implementation(libs.androidxWorkRuntimeKtx)
     implementation(libs.androidxCoreKtx)

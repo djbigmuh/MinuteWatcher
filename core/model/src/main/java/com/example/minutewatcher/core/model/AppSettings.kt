@@ -18,5 +18,5 @@ data class AppSettings(
     val showMinutesLimit: List<Boolean>,
     val showTraffic: List<Boolean>,
     val showTrafficLimit: List<Boolean>,
-    val migrationV1Completed: Boolean
+    val migrationV1Completed: Boolean,
 )

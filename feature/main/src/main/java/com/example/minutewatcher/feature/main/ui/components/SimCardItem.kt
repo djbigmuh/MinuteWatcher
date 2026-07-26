@@ -17,27 +17,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.SimCardUiModel
-import com.example.minutewatcher.core.model.util.FormatUtils
 import com.example.minutewatcher.core.model.util.ColorProvider
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
+import com.example.minutewatcher.core.model.util.FormatUtils
 
 @Composable
-fun getStatusColor(status: ColorProvider.UsageStatus): Color {
-    return when (status) {
+fun getStatusColor(status: ColorProvider.UsageStatus): Color =
+    when (status) {
         ColorProvider.UsageStatus.CRITICAL -> MaterialTheme.colorScheme.error
         ColorProvider.UsageStatus.LOW -> Color(0xFFFFA500) // Orange, could use tertiary but orange is standard
         ColorProvider.UsageStatus.NORMAL -> Color(0xFF4CAF50) // Green
     }
-}
 
 @Composable
 fun SimCardItem(
@@ -55,115 +54,135 @@ fun SimCardItem(
 
     val minutesStatus = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.minutesLimit.toFloat())
     val trafficStatus = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.trafficLimitMb / Constants.MB_PER_GB)
-    
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .semantics(mergeDescendants = true) {
-                contentDescription = simCardDetailsDesc
-            },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = simCardDetailsDesc
+                },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Image(
                     painter = painterResource(id = model.iconRes),
                     contentDescription = stringResource(id = R.string.sim_icon_content_desc),
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp),
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = model.operatorName,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 OutlinedButton(
                     onClick = onSetLimits,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(32.dp),
                 ) {
                     Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Minutes Section
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "${stringResource(id = R.string.used_text)}: ${FormatUtils.formatMinutes(model.minutesUsed)} ${stringResource(id = R.string.minutes_abbr)}",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "${stringResource(
+                            id = R.string.used_text,
+                        )}: ${FormatUtils.formatMinutes(model.minutesUsed)} ${stringResource(id = R.string.minutes_abbr)}",
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     if (model.minutesLimit > 0) {
                         Text(
-                            text = "${stringResource(id = R.string.limit_text)}: ${FormatUtils.formatMinutes(model.minutesLimit)} ${stringResource(id = R.string.minutes_abbr)}",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "${stringResource(
+                                id = R.string.limit_text,
+                            )}: ${FormatUtils.formatMinutes(model.minutesLimit)} ${stringResource(id = R.string.minutes_abbr)}",
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(id = R.string.remaining_text),
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     EditableValueBox(
-                        value = FormatUtils.formatMinutesDisplay(context, model.minutesRemaining, model.minutesLimit, model.manualAdjustment, showLimit = false),
+                        value =
+                            FormatUtils.formatMinutesDisplay(
+                                context,
+                                model.minutesRemaining,
+                                model.minutesLimit,
+                                model.manualAdjustment,
+                                showLimit = false,
+                            ),
                         color = getStatusColor(minutesStatus),
                         onClick = onAdjustMinutes,
-                        contentDescription = stringResource(id = R.string.adjust_minutes_content_desc)
+                        contentDescription = stringResource(id = R.string.adjust_minutes_content_desc),
                     )
                 }
 
                 if (model.manualAdjustment != 0) {
                     Text(
-                        text = "* ${stringResource(id = R.string.adjustment_mark)}: ${if (model.manualAdjustment > 0) "+" else ""}${model.manualAdjustment} ${stringResource(id = R.string.minutes_abbr)}",
+                        text = "* ${stringResource(
+                            id = R.string.adjustment_mark,
+                        )}: ${if (model.manualAdjustment > 0) "+" else ""}${model.manualAdjustment} ${stringResource(
+                            id = R.string.minutes_abbr,
+                        )}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
                     )
                 }
             }
-            
+
             // Traffic Section
             if (model.isTrafficLimitSet || (model.trafficUsedMb > 0)) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                
+
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(id = R.string.traffic_label),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "${stringResource(id = R.string.used_text)}: ${FormatUtils.formatTrafficMb(context, model.trafficUsedMb)}",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "${stringResource(
+                                id = R.string.used_text,
+                            )}: ${FormatUtils.formatTrafficMb(context, model.trafficUsedMb)}",
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                         if (model.isTrafficLimitSet) {
                             Text(
-                                text = "${stringResource(id = R.string.limit_text)}: ${FormatUtils.formatTrafficMb(context, model.trafficLimitMb)}",
-                                style = MaterialTheme.typography.bodyMedium
+                                text = "${stringResource(
+                                    id = R.string.limit_text,
+                                )}: ${FormatUtils.formatTrafficMb(context, model.trafficLimitMb)}",
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         }
                     }
@@ -174,14 +193,20 @@ fun SimCardItem(
                         Text(
                             text = stringResource(id = R.string.traffic_remaining_text),
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         EditableValueBox(
-                            value = FormatUtils.formatTrafficDisplay(context, model.trafficRemainingGb, model.trafficLimitMb / Constants.MB_PER_GB, showLimit = false),
+                            value =
+                                FormatUtils.formatTrafficDisplay(
+                                    context,
+                                    model.trafficRemainingGb,
+                                    model.trafficLimitMb / Constants.MB_PER_GB,
+                                    showLimit = false,
+                                ),
                             color = getStatusColor(trafficStatus),
                             onClick = onAdjustTraffic,
-                            contentDescription = stringResource(id = R.string.adjust_traffic_content_desc)
+                            contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
                         )
                     }
                 }
@@ -190,7 +215,7 @@ fun SimCardItem(
             // Action: Reset
             TextButton(
                 onClick = onResetCounters,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.padding(top = 4.dp),
             ) {
                 Text(text = stringResource(id = R.string.reset_counters))
             }
@@ -198,9 +223,10 @@ fun SimCardItem(
             // Auto-Reset Section
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
             ) {
                 Text(text = stringResource(id = R.string.reset_label), style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -209,21 +235,22 @@ fun SimCardItem(
                     color = MaterialTheme.colorScheme.onSurface,
                     onClick = onEditAutoResetDay,
                     horizontalPadding = 8,
-                    contentDescription = stringResource(id = R.string.change_auto_reset_day_content_desc)
+                    contentDescription = stringResource(id = R.string.change_auto_reset_day_content_desc),
                 )
                 Text(
                     text = " " + stringResource(id = R.string.auto_reset_day_suffix),
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 Switch(
                     checked = model.autoResetEnabled,
                     onCheckedChange = onToggleAutoReset,
-                    modifier = Modifier
-                        .scale(0.8f)
-                        .semantics { 
-                            contentDescription = toggleAutoResetDesc
-                        }
+                    modifier =
+                        Modifier
+                            .scale(0.8f)
+                            .semantics {
+                                contentDescription = toggleAutoResetDesc
+                            },
                 )
             }
         }
@@ -236,35 +263,34 @@ fun EditableValueBox(
     color: Color,
     onClick: () -> Unit,
     horizontalPadding: Int = 12,
-    contentDescription: String? = null
+    contentDescription: String? = null,
 ) {
     val underlineColor = MaterialTheme.colorScheme.primary
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .drawBehind {
-                val strokeWidth = 2.dp.toPx()
-                val y = size.height - strokeWidth / 2
-                drawLine(
-                    color = underlineColor,
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = strokeWidth
-                )
-            }
-            .semantics { 
-                role = Role.Button
-                contentDescription?.let { this.contentDescription = it }
-            }
-            .clickable { onClick() }
-            .padding(horizontal = horizontalPadding.dp, vertical = 4.dp)
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .drawBehind {
+                    val strokeWidth = 2.dp.toPx()
+                    val y = size.height - strokeWidth / 2
+                    drawLine(
+                        color = underlineColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth,
+                    )
+                }.semantics {
+                    role = Role.Button
+                    contentDescription?.let { this.contentDescription = it }
+                }.clickable { onClick() }
+                .padding(horizontal = horizontalPadding.dp, vertical = 4.dp),
     ) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
-            color = color
+            color = color,
         )
     }
 }

@@ -14,7 +14,10 @@ object AppLogger {
         if (isDebug) Log.d(TAG, message)
     }
 
-    fun e(message: String, throwable: Throwable? = null) {
+    fun e(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         Log.e(TAG, message, throwable)
     }
 }

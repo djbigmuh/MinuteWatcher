@@ -7,43 +7,50 @@ import com.example.minutewatcher.core.model.SimIdentity
 import java.security.MessageDigest
 
 object SimIdentityUtils {
-
     fun getMccMnc(info: SubscriptionInfo): String {
-        val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            info.mccString ?: ""
-        } else {
-            @Suppress("DEPRECATION")
-            info.mcc.toString()
-        }
-        val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            info.mncString ?: ""
-        } else {
-            @Suppress("DEPRECATION")
-            info.mnc.toString()
-        }
+        val mcc =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                info.mccString ?: ""
+            } else {
+                @Suppress("DEPRECATION")
+                info.mcc.toString()
+            }
+        val mnc =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                info.mncString ?: ""
+            } else {
+                @Suppress("DEPRECATION")
+                info.mnc.toString()
+            }
         return if (mcc.isNotEmpty() && mnc.isNotEmpty()) "$mcc$mnc" else ""
     }
 
-    fun createIdentityFromInfo(info: SubscriptionInfo, seed: String): SimIdentity {
+    fun createIdentityFromInfo(
+        info: SubscriptionInfo,
+        seed: String,
+    ): SimIdentity {
         val iccid = info.iccId
         return if (!iccid.isNullOrBlank()) {
             SimIdentity(
                 stableId = "icc_" + hashString(iccid, seed),
                 subscriptionId = info.subscriptionId,
                 slotIndex = info.simSlotIndex,
-                source = IdentitySource.ICCID
+                source = IdentitySource.ICCID,
             )
         } else {
             SimIdentity(
                 stableId = "sub_${info.subscriptionId}",
                 subscriptionId = info.subscriptionId,
                 slotIndex = info.simSlotIndex,
-                source = IdentitySource.SUBSCRIPTION_ID
+                source = IdentitySource.SUBSCRIPTION_ID,
             )
         }
     }
 
-    private fun hashString(input: String, seed: String): String {
+    private fun hashString(
+        input: String,
+        seed: String,
+    ): String {
         val md = MessageDigest.getInstance("SHA-256")
         val bytes = md.digest((input + seed).toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }

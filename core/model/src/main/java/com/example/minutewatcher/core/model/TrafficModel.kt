@@ -6,10 +6,14 @@ data class TrafficModel(
     val manualAdjustmentGb: Float,
     val remainingGb: Float,
     val limitGb: Float,
-    val isLimitSet: Boolean
+    val isLimitSet: Boolean,
 ) {
     companion object {
-        fun calculate(usedMb: Float, limitMb: Int, manualAdjustmentGb: Float): TrafficModel {
+        fun calculate(
+            usedMb: Float,
+            limitMb: Int,
+            manualAdjustmentGb: Float,
+        ): TrafficModel {
             val limitGb = limitMb / Constants.MB_PER_GB
             val usedGb = usedMb / Constants.MB_PER_GB
             val remainingGb = if (limitMb > 0 || manualAdjustmentGb != 0f) limitGb + manualAdjustmentGb - usedGb else -1f

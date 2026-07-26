@@ -6,20 +6,26 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 
 object SimCardMapper {
-    fun map(context: Context, slot: Int, usage: SimUsage): SimCardUiModel {
-        val remainingMinutes = if (usage.minutesLimit > 0 || usage.manualAdjustment != 0) {
-            usage.minutesLimit + usage.manualAdjustment - usage.minutesUsed
-        } else {
-            0
-        }
-        
+    fun map(
+        context: Context,
+        slot: Int,
+        usage: SimUsage,
+    ): SimCardUiModel {
+        val remainingMinutes =
+            if (usage.minutesLimit > 0 || usage.manualAdjustment != 0) {
+                usage.minutesLimit + usage.manualAdjustment - usage.minutesUsed
+            } else {
+                0
+            }
+
         val trafficLimitGb = usage.trafficLimitMb / Constants.MB_PER_GB
-        val trafficRemainingGb = if (usage.trafficLimitMb > 0) {
-            trafficLimitGb + usage.trafficAdjustment - (usage.trafficUsed / Constants.MB_PER_GB)
-        } else {
-            -1f
-        }
-        
+        val trafficRemainingGb =
+            if (usage.trafficLimitMb > 0) {
+                trafficLimitGb + usage.trafficAdjustment - (usage.trafficUsed / Constants.MB_PER_GB)
+            } else {
+                -1f
+            }
+
         return SimCardUiModel(
             slot = slot,
             identity = usage.identity,

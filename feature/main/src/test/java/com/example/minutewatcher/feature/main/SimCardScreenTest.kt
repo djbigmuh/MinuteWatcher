@@ -1,26 +1,31 @@
 package com.example.minutewatcher.feature.main
 
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import androidx.test.core.app.ApplicationProvider
+import android.content.Context
+import com.example.minutewatcher.core.model.R
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SimCardScreenTest {
-
     @get:Rule
-    val composeTestRule = androidx.compose.ui.test.junit4.v2.createComposeRule()
+    val composeTestRule = createComposeRule()
 
     @Test
     fun emptyState_isDisplayed() {
         composeTestRule.setContent {
             EmptyState()
         }
-        // Basic check
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val expectedText = context.getString(R.string.no_sim_found)
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
     }
 
     @Test

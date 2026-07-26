@@ -15,11 +15,11 @@ object Constants {
     object UI {
         const val DEFAULT_BG_COLOR: Int = Color.BLACK
     }
-    
+
     object Widget {
         const val FONT_SIZE_SMALL = 12f
         const val FONT_SIZE_MEDIUM = 14f
-        
+
         const val DEBOUNCE_MS = 300L
     }
 

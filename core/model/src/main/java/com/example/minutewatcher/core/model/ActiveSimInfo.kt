@@ -8,5 +8,5 @@ data class ActiveSimInfo(
     val carrierName: String?,
     val mccMnc: String?,
     val isDefaultData: Boolean,
-    val isDefaultVoice: Boolean
+    val isDefaultVoice: Boolean,
 )

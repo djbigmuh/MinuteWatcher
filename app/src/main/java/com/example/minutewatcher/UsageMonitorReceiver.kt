@@ -17,28 +17,34 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class UsageMonitorReceiver : BroadcastReceiver() {
+    @Inject @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
-    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
-
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         val action = intent.action
-        
+
         if (action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
             val pendingResult = goAsync()
             val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
             val subId = intent.getIntExtra("subscription", -1)
-            
+
             applicationScope.launch {
                 try {
-                    val data = Data.Builder()
-                        .putString("state", state)
-                        .putInt("subId", subId)
-                        .build()
-                        
-                    val workRequest = OneTimeWorkRequestBuilder<CallEventWorker>()
-                        .setInputData(data)
-                        .build()
-                        
+                    val data =
+                        Data
+                            .Builder()
+                            .putString("state", state)
+                            .putInt("subId", subId)
+                            .build()
+
+                    val workRequest =
+                        OneTimeWorkRequestBuilder<CallEventWorker>()
+                            .setInputData(data)
+                            .build()
+
                     WorkManager.getInstance(context.applicationContext).enqueue(workRequest).await()
                 } finally {
                     pendingResult.finish()

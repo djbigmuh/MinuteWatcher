@@ -14,10 +14,10 @@ fun AdjustmentComposeDialog(
     currentValue: Float,
     isMinutes: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (Float) -> Unit
+    onConfirm: (Float) -> Unit,
 ) {
-    var text by remember { 
-        mutableStateOf(if (isMinutes) currentValue.toInt().toString() else "%.1f".format(currentValue).replace(",", ".")) 
+    var text by remember {
+        mutableStateOf(if (isMinutes) currentValue.toInt().toString() else "%.1f".format(currentValue).replace(",", "."))
     }
 
     AlertDialog(
@@ -27,9 +27,13 @@ fun AdjustmentComposeDialog(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it.replace(",", ".") },
-                label = { Text(stringResource(id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog)) },
+                label = {
+                    Text(
+                        stringResource(id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog),
+                    )
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         },
         confirmButton = {
@@ -44,6 +48,6 @@ fun AdjustmentComposeDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(id = R.string.cancel_button))
             }
-        }
+        },
     )
 }

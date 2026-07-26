@@ -16,97 +16,94 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PermissionManager @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-) {
-    private val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
+class PermissionManager
+    @Inject
+    constructor(
+        @param:ApplicationContext private val context: Context,
+    ) {
+        private val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
 
-    fun hasPhoneStatePermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_PHONE_STATE,
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    @SuppressLint("MissingPermission")
-    fun getActiveSubscriptions(): List<SubscriptionInfo> {
-        return try {
-            if (hasPhoneStatePermission()) {
-                subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
-            } else {
-                emptyList()
-            }
-        } catch (e: SecurityException) {
-            AppLogger.e("SecurityException in getActiveSubscriptions", e)
-            emptyList()
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun getDefaultVoiceSubscriptionId(): Int {
-        return try {
-            if (hasPhoneStatePermission()) {
-                SubscriptionManager.getDefaultVoiceSubscriptionId()
-            } else {
-                -1
-            }
-        } catch (e: SecurityException) {
-            -1
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun getDefaultDataSubscriptionId(): Int {
-        return try {
-            if (hasPhoneStatePermission()) {
-                SubscriptionManager.getDefaultDataSubscriptionId()
-            } else {
-                -1
-            }
-        } catch (e: SecurityException) {
-            -1
-        }
-    }
-
-    fun hasNotificationPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        fun hasPhoneStatePermission(): Boolean =
             ContextCompat.checkSelfPermission(
                 context,
-                Manifest.permission.POST_NOTIFICATIONS
+                Manifest.permission.READ_PHONE_STATE,
             ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-    }
 
-    fun hasUsageStatsPermission(): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            appOps.unsafeCheckOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                Process.myUid(),
-                context.packageName
-            )
-        } else {
-            appOps.checkOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                Process.myUid(),
-                context.packageName
-            )
-        }
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
+        @SuppressLint("MissingPermission")
+        fun getActiveSubscriptions(): List<SubscriptionInfo> =
+            try {
+                if (hasPhoneStatePermission()) {
+                    subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (e: SecurityException) {
+                AppLogger.e("SecurityException in getActiveSubscriptions", e)
+                emptyList()
+            }
 
-    /**
-     * Helper to run an action only if phone permission is granted.
-     * Note: Does not suppress lint, callers must still handle the permission.
-     */
-    @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
-    inline fun <T> withPhonePermission(action: () -> T): T? {
-        return if (hasPhoneStatePermission()) {
-            action()
-        } else {
-            null
+        @SuppressLint("MissingPermission")
+        fun getDefaultVoiceSubscriptionId(): Int =
+            try {
+                if (hasPhoneStatePermission()) {
+                    SubscriptionManager.getDefaultVoiceSubscriptionId()
+                } else {
+                    -1
+                }
+            } catch (e: SecurityException) {
+                -1
+            }
+
+        @SuppressLint("MissingPermission")
+        fun getDefaultDataSubscriptionId(): Int =
+            try {
+                if (hasPhoneStatePermission()) {
+                    SubscriptionManager.getDefaultDataSubscriptionId()
+                } else {
+                    -1
+                }
+            } catch (e: SecurityException) {
+                -1
+            }
+
+        fun hasNotificationPermission(): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+
+        fun hasUsageStatsPermission(): Boolean {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    appOps.unsafeCheckOpNoThrow(
+                        AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        Process.myUid(),
+                        context.packageName,
+                    )
+                } else {
+                    appOps.checkOpNoThrow(
+                        AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        Process.myUid(),
+                        context.packageName,
+                    )
+                }
+            return mode == AppOpsManager.MODE_ALLOWED
         }
+
+        /**
+         * Helper to run an action only if phone permission is granted.
+         * Note: Does not suppress lint, callers must still handle the permission.
+         */
+        @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
+        inline fun <T> withPhonePermission(action: () -> T): T? =
+            if (hasPhoneStatePermission()) {
+                action()
+            } else {
+                null
+            }
     }
-}

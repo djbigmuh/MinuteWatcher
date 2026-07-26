@@ -7,18 +7,18 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
-import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
-import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
-import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.data.SettingsRepositoryImpl
+import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
+import com.example.minutewatcher.core.data.SimRepositoryImpl
+import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
+import com.example.minutewatcher.core.domain.DataRefreshNotifier
+import com.example.minutewatcher.core.domain.SettingsRepository
+import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimInfoProvider
 import com.example.minutewatcher.core.domain.SimRepository
-import com.example.minutewatcher.core.data.SimRepositoryImpl
 import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
+import com.example.minutewatcher.core.model.Constants
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -34,23 +34,22 @@ private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore
     name = "app_settings",
     produceMigrations = { context ->
         listOf(SharedPreferencesMigration(context, Constants.PREFS_NAME))
-    }
+    },
 )
 
 private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "sim_settings",
     produceMigrations = { context ->
         listOf(
-            SharedPreferencesMigration(context, "secret_usage_prefs")
+            SharedPreferencesMigration(context, "secret_usage_prefs"),
         )
-    }
+    },
 )
 
 @Module
 @InstallIn(SingletonComponent::class)
 @Suppress("unused")
 abstract class DataModule {
-
     @Binds
     @Singleton
     abstract fun bindSimIdentitySeedRepository(impl: SimIdentitySeedRepositoryImpl): SimIdentitySeedRepository
@@ -79,24 +78,28 @@ abstract class DataModule {
         @Provides
         @Singleton
         @AppDataStore
-        fun provideAppDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.appDataStore
+        fun provideAppDataStore(
+            @ApplicationContext context: Context,
+        ): DataStore<Preferences> = context.appDataStore
 
         @Provides
         @Singleton
         @SimDataStore
-        fun provideSimDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.simDataStore
+        fun provideSimDataStore(
+            @ApplicationContext context: Context,
+        ): DataStore<Preferences> = context.simDataStore
 
         @Provides
         @Singleton
-        fun provideTelephonyManager(@ApplicationContext context: Context): TelephonyManager {
-            return context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        }
+        fun provideTelephonyManager(
+            @ApplicationContext context: Context,
+        ): TelephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         @Provides
         @Singleton
-        fun provideSubscriptionManager(@ApplicationContext context: Context): SubscriptionManager {
-            return context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
-        }
+        fun provideSubscriptionManager(
+            @ApplicationContext context: Context,
+        ): SubscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
 
         @Provides
         @Singleton

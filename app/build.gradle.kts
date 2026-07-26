@@ -85,7 +85,7 @@ dependencies {
     implementation(libs.androidxAppsearch)
     ksp(libs.androidxAppsearchCompiler)
     implementation(libs.androidxAppsearchLocalStorage)
-    
+
     // Hilt
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)

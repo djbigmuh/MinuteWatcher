@@ -1,9 +1,14 @@
 package com.example.minutewatcher
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
-import android.os.Bundle
+import android.content.LocusId
 import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -16,28 +21,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
-import com.example.minutewatcher.core.model.R
-import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
-import com.example.minutewatcher.core.model.util.PermissionManager
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
-import android.content.LocusId
-import android.provider.Settings
-import android.widget.Toast
-import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
+import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.UsageCheckWorker
-import androidx.lifecycle.lifecycleScope
+import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.model.util.PermissionManager
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
+import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
+import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         enableEdgeToEdge()
 
         lifecycleScope.launch {
@@ -58,11 +58,12 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.appLanguage.collect { lang ->
-                val appLocale: LocaleListCompat = if (lang == null) {
-                    LocaleListCompat.getEmptyLocaleList()
-                } else {
-                    LocaleListCompat.forLanguageTags(lang)
-                }
+                val appLocale: LocaleListCompat =
+                    if (lang == null) {
+                        LocaleListCompat.getEmptyLocaleList()
+                    } else {
+                        LocaleListCompat.forLanguageTags(lang)
+                    }
                 if (AppCompatDelegate.getApplicationLocales() != appLocale) {
                     AppCompatDelegate.setApplicationLocales(appLocale)
                 }
@@ -75,11 +76,12 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val themeState by viewModel.appTheme.collectAsState()
-            val darkTheme = when (themeState) {
-                AppTheme.DARK -> true
-                AppTheme.LIGHT -> false
-                AppTheme.FOLLOW_SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-            }
+            val darkTheme =
+                when (themeState) {
+                    AppTheme.DARK -> true
+                    AppTheme.LIGHT -> false
+                    AppTheme.FOLLOW_SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+                }
 
             MinuteWatcherTheme(darkTheme = darkTheme) {
                 Surface(
@@ -88,28 +90,31 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     SimCardScreen(
                         viewModel = viewModel,
-                        onOpenSettings = { 
+                        onOpenSettings = {
                             lifecycleScope.launch { openWidgetSettings() }
                         },
                         onAddWidget = { addWidgetToHomeScreen() },
                         onToggleTheme = {
                             val currentTheme = viewModel.appTheme.value
-                            val isCurrentlyDark = if (currentTheme == AppTheme.FOLLOW_SYSTEM) {
-                                (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-                            } else {
-                                currentTheme == AppTheme.DARK
-                            }
+                            val isCurrentlyDark =
+                                if (currentTheme == AppTheme.FOLLOW_SYSTEM) {
+                                    (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                                        android.content.res.Configuration.UI_MODE_NIGHT_YES
+                                } else {
+                                    currentTheme == AppTheme.DARK
+                                }
                             viewModel.setTheme(if (isCurrentlyDark) AppTheme.LIGHT else AppTheme.DARK)
                         },
                         onLanguageChange = { lang ->
-                            val appLocale: LocaleListCompat = if (lang == null) {
-                                LocaleListCompat.getEmptyLocaleList()
-                            } else {
-                                LocaleListCompat.forLanguageTags(lang)
-                            }
+                            val appLocale: LocaleListCompat =
+                                if (lang == null) {
+                                    LocaleListCompat.getEmptyLocaleList()
+                                } else {
+                                    LocaleListCompat.forLanguageTags(lang)
+                                }
                             AppCompatDelegate.setApplicationLocales(appLocale)
                             viewModel.setLanguage(lang)
-                        }
+                        },
                     )
                 }
             }
@@ -146,25 +151,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val requestPermissionLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions.entries.all { it.value }
-        if (granted) {
-            scheduleUsageCheck()
+    private val requestPermissionLauncher =
+        registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts
+                .RequestMultiplePermissions(),
+        ) { permissions ->
+            val granted = permissions.entries.all { it.value }
+            if (granted) {
+                scheduleUsageCheck()
+            }
         }
-    }
 
     private fun checkPermissionsAndInit() {
         if (permissionManager.hasPhoneStatePermission()) {
             scheduleUsageCheck()
-            
+
             // Request usage stats permission if not granted
             if (!permissionManager.hasUsageStatsPermission()) {
                 Toast.makeText(this, getString(R.string.usage_access_rationale), Toast.LENGTH_LONG).show()
-                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                    data = android.net.Uri.fromParts("package", packageName, null)
-                }
+                val intent =
+                    Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", packageName, null)
+                    }
                 // Some devices might not support direct package uri for usage settings
                 try {
                     startActivity(intent)
@@ -186,13 +194,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun scheduleUsageCheck() {
-        val workRequest = PeriodicWorkRequestBuilder<UsageCheckWorker>(1, TimeUnit.HOURS)
-            .build()
-        
+        val workRequest =
+            PeriodicWorkRequestBuilder<UsageCheckWorker>(1, TimeUnit.HOURS)
+                .build()
+
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
             "UsageCheckWork",
             ExistingPeriodicWorkPolicy.KEEP,
-            workRequest
+            workRequest,
         )
     }
 

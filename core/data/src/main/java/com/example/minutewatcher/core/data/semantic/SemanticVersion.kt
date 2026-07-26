@@ -5,8 +5,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SemanticVersion @Inject constructor() {
-    fun getVersion(): SchemaVersion {
-        return SchemaVersion(1, 0, 0)
+class SemanticVersion
+    @Inject
+    constructor() {
+        fun getVersion(): SchemaVersion = SchemaVersion(1, 0, 0)
     }
-}

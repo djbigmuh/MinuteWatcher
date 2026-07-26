@@ -15,10 +15,13 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
+    @Inject @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
-    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
-
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
         val pendingResult = goAsync()

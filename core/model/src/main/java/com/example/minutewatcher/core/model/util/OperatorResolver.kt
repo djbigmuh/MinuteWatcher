@@ -36,12 +36,18 @@ object OperatorResolver {
         }
     }
 
-    fun resolve(context: Context, operatorName: String, networkOperator: String, simSlot: Int): String {
+    fun resolve(
+        context: Context,
+        operatorName: String,
+        networkOperator: String,
+        simSlot: Int,
+    ): String {
         // If name is already a valid specific name, keep it
-        if (operatorName.isNotEmpty() && 
-            operatorName != "null" && 
-            !operatorName.contains("SIM", ignoreCase = true) && 
-            !SimUtils.isInactiveSim(operatorName)) {
+        if (operatorName.isNotEmpty() &&
+            operatorName != "null" &&
+            !operatorName.contains("SIM", ignoreCase = true) &&
+            !SimUtils.isInactiveSim(operatorName)
+        ) {
             return operatorName
         }
 
@@ -73,4 +79,3 @@ object OperatorResolver {
         }
     }
 }
-

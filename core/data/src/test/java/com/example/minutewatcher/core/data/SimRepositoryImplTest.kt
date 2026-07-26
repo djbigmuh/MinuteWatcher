@@ -28,7 +28,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimRepositoryImplTest {
-
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
@@ -37,7 +36,7 @@ class SimRepositoryImplTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var seedRepository: SimIdentitySeedRepository
     private lateinit var permissionManager: com.example.minutewatcher.core.model.util.PermissionManager
-    
+
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
@@ -47,13 +46,14 @@ class SimRepositoryImplTest {
         subscriptionManager = mock()
         seedRepository = mock()
         permissionManager = mock()
-        
+
         whenever(seedRepository.getSeed()).thenReturn(flowOf("test_seed"))
-        
-        dataStore = PreferenceDataStoreFactory.create(
-            scope = testScope,
-            produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") }
-        )
+
+        dataStore =
+            PreferenceDataStoreFactory.create(
+                scope = testScope,
+                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
+            )
     }
 
     @Test
@@ -62,14 +62,15 @@ class SimRepositoryImplTest {
     }
 
     @Test
-    fun testUpdateSimLimitsAndGetUsage() = testScope.runTest {
-        val repository = SimRepositoryImpl(context, subscriptionManager, permissionManager, dataStore, seedRepository)
-        val identity = "test_sim"
-        
-        repository.updateSimLimits(identity, 100, 1024)
-        
-        val usage = repository.getSimUsage(identity).first()
-        assertEquals(100, usage.minutesLimit)
-        assertEquals(1024, usage.trafficLimitMb)
-    }
+    fun testUpdateSimLimitsAndGetUsage() =
+        testScope.runTest {
+            val repository = SimRepositoryImpl(context, subscriptionManager, permissionManager, dataStore, seedRepository)
+            val identity = "test_sim"
+
+            repository.updateSimLimits(identity, 100, 1024)
+
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(100, usage.minutesLimit)
+            assertEquals(1024, usage.trafficLimitMb)
+        }
 }

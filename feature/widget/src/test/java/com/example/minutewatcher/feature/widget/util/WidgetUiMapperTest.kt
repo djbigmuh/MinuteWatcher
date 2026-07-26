@@ -14,66 +14,71 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class WidgetUiMapperTest {
-
     private val context: Context = RuntimeEnvironment.getApplication()
 
     @Test
     fun testSnapshotToUiState_Basic() {
-        val snapshot = GlobalSnapshot(
-            version = SchemaVersion(1, 0, 0),
-            timestamp = System.currentTimeMillis(),
-            simSnapshots = listOf(
-                SimSnapshot(
-                    slot = 0,
-                    operator = "MTS",
-                    isActive = true,
-                    entities = mapOf(
-                        PackageType.MINUTES to SemanticEntity(
-                            id = "sim_0_MINUTES",
-                            simSlot = 0,
-                            operatorName = "MTS",
-                            packageType = PackageType.MINUTES,
-                            limit = 200,
-                            used = 100,
-                            remaining = 100,
-                            unit = MeasurementUnit.MINUTES,
-                            periodStart = 0,
-                            periodEnd = 0,
-                            lastUpdateTime = 0,
-                            sourceType = DataSourceType.SYSTEM,
-                            isStale = false
-                        )
-                    )
-                )
-            ),
-            capabilities = emptyList()
-        )
-
-        val config = WidgetConfig(
-            layoutMode = 1,
-            simArrangement = 0,
-            fontSize = 2,
-            transparency = 50,
-            backgroundColor = Color.BLACK,
-            simConfigs = listOf(
-                SimWidgetConfig(
-                    slot = 0,
-                    showSim = true,
-                    showIcon = true,
-                    showName = true,
-                    showMinutes = true,
-                    showMinutesLimit = true,
-                    showTraffic = false,
-                    showTrafficLimit = false
-                )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            operator = "MTS",
+                            isActive = true,
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to
+                                        SemanticEntity(
+                                            id = "sim_0_MINUTES",
+                                            simSlot = 0,
+                                            operatorName = "MTS",
+                                            packageType = PackageType.MINUTES,
+                                            limit = 200,
+                                            used = 100,
+                                            remaining = 100,
+                                            unit = MeasurementUnit.MINUTES,
+                                            periodStart = 0,
+                                            periodEnd = 0,
+                                            lastUpdateTime = 0,
+                                            sourceType = DataSourceType.SYSTEM,
+                                            isStale = false,
+                                        ),
+                                ),
+                        ),
+                    ),
+                capabilities = emptyList(),
             )
-        )
+
+        val config =
+            WidgetConfig(
+                layoutMode = 1,
+                simArrangement = 0,
+                fontSize = 2,
+                transparency = 50,
+                backgroundColor = Color.BLACK,
+                simConfigs =
+                    listOf(
+                        SimWidgetConfig(
+                            slot = 0,
+                            showSim = true,
+                            showIcon = true,
+                            showName = true,
+                            showMinutes = true,
+                            showMinutesLimit = true,
+                            showTraffic = false,
+                            showTrafficLimit = false,
+                        ),
+                    ),
+            )
 
         val uiState = WidgetUiMapper.snapshotToUiState(context, snapshot, config)
 
         assertEquals(1, uiState.layoutMode)
         assertEquals(1, uiState.simUiStates.size)
-        
+
         val sim0 = uiState.simUiStates[0]
         assertEquals(0, sim0.slot)
         assertEquals("100", sim0.minutesText)
@@ -83,27 +88,30 @@ class WidgetUiMapperTest {
 
     @Test
     fun testSnapshotToUiState_LightBackground() {
-        val snapshot = GlobalSnapshot(
-            version = SchemaVersion(1, 0, 0),
-            timestamp = System.currentTimeMillis(),
-            simSnapshots = listOf(
-                SimSnapshot(0, "Operator", true, emptyMap())
-            ),
-            capabilities = emptyList()
-        )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "Operator", true, emptyMap()),
+                    ),
+                capabilities = emptyList(),
+            )
 
-        val config = WidgetConfig(
-            layoutMode = 1,
-            simArrangement = 0,
-            fontSize = 2,
-            transparency = 50,
-            backgroundColor = Color.WHITE,
-            simConfigs = emptyList()
-        )
+        val config =
+            WidgetConfig(
+                layoutMode = 1,
+                simArrangement = 0,
+                fontSize = 2,
+                transparency = 50,
+                backgroundColor = Color.WHITE,
+                simConfigs = emptyList(),
+            )
 
         val uiState = WidgetUiMapper.snapshotToUiState(context, snapshot, config)
         val sim0 = uiState.simUiStates[0]
-        
+
         assertEquals(Color.BLACK, sim0.textColor)
     }
 }

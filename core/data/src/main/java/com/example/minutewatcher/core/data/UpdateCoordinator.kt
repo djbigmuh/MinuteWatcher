@@ -2,9 +2,9 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import com.example.minutewatcher.core.data.di.ApplicationScope
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.WidgetUpdater
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,37 +18,44 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @OptIn(FlowPreview::class)
 @Singleton
-class UpdateCoordinator @Inject constructor(
-    private val dataRefreshNotifier: DataRefreshNotifier,
-    private val widgetUpdater: WidgetUpdater,
-    @ApplicationScope private val scope: CoroutineScope
-) {
-    private val updateFlow = MutableSharedFlow<Context>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
+class UpdateCoordinator
+    @Inject
+    constructor(
+        private val dataRefreshNotifier: DataRefreshNotifier,
+        private val widgetUpdater: WidgetUpdater,
+        @ApplicationScope private val scope: CoroutineScope,
+    ) {
+        private val updateFlow =
+            MutableSharedFlow<Context>(
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
 
-    init {
-        scope.launch {
-            updateFlow
-                .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                .collect { _ ->
-                    widgetUpdater.updateAll()
-                }
+        init {
+            scope.launch {
+                updateFlow
+                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    .collect { _ ->
+                        widgetUpdater.updateAll()
+                    }
+            }
         }
-    }
 
-    /**
-     * Уведомляет об изменении данных.
-     */
-    suspend fun notifyDataChanged(context: Context, updateWidget: Boolean = true, force: Boolean = false) {
-        dataRefreshNotifier.notifyRefresh(isManual = force)
-        if (updateWidget) {
-            if (force) {
-                widgetUpdater.updateAll()
-            } else {
-                updateFlow.emit(context.applicationContext)
+        /**
+         * Уведомляет об изменении данных.
+         */
+        suspend fun notifyDataChanged(
+            context: Context,
+            updateWidget: Boolean = true,
+            force: Boolean = false,
+        ) {
+            dataRefreshNotifier.notifyRefresh(isManual = force)
+            if (updateWidget) {
+                if (force) {
+                    widgetUpdater.updateAll()
+                } else {
+                    updateFlow.emit(context.applicationContext)
+                }
             }
         }
     }
-}

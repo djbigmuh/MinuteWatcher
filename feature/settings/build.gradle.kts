@@ -39,10 +39,10 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
-    
+
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
-    
+
     implementation(platform(libs.androidxComposeBom))
     implementation(libs.androidxUi)
     implementation(libs.androidxMaterial3)

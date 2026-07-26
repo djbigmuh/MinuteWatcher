@@ -1,14 +1,22 @@
 package com.example.minutewatcher.feature.main
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
@@ -16,22 +24,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.feature.main.ui.components.AdjustmentComposeDialog
+import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
 import com.example.minutewatcher.feature.main.ui.components.SimLimitComposeDialog
-import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDialog
-import com.example.minutewatcher.feature.main.ui.components.AdjustmentComposeDialog
-import com.example.minutewatcher.core.model.AppTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,13 +57,13 @@ fun SimCardScreen(
     val languagesNames = stringArrayResource(id = R.array.languages)
     val languagesCodes = listOf(null, "en", "ru", "de", "fr", "ar", "es", "ja", "zh", "hi")
     val languagesFlags = listOf(stringResource(id = R.string.language_system_icon), "EN", "RU", "DE", "FR", "AR", "ES", "JA", "ZH", "HI")
-    
-    val languages = remember(languagesNames) {
-        languagesNames.mapIndexed { index, name ->
-            LanguageOption(languagesCodes[index], name, languagesFlags[index])
-        }
-    }
 
+    val languages =
+        remember(languagesNames) {
+            languagesNames.mapIndexed { index, name ->
+                LanguageOption(languagesCodes[index], name, languagesFlags[index])
+            }
+        }
 
     LaunchedEffect(highlightedSlot, uiState) {
         val slot = highlightedSlot
@@ -88,11 +87,11 @@ fun SimCardScreen(
                         }
                         DropdownMenu(
                             expanded = showLanguageMenu,
-                            onDismissRequest = { showLanguageMenu = false }
+                            onDismissRequest = { showLanguageMenu = false },
                         ) {
                             languages.forEach { lang ->
                                 DropdownMenuItem(
-                                    text = { 
+                                    text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(lang.flag)
                                             Spacer(Modifier.width(8.dp))
@@ -102,35 +101,43 @@ fun SimCardScreen(
                                     onClick = {
                                         showLanguageMenu = false
                                         onLanguageChange(lang.code)
-                                    }
+                                    },
                                 )
                             }
                         }
                     }
                     IconButton(onClick = onToggleTheme) {
-                        val isNight = when (appTheme) {
-                            AppTheme.FOLLOW_SYSTEM -> isSystemInDarkTheme()
-                            AppTheme.DARK -> true
-                            AppTheme.LIGHT -> false
-                        }
+                        val isNight =
+                            when (appTheme) {
+                                AppTheme.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+                                AppTheme.DARK -> true
+                                AppTheme.LIGHT -> false
+                            }
                         Text(
-                            text = if (isNight) stringResource(id = R.string.theme_light_icon) else stringResource(id = R.string.theme_dark_icon),
-                            fontSize = 20.sp
+                            text =
+                                if (isNight) {
+                                    stringResource(
+                                        id = R.string.theme_light_icon,
+                                    )
+                                } else {
+                                    stringResource(id = R.string.theme_dark_icon)
+                                },
+                            fontSize = 20.sp,
                         )
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(id = R.string.widget_settings_content_desc))
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onAddWidget,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text(stringResource(id = R.string.add_widget_button)) }
+                text = { Text(stringResource(id = R.string.add_widget_button)) },
             )
-        }
+        },
     ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
@@ -141,9 +148,10 @@ fun SimCardScreen(
                     isRefreshing = false
                 }
             },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         ) {
             when (val state = uiState) {
                 is SimCardListState.Loading -> {
@@ -160,26 +168,29 @@ fun SimCardScreen(
                 is SimCardListState.Success -> {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp),
                     ) {
                         items(state.simCards) { model ->
                             SimCardItem(
                                 model = model,
-                                onSetLimits = { 
-                                    viewModel.openLimitDialog(LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb))
+                                onSetLimits = {
+                                    viewModel.openLimitDialog(
+                                        LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb),
+                                    )
                                 },
                                 onResetCounters = { viewModel.resetUsage(model.slot) },
                                 onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
-                                onEditAutoResetDay = { 
+                                onEditAutoResetDay = {
                                     viewModel.openDayDialog(DayDialogData(model.slot, model.autoResetDay))
                                 },
-                                onAdjustMinutes = { 
+                                onAdjustMinutes = {
                                     viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true))
                                 },
-                                onAdjustTraffic = { 
+                                onAdjustTraffic = {
                                     viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.trafficRemainingGb, false))
                                 },
                             )
@@ -204,7 +215,7 @@ fun SimCardScreen(
             onReset = {
                 viewModel.updateLimits(data.slot, 0, 0)
                 viewModel.closeLimitDialog()
-            }
+            },
         )
     }
 
@@ -215,7 +226,7 @@ fun SimCardScreen(
             onDaySelected = { day ->
                 viewModel.updateAutoResetDay(data.slot, day)
                 viewModel.closeDayDialog()
-            }
+            },
         )
     }
 
@@ -231,7 +242,7 @@ fun SimCardScreen(
                     viewModel.adjustRemainingTraffic(data.slot, value)
                 }
                 viewModel.closeAdjustDialog()
-            }
+            },
         )
     }
 }
