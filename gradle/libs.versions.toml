@@ -1,0 +1,110 @@
+[versions]
+agp = "9.3.1"
+kotlinComposePlugin = "2.4.10"
+coreKtx = "1.19.0"
+hiltVersion = "2.60.1"
+lifecycle = "2.11.0"
+datastore = "1.2.1"
+ksp = "2.3.10"
+junit = "4.13.2"
+junitVersion = "1.3.0"
+androidxTestCore = "1.7.0"
+espressoCore = "3.7.0"
+robolectric = "4.16.1"
+lifecycleRuntimeKtx = "2.11.0"
+activityCompose = "1.13.0"
+composeBom = "2026.06.01"
+appcompat = "1.7.1"
+material3 = "1.4.0"
+material = "1.14.0"
+work = "2.11.2"
+glance = "1.1.1"
+firebaseBom = "34.16.0"
+baselineprofile = "1.4.1"
+benchmarkMacroJunit4 = "1.4.1"
+uiautomator = "2.4.0"
+leakcanary = "2.14"
+hiltWork = "1.4.0"
+mockito = "5.23.0"
+mockitoKotlin = "6.3.0"
+colorpickerview = "2.4.0"
+appsearch = "1.1.0"
+kotlinxCoroutines = "1.11.0"
+kotlinxCoroutinesTest = "1.11.0"
+
+[libraries]
+# DI - Hilt
+daggerHiltAndroid = { group = "com.google.dagger", name = "hilt-android", version.ref = "hiltVersion" }
+daggerHiltCompiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hiltVersion" }
+
+# Lifecycle
+androidxLifecycleViewmodelKtx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+androidxLifecycleRuntimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+
+# DataStore
+androidxDatastorePreferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Material Design
+googleMaterial = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# AndroidX
+androidxCoreKtx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidxAppcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidxActivityCompose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidxComposeBom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+
+# Material 3
+androidxMaterial3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+androidxMaterial3WindowSize = { group = "androidx.compose.material3", name = "material3-window-size-class", version.ref = "material3" }
+
+# Testing
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidxTestCoreKtx = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidxJunit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidxEspressoCore = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+# Compose
+androidxLifecycleRuntimeKtx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidxComposeRuntime = { group = "androidx.compose.runtime", name = "runtime" }
+androidxUi = { group = "androidx.compose.ui", name = "ui" }
+androidxUiGraphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidxUiTooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidxUiToolingPreview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidxUiTestManifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidxUiTestJunit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidxGlanceAppwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidxGlanceMaterial3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+androidxBenchmarkMacroJunit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacroJunit4" }
+androidxUiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+leakcanaryAndroid = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+firebaseBom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebaseCrashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebaseAnalytics = { group = "com.google.firebase", name = "firebase-analytics" }
+desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.5" }
+androidxWorkRuntimeKtx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+androidxHiltWorker = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
+androidxHiltCompilerWorker = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltWork" }
+androidxWorkTesting = { group = "androidx.work", name = "work-testing", version.ref = "work" }
+mockingCore = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+mockingKotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
+skydovesColorpickerview = { group = "com.github.skydoves", name = "colorpickerview", version.ref = "colorpickerview" }
+androidxAppsearch = { group = "androidx.appsearch", name = "appsearch", version.ref = "appsearch" }
+androidxAppsearchCompiler = { group = "androidx.appsearch", name = "appsearch-compiler", version.ref = "appsearch" }
+androidxAppsearchLocalStorage = { group = "androidx.appsearch", name = "appsearch-local-storage", version.ref = "appsearch" }
+kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
+kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
+androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
+androidTest = { id = "com.android.test", version.ref = "agp" }
+kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinComposePlugin" }
+hiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersion" }
+kotlinKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+googleServices = { id = "com.google.gms.google-services", version = "4.5.0" }
+firebaseCrashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.7" }
+androidxBaselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "14.2.0" }

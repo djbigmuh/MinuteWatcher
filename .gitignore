@@ -1,0 +1,33 @@
+*.iml
+.gradle/
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+app/release/
+app/build/
+build/
+*.log
+.kotlin/
+.artifacts/
+
+# Sensitive files
+**/local.properties
+**/google-services.json
+google-services.json
+local.properties
+**/*.jks
+**/*.keystore
+keystore/
+
+# OS/IDE
+Thumbs.db
+.settings/
+.project
+.classpath
+.factorypath
+*.bak
+*.tmp
+*.swp

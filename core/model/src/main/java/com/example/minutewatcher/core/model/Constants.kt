@@ -1,0 +1,32 @@
+package com.example.minutewatcher.core.model
+import android.graphics.Color
+
+object Constants {
+    const val PREFS_NAME = "app_prefs"
+
+    object Keys {
+        const val SIM_OPERATOR = "sim_operator_"
+    }
+
+    object Notifications {
+        const val CHANNEL_ID = "usage_monitor_channel"
+    }
+
+    object UI {
+        const val DEFAULT_BG_COLOR: Int = Color.BLACK
+    }
+    
+    object Widget {
+        const val FONT_SIZE_SMALL = 12f
+        const val FONT_SIZE_MEDIUM = 14f
+        
+        const val DEBOUNCE_MS = 300L
+    }
+
+    const val BYTES_PER_MB = 1024L * 1024L
+    const val MB_PER_GB = 1024.0f
+    const val LOW_REMAINING_THRESHOLD_PERCENT = 0.20f
+    const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f
+    const val MAX_MINUTES_LIMIT = 44640
+    const val MAX_TRAFFIC_LIMIT_GB = 10240f
+}

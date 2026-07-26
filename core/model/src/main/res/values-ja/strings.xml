@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">MinuteWatcher</string>
+    <string name="reset_label">リセット</string>
+    <string name="theme_switch">テーマ切り替え</string>
+    <string name="sim_cards_title">SIMカード</string>
+    <string name="no_sim_card">SIMカードが検出されません</string>
+    <string name="limit_button">制限</string>
+    <string name="reset_counters">カウンターをリセット</string>
+    <string name="auto_reset_day_suffix">日</string>
+    <string name="save_settings">保存</string>
+    <string name="sim_card_1">SIM 1</string>
+    <string name="sim_card_2">SIM 2</string>
+    <string name="cancel_button">キャンセル</string>
+    <string name="save_button">保存</string>
+    <string name="remaining_text">残り: </string>
+    <string name="minutes_abbr"> 分</string>
+    <string name="traffic_remaining_text">残りトラフィック: </string>
+    <string name="gb_abbr"> GB</string>
+    <string name="used_text">使用済み</string>
+    <string name="limit_text">制限</string>
+    <string name="traffic_label">トラフィック</string>
+    <string name="no_data">データなし</string>
+    <string name="error">エラー</string>
+    <string name="language_ja">日本語</string>
+    <string name="language_en">英語</string>
+    <string name="language_ru">ロシア語</string>
+    <string name="language_de">ドイツ語</string>
+    <string name="language_fr">フランス語</string>
+    <string name="language_ar">アラビア語</string>
+    <string name="language_es">スペイン語</string>
+    <string name="language_zh">中国語</string>
+    <string name="language_hi">ヒンディー語</string>
+    <string name="divider_text"> | </string>
+</resources>

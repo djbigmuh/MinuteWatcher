@@ -1,0 +1,55 @@
+// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 36, compileSdk 37 are project requirements.
+plugins {
+    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlinKsp)
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+android {
+    namespace = "com.example.minutewatcher.core.model"
+    compileSdk = 37
+
+    defaultConfig {
+        minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
+    lint {
+        abortOnError = true
+        warningsAsErrors = true
+        error += "MissingTranslation"
+    }
+}
+
+dependencies {
+    implementation(libs.androidxAppcompat)
+    implementation(libs.googleMaterial)
+    implementation(libs.androidxMaterial3)
+    implementation(libs.daggerHiltAndroid)
+    ksp(libs.daggerHiltCompiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockingCore)
+    testImplementation(libs.mockingKotlin)
+    testImplementation(libs.kotlinxCoroutinesTesting)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidxTestCoreKtx)
+}

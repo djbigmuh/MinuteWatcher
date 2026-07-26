@@ -1,0 +1,68 @@
+package com.example.minutewatcher.core.data
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import android.app.PendingIntent
+import android.content.Intent
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
+import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class NotificationHelper @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+) {
+    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    init {
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            Constants.Notifications.CHANNEL_ID,
+            context.getString(R.string.notification_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    fun sendUsageNotification(title: String, message: String, simSlot: Int, type: Int) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return
+        }
+
+        val intent = Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("sim_slot", simSlot)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            100 + simSlot,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, Constants.Notifications.CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.primary))
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setGroup("usage_monitor_group")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        val notificationId = 1000 + (simSlot * 10) + type
+        notificationManager.notify(notificationId, notification)
+    }
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Тёмная тема Material 3 -->
+    <color name="primary">#F5F5F5</color>
+    <color name="onPrimary">#212121</color>
+    
+    <color name="surface">#191C1B</color>
+    <color name="onSurface">#E0E3E1</color>
+    
+    <color name="surfaceVariant">#3F4946</color>
+    <color name="onSurfaceVariant">#BEC9C5</color>
+    <color name="outline">#89938F</color>
+    
+    <!-- Сохраняем семантические цвета -->
+    <color name="green">#4CAF50</color>
+    <color name="orange">#FF9800</color>
+    <color name="red">#F44336</color>
+    
+    <!-- Цвета для прозрачности -->
+    <color name="surface_container">#1D2523</color>
+</resources>

@@ -1,0 +1,114 @@
+package com.example.minutewatcher.core.data
+
+import com.example.minutewatcher.core.domain.SettingsRepository
+import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+import org.mockito.kotlin.*
+
+class WidgetSettingsRepositoryTest {
+
+    private lateinit var repository: WidgetSettingsRepository
+    private val settingsRepository: SettingsRepository = mock()
+    private val simRepository: SimRepository = mock()
+
+    @Before
+    fun setup() {
+        repository = WidgetSettingsRepository(settingsRepository, simRepository)
+    }
+
+    @Test
+    fun `load should return state populated from app settings`() = runTest {
+        // Arrange
+        val appSettings = AppSettings(
+            theme = AppTheme.LIGHT,
+            language = "en",
+            notifyLowMinutes = true,
+            notifyLowTraffic = false,
+            callTrackingEnabled = true,
+            widgetLayoutMode = 1,
+            widgetSimArrangement = 1,
+            widgetTransparency = 80,
+            widgetFontSize = 3,
+            widgetBackgroundColor = 0xFF0000FF.toInt(),
+            showSim = listOf(true, false),
+            showSimIcon = listOf(true, true),
+            showSimName = listOf(false, true),
+            showMinutes = listOf(true, false),
+            showMinutesLimit = listOf(true, false),
+            showTraffic = listOf(false, true),
+            showTrafficLimit = listOf(false, true),
+            migrationV1Completed = true
+        )
+        whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+        whenever(simRepository.getIdentity(any())).thenReturn("test_sim")
+        whenever(simRepository.getShowSim(any())).thenReturn(flowOf(true))
+        whenever(simRepository.getShowSimIcon(any())).thenReturn(flowOf(true))
+        whenever(simRepository.getShowSimName(any())).thenReturn(flowOf(true))
+        whenever(simRepository.getShowMinutes(any())).thenReturn(flowOf(true))
+        whenever(simRepository.getShowMinutesLimit(any())).thenReturn(flowOf(false))
+        whenever(simRepository.getShowTraffic(any())).thenReturn(flowOf(true))
+        whenever(simRepository.getShowTrafficLimit(any())).thenReturn(flowOf(false))
+
+        // Act
+        val result = repository.load()
+
+        // Assert
+        assertEquals(1, result.layoutMode)
+        assertEquals(1, result.simArrangement)
+        assertEquals(80, result.transparency)
+        assertEquals(3, result.fontSize)
+        assertEquals(0xFF0000FF.toInt(), result.backgroundColor)
+        assertEquals(true, result.notifyLowMinutes)
+        assertEquals(false, result.notifyLowTraffic)
+        
+        assertEquals(2, result.simStates.size)
+        
+        verify(settingsRepository).getAppSettings()
+    }
+
+    @Test
+    fun `save should update general and sim specific settings`() = runTest {
+        // Arrange
+        val state = WidgetSettingsState(
+            layoutMode = 2,
+            simArrangement = 0,
+            transparency = 30,
+            fontSize = 1,
+            backgroundColor = 0xFF00FF00.toInt(),
+            notifyLowMinutes = false,
+            notifyLowTraffic = true,
+            callTrackingEnabled = false,
+            simStates = listOf(
+                com.example.minutewatcher.core.model.SimSettingsState(
+                    showSim = true, showIcon = false, showName = true, 
+                    showMinutes = true, showMinutesLimit = false, 
+                    showTraffic = true, showTrafficLimit = false
+                ),
+                com.example.minutewatcher.core.model.SimSettingsState(
+                    showSim = false, showIcon = true, showName = true, 
+                    showMinutes = true, showMinutesLimit = false, 
+                    showTraffic = true, showTrafficLimit = false
+                )
+            )
+        )
+        whenever(simRepository.getIdentity(0)).thenReturn("sim0")
+        whenever(simRepository.getIdentity(1)).thenReturn("sim1")
+
+        // Act
+        repository.save(state)
+
+        // Assert
+        verify(settingsRepository).updateSettings(any())
+        verify(simRepository).setShowSim(eq("sim0"), eq(true))
+        verify(simRepository).setShowSim(eq("sim1"), eq(false))
+        verify(simRepository).setShowSimIcon(eq("sim0"), eq(false))
+        verify(simRepository).setShowSimIcon(eq("sim1"), eq(true))
+    }
+}

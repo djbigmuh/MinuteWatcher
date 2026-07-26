@@ -1,0 +1,237 @@
+package com.example.minutewatcher.feature.main
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.feature.main.ui.components.SimCardItem
+import com.example.minutewatcher.feature.main.ui.components.SimLimitComposeDialog
+import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDialog
+import com.example.minutewatcher.feature.main.ui.components.AdjustmentComposeDialog
+import com.example.minutewatcher.core.model.AppTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SimCardScreen(
+    viewModel: MainViewModel,
+    onOpenSettings: () -> Unit,
+    onAddWidget: () -> Unit,
+    onToggleTheme: () -> Unit,
+    onLanguageChange: (String?) -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
+    val highlightedSlot by viewModel.highlightedSlot.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    var isRefreshing by remember { mutableStateOf(value = false) }
+    var showLanguageMenu by remember { mutableStateOf(value = false) }
+
+    // Dialog states from ViewModel
+    val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
+    val showDayDialog by viewModel.showDayDialog.collectAsStateWithLifecycle()
+    val showAdjustDialog by viewModel.showAdjustDialog.collectAsStateWithLifecycle()
+
+    val languagesNames = stringArrayResource(id = R.array.languages)
+    val languagesCodes = listOf(null, "en", "ru", "de", "fr", "ar", "es", "ja", "zh", "hi")
+    val languagesFlags = listOf(stringResource(id = R.string.language_system_icon), "EN", "RU", "DE", "FR", "AR", "ES", "JA", "ZH", "HI")
+    
+    val languages = remember(languagesNames) {
+        languagesNames.mapIndexed { index, name ->
+            LanguageOption(languagesCodes[index], name, languagesFlags[index])
+        }
+    }
+
+
+    LaunchedEffect(highlightedSlot, uiState) {
+        val slot = highlightedSlot
+        val state = uiState
+        if (slot != null && state is SimCardListState.Success) {
+            val index = state.simCards.indexOfFirst { it.slot == slot }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(id = R.string.app_name)) },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showLanguageMenu = true }) {
+                            Text(stringResource(id = R.string.language_system_icon))
+                        }
+                        DropdownMenu(
+                            expanded = showLanguageMenu,
+                            onDismissRequest = { showLanguageMenu = false }
+                        ) {
+                            languages.forEach { lang ->
+                                DropdownMenuItem(
+                                    text = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(lang.flag)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(lang.name)
+                                        }
+                                    },
+                                    onClick = {
+                                        showLanguageMenu = false
+                                        onLanguageChange(lang.code)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    IconButton(onClick = onToggleTheme) {
+                        val isNight = when (appTheme) {
+                            AppTheme.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+                            AppTheme.DARK -> true
+                            AppTheme.LIGHT -> false
+                        }
+                        Text(
+                            text = if (isNight) stringResource(id = R.string.theme_light_icon) else stringResource(id = R.string.theme_dark_icon),
+                            fontSize = 20.sp
+                        )
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(id = R.string.widget_settings_content_desc))
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAddWidget,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text(stringResource(id = R.string.add_widget_button)) }
+            )
+        }
+    ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    viewModel.refreshSimCardsNow()
+                    isRefreshing = false
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (val state = uiState) {
+                is SimCardListState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is SimCardListState.Empty -> {
+                    EmptyState()
+                }
+                is SimCardListState.Error -> {
+                    ErrorState(state.message)
+                }
+                is SimCardListState.Success -> {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(state.simCards) { model ->
+                            SimCardItem(
+                                model = model,
+                                onSetLimits = { 
+                                    viewModel.openLimitDialog(LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb))
+                                },
+                                onResetCounters = { viewModel.resetUsage(model.slot) },
+                                onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
+                                onEditAutoResetDay = { 
+                                    viewModel.openDayDialog(DayDialogData(model.slot, model.autoResetDay))
+                                },
+                                onAdjustMinutes = { 
+                                    viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true))
+                                },
+                                onAdjustTraffic = { 
+                                    viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.trafficRemainingGb, false))
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Render Dialogs
+    showLimitDialog?.let { data ->
+        SimLimitComposeDialog(
+            operatorName = data.name,
+            initialMinutes = data.minutes,
+            initialTrafficMb = data.traffic,
+            onDismiss = { viewModel.closeLimitDialog() },
+            onConfirm = { min, traf ->
+                viewModel.updateLimits(data.slot, min, traf)
+                viewModel.closeLimitDialog()
+            },
+            onReset = {
+                viewModel.updateLimits(data.slot, 0, 0)
+                viewModel.closeLimitDialog()
+            }
+        )
+    }
+
+    showDayDialog?.let { data ->
+        DayPickerComposeDialog(
+            initialDay = data.day,
+            onDismiss = { viewModel.closeDayDialog() },
+            onDaySelected = { day ->
+                viewModel.updateAutoResetDay(data.slot, day)
+                viewModel.closeDayDialog()
+            }
+        )
+    }
+
+    showAdjustDialog?.let { data ->
+        AdjustmentComposeDialog(
+            currentValue = data.currentValue,
+            isMinutes = data.isMinutes,
+            onDismiss = { viewModel.closeAdjustDialog() },
+            onConfirm = { value ->
+                if (data.isMinutes) {
+                    viewModel.adjustRemainingMinutes(data.slot, value.toInt())
+                } else {
+                    viewModel.adjustRemainingTraffic(data.slot, value)
+                }
+                viewModel.closeAdjustDialog()
+            }
+        )
+    }
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="60dp"
+    android:viewportWidth="120"
+    android:viewportHeight="60">
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M10,0 L110,0 A10,10 0 0,1 120,10 L120,50 A10,10 0 0,1 110,60 L10,60 A10,10 0 0,1 0,50 L0,10 A10,10 0 0,1 10,0 z"/>
+    
+    <!-- Пример содержимого виджета -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,15 L30,15 L30,25 L20,25 z"/>
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M35,15 L80,15 L80,20 L35,20 z"/>
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M35,25 L60,25 L60,30 L35,30 z"/>
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,15 L80,15 L80,25 L70,25 z"/>
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M85,15 L110,15 L110,20 L85,20 z"/>
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M85,25 L100,25 L100,30 L85,30 z"/>
+</vector>
