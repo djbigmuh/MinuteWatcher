@@ -5,7 +5,9 @@ import android.content.Context
 import android.net.NetworkCapabilities
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.core.model.util.PermissionManager
@@ -39,9 +41,11 @@ class TrafficTracker
         private val settingsRepository: SettingsRepository,
         private val permissionManager: PermissionManager,
         @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
-    ) {
+    ) : TrackingStatusProvider {
+        override val key: String = "traffic"
+
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private val trafficMutex = Mutex()
         private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
@@ -50,14 +54,6 @@ class TrafficTracker
             settingsRepository
                 .getLastDataSubId()
                 .stateIn(scope, SharingStarted.Eagerly, -1)
-
-        private val operators =
-            (0..1).associateWith { slot ->
-                flow {
-                    val id = simRepository.getIdentity(slot)
-                    emitAll(simRepository.getSimOperator(id))
-                }.stateIn(scope, SharingStarted.Eagerly, "")
-            }
 
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
@@ -151,14 +147,7 @@ class TrafficTracker
             }
 
             if (targetSim == -1) {
-                val sim0Active = !SimUtils.isInactiveSim(operators[0]?.value ?: "")
-                val sim1Active = !SimUtils.isInactiveSim(operators[1]?.value ?: "")
-                targetSim =
-                    when {
-                        sim0Active && !sim1Active -> 0
-                        sim1Active && !sim0Active -> 1
-                        else -> -1
-                    }
+                targetSim = findSingleActiveSimSlot() ?: -1
             }
 
             if (targetSim == -1) return null
@@ -177,5 +166,25 @@ class TrafficTracker
             }
 
             return targetSim to currentDataSubId
+        }
+
+        private suspend fun findSingleActiveSimSlot(): Int? {
+            val activeSlots = mutableListOf<Int>()
+
+            // We support up to 2 SIM slots
+            for (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
+                try {
+                    val identity = simRepository.getIdentity(slot)
+                    val operator = simRepository.getSimOperator(identity).first()
+
+                    if (!SimUtils.isInactiveSim(operator)) {
+                        activeSlots.add(slot)
+                    }
+                } catch (e: Exception) {
+                    AppLogger.w("Error checking active status for slot $slot: ${e.message}")
+                }
+            }
+
+            return if (activeSlots.size == 1) activeSlots.first() else null
         }
     }

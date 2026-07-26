@@ -40,7 +40,6 @@ data class SemanticEntity(
     val periodEnd: Long,
     val lastUpdateTime: Long,
     val sourceType: DataSourceType,
-    val isStale: Boolean,
     val metadata: Map<String, Any> = emptyMap(),
 )
 

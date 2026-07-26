@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.util.OperatorResolver
 import com.example.minutewatcher.core.model.util.PermissionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,7 +26,7 @@ class UsageUseCase
 
                 for (info in activeList) {
                     val slot = info.simSlotIndex
-                    if (slot in 0..1) {
+                    if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
                         val identity = simRepository.getIdentity(slot)
                         val displayName = info.displayName?.toString() ?: ""
                         val carrierName = info.carrierName?.toString() ?: ""
@@ -68,7 +69,9 @@ class UsageUseCase
             val identity = simRepository.getIdentity(slot)
             val limit = simRepository.getMonthlyLimit(identity).first()
             val used = simRepository.getMinutesUsed(identity).first()
-            val adj = (remainingMinutes - limit) + used
+            
+            val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
+            val adj = (safeRemaining - limit) + used
             simRepository.setManualAdjustment(identity, adj)
         }
 
@@ -79,9 +82,11 @@ class UsageUseCase
             val identity = simRepository.getIdentity(slot)
             val limitMb = simRepository.getTrafficLimit(identity).first()
             val usedMb = simRepository.getTrafficUsed(identity).first()
+            
+            val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
             val limitGb = limitMb / Constants.MB_PER_GB
             val usedGb = usedMb / Constants.MB_PER_GB
-            val adj = remainingGb - (limitGb - usedGb)
+            val adj = safeRemainingGb - (limitGb - usedGb)
             simRepository.setTrafficAdjustment(identity, adj)
         }
     }

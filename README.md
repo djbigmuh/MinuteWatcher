@@ -15,6 +15,10 @@ MinuteWatcher is an Android application designed to track your mobile carrier's 
     - **LocusId Support**: Helps Android understand the context of what you are viewing in the app.
 - **Multi-language Support**: Supports 9 languages, including RTL (Arabic) and CJK (Japanese, Chinese).
 
+## Technical Limitations
+
+- **Traffic Tracking**: Android provides aggregate cellular traffic for the entire device rather than per-SIM. MinuteWatcher attributes all detected mobile traffic to the SIM card currently set as the "Default Data SIM" in system settings. If you switch your default data SIM, the app resets its internal baseline to start tracking for the new SIM.
+
 ## Technical Architecture
 
 The app follows modern Android development best practices:

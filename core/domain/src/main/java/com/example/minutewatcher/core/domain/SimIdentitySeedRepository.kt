@@ -6,4 +6,6 @@ interface SimIdentitySeedRepository {
     fun getSeed(): Flow<String>
 
     suspend fun setSeed(seed: String)
+
+    suspend fun getOrCreateSeed(generator: () -> String): String
 }

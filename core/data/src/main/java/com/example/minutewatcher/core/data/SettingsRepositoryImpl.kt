@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
@@ -35,13 +36,6 @@ class SettingsRepositoryImpl
                         widgetTransparency = prefs[SettingsKeys.WIDGET_TRANSPARENCY] ?: 50,
                         widgetFontSize = prefs[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
                         widgetBackgroundColor = prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
-                        showSim = listOf(true, true), // Will be handled by SimRepository or updated later
-                        showSimIcon = listOf(true, true),
-                        showSimName = listOf(true, true),
-                        showMinutes = listOf(true, true),
-                        showMinutesLimit = listOf(false, false),
-                        showTraffic = listOf(true, true),
-                        showTrafficLimit = listOf(false, false),
                         migrationV1Completed = prefs[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
                     )
                 }.stateIn(
@@ -58,13 +52,6 @@ class SettingsRepositoryImpl
                         widgetTransparency = 50,
                         widgetFontSize = 2,
                         widgetBackgroundColor = Constants.UI.DEFAULT_BG_COLOR,
-                        showSim = listOf(true, true),
-                        showSimIcon = listOf(true, true),
-                        showSimName = listOf(true, true),
-                        showMinutes = listOf(true, true),
-                        showMinutesLimit = listOf(false, false),
-                        showTraffic = listOf(true, true),
-                        showTrafficLimit = listOf(false, false),
                         migrationV1Completed = false,
                     ),
                 )
@@ -77,6 +64,12 @@ class SettingsRepositoryImpl
 
         override suspend fun setMigrationV1Completed(completed: Boolean) {
             dataStore.edit { it[SettingsKeys.MIGRATION_V1_COMPLETED] = completed }
+        }
+
+        override fun getMigrationV1SkippedReason(): Flow<String?> = dataStore.data.map { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] }
+
+        override suspend fun setMigrationV1Skipped(reason: MigrationSkipReason) {
+            dataStore.edit { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] = reason.name }
         }
 
         private fun <T> get(
@@ -193,7 +186,30 @@ class SettingsRepositoryImpl
 
         override suspend fun setSimIdentitySeed(seed: String) = seedRepository.setSeed(seed)
 
-        override suspend fun updateSettings(block: suspend (Any) -> Unit) {
-            dataStore.edit { block(it) }
+        override suspend fun clearAllCallSessions() {
+            dataStore.edit { prefs ->
+                prefs.asMap().keys
+                    .filter { key ->
+                        key.name.startsWith("call_start_time_") ||
+                            key.name.startsWith("boot_time_") ||
+                            key.name.startsWith("call_identity_")
+                    }.forEach { key ->
+                        @Suppress("UNCHECKED_CAST")
+                        prefs.remove(key as Preferences.Key<Any>)
+                    }
+            }
+        }
+
+        override suspend fun getActiveCallSubIds(): List<Int> =
+            dataStore.data.first().asMap().entries.mapNotNull { (key, value) ->
+                if (key.name.startsWith("call_start_time_") && (value as? Long ?: 0L) > 0L) {
+                    key.name.substringAfterLast('_').toIntOrNull()
+                } else {
+                    null
+                }
+            }
+
+        override suspend fun updateSettings(transform: suspend (MutablePreferences) -> Unit) {
+            dataStore.edit { transform(it) }
         }
     }

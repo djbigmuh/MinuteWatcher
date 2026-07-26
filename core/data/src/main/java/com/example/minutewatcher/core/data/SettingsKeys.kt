@@ -15,6 +15,7 @@ object SettingsKeys {
     val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
     val LAST_DATA_SUB_ID = intPreferencesKey("last_data_sub_id")
     val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")
+    val MIGRATION_V1_SKIPPED_REASON = stringPreferencesKey("migration_v1_skipped_reason")
 
     fun callStartTimeKey(subId: Int) = longPreferencesKey("call_start_time_$subId")
 

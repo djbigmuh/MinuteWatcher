@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import com.example.minutewatcher.core.data.di.ApplicationScope
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -26,7 +25,7 @@ class UpdateCoordinator
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val updateFlow =
-            MutableSharedFlow<Context>(
+            MutableSharedFlow<Unit>(
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
@@ -45,7 +44,6 @@ class UpdateCoordinator
          * Уведомляет об изменении данных.
          */
         suspend fun notifyDataChanged(
-            context: Context,
             updateWidget: Boolean = true,
             force: Boolean = false,
         ) {
@@ -54,7 +52,7 @@ class UpdateCoordinator
                 if (force) {
                     widgetUpdater.updateAll()
                 } else {
-                    updateFlow.emit(context.applicationContext)
+                    updateFlow.emit(Unit)
                 }
             }
         }

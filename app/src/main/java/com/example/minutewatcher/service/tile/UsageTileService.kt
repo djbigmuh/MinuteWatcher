@@ -10,9 +10,11 @@ import androidx.core.service.quicksettings.TileServiceCompat
 import com.example.minutewatcher.core.data.di.ApplicationScope
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.feature.semantic.SemanticRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,10 +32,15 @@ class UsageTileService : TileService() {
         updateTile()
         job?.cancel()
         job =
-            applicationScope.launch {
-                semanticRepository.snapshot.collect {
-                    updateTile()
-                }
+            applicationScope.launch(Dispatchers.Main.immediate) {
+                semanticRepository.snapshot
+                    .collect {
+                        try {
+                            updateTile()
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to update quick settings tile", e)
+                        }
+                    }
             }
     }
 

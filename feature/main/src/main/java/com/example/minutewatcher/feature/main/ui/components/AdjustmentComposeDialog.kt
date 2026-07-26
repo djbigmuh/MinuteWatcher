@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 
 @Composable
@@ -19,27 +20,51 @@ fun AdjustmentComposeDialog(
     var text by remember {
         mutableStateOf(if (isMinutes) currentValue.toInt().toString() else "%.1f".format(currentValue).replace(",", "."))
     }
+    
+    var errorText by remember { mutableStateOf<String?>(null) }
+    
+    val maxLimit = if (isMinutes) Constants.MAX_MINUTES_LIMIT.toFloat() else Constants.MAX_TRAFFIC_LIMIT_GB
+    
+    val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
+    val invalidRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", maxLimit.toInt().toString())
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = if (isMinutes) R.string.remaining_text else R.string.traffic_remaining_text)) },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it.replace(",", ".") },
-                label = {
-                    Text(
-                        stringResource(id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog),
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { 
+                        text = it.replace(",", ".")
+                        errorText = null
+                    },
+                    label = {
+                        Text(
+                            stringResource(id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog),
+                        )
+                    },
+                    isError = errorText != null,
+                    supportingText = {
+                        if (errorText != null) {
+                            Text(text = errorText!!)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         },
         confirmButton = {
             Button(onClick = {
-                val value = text.toFloatOrNull() ?: 0f
-                onConfirm(value)
+                val value = text.toFloatOrNull()
+                if (value == null) {
+                    errorText = invalidNumberMsg
+                } else if (value < 0 || value > maxLimit) {
+                    errorText = invalidRangeMsg
+                } else {
+                    onConfirm(value)
+                }
             }) {
                 Text(stringResource(id = R.string.save_button))
             }

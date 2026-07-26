@@ -12,21 +12,21 @@
         <item>In a column</item>
     </string-array>
 
-    <string-array name="languages">
-        <item>@string/language_system</item>
-        <item>@string/language_en</item>
-        <item>@string/language_ru</item>
-        <item>@string/language_de</item>
-        <item>@string/language_fr</item>
-        <item>@string/language_ar</item>
-        <item>@string/language_es</item>
-        <item>@string/language_ja</item>
-        <item>@string/language_zh</item>
-        <item>@string/language_hi</item>
+    <string-array name="languages" translatable="false">
+        <item>System default</item>
+        <item>English</item>
+        <item>Русский</item>
+        <item>Deutsch</item>
+        <item>Français</item>
+        <item>العربية</item>
+        <item>Español</item>
+        <item>日本語</item>
+        <item>中文</item>
+        <item>हिन्दी</item>
     </string-array>
 
-    <string-array name="language_codes">
-        <item>system</item>
+    <string-array name="language_codes" translatable="false">
+        <item></item>
         <item>en</item>
         <item>ru</item>
         <item>de</item>

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.LocusId
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -20,14 +21,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.UsageCheckWorker
+import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.util.PermissionManager
 import com.example.minutewatcher.feature.main.MainViewModel
@@ -35,6 +38,8 @@ import com.example.minutewatcher.feature.main.SimCardScreen
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -44,6 +49,8 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     @Inject lateinit var permissionManager: PermissionManager
+    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
+    @Inject lateinit var permissionStateNotifier: PermissionStateNotifier
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,7 +98,7 @@ class MainActivity : AppCompatActivity() {
                     SimCardScreen(
                         viewModel = viewModel,
                         onOpenSettings = {
-                            lifecycleScope.launch { openWidgetSettings() }
+                            openWidgetSettings()
                         },
                         onAddWidget = { addWidgetToHomeScreen() },
                         onToggleTheme = {
@@ -115,6 +122,15 @@ class MainActivity : AppCompatActivity() {
                             AppCompatDelegate.setApplicationLocales(appLocale)
                             viewModel.setLanguage(lang)
                         },
+                        onGrantPhonePermission = {
+                            requestPermissionLauncher.launch(arrayOf(Manifest.permission.READ_PHONE_STATE))
+                        },
+                        onOpenUsageSettings = {
+                            viewModel.openUsageAccessDialog()
+                        },
+                        onOpenAppSettings = {
+                            openAppSettings()
+                        }
                     )
                 }
             }
@@ -139,16 +155,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun openWidgetSettings() {
-        try {
-            val intent = Intent(this, WidgetSettingsActivity::class.java)
-            for (i in 0..1) {
-                intent.putExtra(Constants.Keys.SIM_OPERATOR + i, viewModel.getSimOperatorAsync(i))
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            // Error logged elsewhere
-        }
+    private fun openWidgetSettings() {
+        startActivity(Intent(this, WidgetSettingsActivity::class.java))
     }
 
     private val requestPermissionLauncher =
@@ -156,53 +164,64 @@ class MainActivity : AppCompatActivity() {
             androidx.activity.result.contract.ActivityResultContracts
                 .RequestMultiplePermissions(),
         ) { permissions ->
-            val granted = permissions.entries.all { it.value }
-            if (granted) {
+            val phoneGranted = permissions[Manifest.permission.READ_PHONE_STATE] ?: false
+            if (phoneGranted) {
                 scheduleUsageCheck()
+                // Move to next step: Usage Access
+                if (!permissionManager.hasUsageStatsPermission()) {
+                    viewModel.openUsageAccessDialog()
+                } else {
+                    checkNotifications()
+                }
+            } else {
+                val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)
+                viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
             }
+            permissionStateNotifier.notifyChanged()
         }
 
     private fun checkPermissionsAndInit() {
         if (permissionManager.hasPhoneStatePermission()) {
+            viewModel.setPhonePermissionPermanentlyDenied(false)
             scheduleUsageCheck()
 
-            // Request usage stats permission if not granted
             if (!permissionManager.hasUsageStatsPermission()) {
-                Toast.makeText(this, getString(R.string.usage_access_rationale), Toast.LENGTH_LONG).show()
-                val intent =
-                    Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                        data = android.net.Uri.fromParts("package", packageName, null)
-                    }
-                // Some devices might not support direct package uri for usage settings
-                try {
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                }
-            }
-
-            // Optional: Request notifications if not granted
-            if (!permissionManager.hasNotificationPermission()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-                }
+                viewModel.openUsageAccessDialog()
+            } else {
+                checkNotifications()
             }
         } else {
-            // Request critical permission
-            requestPermissionLauncher.launch(arrayOf(Manifest.permission.READ_PHONE_STATE))
+            // Rationale logic can be added here if we want to show it before the banner
         }
     }
 
-    private fun scheduleUsageCheck() {
-        val workRequest =
-            PeriodicWorkRequestBuilder<UsageCheckWorker>(1, TimeUnit.HOURS)
-                .build()
+    private fun checkNotifications() {
+        if (!permissionManager.hasNotificationPermission()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            }
+        }
+    }
 
-        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-            "UsageCheckWork",
-            ExistingPeriodicWorkPolicy.KEEP,
-            workRequest,
-        )
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = android.net.Uri.fromParts("package", packageName, null)
+        }
+        startActivity(intent)
+    }
+
+    private fun scheduleUsageCheck() {
+        applicationScope.launch(Dispatchers.IO) {
+            val workRequest =
+                PeriodicWorkRequestBuilder<UsageCheckWorker>(1, TimeUnit.HOURS)
+                    .build()
+
+            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+                "UsageCheckWork",
+                ExistingPeriodicWorkPolicy.KEEP,
+                workRequest,
+            )
+        }
     }
 
     private fun addWidgetToHomeScreen() {
@@ -222,9 +241,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var lastRefreshAt = 0L
+    private var lastResumeNotifyTime = 0L
+
     override fun onResume() {
         super.onResume()
-        viewModel.refreshSimCards()
-        viewModel.notifyDataChanged()
+        
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastRefreshAt > 20_000L) {
+            lastRefreshAt = now
+            viewModel.refreshSimCards()
+            viewModel.notifyDataChanged()
+        }
+        
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastResumeNotifyTime > 1000) {
+            permissionStateNotifier.notifyChanged()
+            lastResumeNotifyTime = currentTime
+        }
+
+        // If we returned from settings, check if we can move to notifications
+        if (permissionManager.hasPhoneStatePermission()) {
+            viewModel.setPhonePermissionPermanentlyDenied(false)
+            if (permissionManager.hasUsageStatsPermission()) {
+                checkNotifications()
+            }
+        }
     }
 }

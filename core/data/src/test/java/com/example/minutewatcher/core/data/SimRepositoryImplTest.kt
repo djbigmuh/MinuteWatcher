@@ -5,6 +5,7 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -35,6 +36,7 @@ class SimRepositoryImplTest {
     private lateinit var subscriptionManager: SubscriptionManager
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var seedRepository: SimIdentitySeedRepository
+    private lateinit var permissionStateNotifier: PermissionStateNotifier
     private lateinit var permissionManager: com.example.minutewatcher.core.model.util.PermissionManager
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -45,6 +47,7 @@ class SimRepositoryImplTest {
         context = mock()
         subscriptionManager = mock()
         seedRepository = mock()
+        permissionStateNotifier = mock()
         permissionManager = mock()
 
         whenever(seedRepository.getSeed()).thenReturn(flowOf("test_seed"))
@@ -64,7 +67,7 @@ class SimRepositoryImplTest {
     @Test
     fun testUpdateSimLimitsAndGetUsage() =
         testScope.runTest {
-            val repository = SimRepositoryImpl(context, subscriptionManager, permissionManager, dataStore, seedRepository)
+            val repository = SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)
             val identity = "test_sim"
 
             repository.updateSimLimits(identity, 100, 1024)

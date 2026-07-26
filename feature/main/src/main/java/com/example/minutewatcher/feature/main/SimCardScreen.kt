@@ -30,6 +30,7 @@ import com.example.minutewatcher.feature.main.ui.components.AdjustmentComposeDia
 import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
 import com.example.minutewatcher.feature.main.ui.components.SimLimitComposeDialog
+import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,10 +41,15 @@ fun SimCardScreen(
     onAddWidget: () -> Unit,
     onToggleTheme: () -> Unit,
     onLanguageChange: (String?) -> Unit,
+    onGrantPhonePermission: () -> Unit = {},
+    onOpenUsageSettings: () -> Unit = {},
+    onOpenAppSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val highlightedSlot by viewModel.highlightedSlot.collectAsStateWithLifecycle()
+    val trackingBannerState by viewModel.trackingBannerState.collectAsStateWithLifecycle()
+    val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     var isRefreshing by remember { mutableStateOf(value = false) }
@@ -53,15 +59,39 @@ fun SimCardScreen(
     val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
     val showDayDialog by viewModel.showDayDialog.collectAsStateWithLifecycle()
     val showAdjustDialog by viewModel.showAdjustDialog.collectAsStateWithLifecycle()
+    val showTrafficLimitationDialog by viewModel.showTrafficLimitationDialog.collectAsStateWithLifecycle()
 
     val languagesNames = stringArrayResource(id = R.array.languages)
-    val languagesCodes = listOf(null, "en", "ru", "de", "fr", "ar", "es", "ja", "zh", "hi")
-    val languagesFlags = listOf(stringResource(id = R.string.language_system_icon), "EN", "RU", "DE", "FR", "AR", "ES", "JA", "ZH", "HI")
+    val languageCodes = stringArrayResource(id = R.array.language_codes)
+    val languagesFlags =
+        listOf(
+            stringResource(id = R.string.language_system_icon),
+            "EN",
+            "RU",
+            "DE",
+            "FR",
+            "AR",
+            "ES",
+            "JA",
+            "ZH",
+            "HI",
+        )
 
     val languages =
-        remember(languagesNames) {
+        remember(languagesNames, languageCodes) {
+            require(languagesNames.size == languageCodes.size) {
+                "languages and language_codes arrays must have the same size"
+            }
+            require(languagesFlags.size == languagesNames.size) {
+                "languagesFlags must have the same size as languages"
+            }
+
             languagesNames.mapIndexed { index, name ->
-                LanguageOption(languagesCodes[index], name, languagesFlags[index])
+                LanguageOption(
+                    code = languageCodes[index].ifEmpty { null },
+                    name = name,
+                    flag = languagesFlags[index],
+                )
             }
         }
 
@@ -174,6 +204,15 @@ fun SimCardScreen(
                                 .padding(horizontal = 16.dp),
                         contentPadding = PaddingValues(bottom = 80.dp),
                     ) {
+                        item {
+                            TrackingBanners(
+                                state = trackingBannerState,
+                                onGrantPhonePermission = onGrantPhonePermission,
+                                onOpenUsageSettings = onOpenUsageSettings,
+                                onOpenAppSettings = onOpenAppSettings,
+                            )
+                        }
+
                         items(state.simCards) { model ->
                             SimCardItem(
                                 model = model,
@@ -192,6 +231,9 @@ fun SimCardScreen(
                                 },
                                 onAdjustTraffic = {
                                     viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.trafficRemainingGb, false))
+                                },
+                                onShowTrafficInfo = {
+                                    viewModel.openTrafficLimitationDialog()
                                 },
                             )
                         }
@@ -243,6 +285,40 @@ fun SimCardScreen(
                 }
                 viewModel.closeAdjustDialog()
             },
+        )
+    }
+
+    if (showTrafficLimitationDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.closeTrafficLimitationDialog() },
+            title = { Text(stringResource(id = R.string.traffic_tracking_limitation_title)) },
+            text = { Text(stringResource(id = R.string.traffic_tracking_limitation_body)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.closeTrafficLimitationDialog() }) {
+                    Text(stringResource(id = android.R.string.ok))
+                }
+            },
+        )
+    }
+
+    if (showUsageAccessDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.closeUsageAccessDialog() },
+            title = { Text(stringResource(id = R.string.usage_access_dialog_title)) },
+            text = { Text(stringResource(id = R.string.usage_access_dialog_description)) },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.closeUsageAccessDialog()
+                    onOpenUsageSettings()
+                }) {
+                    Text(stringResource(id = R.string.action_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.closeUsageAccessDialog() }) {
+                    Text(stringResource(id = R.string.cancel_button))
+                }
+            }
         )
     }
 }

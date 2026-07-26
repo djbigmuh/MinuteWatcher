@@ -28,7 +28,6 @@ object SemanticMapper {
             periodEnd = periodEnd,
             lastUpdateTime = System.currentTimeMillis(),
             sourceType = if (model.manualAdjustment != 0) DataSourceType.MANUAL else DataSourceType.SYSTEM,
-            isStale = false,
             metadata = mapOf("reset_day" to resetDay),
         )
     }
@@ -58,7 +57,6 @@ object SemanticMapper {
             periodEnd = periodEnd,
             lastUpdateTime = System.currentTimeMillis(),
             sourceType = if (model.manualAdjustmentGb != 0f) DataSourceType.MANUAL else DataSourceType.SYSTEM,
-            isStale = false,
             metadata = mapOf("reset_day" to resetDay),
         )
     }

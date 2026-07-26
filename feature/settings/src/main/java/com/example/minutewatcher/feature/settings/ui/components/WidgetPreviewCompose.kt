@@ -26,6 +26,9 @@ fun WidgetPreview(
     val alpha = uiState.transparency / 100f
     val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
 
+    val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(uiState.backgroundColor)
+    val noDataColor = if (luminance > 0.5f) Color.Black else Color.White
+
     Box(
         modifier =
             modifier
@@ -40,7 +43,7 @@ fun WidgetPreview(
         if (simUiStates.isEmpty()) {
             Text(
                 text = stringResource(id = R.string.no_data),
-                color = Color.White,
+                color = noDataColor,
                 fontSize = 14.sp,
             )
         } else {
@@ -222,7 +225,7 @@ private fun SimItemPreview(
                     }
                 }
             }
-            WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.SIX_LINES -> {
+            WidgetLayoutMode.THREE_LINES -> {
                 if (sim.showIcon || sim.showName) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (sim.showIcon) {
@@ -304,6 +307,44 @@ private fun SimItemPreview(
                         )
                     }
                 }
+            }
+            WidgetLayoutMode.SIX_LINES -> {
+                // Line 1: Name
+                Text(
+                    text = sim.operatorName,
+                    color = textColor,
+                    fontSize = (12 * fontMultiplier).sp
+                )
+                // Line 2: Icon
+                Image(
+                    painter = painterResource(id = sim.operatorIconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size((16 * fontMultiplier).dp)
+                )
+                // Line 3: Minutes Used
+                Text(
+                    text = sim.minutesUsedFullText,
+                    color = textColor,
+                    fontSize = (11 * fontMultiplier).sp
+                )
+                // Line 4: Minutes Limit
+                Text(
+                    text = sim.minutesLimitFullText,
+                    color = secondaryColor,
+                    fontSize = (11 * fontMultiplier).sp
+                )
+                // Line 5: Traffic Used
+                Text(
+                    text = sim.trafficUsedFullText,
+                    color = textColor,
+                    fontSize = (11 * fontMultiplier).sp
+                )
+                // Line 6: Traffic Limit
+                Text(
+                    text = sim.trafficLimitFullText,
+                    color = secondaryColor,
+                    fontSize = (11 * fontMultiplier).sp
+                )
             }
         }
     }

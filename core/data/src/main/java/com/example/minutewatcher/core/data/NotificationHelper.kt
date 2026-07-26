@@ -10,6 +10,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,38 +43,44 @@ class NotificationHelper
             simSlot: Int,
             type: Int,
         ) {
-            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
-                return
-            }
-
-            val intent =
-                Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra("sim_slot", simSlot)
+            try {
+                if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                    return
                 }
 
-            val pendingIntent =
-                PendingIntent.getActivity(
-                    context,
-                    100 + simSlot,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
+                val intent =
+                    Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra("sim_slot", simSlot)
+                    }
 
-            val notification =
-                NotificationCompat
-                    .Builder(context, Constants.Notifications.CHANNEL_ID)
-                    .setContentTitle(title)
-                    .setContentText(message)
-                    .setSmallIcon(R.drawable.ic_notification)
-                    .setColor(ContextCompat.getColor(context, R.color.primary))
-                    .setAutoCancel(true)
-                    .setContentIntent(pendingIntent)
-                    .setGroup("usage_monitor_group")
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                    .build()
+                val pendingIntent =
+                    PendingIntent.getActivity(
+                        context,
+                        100 + simSlot,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    )
 
-            val notificationId = 1000 + (simSlot * 10) + type
-            notificationManager.notify(notificationId, notification)
+                val notification =
+                    NotificationCompat
+                        .Builder(context, Constants.Notifications.CHANNEL_ID)
+                        .setContentTitle(title)
+                        .setContentText(message)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setColor(ContextCompat.getColor(context, R.color.primary))
+                        .setAutoCancel(true)
+                        .setContentIntent(pendingIntent)
+                        .setGroup("usage_monitor_group")
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .build()
+
+                val notificationId = 1000 + (simSlot * 10) + type
+                notificationManager.notify(notificationId, notification)
+            } catch (e: SecurityException) {
+                AppLogger.w("Notification permission denied: ${e.message}")
+            } catch (e: Exception) {
+                AppLogger.e("Failed to send notification", e)
+            }
         }
     }

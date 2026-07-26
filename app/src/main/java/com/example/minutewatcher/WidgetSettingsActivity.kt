@@ -33,9 +33,21 @@ class WidgetSettingsActivity : AppCompatActivity() {
                     WidgetSettingsScreen(
                         viewModel = viewModel,
                         onSave = {
-                            viewModel.saveAndNotify {
-                                Toast.makeText(this, getString(R.string.settings_saved_toast), Toast.LENGTH_SHORT).show()
-                                finish()
+                            viewModel.saveAndNotify { success ->
+                                if (success) {
+                                    Toast.makeText(
+                                        this,
+                                        getString(R.string.settings_saved_toast),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                    finish()
+                                } else {
+                                    Toast.makeText(
+                                        this,
+                                        getString(R.string.error),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             }
                         },
                         onBack = { finish() },

@@ -80,4 +80,24 @@ class TrafficTrackerTest {
             verify(simRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
             verify(settingsRepository).setLastDataSubId(2)
         }
+
+    @Test
+    fun `test fallback to single active SIM when default subId is missing`() =
+        runTest {
+            // Arrange: No default data subId
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
+            
+            // SIM 0 is active, SIM 1 is empty
+            whenever(simRepository.getIdentity(0)).thenReturn("sim_0")
+            whenever(simRepository.getSimOperator("sim_0")).thenReturn(flowOf("MTS"))
+            
+            whenever(simRepository.getIdentity(1)).thenReturn("sim_1")
+            whenever(simRepository.getSimOperator("sim_1")).thenReturn(flowOf("")) // empty/inactive
+
+            // Act
+            trafficTracker.updateTrafficUsage()
+
+            // Assert: it should have used sim_0 as fallback
+            verify(simRepository).getLastTotalBytes(eq("sim_0"))
+        }
 }

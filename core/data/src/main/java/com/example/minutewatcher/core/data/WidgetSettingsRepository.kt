@@ -1,8 +1,8 @@
 package com.example.minutewatcher.core.data
 
-import androidx.datastore.preferences.core.MutablePreferences
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.flow.first
@@ -20,7 +20,7 @@ class WidgetSettingsRepository
             val settings = settingsRepository.getAppSettings().first()
 
             val simStates =
-                (0..1).map { i ->
+                SimConstants.SUPPORTED_SLOT_INDICES.map { i ->
                     val identity = simRepository.getIdentity(i)
                     simRepository.getSimSettings(identity).first()
                 }
@@ -38,8 +38,7 @@ class WidgetSettingsRepository
         }
 
         suspend fun save(state: WidgetSettingsState) {
-            settingsRepository.updateSettings { anyPrefs ->
-                val prefs = anyPrefs as MutablePreferences
+            settingsRepository.updateSettings { prefs ->
                 prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = state.layoutMode
                 prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = state.simArrangement
                 prefs[SettingsKeys.WIDGET_TRANSPARENCY] = state.transparency

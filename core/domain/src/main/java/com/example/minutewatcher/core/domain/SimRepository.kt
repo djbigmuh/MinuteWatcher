@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.domain
 
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
@@ -13,6 +14,8 @@ interface SimRepository {
     suspend fun getSimIdentity(slot: Int): SimIdentity
 
     fun getActiveIdentities(): Flow<List<String>>
+
+    fun observeActiveSims(): Flow<List<ActiveSimInfo>>
 
     fun observeIdentities(): Flow<List<String>>
 
@@ -76,6 +79,12 @@ interface SimRepository {
     )
 
     suspend fun resetSimUsage(identity: String)
+
+    suspend fun resetSimUsageIfDue(
+        identity: String,
+        autoResetDay: Int,
+        nowMillis: Long,
+    ): Boolean
 
     fun getAutoReset(identity: String): Flow<Boolean>
 

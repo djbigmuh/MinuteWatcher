@@ -7,7 +7,6 @@ data class SimCardUiModel(
     val slot: Int,
     val identity: String,
     val operatorName: String,
-    val operatorCode: String,
     val iconRes: Int,
     val minutesUsed: Int,
     val minutesLimit: Int,

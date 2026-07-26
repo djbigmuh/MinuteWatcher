@@ -14,6 +14,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.R
 
+data class TrackingBannerState(
+    val showPhonePermissionBanner: Boolean = false,
+    val isPhonePermissionPermanentlyDenied: Boolean = false,
+    val showUsageAccessBanner: Boolean = false,
+    val showTrafficErrorBanner: Boolean = false,
+    val showAppSearchErrorBanner: Boolean = false,
+) {
+    val hasAnyError: Boolean
+        get() = showPhonePermissionBanner || showUsageAccessBanner || showTrafficErrorBanner || showAppSearchErrorBanner
+}
+
 @Composable
 fun EmptyState() {
     Column(

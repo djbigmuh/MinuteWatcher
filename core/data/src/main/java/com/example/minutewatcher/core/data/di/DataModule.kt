@@ -8,15 +8,20 @@ import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
+import com.example.minutewatcher.core.data.PermissionStateNotifierImpl
 import com.example.minutewatcher.core.data.SettingsRepositoryImpl
 import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
 import com.example.minutewatcher.core.data.SimRepositoryImpl
 import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
+import com.example.minutewatcher.core.data.CallTracker
+import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimInfoProvider
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import dagger.Binds
@@ -25,6 +30,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -72,7 +78,19 @@ abstract class DataModule {
 
     @Binds
     @Singleton
+    abstract fun bindPermissionStateNotifier(impl: PermissionStateNotifierImpl): PermissionStateNotifier
+
+    @Binds
+    @Singleton
     abstract fun bindUsageStateRepository(impl: UsageStateRepositoryImpl): UsageStateRepository
+
+    @Binds
+    @IntoSet
+    abstract fun bindCallTrackerStatus(impl: CallTracker): TrackingStatusProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindTrafficTrackerStatus(impl: TrafficTracker): TrackingStatusProvider
 
     companion object {
         @Provides

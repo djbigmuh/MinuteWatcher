@@ -2,8 +2,10 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import android.os.SystemClock
+import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.core.model.util.PermissionManager
@@ -22,10 +24,13 @@ class CallTracker
         private val settingsRepository: SettingsRepository,
         private val updateCoordinator: UpdateCoordinator,
         private val permissionManager: PermissionManager,
+        private val telephonyManager: TelephonyManager,
         @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
-    ) {
+    ) : TrackingStatusProvider {
+        override val key: String = "calls"
+
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private val callTrackingEnabled =
             settingsRepository
@@ -34,15 +39,10 @@ class CallTracker
 
         /**
          * Called on device boot to clean up any stale state.
-         * Since we now use subId-based keys, we'd need to know which subIds to clear.
-         * For now, we'll clear sessions for slots 0 and 1 as a safety measure,
-         * and rely on session validation (bootTime vs currentBootTime).
          */
         suspend fun onBoot() {
-            // Best effort cleanup for common slots
-            (0..5).forEach { subId ->
-                clearSession(subId)
-            }
+            settingsRepository.clearAllCallSessions()
+            AppLogger.d("Cleared all stale call sessions on boot")
         }
 
         /**
@@ -50,20 +50,38 @@ class CallTracker
          */
         suspend fun onCallStarted(subId: Int) {
             if (!callTrackingEnabled.value) return
-            if (subId == -1) {
-                AppLogger.d("Call started with unknown subId, ignoring")
+
+            val effectiveSubId =
+                if (subId == -1) {
+                    permissionManager.getDefaultVoiceSubscriptionId()
+                } else {
+                    subId
+                }
+
+            if (effectiveSubId == -1) {
+                AppLogger.d("Call started with unknown subId and no default voice subId, ignoring")
                 return
             }
 
-            val startTime = settingsRepository.getCallStartTime(subId).first()
-            if (startTime == 0L) {
-                val identity = resolveIdentity(subId)
-                settingsRepository.setCallStartTime(subId, System.currentTimeMillis())
-                settingsRepository.setBootTime(subId, SystemClock.elapsedRealtime())
-                settingsRepository.setCallIdentity(subId, identity)
-                AppLogger.d("Call started for subId $subId (identity: $identity)")
+            val startTime = settingsRepository.getCallStartTime(effectiveSubId).first()
+            val savedBootTime = settingsRepository.getBootTime(effectiveSubId).first()
+            val currentBootTime = SystemClock.elapsedRealtime()
+
+            val isStale = startTime == 0L || savedBootTime == 0L || savedBootTime > currentBootTime
+
+            if (isStale) {
+                if (startTime != 0L || savedBootTime != 0L) {
+                    AppLogger.d("Clearing stale call session for subId $effectiveSubId")
+                    clearSession(effectiveSubId)
+                }
+
+                val identity = resolveIdentity(effectiveSubId)
+                settingsRepository.setCallStartTime(effectiveSubId, System.currentTimeMillis())
+                settingsRepository.setBootTime(effectiveSubId, currentBootTime)
+                settingsRepository.setCallIdentity(effectiveSubId, identity)
+                AppLogger.d("Call started for subId $effectiveSubId (identity: $identity)")
             } else {
-                AppLogger.d("Call already active for subId $subId")
+                AppLogger.d("Call already active for subId $effectiveSubId")
             }
         }
 
@@ -72,12 +90,48 @@ class CallTracker
          */
         suspend fun onCallEnded(subId: Int) {
             if (subId == -1) {
-                AppLogger.d("Call ended with unknown subId, checking all active sessions")
-                // In some edge cases, subId might be missing in IDLE.
-                // We should ideally track which subIds are currently active.
+                val activeSubIds = settingsRepository.getActiveCallSubIds()
+                if (activeSubIds.isEmpty()) {
+                    AppLogger.d("Call ended with unknown subId and no active sessions found")
+                    return
+                }
+
+                // Priority 1: Global safety cleanup. If device is IDLE, close everything.
+                if (telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE) {
+                    AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions: $activeSubIds")
+                    activeSubIds.forEach { endCall(it) }
+                    return
+                }
+
+                // Priority 2: Attribution
+                when {
+                    activeSubIds.size == 1 -> {
+                        val target = activeSubIds.first()
+                        AppLogger.d("Call ended with unknown subId, attributing to single active session: $target")
+                        endCall(target)
+                    }
+
+                    else -> {
+                        val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
+                        val target =
+                            activeSubIds.firstOrNull { it == defaultVoice }
+                                ?: activeSubIds.minByOrNull { settingsRepository.getCallStartTime(it).first() }
+
+                        if (target != null) {
+                            AppLogger.d("Call ended with unknown subId, attributing to session: $target")
+                            endCall(target)
+                        } else {
+                            AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls")
+                        }
+                    }
+                }
                 return
             }
 
+            endCall(subId)
+        }
+
+        private suspend fun endCall(subId: Int) {
             val startTime = settingsRepository.getCallStartTime(subId).first()
             val savedBootTime = settingsRepository.getBootTime(subId).first()
             val savedIdentity = settingsRepository.getCallIdentity(subId).first()
@@ -92,9 +146,9 @@ class CallTracker
                     return
                 }
 
-                // Validate session against reboots (bootTime should be less than currentBootTime)
-                if (savedBootTime > currentBootTime) {
-                    AppLogger.d("Stale call session detected for subId $subId (reboot occurred)")
+                // Validate session against reboots/corruption
+                if (savedBootTime == 0L || savedBootTime > currentBootTime) {
+                    AppLogger.d("Stale call session detected for subId $subId (reboot or corrupted state)")
                     return
                 }
 
@@ -142,7 +196,7 @@ class CallTracker
             if (targetIdentity != null) {
                 simRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
                 AppLogger.d("Added $durationMinutes min to identity $targetIdentity for subId $subId")
-                updateCoordinator.notifyDataChanged(context)
+                updateCoordinator.notifyDataChanged()
                 _status.value = TrackingStatus.Active
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")

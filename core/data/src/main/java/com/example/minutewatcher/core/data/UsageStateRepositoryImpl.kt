@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MinutesModel
@@ -31,21 +32,18 @@ class UsageStateRepositoryImpl
         private val simRepository: SimRepository,
         private val capabilities: SemanticCapabilities,
         private val version: SemanticVersion,
-        private val callTracker: CallTracker,
-        private val trafficTracker: TrafficTracker,
+        private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
         private val dataRefreshNotifier: DataRefreshNotifier,
         @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
-        override fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>> =
-            combine(
-                callTracker.status,
-                trafficTracker.status,
-            ) { callStatus, trafficStatus ->
-                mapOf(
-                    "calls" to callStatus,
-                    "traffic" to trafficStatus,
-                )
+        override fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>> {
+            val flows = statusProviders.map { provider ->
+                provider.status.map { status -> provider.key to status }
             }
+            return combine(flows) { pairs ->
+                pairs.toMap()
+            }
+        }
 
         override fun observeSimUsages(): Flow<List<SimUsage>> =
             combine(

@@ -27,6 +27,8 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 class MinutesGlanceWidget : GlanceAppWidget() {
     @EntryPoint
@@ -62,7 +64,14 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val usageRepository = entryPoint.usageStateRepository()
         val widgetSettingsRepository = entryPoint.widgetSettingsRepository()
 
-        val snapshot = usageRepository.observeSnapshot().value
+        var snapshot = usageRepository.observeSnapshot().value
+        if (snapshot.timestamp == 0L) {
+            // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
+            snapshot = withTimeoutOrNull(2000.milliseconds) {
+                usageRepository.refresh()
+            } ?: snapshot
+        }
+
         val settingsState = widgetSettingsRepository.load()
 
         return WidgetUiMapper.mapFromSnapshot(
@@ -82,6 +91,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             androidx.compose.ui.graphics
                 .Color(uiState.backgroundColor)
                 .copy(alpha = alpha)
+
+        val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(uiState.backgroundColor)
+        val noDataColorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+        val noDataColor = androidx.compose.ui.graphics.Color(noDataColorInt)
 
         Box(
             modifier =
@@ -110,8 +123,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                 fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
                                 color =
                                     ColorProvider(
-                                        day = androidx.compose.ui.graphics.Color.White,
-                                        night = androidx.compose.ui.graphics.Color.White,
+                                        day = noDataColor,
+                                        night = noDataColor,
                                     ),
                             ),
                     )
@@ -213,6 +226,9 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val textColor = ColorProvider(day = androidx.compose.ui.graphics.Color(sim.textColor), night = androidx.compose.ui.graphics.Color(sim.textColor))
+            val secondaryColor = ColorProvider(day = androidx.compose.ui.graphics.Color(sim.secondaryTextColor), night = androidx.compose.ui.graphics.Color(sim.secondaryTextColor))
+            
             when (layoutMode) {
                 WidgetLayoutMode.SINGLE_LINE -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,15 +299,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                     style =
                                         TextStyle(
                                             fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                            color =
-                                                ColorProvider(
-                                                    day =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.textColor),
-                                                    night =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.textColor),
-                                                ),
+                                            color = textColor,
                                         ),
                                 )
                             }
@@ -340,7 +348,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                         }
                     }
                 }
-                WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.SIX_LINES -> {
+                WidgetLayoutMode.THREE_LINES -> {
                     if (sim.showIcon || sim.showName) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (sim.showIcon) {
@@ -357,15 +365,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                     style =
                                         TextStyle(
                                             fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                            color =
-                                                ColorProvider(
-                                                    day =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.textColor),
-                                                    night =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.textColor),
-                                                ),
+                                            color = textColor,
                                         ),
                                 )
                             }
@@ -398,15 +398,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                 style =
                                     TextStyle(
                                         fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.secondaryTextColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.secondaryTextColor),
-                                            ),
+                                        color = secondaryColor,
                                     ),
                             )
                             if (sim.showMinutesLimit) {
@@ -415,15 +407,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                     style =
                                         TextStyle(
                                             fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                            color =
-                                                ColorProvider(
-                                                    day =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.secondaryTextColor),
-                                                    night =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.secondaryTextColor),
-                                                ),
+                                            color = secondaryColor,
                                         ),
                                 )
                             }
@@ -455,15 +439,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                 style =
                                     TextStyle(
                                         fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.secondaryTextColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.secondaryTextColor),
-                                            ),
+                                        color = secondaryColor,
                                     ),
                             )
                             if (sim.showTrafficLimit) {
@@ -472,20 +448,45 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                                     style =
                                         TextStyle(
                                             fontSize = (Constants.Widget.FONT_SIZE_SMALL * 0.9f * sim.fontMultiplier).sp,
-                                            color =
-                                                ColorProvider(
-                                                    day =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.secondaryTextColor),
-                                                    night =
-                                                        androidx.compose.ui.graphics
-                                                            .Color(sim.secondaryTextColor),
-                                                ),
+                                            color = secondaryColor,
                                         ),
                                 )
                             }
                         }
                     }
+                }
+                WidgetLayoutMode.SIX_LINES -> {
+                    // Line 1: Name
+                    Text(
+                        text = sim.operatorName,
+                        style = TextStyle(fontSize = (12 * sim.fontMultiplier).sp, color = textColor)
+                    )
+                    // Line 2: Icon
+                    Image(
+                        provider = ImageProvider(sim.operatorIconRes),
+                        contentDescription = null,
+                        modifier = GlanceModifier.size(16.dp)
+                    )
+                    // Line 3: Minutes Used
+                    Text(
+                        text = sim.minutesUsedFullText,
+                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = textColor)
+                    )
+                    // Line 4: Minutes Limit
+                    Text(
+                        text = sim.minutesLimitFullText,
+                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = secondaryColor)
+                    )
+                    // Line 5: Traffic Used
+                    Text(
+                        text = sim.trafficUsedFullText,
+                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = textColor)
+                    )
+                    // Line 6: Traffic Limit
+                    Text(
+                        text = sim.trafficLimitFullText,
+                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = secondaryColor)
+                    )
                 }
             }
         }

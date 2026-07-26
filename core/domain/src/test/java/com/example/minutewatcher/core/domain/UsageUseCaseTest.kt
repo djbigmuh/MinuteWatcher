@@ -100,7 +100,6 @@ class UsageUseCaseTest {
                         slot = 0,
                         identity = "sim_0",
                         operatorName = "MTS",
-                        operatorCode = "25001",
                         iconRes = 0,
                         minutesUsed = 100,
                         minutesLimit = 500,

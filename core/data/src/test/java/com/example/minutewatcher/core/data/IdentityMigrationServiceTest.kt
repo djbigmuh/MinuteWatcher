@@ -73,4 +73,21 @@ class IdentityMigrationServiceTest {
             service.migrateLegacyData(0, "some_id")
             assertFalse(service.hasLegacyData())
         }
+
+    @Test
+    fun testMigrationSlot1() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val legacyKey = intPreferencesKey("test_key_sim_1")
+            val identity = "new_identity"
+            val newKey = intPreferencesKey("test_key_$identity")
+
+            appDataStore.edit { it[legacyKey] = 42 }
+
+            service.migrateLegacyData(1, identity)
+
+            val prefs = appDataStore.data.first()
+            assertEquals(42, prefs[newKey])
+            assertEquals(null, prefs[legacyKey])
+        }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>سطر واحد</item>
+        <item>سطران</item>
+        <item>ثلاثة أسطر</item>
+        <item>ستة أسطر</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>أفقي</item>
+        <item>عمودي</item>
+    </string-array>
+</resources>

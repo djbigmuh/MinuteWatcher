@@ -8,7 +8,9 @@ import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
 import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -28,15 +30,16 @@ class SemanticSearchManager
     constructor(
         @param:ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : AutoCloseable {
+    ) : AutoCloseable, TrackingStatusProvider {
+        override val key: String = "appsearch"
+
         private var session: AppSearchSession? = null
         private var lastSnapshotHash: Int = 0
         private var job: Job? = null
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
 
-        @Suppress("unused")
-        val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
@@ -60,20 +63,22 @@ class SemanticSearchManager
             var retryDelay = 1000.milliseconds
             while (retries > 0) {
                 try {
-                    session =
+                    val createdSession =
                         LocalStorage
                             .createSearchSessionAsync(
                                 LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
                             ).await()
 
-                    session
-                        ?.setSchemaAsync(
-                            SetSchemaRequest
-                                .Builder()
-                                .addDocumentClasses(UsageDocument::class.java)
-                                .setForceOverride(false)
-                                .build(),
-                        )?.await()
+                    session = createdSession
+
+                    createdSession.setSchemaAsync(
+                        SetSchemaRequest
+                            .Builder()
+                            .addDocumentClasses(UsageDocument::class.java)
+                            .setForceOverride(false)
+                            .build(),
+                    ).await()
+
                     return true
                 } catch (e: AppSearchException) {
                     if (e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR || e.resultCode == AppSearchResult.RESULT_IO_ERROR) {
@@ -84,15 +89,20 @@ class SemanticSearchManager
                     } else if (e.message?.contains("Schema") == true) {
                         // Attempt force override on schema conflict
                         AppLogger.w("AppSearch schema mismatch, forcing override")
+                        val currentSession = session
+                        if (currentSession == null) {
+                            AppLogger.e("AppSearch session is null during schema override")
+                            break
+                        }
+
                         try {
-                            session
-                                ?.setSchemaAsync(
-                                    SetSchemaRequest
-                                        .Builder()
-                                        .addDocumentClasses(UsageDocument::class.java)
-                                        .setForceOverride(true)
-                                        .build(),
-                                )?.await()
+                            currentSession.setSchemaAsync(
+                                SetSchemaRequest
+                                    .Builder()
+                                    .addDocumentClasses(UsageDocument::class.java)
+                                    .setForceOverride(true)
+                                    .build(),
+                            ).await()
                             return true
                         } catch (ex: Exception) {
                             AppLogger.e("Failed to force AppSearch schema override", ex)
@@ -151,7 +161,7 @@ class SemanticSearchManager
                 lastSnapshotHash = currentHash
 
                 val activeSimSlots = activeSimSnapshots.map { it.slot }.toSet()
-                val allSimSlots = setOf(0, 1)
+                val allSimSlots = SimConstants.SUPPORTED_SLOT_INDICES.toSet()
                 val inactiveSimSlots = allSimSlots - activeSimSlots
 
                 inactiveSimSlots.forEach { slot ->

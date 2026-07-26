@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimInfoProvider
 import com.example.minutewatcher.core.domain.SimRepository
@@ -15,6 +16,7 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import com.example.minutewatcher.core.model.util.PermissionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -32,6 +34,7 @@ class SimRepositoryImpl
         @param:ApplicationContext private val context: Context,
         private val subscriptionManager: SubscriptionManager,
         private val permissionManager: PermissionManager,
+        private val permissionStateNotifier: PermissionStateNotifier,
         @SimDataStore private val dataStore: DataStore<Preferences>,
         private val seedRepository: SimIdentitySeedRepository,
     ) : SimRepository,
@@ -66,17 +69,10 @@ class SimRepositoryImpl
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
-        private suspend fun getSeed(): String {
-            var seed = seedRepository.getSeed().first()
-            if (seed.isEmpty()) {
-                seed =
-                    java.util.UUID
-                        .randomUUID()
-                        .toString()
-                seedRepository.setSeed(seed)
+        private suspend fun getSeed(): String =
+            seedRepository.getOrCreateSeed {
+                java.util.UUID.randomUUID().toString()
             }
-            return seed
-        }
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             val seed = getSeed()
@@ -92,7 +88,9 @@ class SimRepositoryImpl
                 subscriptionId = null,
                 slotIndex = slot,
                 source = IdentitySource.SLOT_FALLBACK,
-            )
+            ).also { fallback ->
+                saveSimIdentityInfo(fallback)
+            }
         }
 
         private suspend fun saveSimIdentityInfo(identity: SimIdentity) {
@@ -103,8 +101,10 @@ class SimRepositoryImpl
         }
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
-            seedRepository
-                .getSeed()
+            combine(
+                seedRepository.getSeed(),
+                permissionStateNotifier.changes,
+            ) { seed, _ -> seed }
                 .flatMapLatest { seed ->
                     callbackFlow {
                         val listener =
@@ -160,36 +160,11 @@ class SimRepositoryImpl
                 sims.map { it.identity.stableId }
             }
 
-        private fun subscriptionChangesFlow(): Flow<Unit> =
-            callbackFlow {
-                trySend(Unit)
-                val listener =
-                    object : SubscriptionManager.OnSubscriptionsChangedListener() {
-                        override fun onSubscriptionsChanged() {
-                            trySend(Unit)
-                        }
-                    }
-
-                if (permissionManager.hasPhoneStatePermission()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        subscriptionManager.addOnSubscriptionsChangedListener(context.mainExecutor, listener)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        subscriptionManager.addOnSubscriptionsChangedListener(listener)
-                    }
-                    awaitClose { subscriptionManager.removeOnSubscriptionsChangedListener(listener) }
-                } else {
-                    awaitClose { }
-                }
-            }
-
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =
-            subscriptionChangesFlow()
+            getActiveIdentities()
                 .debounce(300.milliseconds)
-                .mapLatest {
-                    getActiveIdentities().first()
-                }.distinctUntilChanged()
+                .distinctUntilChanged()
 
         override fun getSimUsage(identity: String): Flow<SimUsage> =
             dataStore.data.map { prefs ->
@@ -355,7 +330,40 @@ class SimRepositoryImpl
                 it[manualAdjustmentKey(identity)] = 0
                 it[trafficAdjustmentKey(identity)] = 0f
                 it[lastResetDateKey(identity)] = System.currentTimeMillis()
+
+                it[SettingsKeys.notifiedLowMinutesKey(identity)] = false
+                it[SettingsKeys.notifiedLowTrafficKey(identity)] = false
+                it[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+                it[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
             }
+        }
+
+        override suspend fun resetSimUsageIfDue(
+            identity: String,
+            autoResetDay: Int,
+            nowMillis: Long,
+        ): Boolean {
+            var didReset = false
+            dataStore.edit { prefs ->
+                val lastResetDate = prefs[lastResetDateKey(identity)] ?: 0L
+                val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
+
+                if (lastResetDate < periodStart) {
+                    prefs[minutesUsedKey(identity)] = 0
+                    prefs[trafficUsedKey(identity)] = 0f
+                    prefs[manualAdjustmentKey(identity)] = 0
+                    prefs[trafficAdjustmentKey(identity)] = 0f
+                    prefs[lastResetDateKey(identity)] = nowMillis
+
+                    prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
+                    prefs[SettingsKeys.notifiedLowTrafficKey(identity)] = false
+                    prefs[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+                    prefs[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+
+                    didReset = true
+                }
+            }
+            return didReset
         }
 
         // Visibility settings (moved from SettingsRepository)

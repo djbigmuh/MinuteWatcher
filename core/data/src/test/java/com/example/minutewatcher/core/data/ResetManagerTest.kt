@@ -1,11 +1,12 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -19,9 +20,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ResetManagerTest {
-    @Mock
-    private lateinit var context: Context
-
     @Mock
     private lateinit var updateCoordinator: UpdateCoordinator
 
@@ -39,7 +37,7 @@ class ResetManagerTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
-        resetManager = ResetManager(context, trafficTracker, updateCoordinator)
+        resetManager = ResetManager(trafficTracker, updateCoordinator)
 
         runTest {
             whenever(simRepository.getIdentity(0)).thenReturn("sim_0")
@@ -103,10 +101,54 @@ class ResetManagerTest {
                     ),
                 ),
             )
+            whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
             resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
 
-            verify(simRepository).resetSimUsage(identity)
-            verify(simRepository).setNotifiedLowMinutes(eq(identity), any())
+            verify(simRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+        }
+
+    @Test
+    fun testPerformAutoReset_ConcurrentCalls() =
+        runTest {
+            val identity = "sim_0"
+            val snapshot = createSnapshot(listOf(0))
+
+            whenever(simRepository.getSimUsage(identity)).thenReturn(
+                flowOf(
+                    com.example.minutewatcher.core.model.SimUsage(
+                        identity = identity,
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        operator = "MTS",
+                        minutesUsed = 100,
+                        minutesLimit = 500,
+                        trafficUsed = 1024f,
+                        trafficLimitMb = 5120,
+                        manualAdjustment = 0,
+                        trafficAdjustment = 0f,
+                        autoReset = true,
+                        autoResetDay = 1,
+                        lastResetDate = 0L,
+                    ),
+                ),
+            )
+            whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+
+            // Launch multiple resets concurrently
+            val jobs = List(5) {
+                launch {
+                    resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+                }
+            }
+            joinAll(*jobs.toTypedArray())
+
+            // With Mutex in ResetManager, we still might have multiple calls to performAutoReset,
+            // but they will wait for each other.
+            // However, verify(..., times(5)) would be wrong if we expect them to be sequential and all attempt reset.
+            // The idempotency is REALLY at the SimRepository level (DataStore edit block).
+            // But Mutex helps avoiding multiple first() reads and calculations in parallel.
+            
+            verify(simRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }

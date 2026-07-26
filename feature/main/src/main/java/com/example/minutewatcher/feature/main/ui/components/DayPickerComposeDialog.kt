@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.R
+import kotlin.math.abs
 
 @Composable
 fun DayPickerComposeDialog(
@@ -23,8 +24,20 @@ fun DayPickerComposeDialog(
     onDaySelected: (Int) -> Unit,
 ) {
     val days = (1..31).toList()
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (initialDay - 1).coerceAtLeast(0))
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (initialDay - 1).coerceIn(0, 30))
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    val selectedDay by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportSize.height / 2
+            val centeredItem =
+                layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                    abs((item.offset + item.size / 2) - viewportCenter)
+                }
+            (centeredItem?.index ?: 0) + 1
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -64,7 +77,7 @@ fun DayPickerComposeDialog(
                     ) {
                         itemsIndexed(days) { _, day ->
                             val isSelected by remember {
-                                derivedStateOf { listState.firstVisibleItemIndex == day - 1 }
+                                derivedStateOf { selectedDay == day }
                             }
 
                             Text(
@@ -95,7 +108,6 @@ fun DayPickerComposeDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val selectedDay = listState.firstVisibleItemIndex + 1
                     onDaySelected(selectedDay.coerceIn(1, 31))
                 },
                 modifier = Modifier.padding(horizontal = 8.dp),

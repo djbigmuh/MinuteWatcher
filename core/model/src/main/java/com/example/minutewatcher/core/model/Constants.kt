@@ -4,10 +4,6 @@ import android.graphics.Color
 object Constants {
     const val PREFS_NAME = "app_prefs"
 
-    object Keys {
-        const val SIM_OPERATOR = "sim_operator_"
-    }
-
     object Notifications {
         const val CHANNEL_ID = "usage_monitor_channel"
     }
@@ -29,4 +25,9 @@ object Constants {
     const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f
     const val MAX_MINUTES_LIMIT = 44640
     const val MAX_TRAFFIC_LIMIT_GB = 10240f
+}
+
+object SimConstants {
+    const val MAX_SUPPORTED_SIM_SLOTS = 2
+    val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
 }

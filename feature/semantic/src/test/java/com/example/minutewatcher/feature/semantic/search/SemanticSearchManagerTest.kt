@@ -55,7 +55,6 @@ class SemanticSearchManagerTest {
                 periodEnd = 0,
                 lastUpdateTime = 0,
                 sourceType = DataSourceType.SYSTEM,
-                isStale = false,
             )
         val simSnapshot =
             SimSnapshot(

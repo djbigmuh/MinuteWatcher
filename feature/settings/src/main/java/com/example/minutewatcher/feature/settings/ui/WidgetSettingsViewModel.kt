@@ -83,17 +83,21 @@ class WidgetSettingsViewModel
             }
         }
 
-        fun saveAndNotify(onComplete: () -> Unit) {
-            val currentState = _settingsState.value ?: return
+        fun saveAndNotify(onComplete: (Boolean) -> Unit) {
+            val currentState = _settingsState.value ?: run {
+                onComplete(false)
+                return
+            }
+
             viewModelScope.launch {
                 try {
                     repository.save(currentState)
-                    updateCoordinator.notifyDataChanged(context)
-                    onComplete()
+                    updateCoordinator.notifyDataChanged()
+                    onComplete(true)
                 } catch (e: Exception) {
                     com.example.minutewatcher.core.model.util.AppLogger
                         .e("Failed to save widget settings", e)
-                    onComplete()
+                    onComplete(false)
                 }
             }
         }

@@ -30,7 +30,6 @@ object SimCardMapper {
             slot = slot,
             identity = usage.identity,
             operatorName = SimUtils.getShortOperatorName(context, usage.operator),
-            operatorCode = usage.identity, // identity is used for matching
             iconRes = SimUtils.getOperatorIconResource(usage.operator),
             minutesUsed = usage.minutesUsed,
             minutesLimit = usage.minutesLimit,

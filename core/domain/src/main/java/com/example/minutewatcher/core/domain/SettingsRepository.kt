@@ -2,6 +2,8 @@ package com.example.minutewatcher.core.domain
 
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.MigrationSkipReason
+import androidx.datastore.preferences.core.MutablePreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -13,6 +15,10 @@ interface SettingsRepository {
     fun isMigrationV1Completed(): Flow<Boolean>
 
     suspend fun setMigrationV1Completed(completed: Boolean)
+
+    fun getMigrationV1SkippedReason(): Flow<String?>
+
+    suspend fun setMigrationV1Skipped(reason: MigrationSkipReason)
 
     fun getAppTheme(): Flow<AppTheme>
 
@@ -86,5 +92,9 @@ interface SettingsRepository {
 
     suspend fun setSimIdentitySeed(seed: String)
 
-    suspend fun updateSettings(block: suspend (Any) -> Unit)
+    suspend fun clearAllCallSessions()
+
+    suspend fun getActiveCallSubIds(): List<Int>
+
+    suspend fun updateSettings(transform: suspend (MutablePreferences) -> Unit)
 }

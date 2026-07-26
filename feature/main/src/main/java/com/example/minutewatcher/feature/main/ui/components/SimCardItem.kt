@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,6 +49,7 @@ fun SimCardItem(
     onEditAutoResetDay: () -> Unit = {},
     onAdjustMinutes: () -> Unit = {},
     onAdjustTraffic: () -> Unit = {},
+    onShowTrafficInfo: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val simCardDetailsDesc = stringResource(id = R.string.sim_card_details_content_desc, model.operatorName)
@@ -160,11 +163,28 @@ fun SimCardItem(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(id = R.string.traffic_label),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.traffic_label),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = onShowTrafficInfo,
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Traffic info",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),

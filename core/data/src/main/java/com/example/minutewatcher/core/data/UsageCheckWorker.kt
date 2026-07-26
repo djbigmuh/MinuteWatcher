@@ -63,7 +63,7 @@ class UsageCheckWorker
             // Refresh again after possible reset and traffic update to have latest values for notification check
             val finalSnapshot = usageStateRepository.refresh()
 
-            updateCoordinator.notifyDataChanged(applicationContext, updateWidget = true)
+            updateCoordinator.notifyDataChanged(updateWidget = true)
 
             val appSettings = settingsRepository.observeAppSettings().value
 
@@ -73,15 +73,11 @@ class UsageCheckWorker
                 val slot = simSnapshot.slot
                 val identity = simRepository.getIdentity(slot)
 
-                // We need the reset day for progress calculation.
-                // It's in the semantic entity metadata now.
                 val minutesEntity = simSnapshot.entities[PackageType.MINUTES]
-                val resetDay =
-                    minutesEntity
-                        ?.metadata
-                        ?.get("reset_day")
-                        ?.toString()
-                        ?.toIntOrNull() ?: 1
+
+                // Use the actual SIM configuration as the source of truth.
+                val simUsage = simRepository.getSimUsage(identity).first()
+                val resetDay = simUsage.autoResetDay
 
                 val monthProgress = DateUtils.getMonthProgressPercentage(resetDay)
                 val daysRemaining = DateUtils.getDaysRemainingInMonth(resetDay)

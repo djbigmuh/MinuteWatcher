@@ -1,25 +1,5 @@
 package com.example.minutewatcher.core.model
 
-data class WidgetConfig(
-    val layoutMode: Int,
-    val simArrangement: Int,
-    val fontSize: Int,
-    val transparency: Int,
-    val backgroundColor: Int,
-    val simConfigs: List<SimWidgetConfig>,
-)
-
-data class SimWidgetConfig(
-    val slot: Int,
-    val showSim: Boolean,
-    val showIcon: Boolean,
-    val showName: Boolean,
-    val showMinutes: Boolean,
-    val showMinutesLimit: Boolean,
-    val showTraffic: Boolean,
-    val showTrafficLimit: Boolean,
-)
-
 data class WidgetUiState(
     val layoutMode: Int,
     val simArrangement: Int,
@@ -48,4 +28,9 @@ data class SimUiState(
     val fontMultiplier: Float,
     val textColor: Int,
     val secondaryTextColor: Int,
+    // Detailed fields for SIX_LINES mode
+    val minutesUsedFullText: String = "",
+    val minutesLimitFullText: String = "",
+    val trafficUsedFullText: String = "",
+    val trafficLimitFullText: String = "",
 )

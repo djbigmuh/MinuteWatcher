@@ -44,7 +44,6 @@ class WidgetUiMapperTest {
                                             periodEnd = 0,
                                             lastUpdateTime = 0,
                                             sourceType = DataSourceType.SYSTEM,
-                                            isStale = false,
                                         ),
                                 ),
                         ),
@@ -52,17 +51,19 @@ class WidgetUiMapperTest {
                 capabilities = emptyList(),
             )
 
-        val config =
-            WidgetConfig(
+        val settings =
+            WidgetSettingsState(
                 layoutMode = 1,
                 simArrangement = 0,
                 fontSize = 2,
                 transparency = 50,
                 backgroundColor = Color.BLACK,
-                simConfigs =
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                callTrackingEnabled = true,
+                simStates =
                     listOf(
-                        SimWidgetConfig(
-                            slot = 0,
+                        SimSettingsState(
                             showSim = true,
                             showIcon = true,
                             showName = true,
@@ -74,7 +75,7 @@ class WidgetUiMapperTest {
                     ),
             )
 
-        val uiState = WidgetUiMapper.snapshotToUiState(context, snapshot, config)
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
 
         assertEquals(1, uiState.layoutMode)
         assertEquals(1, uiState.simUiStates.size)
@@ -99,17 +100,20 @@ class WidgetUiMapperTest {
                 capabilities = emptyList(),
             )
 
-        val config =
-            WidgetConfig(
+        val settings =
+            WidgetSettingsState(
                 layoutMode = 1,
                 simArrangement = 0,
                 fontSize = 2,
                 transparency = 50,
                 backgroundColor = Color.WHITE,
-                simConfigs = emptyList(),
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                callTrackingEnabled = true,
+                simStates = emptyList(),
             )
 
-        val uiState = WidgetUiMapper.snapshotToUiState(context, snapshot, config)
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
         val sim0 = uiState.simUiStates[0]
 
         assertEquals(Color.BLACK, sim0.textColor)

@@ -9,13 +9,18 @@ import com.example.minutewatcher.core.data.di.ApplicationScope
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.model.SimConstants
+import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.FlowPreview
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@OptIn(FlowPreview::class)
 @Singleton
 class ShortcutManager
     @Inject
@@ -29,9 +34,15 @@ class ShortcutManager
             job?.cancel()
             job =
                 scope.launch {
-                    snapshotFlow.collectLatest { snapshot ->
-                        updateShortcuts(snapshot)
-                    }
+                    snapshotFlow
+                        .debounce(30_000L)
+                        .collectLatest { snapshot ->
+                            try {
+                                updateShortcuts(snapshot)
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to update dynamic shortcuts", e)
+                            }
+                        }
                 }
         }
 
@@ -43,8 +54,8 @@ class ShortcutManager
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
             val shortcuts = mutableListOf<ShortcutInfoCompat>()
 
-            // limit to 5 total shortcuts as per system limits
-            snapshot.simSnapshots.filter { it.isActive }.take(2).forEach { sim ->
+            // limit shortcuts to supported SIMs
+            snapshot.simSnapshots.filter { it.isActive }.take(SimConstants.MAX_SUPPORTED_SIM_SLOTS).forEach { sim ->
                 val slot = sim.slot
                 val operator = sim.operator
                 val minutes = sim.entities[PackageType.MINUTES]

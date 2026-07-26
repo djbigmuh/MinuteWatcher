@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -39,6 +40,8 @@ class MainViewModel
         val showLimitDialog = savedStateHandle.getStateFlow<LimitDialogData?>("limit_dialog", null)
         val showDayDialog = savedStateHandle.getStateFlow<DayDialogData?>("day_dialog", null)
         val showAdjustDialog = savedStateHandle.getStateFlow<AdjustDialogData?>("adjust_dialog", null)
+        val showTrafficLimitationDialog = savedStateHandle.getStateFlow<Boolean>("traffic_limitation_dialog", false)
+        val showUsageAccessDialog = savedStateHandle.getStateFlow<Boolean>("usage_access_dialog", false)
 
         fun openLimitDialog(data: LimitDialogData) {
             savedStateHandle["limit_dialog"] = data
@@ -63,6 +66,62 @@ class MainViewModel
         fun closeAdjustDialog() {
             savedStateHandle["adjust_dialog"] = null
         }
+
+        fun openTrafficLimitationDialog() {
+            savedStateHandle["traffic_limitation_dialog"] = true
+        }
+
+        fun closeTrafficLimitationDialog() {
+            savedStateHandle["traffic_limitation_dialog"] = false
+        }
+
+        private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
+
+        fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
+            _isPhonePermissionPermanentlyDenied.value = denied
+        }
+
+        fun openUsageAccessDialog() {
+            savedStateHandle["usage_access_dialog"] = true
+        }
+
+        fun closeUsageAccessDialog() {
+            savedStateHandle["usage_access_dialog"] = false
+        }
+
+        val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
+            usageStateRepository
+                .observeTrackingStatus()
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = emptyMap(),
+                )
+
+        val trackingBannerState: StateFlow<TrackingBannerState> =
+            combine(
+                trackingStatus,
+                _isPhonePermissionPermanentlyDenied
+            ) { statusMap, permanentlyDenied ->
+                val calls = statusMap["calls"]
+                val traffic = statusMap["traffic"]
+                val appsearch = statusMap["appsearch"]
+
+                TrackingBannerState(
+                    showPhonePermissionBanner = calls is TrackingStatus.Error &&
+                        calls.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    isPhonePermissionPermanentlyDenied = permanentlyDenied,
+                    showUsageAccessBanner = traffic is TrackingStatus.Error &&
+                        traffic.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    showTrafficErrorBanner = traffic is TrackingStatus.Error &&
+                        traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
+                )
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = TrackingBannerState(),
+            )
 
         val uiState: StateFlow<SimCardListState> =
             usageStateRepository
@@ -130,13 +189,11 @@ class MainViewModel
 
         fun notifyDataChanged(force: Boolean = false) {
             viewModelScope.launch {
-                updateCoordinator.notifyDataChanged(context, force = force)
+                updateCoordinator.notifyDataChanged(force = force)
             }
         }
 
         val appLanguage: Flow<String?> = settingsUseCase.appLanguage
-
-        suspend fun getSimOperatorAsync(slot: Int) = settingsUseCase.getSimOperator(slot)
 
         fun setLanguage(language: String?) {
             viewModelScope.launch {

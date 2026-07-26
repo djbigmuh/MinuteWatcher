@@ -63,10 +63,4 @@ class MinuteWatcherApp :
                 .Builder()
                 .setWorkerFactory(workerFactory)
                 .build()
-
-    override fun onTerminate() {
-        searchManager.close()
-        shortcutManager.close()
-        super.onTerminate()
-    }
 }

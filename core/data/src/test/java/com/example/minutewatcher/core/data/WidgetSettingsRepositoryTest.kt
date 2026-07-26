@@ -39,13 +39,6 @@ class WidgetSettingsRepositoryTest {
                     widgetTransparency = 80,
                     widgetFontSize = 3,
                     widgetBackgroundColor = 0xFF0000FF.toInt(),
-                    showSim = listOf(true, false),
-                    showSimIcon = listOf(true, true),
-                    showSimName = listOf(false, true),
-                    showMinutes = listOf(true, false),
-                    showMinutesLimit = listOf(true, false),
-                    showTraffic = listOf(false, true),
-                    showTrafficLimit = listOf(false, true),
                     migrationV1Completed = true,
                 )
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))

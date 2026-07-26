@@ -2,9 +2,9 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -22,12 +22,12 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
-    - name: Run Lint
-      run: ./gradlew lintDebug
-      
     - name: Run Ktlint
       run: ./gradlew ktlintCheck
 
+    - name: Run Lint
+      run: ./gradlew lintDebug
+      
     - name: Run Unit Tests
       run: ./gradlew testDebugUnitTest
 
