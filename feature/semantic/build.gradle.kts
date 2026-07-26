@@ -38,4 +38,8 @@ dependencies {
     ksp(libs.androidxAppsearchCompiler)
     implementation(libs.androidxAppsearchLocalStorage)
     implementation(libs.kotlinxCoroutinesGuava)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockingKotlin)
+    testImplementation(libs.kotlinxCoroutinesTesting)
 }

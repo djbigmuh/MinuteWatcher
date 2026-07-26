@@ -23,8 +23,11 @@ class ShortcutManager
         @ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
     ) : AutoCloseable {
+        private var job: Job? = null
+
         fun initialize(snapshotFlow: kotlinx.coroutines.flow.StateFlow<GlobalSnapshot>) {
-            scope.launch {
+            job?.cancel()
+            job = scope.launch {
                 snapshotFlow.collectLatest { snapshot ->
                     updateShortcuts(snapshot)
                 }
@@ -32,7 +35,8 @@ class ShortcutManager
         }
 
         override fun close() {
-            scope.cancel()
+            job?.cancel()
+            job = null
         }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {

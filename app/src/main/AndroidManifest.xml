@@ -28,7 +28,7 @@
         <receiver
             android:name=".UsageMonitorReceiver"
             android:enabled="true"
-            android:exported="true"
+            android:exported="false"
             android:permission="android.permission.READ_PHONE_STATE">
             <intent-filter>
                 <action android:name="android.telephony.action.PHONE_STATE_CHANGED" />
