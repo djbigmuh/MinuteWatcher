@@ -3,8 +3,16 @@ package com.example.minutewatcher
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.feature.semantic.ShortcutManager
+import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 @HiltAndroidApp
 class MinuteWatcherApp :
@@ -12,17 +20,24 @@ class MinuteWatcherApp :
     Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
-    @Inject lateinit var searchManager: com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
+    @Inject lateinit var searchManager: SemanticSearchManager
 
-    @Inject lateinit var shortcutManager: com.example.minutewatcher.feature.semantic.ShortcutManager
+    @Inject lateinit var shortcutManager: ShortcutManager
 
-    @Inject lateinit var usageStateRepository: com.example.minutewatcher.core.domain.UsageStateRepository
+    @Inject lateinit var usageStateRepository: UsageStateRepository
+
+    @Inject @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     override fun onCreate() {
         super.onCreate()
 
-        searchManager.initialize(usageStateRepository.observeSnapshot())
-        shortcutManager.initialize(usageStateRepository.observeSnapshot())
+        // Defer semantic layer initialization to improve cold start performance
+        applicationScope.launch {
+            delay(5.seconds) // 5 seconds grace period for UI and primary setup
+            searchManager.initialize(usageStateRepository.observeSnapshot())
+            shortcutManager.initialize(usageStateRepository.observeSnapshot())
+        }
 
         if (BuildConfig.DEBUG) {
             android.os.StrictMode.setThreadPolicy(

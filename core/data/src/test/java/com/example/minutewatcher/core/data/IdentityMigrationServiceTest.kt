@@ -61,15 +61,16 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testHasLegacyData() = testScope.runTest {
-        val service = IdentityMigrationService(appDataStore, simDataStore)
-        
-        assertFalse(service.hasLegacyData())
-        
-        appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
-        assertTrue(service.hasLegacyData())
-        
-        service.migrateLegacyData(0, "some_id")
-        assertFalse(service.hasLegacyData())
-    }
+    fun testHasLegacyData() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+
+            assertFalse(service.hasLegacyData())
+
+            appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
+            assertTrue(service.hasLegacyData())
+
+            service.migrateLegacyData(0, "some_id")
+            assertFalse(service.hasLegacyData())
+        }
 }

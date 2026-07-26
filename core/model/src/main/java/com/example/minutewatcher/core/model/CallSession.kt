@@ -6,5 +6,5 @@ package com.example.minutewatcher.core.model
 data class CallSession(
     val startTime: Long,
     val bootTime: Long,
-    val identity: String? = null
+    val identity: String? = null,
 )

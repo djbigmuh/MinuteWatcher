@@ -13,7 +13,6 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class UsageMonitorReceiver : BroadcastReceiver() {
-
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -39,7 +38,7 @@ class UsageMonitorReceiver : BroadcastReceiver() {
             WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
                 "CALL_EVENT",
                 ExistingWorkPolicy.REPLACE,
-                workRequest
+                workRequest,
             )
         }
     }

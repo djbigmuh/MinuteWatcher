@@ -1,9 +1,9 @@
 package com.example.minutewatcher.core.domain
 
 import android.content.Context
-import com.example.minutewatcher.core.model.util.PermissionManager
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.model.util.PermissionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest

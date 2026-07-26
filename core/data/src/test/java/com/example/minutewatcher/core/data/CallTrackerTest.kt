@@ -74,15 +74,16 @@ class CallTrackerTest {
             verify(settingsRepository).setCallStartTime(1, 0)
             verify(settingsRepository).setBootTime(1, 0)
         }
-        
+
     @Test
-    fun `test dual SIM concurrent call tracking`() = runTest {
-        // Start call on subId 1
-        callTracker.onCallStarted(subId = 1)
-        verify(settingsRepository).setCallStartTime(eq(1), any())
-        
-        // Start call on subId 2
-        callTracker.onCallStarted(subId = 2)
-        verify(settingsRepository).setCallStartTime(eq(2), any())
-    }
+    fun `test dual SIM concurrent call tracking`() =
+        runTest {
+            // Start call on subId 1
+            callTracker.onCallStarted(subId = 1)
+            verify(settingsRepository).setCallStartTime(eq(1), any())
+
+            // Start call on subId 2
+            callTracker.onCallStarted(subId = 2)
+            verify(settingsRepository).setCallStartTime(eq(2), any())
+        }
 }

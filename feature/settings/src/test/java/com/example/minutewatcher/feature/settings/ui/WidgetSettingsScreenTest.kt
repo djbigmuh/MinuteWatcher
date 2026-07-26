@@ -1,8 +1,10 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -14,8 +16,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import androidx.test.core.app.ApplicationProvider
-import android.content.Context
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -54,7 +54,7 @@ class WidgetSettingsScreenTest {
                 onBack = {},
             )
         }
-        
+
         val context = ApplicationProvider.getApplicationContext<Context>()
         val expectedTitle = context.getString(R.string.settings_widget_title)
         composeTestRule.onNodeWithText(expectedTitle).assertIsDisplayed()

@@ -38,43 +38,46 @@ class TrafficTrackerTest {
     private lateinit var trafficTracker: TrafficTracker
 
     @Before
-    fun setup() = runTest {
-        whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
-        whenever(settingsRepository.getLastDataSubId()).thenReturn(lastDataSubIdFlow)
-        whenever(simRepository.getIdentity(any())).thenReturn("test_id")
-        whenever(simRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
-        
-        // Mock NetworkStats bucket
-        val bucket = mock<NetworkStats.Bucket>()
-        whenever(bucket.rxBytes).thenReturn(1000L)
-        whenever(bucket.txBytes).thenReturn(500L)
-        whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
+    fun setup() =
+        runTest {
+            whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
+            whenever(settingsRepository.getLastDataSubId()).thenReturn(lastDataSubIdFlow)
+            whenever(simRepository.getIdentity(any())).thenReturn("test_id")
+            whenever(simRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
 
-        trafficTracker = TrafficTracker(
-            context,
-            simRepository,
-            settingsRepository,
-            permissionManager,
-            testScope
-        )
-    }
+            // Mock NetworkStats bucket
+            val bucket = mock<NetworkStats.Bucket>()
+            whenever(bucket.rxBytes).thenReturn(1000L)
+            whenever(bucket.txBytes).thenReturn(500L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
+
+            trafficTracker =
+                TrafficTracker(
+                    context,
+                    simRepository,
+                    settingsRepository,
+                    permissionManager,
+                    testScope,
+                )
+        }
 
     @Test
-    fun `test SIM swap resets baseline`() = runTest {
-        // Prepare: last known subId was 1
-        lastDataSubIdFlow.value = 1
-        
-        // Act: current subId is 2
-        whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
-        val subInfo = mock<SubscriptionInfo>()
-        whenever(subInfo.subscriptionId).thenReturn(2)
-        whenever(subInfo.simSlotIndex).thenReturn(0)
-        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
-        
-        trafficTracker.updateTrafficUsage()
-        
-        // Assert: lastTotalBytes should be set (resetting baseline) for the new identity
-        verify(simRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
-        verify(settingsRepository).setLastDataSubId(2)
-    }
+    fun `test SIM swap resets baseline`() =
+        runTest {
+            // Prepare: last known subId was 1
+            lastDataSubIdFlow.value = 1
+
+            // Act: current subId is 2
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            val subInfo = mock<SubscriptionInfo>()
+            whenever(subInfo.subscriptionId).thenReturn(2)
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+
+            trafficTracker.updateTrafficUsage()
+
+            // Assert: lastTotalBytes should be set (resetting baseline) for the new identity
+            verify(simRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+            verify(settingsRepository).setLastDataSubId(2)
+        }
 }

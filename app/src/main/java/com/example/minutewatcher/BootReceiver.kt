@@ -11,7 +11,6 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
-
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -22,7 +21,7 @@ class BootReceiver : BroadcastReceiver() {
         WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
             "BOOT_SETUP",
             ExistingWorkPolicy.KEEP,
-            workRequest
+            workRequest,
         )
     }
 }

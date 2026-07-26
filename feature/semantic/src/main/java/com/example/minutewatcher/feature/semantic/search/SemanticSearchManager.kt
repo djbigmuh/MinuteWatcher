@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
+import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.AppSearchSession
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.SetSchemaRequest
@@ -14,8 +15,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.guava.await
+import java.util.Objects
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(FlowPreview::class)
@@ -40,37 +43,72 @@ class SemanticSearchManager
             job =
                 scope.launch {
                     _status.value = TrackingStatus.Active
-                    try {
-                        session =
-                            LocalStorage
-                                .createSearchSessionAsync(
-                                    LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
-                                ).await()
+                    if (!ensureSession()) return@launch
 
-                        session
-                            ?.setSchemaAsync(
-                                SetSchemaRequest.Builder().addDocumentClasses(UsageDocument::class.java).build(),
-                            )?.await()
-
-                        snapshotFlow
-                            .collectLatest { snapshot: GlobalSnapshot ->
-                                if (snapshot.timestamp > 0) {
-                                    if (snapshot.isManualUpdate) {
-                                        indexSnapshot(snapshot)
-                                    } else {
-                                        delay(15.seconds) // Debounce for background updates
-                                        indexSnapshot(snapshot)
-                                    }
-                                }
+                    snapshotFlow
+                        .debounce { if (it.isManualUpdate) 0.seconds else 15.seconds }
+                        .collectLatest { snapshot ->
+                            if (snapshot.timestamp > 0) {
+                                indexSnapshot(snapshot)
                             }
-                    } catch (e: AppSearchException) {
-                        AppLogger.e("AppSearch error during initialization", e)
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                    } catch (e: Exception) {
-                        AppLogger.e("Unexpected error during AppSearch initialization", e)
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    }
+                        }
                 }
+        }
+
+        private suspend fun ensureSession(): Boolean {
+            var retries = 3
+            var retryDelay = 1000.milliseconds
+            while (retries > 0) {
+                try {
+                    session =
+                        LocalStorage
+                            .createSearchSessionAsync(
+                                LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
+                            ).await()
+
+                    session
+                        ?.setSchemaAsync(
+                            SetSchemaRequest
+                                .Builder()
+                                .addDocumentClasses(UsageDocument::class.java)
+                                .setForceOverride(false)
+                                .build(),
+                        )?.await()
+                    return true
+                } catch (e: AppSearchException) {
+                    if (e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR || e.resultCode == AppSearchResult.RESULT_IO_ERROR) {
+                        AppLogger.e("AppSearch transient error, retrying in $retryDelay...", e)
+                        delay(retryDelay)
+                        retryDelay *= 2
+                        retries--
+                    } else if (e.message?.contains("Schema") == true) {
+                        // Attempt force override on schema conflict
+                        AppLogger.w("AppSearch schema mismatch, forcing override")
+                        try {
+                            session
+                                ?.setSchemaAsync(
+                                    SetSchemaRequest
+                                        .Builder()
+                                        .addDocumentClasses(UsageDocument::class.java)
+                                        .setForceOverride(true)
+                                        .build(),
+                                )?.await()
+                            return true
+                        } catch (ex: Exception) {
+                            AppLogger.e("Failed to force AppSearch schema override", ex)
+                            break
+                        }
+                    } else {
+                        AppLogger.e("AppSearch fatal error during session creation", e)
+                        break
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("Unexpected error during AppSearch initialization", e)
+                    break
+                }
+            }
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "Failed to init AppSearch")
+            return false
         }
 
         private var lastIndexTime = 0L
@@ -78,7 +116,7 @@ class SemanticSearchManager
 
         private suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
             val currentTime = System.currentTimeMillis()
-            val currentHash = snapshot.hashCode()
+            val currentHash = calculateContentHash(snapshot)
 
             if (currentHash == lastSnapshotHash) return
 
@@ -134,6 +172,20 @@ class SemanticSearchManager
                 AppLogger.e("Failed to update AppSearch index", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
+        }
+
+        private fun calculateContentHash(snapshot: GlobalSnapshot): Int {
+            // Only hash components that change the indexed content
+            val entityStates =
+                snapshot.simSnapshots
+                    .filter { it.isActive }
+                    .map { sim ->
+                        sim.slot to
+                            sim.entities.mapValues { (_, e) ->
+                                Triple(e.operatorName, e.remaining, e.unit)
+                            }
+                    }
+            return Objects.hash(entityStates)
         }
 
         override fun close() {

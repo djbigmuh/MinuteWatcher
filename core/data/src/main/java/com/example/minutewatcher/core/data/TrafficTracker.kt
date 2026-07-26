@@ -20,14 +20,14 @@ import javax.inject.Singleton
 
 /**
  * Tracks mobile traffic usage for the device.
- * 
+ *
  * IMPORTANT LIMITATION:
  * Android's NetworkStatsManager (querySummaryForDevice) provides aggregate cellular traffic
  * for the entire device. Since it doesn't always provide reliable per-subscription breakdown
  * for the "Total Mobile" bucket without extra permissions (like READ_NETWORK_USAGE_HISTORY),
  * this tracker attributes all mobile traffic to the CURRENT DEFAULT DATA SIM.
- * 
- * If the user swaps the default data SIM, the tracker detects the change and resets the 
+ *
+ * If the user swaps the default data SIM, the tracker detects the change and resets the
  * baseline to avoid mixing traffic from different providers.
  */
 @Singleton

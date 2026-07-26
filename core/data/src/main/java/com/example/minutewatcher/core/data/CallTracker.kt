@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.core.model.util.PermissionManager
-import com.example.minutewatcher.core.model.util.SimUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*

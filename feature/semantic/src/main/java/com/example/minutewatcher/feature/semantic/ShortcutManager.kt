@@ -27,11 +27,12 @@ class ShortcutManager
 
         fun initialize(snapshotFlow: kotlinx.coroutines.flow.StateFlow<GlobalSnapshot>) {
             job?.cancel()
-            job = scope.launch {
-                snapshotFlow.collectLatest { snapshot ->
-                    updateShortcuts(snapshot)
+            job =
+                scope.launch {
+                    snapshotFlow.collectLatest { snapshot ->
+                        updateShortcuts(snapshot)
+                    }
                 }
-            }
         }
 
         override fun close() {

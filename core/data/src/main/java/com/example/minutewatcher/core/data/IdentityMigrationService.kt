@@ -17,8 +17,18 @@ class IdentityMigrationService
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
         suspend fun hasLegacyData(): Boolean {
-            val appHasLegacy = appDataStore.data.first().asMap().keys.any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
-            val simHasLegacy = simDataStore.data.first().asMap().keys.any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
+            val appHasLegacy =
+                appDataStore.data
+                    .first()
+                    .asMap()
+                    .keys
+                    .any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
+            val simHasLegacy =
+                simDataStore.data
+                    .first()
+                    .asMap()
+                    .keys
+                    .any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
             return appHasLegacy || simHasLegacy
         }
 
@@ -36,7 +46,7 @@ class IdentityMigrationService
 
             val appMigrated = migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
             val simMigrated = migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
-            
+
             return true // We return true to signify the attempt was made.
         }
 
@@ -59,45 +69,56 @@ class IdentityMigrationService
 
                     // Only migrate if the new key doesn't exist yet
                     // To avoid overwriting already established identity-based settings
-                    val keyHandled = when (value) {
-                        is Int -> {
-                            val newKey = intPreferencesKey(newKeyName)
-                            if (prefs[newKey] == null) {
-                                prefs[newKey] = value
-                                true
-                            } else false
+                    val keyHandled =
+                        when (value) {
+                            is Int -> {
+                                val newKey = intPreferencesKey(newKeyName)
+                                if (prefs[newKey] == null) {
+                                    prefs[newKey] = value
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            is Float -> {
+                                val newKey = floatPreferencesKey(newKeyName)
+                                if (prefs[newKey] == null) {
+                                    prefs[newKey] = value
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            is Long -> {
+                                val newKey = longPreferencesKey(newKeyName)
+                                if (prefs[newKey] == null) {
+                                    prefs[newKey] = value
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            is Boolean -> {
+                                val newKey = booleanPreferencesKey(newKeyName)
+                                if (prefs[newKey] == null) {
+                                    prefs[newKey] = value
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            is String -> {
+                                val newKey = stringPreferencesKey(newKeyName)
+                                if (prefs[newKey] == null) {
+                                    prefs[newKey] = value
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            else -> false
                         }
-                        is Float -> {
-                            val newKey = floatPreferencesKey(newKeyName)
-                            if (prefs[newKey] == null) {
-                                prefs[newKey] = value
-                                true
-                            } else false
-                        }
-                        is Long -> {
-                            val newKey = longPreferencesKey(newKeyName)
-                            if (prefs[newKey] == null) {
-                                prefs[newKey] = value
-                                true
-                            } else false
-                        }
-                        is Boolean -> {
-                            val newKey = booleanPreferencesKey(newKeyName)
-                            if (prefs[newKey] == null) {
-                                prefs[newKey] = value
-                                true
-                            } else false
-                        }
-                        is String -> {
-                            val newKey = stringPreferencesKey(newKeyName)
-                            if (prefs[newKey] == null) {
-                                prefs[newKey] = value
-                                true
-                            } else false
-                        }
-                        else -> false
-                    }
-                    
+
                     if (keyHandled) anyMigrated = true
                     prefs.remove(oldKey)
                 }

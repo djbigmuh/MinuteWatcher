@@ -24,8 +24,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import org.robolectric.Shadows
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -47,7 +47,7 @@ class UsageCheckWorkerModuleTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
-        
+
         // Grant permission for Robolectric
         val application = ApplicationProvider.getApplicationContext<Application>()
         Shadows.shadowOf(application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
@@ -94,7 +94,7 @@ class UsageCheckWorkerModuleTest {
 
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.success(), result)
-            
+
             // Verify refresh was called twice as per checkUsageAndNotify logic
             verify(usageStateRepository, times(2)).refresh()
         }
