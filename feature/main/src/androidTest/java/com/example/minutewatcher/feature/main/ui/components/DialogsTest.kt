@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main.ui.components
 
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -14,7 +13,9 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DialogsTest {
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule =
+        androidx.compose.ui.test.junit4.v2
+            .createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 

@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
@@ -35,9 +34,6 @@ class ResetManagerTest {
 
     @Mock
     private lateinit var simRepository: SimRepository
-
-    @Mock
-    private lateinit var settingsRepository: SettingsRepository
 
     private lateinit var resetManager: ResetManager
 
@@ -74,7 +70,7 @@ class ResetManagerTest {
                     capabilities = emptyList(),
                 )
 
-            resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+            resetManager.performAutoReset(simRepository, snapshot)
 
             verify(simRepository, never()).resetSimUsage(any())
         }
@@ -106,7 +102,7 @@ class ResetManagerTest {
             )
             whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
-            resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+            resetManager.performAutoReset(simRepository, snapshot)
 
             verify(simRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
@@ -138,7 +134,7 @@ class ResetManagerTest {
             )
             whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(false)
 
-            resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+            resetManager.performAutoReset(simRepository, snapshot)
 
             // Should still call the method to check, but we verify what happens when it returns false
             verify(simRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
@@ -176,7 +172,7 @@ class ResetManagerTest {
             val jobs =
                 List(5) {
                     launch {
-                        resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+                        resetManager.performAutoReset(simRepository, snapshot)
                     }
                 }
             joinAll(*jobs.toTypedArray())

@@ -168,7 +168,7 @@ class MainViewModel
         private fun initializeApp() {
             viewModelScope.launch(Dispatchers.IO) {
                 val snapshot = usageStateRepository.observeSnapshot().value
-                resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+                resetManager.performAutoReset(simRepository, snapshot)
                 refreshSimCards()
             }
         }

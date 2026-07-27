@@ -30,4 +30,5 @@ android {
 dependencies {
     implementation(libs.androidxBenchmarkMacroJunit4)
     implementation(libs.androidxUiautomator)
+    implementation(libs.androidxJunit)
 }

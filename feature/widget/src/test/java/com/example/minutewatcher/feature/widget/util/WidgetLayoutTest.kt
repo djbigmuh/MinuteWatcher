@@ -13,9 +13,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -62,33 +59,41 @@ class WidgetLayoutTest {
     }
 
     private fun createWidgetUiState(mode: WidgetLayoutMode): com.example.minutewatcher.core.model.WidgetUiState {
-        val entity = SemanticEntity(
-            id = "test",
-            simSlot = 0,
-            operatorName = "MTS",
-            packageType = PackageType.MINUTES,
-            limit = 100,
-            used = 10,
-            remaining = 90,
-            unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
-            periodStart = 0,
-            periodEnd = 0,
-            lastUpdateTime = 0,
-            sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM
-        )
+        val entity =
+            SemanticEntity(
+                id = "test",
+                simSlot = 0,
+                operatorName = "MTS",
+                packageType = PackageType.MINUTES,
+                limit = 100,
+                used = 10,
+                remaining = 90,
+                unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
+                periodStart = 0,
+                periodEnd = 0,
+                lastUpdateTime = 0,
+                sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM,
+            )
         val simSnapshot = SimSnapshot(0, "MTS", true, mapOf(PackageType.MINUTES to entity))
-        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), listOf(simSnapshot), emptyList())
-        val state = WidgetSettingsState(
-            layoutMode = mode.value,
-            simArrangement = 0,
-            transparency = 0,
-            fontSize = 2,
-            backgroundColor = 0,
-            notifyLowMinutes = true,
-            notifyLowTraffic = true,
-            callTrackingEnabled = true,
-            simStates = emptyList()
-        )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots = listOf(simSnapshot),
+                capabilities = emptyList(),
+            )
+        val state =
+            WidgetSettingsState(
+                layoutMode = mode.value,
+                simArrangement = 0,
+                transparency = 0,
+                fontSize = 2,
+                backgroundColor = 0,
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                callTrackingEnabled = true,
+                simStates = emptyList(),
+            )
         return WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
     }
 }

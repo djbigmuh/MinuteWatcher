@@ -107,9 +107,10 @@ class SemanticSearchManager
                         try {
                             // Re-open session if needed, but usually we just got one
                             val overrideSession =
-                                currentSession ?: LocalStorage.createSearchSessionAsync(
-                                    LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
-                                ).await()
+                                currentSession ?: LocalStorage
+                                    .createSearchSessionAsync(
+                                        LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
+                                    ).await()
 
                             overrideSession
                                 .setSchemaAsync(

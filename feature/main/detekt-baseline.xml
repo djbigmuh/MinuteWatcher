@@ -53,5 +53,6 @@
     <ID>SerialVersionUIDInSerializableClass:SimCardUiModels.kt$LimitDialogData : Serializable</ID>
     <ID>TooManyFunctions:MainViewModel.kt$MainViewModel : ViewModel</ID>
     <ID>UnusedPrivateProperty:MainViewModel.kt$MainViewModel$@param:ApplicationContext private val context: Context</ID>
+    <ID>UnusedPrivateProperty:MainViewModel.kt$MainViewModel$private val settingsRepository: SettingsRepository</ID>
   </CurrentIssues>
 </SmellBaseline>

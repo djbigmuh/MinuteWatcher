@@ -36,14 +36,15 @@ class SemanticSearchManagerTest {
     }
 
     @Test
-    fun `initialize transitions status to Active`() = runTest {
-        manager = SemanticSearchManager(context, backgroundScope)
-        val flow = MutableStateFlow(createSnapshot())
-        manager.initialize(flow)
-        runCurrent()
-        
-        assertEquals(TrackingStatus.Active, manager.status.first())
-    }
+    fun `initialize transitions status to Active`() =
+        runTest {
+            manager = SemanticSearchManager(context, backgroundScope)
+            val flow = MutableStateFlow(createSnapshot())
+            manager.initialize(flow)
+            runCurrent()
+
+            assertEquals(TrackingStatus.Active, manager.status.first())
+        }
 
     @Test
     fun calculateContentHash_sameContentDifferentTimestamp_returnsSameHash() {

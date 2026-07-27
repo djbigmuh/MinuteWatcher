@@ -21,6 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = TestMinuteWatcherApp::class)
@@ -62,10 +63,10 @@ class UsageMonitorReceiverTest {
             ShadowLooper.idleMainLooper()
 
             var workInfos: List<WorkInfo> = emptyList()
-            for (j in 1..20) {
+            for (_unused in 1..20) {
                 workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_1").get(1, TimeUnit.SECONDS)
                 if (workInfos.isNotEmpty()) break
-                delay(50)
+                delay(50.milliseconds)
             }
 
             assertTrue("Work CALL_EVENT_1 should be enqueued", workInfos.isNotEmpty())

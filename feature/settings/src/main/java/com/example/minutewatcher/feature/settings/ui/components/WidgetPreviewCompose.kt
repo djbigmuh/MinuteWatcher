@@ -69,7 +69,7 @@ fun WidgetPreview(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[0])
+                        simItemPreview(simUiStates[0])
                     }
                     if (uiState.showSeparator) {
                         Spacer(
@@ -81,7 +81,7 @@ fun WidgetPreview(
                         )
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[1])
+                        simItemPreview(simUiStates[1])
                     }
                 }
             } else if (!uiState.isHorizontal && simUiStates.size >= 2) {
@@ -90,7 +90,7 @@ fun WidgetPreview(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[0])
+                        simItemPreview(simUiStates[0])
                     }
                     if (uiState.showSeparator) {
                         Spacer(
@@ -102,23 +102,20 @@ fun WidgetPreview(
                         )
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[1])
+                        simItemPreview(simUiStates[1])
                     }
                 }
             } else {
                 Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                    SimItemPreview(simUiStates[0])
+                    simItemPreview(simUiStates[0])
                 }
             }
         }
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
-private fun SimItemPreview(
-    sim: SimUiState,
-) {
+private fun simItemPreview(sim: SimUiState) {
     val summary = stringResource(id = R.string.sim_status_summary, sim.operatorName, sim.minutesText, sim.trafficText)
 
     Column(

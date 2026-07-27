@@ -142,12 +142,14 @@ class UsageCheckWorkerTest {
 
             whenever(usageStateRepository.refresh()).thenReturn(snapshot)
             whenever(simRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(simRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", minutesUsed = 80, minutesLimit = 100, autoResetDay = 1)))
+            whenever(
+                simRepository.getSimUsage("sim_0"),
+            ).thenReturn(flowOf(createSimUsage("sim_0", minutesUsed = 80, minutesLimit = 100, autoResetDay = 1)))
 
             // Mock date utils to return 90% month progress
             // Note: In real app we might need to mock DateUtils or rely on system clock in Robolectric.
             // For now, this test identifies the logic branch.
-            
+
             createWorker().doWork()
             verify(notificationHelper, org.mockito.kotlin.never()).sendUsageNotification(any(), any(), any(), any())
         }
@@ -161,13 +163,19 @@ class UsageCheckWorkerTest {
 
             whenever(usageStateRepository.refresh()).thenReturn(snapshot)
             whenever(simRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(simRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", trafficUsed = 1024f, trafficLimit = 1024)))
+            whenever(
+                simRepository.getSimUsage("sim_0"),
+            ).thenReturn(flowOf(createSimUsage("sim_0", trafficUsed = 1024f, trafficLimit = 1024)))
 
             createWorker().doWork()
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(1))
         }
 
-    private fun createEntity(type: PackageType, limit: Long, used: Long) = SemanticEntity(
+    private fun createEntity(
+        type: PackageType,
+        limit: Long,
+        used: Long,
+    ) = SemanticEntity(
         id = "id",
         simSlot = 0,
         operatorName = "MTS",
@@ -179,10 +187,17 @@ class UsageCheckWorkerTest {
         periodStart = 0,
         periodEnd = 0,
         lastUpdateTime = 0,
-        sourceType = DataSourceType.SYSTEM
+        sourceType = DataSourceType.SYSTEM,
     )
 
-    private fun createSimUsage(id: String, minutesUsed: Int = 0, minutesLimit: Int = 0, trafficUsed: Float = 0f, trafficLimit: Int = 0, autoResetDay: Int = 1) = SimUsage(
+    private fun createSimUsage(
+        id: String,
+        minutesUsed: Int = 0,
+        minutesLimit: Int = 0,
+        trafficUsed: Float = 0f,
+        trafficLimit: Int = 0,
+        autoResetDay: Int = 1,
+    ) = SimUsage(
         identity = id,
         slotIndex = 0,
         subscriptionId = 1,

@@ -63,7 +63,7 @@ class UsageCheckWorker
             val snapshot = usageStateRepository.refresh()
 
             // Pass snapshot to reset manager to avoid redundant identity lookups
-            resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+            resetManager.performAutoReset(simRepository, snapshot)
 
             trafficTracker.updateTrafficUsage()
 

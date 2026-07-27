@@ -80,7 +80,7 @@ class SimRepositoryImplTest {
         }
 
     @Test
-    fun `testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage`() =
+    fun testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage() =
         testScope.runTest {
             val repository =
                 SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)
@@ -105,7 +105,7 @@ class SimRepositoryImplTest {
         }
 
     @Test
-    fun `testActiveSimInSlot2_IsFilteredOut`() =
+    fun testActiveSimInSlot2_IsFilteredOut() =
         testScope.runTest {
             val repository =
                 SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)

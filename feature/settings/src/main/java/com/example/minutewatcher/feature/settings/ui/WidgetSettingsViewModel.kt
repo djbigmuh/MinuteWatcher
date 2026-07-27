@@ -26,7 +26,7 @@ import javax.inject.Inject
 class WidgetSettingsViewModel
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
+        @ApplicationContext private val context: Context,
         private val repository: WidgetSettingsRepository,
         private val updateCoordinator: UpdateCoordinator,
         private val usageStateRepository: UsageStateRepository,

@@ -35,8 +35,6 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.minutewatcher.core.data.WidgetSettingsRepository
 import com.example.minutewatcher.core.domain.NavigationProvider
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
@@ -55,10 +53,6 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
         fun usageStateRepository(): UsageStateRepository
-
-        fun settingsRepository(): SettingsRepository
-
-        fun simRepository(): SimRepository
 
         fun widgetSettingsRepository(): WidgetSettingsRepository
 
@@ -193,8 +187,14 @@ private fun DualSimLayout(
                             .fillMaxHeight()
                             .background(
                                 ColorProvider(
-                                    day = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
-                                    night = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
+                                    day =
+                                        androidx.compose.ui.graphics
+                                            .Color(sim1.secondaryTextColor)
+                                            .copy(alpha = 0.5f),
+                                    night =
+                                        androidx.compose.ui.graphics
+                                            .Color(sim1.secondaryTextColor)
+                                            .copy(alpha = 0.5f),
                                 ),
                             ),
                 )
@@ -219,8 +219,14 @@ private fun DualSimLayout(
                             .fillMaxWidth()
                             .background(
                                 ColorProvider(
-                                    day = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
-                                    night = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
+                                    day =
+                                        androidx.compose.ui.graphics
+                                            .Color(sim1.secondaryTextColor)
+                                            .copy(alpha = 0.5f),
+                                    night =
+                                        androidx.compose.ui.graphics
+                                            .Color(sim1.secondaryTextColor)
+                                            .copy(alpha = 0.5f),
                                 ),
                             ),
                 )
@@ -282,8 +288,12 @@ private fun SimItem(
                                         fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
                                         color =
                                             ColorProvider(
-                                                day = androidx.compose.ui.graphics.Color(component.color),
-                                                night = androidx.compose.ui.graphics.Color(component.color),
+                                                day =
+                                                    androidx.compose.ui.graphics
+                                                        .Color(component.color),
+                                                night =
+                                                    androidx.compose.ui.graphics
+                                                        .Color(component.color),
                                             ),
                                     ),
                             )

@@ -47,7 +47,7 @@ class TrackingBannerMappingTest {
     @Test
     fun `test permanently denied phone permission`() {
         val statusMap = mapOf<String, TrackingStatus>()
-        
+
         val state = mapToBannerState(statusMap, isPhonePermanentlyDenied = true)
 
         assertTrue(state.isPhonePermissionPermanentlyDenied)
@@ -55,7 +55,7 @@ class TrackingBannerMappingTest {
 
     private fun mapToBannerState(
         statusMap: Map<String, TrackingStatus>,
-        isPhonePermanentlyDenied: Boolean = false
+        isPhonePermanentlyDenied: Boolean = false,
     ): TrackingBannerState {
         val calls = statusMap["calls"]
         val traffic = statusMap["traffic"]

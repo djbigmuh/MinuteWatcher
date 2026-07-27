@@ -2,13 +2,14 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>LongMethod:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(): Boolean</ID>
+    <ID>LongMethod:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
     <ID>LoopWithTooManyJumpStatements:SemanticSearchManager.kt$SemanticSearchManager$while</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$1000L</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$3</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$5</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$60</ID>
     <ID>MagicNumber:ShortcutManager.kt$ShortcutManager$1024</ID>
-    <ID>MagicNumber:ShortcutManager.kt$ShortcutManager$30_000L</ID>
     <ID>MagicNumber:ShortcutManager.kt$ShortcutManager$5</ID>
     <ID>MaxLineLength:SemanticSearchManager.kt$SemanticSearchManager$if</ID>
     <ID>MaxLineLength:SemanticSearchManager.kt$SemanticSearchManager$if (!snapshot.isManualUpdate &amp;&amp; activeSimSnapshots.isNotEmpty() &amp;&amp; (currentTime - lastIndexTime &lt; minIndexInterval)) return</ID>
@@ -17,5 +18,7 @@
     <ID>MaxLineLength:ShortcutManager.kt$ShortcutManager$val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))</ID>
     <ID>NestedBlockDepth:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(): Boolean</ID>
     <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(): Boolean</ID>
+    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
+    <ID>TooGenericExceptionCaught:SemanticSearchManager.kt$SemanticSearchManager$t: Throwable</ID>
   </CurrentIssues>
 </SmellBaseline>

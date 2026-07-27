@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import android.os.SystemClock
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.SettingsRepository
@@ -9,7 +8,6 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.core.model.util.PermissionManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,7 +22,6 @@ import javax.inject.Singleton
 class CallTracker
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
         private val simRepository: SimRepository,
         private val settingsRepository: SettingsRepository,
         private val updateCoordinator: UpdateCoordinator,
@@ -110,7 +107,14 @@ class CallTracker
                     }
 
                     // Priority 1: Global safety cleanup. If device is IDLE, close everything.
-                    if (telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE) {
+                    val isIdle =
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+                        } else {
+                            @Suppress("DEPRECATION")
+                            telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+                        }
+                    if (isIdle) {
                         AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions: $activeSubIds")
                         activeSubIds.forEach { endCall(it) }
                         return

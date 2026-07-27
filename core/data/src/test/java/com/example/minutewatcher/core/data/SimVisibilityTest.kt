@@ -1,18 +1,24 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.util.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -33,18 +39,18 @@ class SimVisibilityTest {
     private val dataStore: DataStore<Preferences> = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
 
-    private val permissionChanges = MutableSharedFlow<Unit>(replay = 1)
+    private val permissionChanges = MutableSharedFlow<Int>(replay = 1)
 
     @Before
     fun setup() {
-        whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
+        whenever(permissionStateNotifier.changes).thenReturn(permissionChanges.map { })
         whenever(seedRepository.getSeed()).thenReturn(flowOf("test_seed"))
-        permissionChanges.tryEmit(Unit)
     }
 
     @Test
     fun `observeActiveSims returns empty list when permission is missing`() =
         runTest {
+            permissionChanges.emit(0)
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
             val repository =
@@ -62,17 +68,33 @@ class SimVisibilityTest {
             val repository =
                 SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)
 
-            // Collect first emission
-            assertTrue(repository.observeActiveSims().first().isEmpty())
+            val simsList = mutableListOf<List<ActiveSimInfo>>()
+            val job =
+                launch(UnconfinedTestDispatcher(testScheduler)) {
+                    repository.observeActiveSims().collect { simsList.add(it) }
+                }
 
-            // Now grant permission and notify
+            permissionChanges.emit(0)
+            runCurrent()
+
+            // Initial emission (empty)
+            assertTrue(simsList.isNotEmpty())
+            val initialSize = simsList.size
+
+            // Now grant permission AND PROVIDE A SIM to change the result
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
-            
-            permissionChanges.emit(Unit)
-            
-            // Collect again - should be empty but this time it actually checked subscriptions
-            // (In a real test we'd verify getActiveSubscriptions was called)
-            assertTrue(repository.observeActiveSims().first().isEmpty())
+            val mockInfo = mock<SubscriptionInfo>()
+            whenever(mockInfo.simSlotIndex).thenReturn(0)
+            whenever(mockInfo.subscriptionId).thenReturn(1)
+            whenever(mockInfo.iccId).thenReturn("test_iccid")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockInfo))
+
+            permissionChanges.emit(1)
+            advanceUntilIdle()
+
+            // Should have emitted again
+            assertTrue("Should have more than $initialSize emissions, but had ${simsList.size}", simsList.size > initialSize)
+
+            job.cancel()
         }
 }

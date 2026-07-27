@@ -141,7 +141,17 @@ class InitialSetupWorkerTest {
             whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
 
             val sim0 = ActiveSimInfo(SimIdentity("id0", 1, 0, IdentitySource.SUBSCRIPTION_ID), 0, 1, "MTS", "MTS", "25001", true, true)
-            val sim1 = ActiveSimInfo(SimIdentity("id1", 2, 1, IdentitySource.SUBSCRIPTION_ID), 1, 2, "Beeline", "Beeline", "25099", false, false)
+            val sim1 =
+                ActiveSimInfo(
+                    SimIdentity("id1", 2, 1, IdentitySource.SUBSCRIPTION_ID),
+                    1,
+                    2,
+                    "Beeline",
+                    "Beeline",
+                    "25099",
+                    false,
+                    false,
+                )
 
             whenever(simRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
             whenever(usageStateRepository.refresh()).thenReturn(mock())

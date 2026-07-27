@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,46 +67,50 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `trackingBannerState shows phone permission banner when granted is false`() = runTest {
-        val viewModel = createViewModel()
-        
-        phonePermissionFlow.value = false
-        
-        val bannerState = viewModel.trackingBannerState.first()
-        assertTrue(bannerState.showPhonePermissionBanner)
-    }
+    fun `trackingBannerState shows phone permission banner when granted is false`() =
+        runTest {
+            val viewModel = createViewModel()
+
+            phonePermissionFlow.value = false
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.showPhonePermissionBanner)
+        }
 
     @Test
-    fun `trackingBannerState hides phone permission banner when granted is true`() = runTest {
-        val viewModel = createViewModel()
-        
-        phonePermissionFlow.value = true
-        usageStatsPermissionFlow.value = true
-        
-        val bannerState = viewModel.trackingBannerState.first()
-        assertFalse(bannerState.showPhonePermissionBanner)
-    }
+    fun `trackingBannerState hides phone permission banner when granted is true`() =
+        runTest {
+            val viewModel = createViewModel()
+
+            phonePermissionFlow.value = true
+            usageStatsPermissionFlow.value = true
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertFalse(bannerState.showPhonePermissionBanner)
+        }
 
     @Test
-    fun `trackingBannerState reflects permanently denied status`() = runTest {
-        val viewModel = createViewModel()
-        
-        viewModel.setPhonePermissionPermanentlyDenied(true)
-        
-        val bannerState = viewModel.trackingBannerState.first()
-        assertTrue(bannerState.isPhonePermissionPermanentlyDenied)
-    }
+    fun `trackingBannerState reflects permanently denied status`() =
+        runTest {
+            val viewModel = createViewModel()
 
-    private fun createViewModel() = MainViewModel(
-        context,
-        simRepository,
-        settingsRepository,
-        usageStateRepository,
-        resetManager,
-        usageUseCase,
-        settingsUseCase,
-        permissionRepository,
-        updateCoordinator,
-        savedStateHandle
-    )
+            viewModel.setPhonePermissionPermanentlyDenied(true)
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.isPhonePermissionPermanentlyDenied)
+        }
+
+    private fun createViewModel() =
+        MainViewModel(
+            context,
+            simRepository,
+            settingsRepository,
+            usageStateRepository,
+            resetManager,
+            usageUseCase,
+            settingsUseCase,
+            permissionRepository,
+            updateCoordinator,
+            savedStateHandle,
+        )
 }

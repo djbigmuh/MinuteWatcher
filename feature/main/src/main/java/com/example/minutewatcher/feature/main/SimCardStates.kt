@@ -20,10 +20,7 @@ data class TrackingBannerState(
     val showUsageAccessBanner: Boolean = false,
     val showTrafficErrorBanner: Boolean = false,
     val showAppSearchErrorBanner: Boolean = false,
-) {
-    val hasAnyError: Boolean
-        get() = showPhonePermissionBanner || showUsageAccessBanner || showTrafficErrorBanner || showAppSearchErrorBanner
-}
+)
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

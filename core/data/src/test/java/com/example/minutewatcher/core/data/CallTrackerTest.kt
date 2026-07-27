@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
@@ -32,7 +31,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerTest {
-    private val context: Context = mock()
     private val simRepository: SimRepository = mock()
     private val settingsRepository: SettingsRepository = mock()
     private val updateCoordinator: UpdateCoordinator = mock()
@@ -59,7 +57,6 @@ class CallTrackerTest {
 
             callTracker =
                 CallTracker(
-                    context,
                     simRepository,
                     settingsRepository,
                     updateCoordinator,

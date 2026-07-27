@@ -60,7 +60,7 @@
     <string name="font_size_xlarge">+2</string>
     <string name="dual_sim_traffic_note">* Remarque : Le suivi du trafic pour le Dual SIM peut être imprécis en raison des limitations d\'Android.</string>
     <string name="traffic_tracking_limitation_title">Limitation du suivi du trafic</string>
-    <string name="traffic_tracking_limitation_body">Android fournit l\'utilisation des données mobiles en tant que valeur globale pour l\'ensemble de l\'appareil. \n\nMinuteWatcher attribue tout le trafic mobile à la carte SIM actuellement sélectionnée comme « SIM de données par défaut » dans les paramètres de votre système.</string>
+    <string name="traffic_tracking_limitation_body">Android fournit l\'utilisation des données mobiles en tant que valeur globale pour l\'ensemble de l\'appareil. \n\nMinuteWatcher atribue tout le trafic mobile à la carte SIM actuellement sélectionnée comme « SIM de données par défaut » dans les paramètres de votre système.</string>
     <string name="tracking_banner_phone_permission">Autorisation de téléphone requise.</string>
     <string name="tracking_banner_usage_access">Accès à l\'utilisation requis.</string>
     <string name="tracking_banner_traffic_error">Erreur de données de trafic.</string>
@@ -132,5 +132,5 @@
     <string name="adjust_minutes_content_desc">Ajuster les minutes restantes</string>
     <string name="adjust_traffic_content_desc">Ajuster le trafic restant</string>
     <string name="change_auto_reset_day_content_desc">Changer le jour de réinitialisation automatique</string>
-    <string name="toggle_auto_reset_content_desc">Activer ou désactiver la réinitialisation automatique</string>
+    <string name="toggle_auto_reset_content_desc">Activar ou désactiver la réinitialisation automatique</string>
 </resources>

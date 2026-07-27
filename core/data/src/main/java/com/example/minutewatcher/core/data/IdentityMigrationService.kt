@@ -38,22 +38,17 @@ class IdentityMigrationService
             return appHasLegacy || simHasLegacy
         }
 
-        /**
-         * Returns true if any data was migrated or no legacy data was found for this identity.
-         */
         suspend fun migrateLegacyData(
             slot: Int,
             identity: String,
-        ): Boolean {
-            if (identity == "sim_$slot") return true
+        ) {
+            if (identity == "sim_$slot") return
 
             val legacySuffix = "_sim_$slot"
             val newSuffix = "_$identity"
 
             migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
             migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
-
-            return true // We return true to signify the attempt was made.
         }
 
         private suspend fun migrateDataStore(

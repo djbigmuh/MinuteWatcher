@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.util.AppLogger
@@ -21,7 +20,6 @@ class ResetManager
 
         suspend fun performAutoReset(
             simRepository: SimRepository,
-            settingsRepository: SettingsRepository,
             snapshot: GlobalSnapshot,
         ) {
             resetMutex.withLock {

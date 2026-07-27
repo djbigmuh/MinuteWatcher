@@ -20,6 +20,8 @@
     <ID>MagicNumber:UsageCheckWorker.kt$UsageCheckWorker$100</ID>
     <ID>MagicNumber:UsageCheckWorker.kt$UsageCheckWorker$1024</ID>
     <ID>MaxLineLength:CallTracker.kt$CallTracker$AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions: $activeSubIds")</ID>
+    <ID>MaxLineLength:InitialSetupWorkerTest.kt$InitialSetupWorkerTest$val sim0 = ActiveSimInfo(SimIdentity("id0", 1, 0, IdentitySource.SUBSCRIPTION_ID), 0, 1, "MTS", "MTS", "25001", true, true)</ID>
+    <ID>MaxLineLength:InitialSetupWorkerTest.kt$InitialSetupWorkerTest$val sim1 = ActiveSimInfo(SimIdentity("id1", 2, 1, IdentitySource.SUBSCRIPTION_ID), 1, 2, "Beeline", "Beeline", "25099", false, false)</ID>
     <ID>MaxLineLength:ResetManager.kt$ResetManager$AppLogger.d("Auto reset performed for SIM $slot ($identity), day: ${usage.autoResetDay}")</ID>
     <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$override fun getCallIdentity(subId: Int): Flow&lt;String?&gt;</ID>
     <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$override fun getMigrationV1SkippedReason(): Flow&lt;String?&gt;</ID>
@@ -31,11 +33,14 @@
     <ID>MaxLineLength:SimRepositoryImpl.kt$SimRepositoryImpl$override fun getShowTrafficLimit(identity: String): Flow&lt;Boolean&gt;</ID>
     <ID>MaxLineLength:SimRepositoryImplTest.kt$SimRepositoryImplTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)</ID>
     <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)</ID>
-    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())</ID>
+    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$assertTrue("Should have more than $initialSize emissions, but had ${simsList.size}", simsList.size &gt; initialSize)</ID>
     <ID>MaxLineLength:TrafficTracker.kt$TrafficTracker$AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")</ID>
     <ID>MaxLineLength:TrafficTracker.kt$TrafficTracker$private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager</ID>
     <ID>MaxLineLength:TrafficTrackerTest.kt$TrafficTrackerTest$whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenThrow(SecurityException())</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$private</ID>
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), listOf(simSnapshot), emptyList())</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", minutesUsed = 80, minutesLimit = 100, autoResetDay = 1)))</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", trafficUsed = 1024f, trafficLimit = 1024)))</ID>
     <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay)</ID>
     <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay)</ID>
     <ID>NestedBlockDepth:CallTracker.kt$CallTracker$suspend fun onCallEnded(subId: Int)</ID>
@@ -49,7 +54,8 @@
     <ID>TooManyFunctions:SettingsRepositoryImpl.kt$SettingsRepositoryImpl : SettingsRepository</ID>
     <ID>TooManyFunctions:SimRepositoryImpl.kt$SimRepositoryImpl : SimRepositorySimInfoProvider</ID>
     <ID>TooManyFunctions:SimRepositoryImpl.kt$SimRepositoryImpl$Companion</ID>
-    <ID>UnusedParameter:ResetManager.kt$ResetManager$settingsRepository: SettingsRepository</ID>
-    <ID>UnusedPrivateProperty:CallTracker.kt$CallTracker$@param:ApplicationContext private val context: Context</ID>
+    <ID>UnusedImports:CallTracker.kt$import android.content.Context</ID>
+    <ID>UnusedImports:CallTracker.kt$import dagger.hilt.android.qualifiers.ApplicationContext</ID>
+    <ID>UnusedImports:ResetManager.kt$import com.example.minutewatcher.core.domain.SettingsRepository</ID>
   </CurrentIssues>
 </SmellBaseline>

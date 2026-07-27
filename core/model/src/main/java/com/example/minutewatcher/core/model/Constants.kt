@@ -13,7 +13,6 @@ object Constants {
     }
 
     object Widget {
-        const val FONT_SIZE_SMALL = 12f
         const val FONT_SIZE_MEDIUM = 14f
 
         const val DEBOUNCE_MS = 300L

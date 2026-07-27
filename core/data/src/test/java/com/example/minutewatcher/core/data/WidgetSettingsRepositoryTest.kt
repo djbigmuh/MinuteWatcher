@@ -74,8 +74,10 @@ class WidgetSettingsRepositoryTest {
 
             assertEquals(2, result.simStates.size)
 
-            verify(settingsRepository).getAppSettings()
-            verify(simRepository, times(2)).getSimSettings(any())
+            val f1 = verify(settingsRepository).getAppSettings()
+            println("Verified call to getAppSettings with $f1")
+            val f2 = verify(simRepository, times(2)).getSimSettings(any())
+            println("Verified call to getSimSettings with $f2")
         }
 
     @Test

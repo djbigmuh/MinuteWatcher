@@ -7,11 +7,8 @@
     <ID>MagicNumber:MainActivity.kt$MainActivity$20_000L</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$(resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK)</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)</ID>
-    <ID>UnusedImports:MainActivity.kt$import androidx.work.WorkManager</ID>
-    <ID>UnusedImports:MainActivity.kt$import com.example.minutewatcher.core.data.UsageCheckWorker</ID>
-    <ID>UnusedImports:MainActivity.kt$import java.util.concurrent.TimeUnit</ID>
-    <ID>UnusedImports:MainActivity.kt$import kotlinx.coroutines.Dispatchers</ID>
-    <ID>UnusedPrivateProperty:BootReceiverTest.kt$BootReceiverTest$i</ID>
+    <ID>UnusedPrivateProperty:BootReceiverTest.kt$BootReceiverTest$_unused</ID>
+    <ID>UnusedPrivateProperty:UsageMonitorReceiverTest.kt$UsageMonitorReceiverTest$_unused</ID>
     <ID>UnusedPrivateProperty:UsageMonitorReceiverTest.kt$UsageMonitorReceiverTest$j</ID>
   </CurrentIssues>
 </SmellBaseline>

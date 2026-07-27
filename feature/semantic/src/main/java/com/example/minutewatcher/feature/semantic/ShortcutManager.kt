@@ -50,8 +50,7 @@ class ShortcutManager
                             } else {
                                 30.seconds
                             }
-                        }
-                        .collectLatest { snapshot ->
+                        }.collectLatest { snapshot ->
                             try {
                                 updateShortcuts(snapshot)
                             } catch (e: Exception) {
