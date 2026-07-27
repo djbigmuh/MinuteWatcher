@@ -17,7 +17,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.guava.await
-import java.util.Objects
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -126,7 +125,7 @@ class SemanticSearchManager
 
         private suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
             val currentTime = System.currentTimeMillis()
-            val currentHash = calculateContentHash(snapshot)
+            val currentHash = SnapshotHashCalculator.calculate(snapshot)
 
             if (currentHash == lastSnapshotHash) return
 
@@ -182,20 +181,6 @@ class SemanticSearchManager
                 AppLogger.e("Failed to update AppSearch index", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
-        }
-
-        private fun calculateContentHash(snapshot: GlobalSnapshot): Int {
-            // Only hash components that change the indexed content
-            val entityStates =
-                snapshot.simSnapshots
-                    .filter { it.isActive }
-                    .map { sim ->
-                        sim.slot to
-                            sim.entities.mapValues { (_, e) ->
-                                Triple(e.operatorName, e.remaining, e.unit)
-                            }
-                    }
-            return Objects.hash(entityStates)
         }
 
         override fun close() {

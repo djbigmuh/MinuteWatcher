@@ -54,6 +54,8 @@ fun SimCardItem(
     val context = LocalContext.current
     val simCardDetailsDesc = stringResource(id = R.string.sim_card_details_content_desc, model.operatorName)
     val toggleAutoResetDesc = stringResource(id = R.string.toggle_auto_reset_content_desc)
+    val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
+    val trafficInfoDesc = stringResource(id = R.string.traffic_info_content_desc)
 
     val minutesStatus = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.minutesLimit.toFloat())
     val trafficStatus = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.trafficLimitMb / Constants.MB_PER_GB)
@@ -90,7 +92,9 @@ fun SimCardItem(
                 OutlinedButton(
                     onClick = onSetLimits,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp),
+                    modifier = Modifier.height(32.dp).semantics {
+                        contentDescription = setLimitsDesc
+                    },
                 ) {
                     Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
                 }
@@ -179,7 +183,7 @@ fun SimCardItem(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Info,
-                                contentDescription = "Traffic info",
+                                contentDescription = trafficInfoDesc,
                                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                                 modifier = Modifier.size(16.dp),
                             )

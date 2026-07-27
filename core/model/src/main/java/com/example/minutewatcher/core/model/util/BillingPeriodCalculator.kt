@@ -17,8 +17,8 @@ object BillingPeriodCalculator {
     fun calculate(
         resetDay: Int,
         nowMillis: Long = System.currentTimeMillis(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
     ): PeriodInfo {
-        val zoneId = ZoneId.systemDefault()
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zoneId)
 
         val currentYearMonth = YearMonth.from(now)

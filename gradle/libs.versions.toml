@@ -30,6 +30,7 @@ colorpickerview = "2.4.0"
 appsearch = "1.1.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
+detekt = "1.23.8"
 
 [libraries]
 # DI - Hilt
@@ -102,3 +103,4 @@ hiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersio
 kotlinKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidxBaselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "14.2.0" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

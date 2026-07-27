@@ -11,6 +11,8 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.*
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.*
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -221,8 +223,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         sim: SimUiState,
         layoutMode: WidgetLayoutMode,
     ) {
+        val summary = context.getString(com.example.minutewatcher.core.model.R.string.sim_status_summary, sim.operatorName, sim.minutesText, sim.trafficText)
+        
         Column(
-            modifier = GlanceModifier.padding(4.dp),
+            modifier = GlanceModifier.padding(4.dp).semantics { contentDescription = summary },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -235,7 +239,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                         if (sim.showIcon) {
                             Image(
                                 provider = ImageProvider(sim.operatorIconRes),
-                                contentDescription = null,
+                                contentDescription = sim.operatorName,
                                 modifier = GlanceModifier.size(14.dp),
                             )
                             Spacer(modifier = GlanceModifier.width(4.dp))
@@ -288,7 +292,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                             if (sim.showIcon) {
                                 Image(
                                     provider = ImageProvider(sim.operatorIconRes),
-                                    contentDescription = null,
+                                    contentDescription = sim.operatorName,
                                     modifier = GlanceModifier.size(16.dp),
                                 )
                                 Spacer(modifier = GlanceModifier.width(4.dp))
@@ -354,7 +358,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                             if (sim.showIcon) {
                                 Image(
                                     provider = ImageProvider(sim.operatorIconRes),
-                                    contentDescription = null,
+                                    contentDescription = sim.operatorName,
                                     modifier = GlanceModifier.size(16.dp),
                                 )
                                 Spacer(modifier = GlanceModifier.width(4.dp))
@@ -464,7 +468,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                     // Line 2: Icon
                     Image(
                         provider = ImageProvider(sim.operatorIconRes),
-                        contentDescription = null,
+                        contentDescription = sim.operatorName,
                         modifier = GlanceModifier.size(16.dp)
                     )
                     // Line 3: Minutes Used

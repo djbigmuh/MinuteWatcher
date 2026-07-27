@@ -2,65 +2,57 @@ package com.example.minutewatcher.core.model.util
 
 import org.junit.Assert.*
 import org.junit.Test
-import java.util.*
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 class DateUtilsTest {
+    private val zoneId = ZoneId.of("UTC")
+
     @Test
     fun testShouldPerformAutoReset_BeforeResetDay() {
         // Сегодня 5 Октября, день сброса 15-е
-        val now = createDate(Calendar.OCTOBER, 5)
+        val now = createMillis(10, 5)
 
         // Сброс уже был в этом цикле (начался 15 Сентября)
-        val lastResetDate = createDate(Calendar.SEPTEMBER, 16)
-        assertFalse(DateUtils.shouldPerformAutoReset(lastResetDate, 15, now))
+        val lastResetDate = createMillis(9, 16)
+        assertFalse(DateUtils.shouldPerformAutoReset(lastResetDate, 15, now, zoneId))
 
         // Сброс был до начала цикла (до 15 Сентября)
-        val lastResetOld = createDate(Calendar.SEPTEMBER, 10)
-        assertTrue(DateUtils.shouldPerformAutoReset(lastResetOld, 15, now))
+        val lastResetOld = createMillis(9, 10)
+        assertTrue(DateUtils.shouldPerformAutoReset(lastResetOld, 15, now, zoneId))
     }
 
     @Test
     fun testShouldPerformAutoReset_AfterResetDay() {
         // Сегодня 20 Октября, день сброса 15-е
-        val now = createDate(Calendar.OCTOBER, 20)
+        val now = createMillis(10, 20)
 
         // Сброс уже был в этом цикле (начался 15 Октября)
-        val lastResetDate = createDate(Calendar.OCTOBER, 16)
-        assertFalse(DateUtils.shouldPerformAutoReset(lastResetDate, 15, now))
+        val lastResetDate = createMillis(10, 16)
+        assertFalse(DateUtils.shouldPerformAutoReset(lastResetDate, 15, now, zoneId))
 
         // Сброс был до начала цикла (например, 10 Октября)
-        val lastResetOld = createDate(Calendar.OCTOBER, 10)
-        assertTrue(DateUtils.shouldPerformAutoReset(lastResetOld, 15, now))
+        val lastResetOld = createMillis(10, 10)
+        assertTrue(DateUtils.shouldPerformAutoReset(lastResetOld, 15, now, zoneId))
     }
 
     @Test
     fun testShouldPerformAutoReset_OnResetDay() {
         // Сегодня 15 Октября, день сброса 15-е
-        val now = createDate(Calendar.OCTOBER, 15, hour = 10)
+        val now = LocalDateTime.of(2026, 10, 15, 10, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
 
         // Сброс был вчера (в прошлом цикле)
-        val lastResetYesterday = createDate(Calendar.OCTOBER, 14)
-        assertTrue(DateUtils.shouldPerformAutoReset(lastResetYesterday, 15, now))
+        val lastResetYesterday = createMillis(10, 14)
+        assertTrue(DateUtils.shouldPerformAutoReset(lastResetYesterday, 15, now, zoneId))
 
         // Сброс был сегодня в 00:01
-        val lastResetToday = createDate(Calendar.OCTOBER, 15, hour = 0, minute = 1)
-        assertFalse(DateUtils.shouldPerformAutoReset(lastResetToday, 15, now))
+        val lastResetToday = LocalDateTime.of(2026, 10, 15, 0, 1).toInstant(ZoneOffset.UTC).toEpochMilli()
+        assertFalse(DateUtils.shouldPerformAutoReset(lastResetToday, 15, now, zoneId))
     }
 
-    private fun createDate(
+    private fun createMillis(
         month: Int,
         day: Int,
-        hour: Int = 0,
-        minute: Int = 0,
-    ): Long =
-        Calendar
-            .getInstance()
-            .apply {
-                set(Calendar.MONTH, month)
-                set(Calendar.DAY_OF_MONTH, day)
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
+    ): Long = LocalDateTime.of(2026, month, day, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
 }

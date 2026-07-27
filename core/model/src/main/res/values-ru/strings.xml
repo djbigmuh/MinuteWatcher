@@ -131,8 +131,11 @@
     <string name="widget_settings_content_desc">Настройки виджета</string>
     <string name="choose_color_content_desc">Выбрать цвет фона</string>
     <string name="sim_card_details_content_desc">Детали SIM-карты %1$s</string>
+    <string name="sim_status_summary">%1$s: %2$s, %3$s</string>
     <string name="adjust_minutes_content_desc">Изменить остаток минут</string>
     <string name="adjust_traffic_content_desc">Изменить остаток трафика</string>
+    <string name="traffic_info_content_desc">Дополнительная информация об учете трафика</string>
+    <string name="set_limits_content_desc">Установить лимиты для %1$s</string>
     <string name="change_auto_reset_day_content_desc">Изменить день автосброса</string>
     <string name="toggle_auto_reset_content_desc">Включить или выключить автосброс</string>
 </resources>

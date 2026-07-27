@@ -19,7 +19,7 @@ configure<ApplicationExtension> {
     defaultConfig {
         applicationId = "com.example.minutewatcher"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 240
         versionName = "2.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -8,7 +8,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.model.MigrationSkipReason
+import com.example.minutewatcher.core.model.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -50,6 +50,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork marks migration as completed when no legacy data exists`() = runTest {
         whenever(migrationService.hasLegacyData()).thenReturn(false)
+        whenever(usageStateRepository.refresh()).thenReturn(mock())
 
         val worker = createWorker()
         val result = worker.doWork()
@@ -57,14 +58,13 @@ class InitialSetupWorkerTest {
         assertEquals(ListenableWorker.Result.success(), result)
         verify(settingsRepository).setMigrationV1Completed(true)
         verify(settingsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+        verify(usageStateRepository).refresh()
     }
 
     @Test
     fun `doWork skips migration after retries when no permission`() = runTest {
         whenever(migrationService.hasLegacyData()).thenReturn(true)
-        
-        // We can't easily mock ContextCompat.checkSelfPermission in Robolectric without Shadowing,
-        // but by default it returns PERMISSION_DENIED.
+        whenever(usageStateRepository.refresh()).thenReturn(mock())
         
         val worker = createWorker(runAttemptCount = 6)
         val result = worker.doWork()
@@ -72,6 +72,32 @@ class InitialSetupWorkerTest {
         assertEquals(ListenableWorker.Result.success(), result)
         verify(settingsRepository).setMigrationV1Completed(true)
         verify(settingsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_PERMISSION)
+    }
+
+    @Test
+    fun `doWork resets traffic baseline for active SIMs`() = runTest {
+        whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+        
+        val activeSim = ActiveSimInfo(
+            identity = SimIdentity("id0", 1, 0, IdentitySource.SUBSCRIPTION_ID),
+            slotIndex = 0,
+            subscriptionId = 1,
+            displayName = "MTS",
+            carrierName = "MTS",
+            mccMnc = "25001",
+            isDefaultData = true,
+            isDefaultVoice = true
+        )
+        
+        whenever(simRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+        whenever(usageStateRepository.refresh()).thenReturn(mock())
+
+        val worker = createWorker()
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        verify(trafficTracker).resetBaseline("id0")
+        verify(updateCoordinator).notifyDataChanged(eq(true), eq(true))
     }
 
     private fun createWorker(runAttemptCount: Int = 0): InitialSetupWorker {

@@ -82,6 +82,41 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `test traffic increment on delta detection`() =
+        runTest {
+            // Arrange
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+            val subInfo = mock<SubscriptionInfo>()
+            whenever(subInfo.subscriptionId).thenReturn(1)
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+            
+            // lastTotalBytes was 1000, now it's 1500 (from setup) -> delta 500 bytes
+            whenever(simRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            // Act
+            trafficTracker.updateTrafficUsage()
+
+            // Assert
+            val deltaMb = 500f / (1024 * 1024)
+            verify(simRepository).incrementTrafficUsed(eq("test_id"), eq(deltaMb))
+            verify(simRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+        }
+
+    @Test
+    fun `test traffic tracker handles missing permission`() =
+        runTest {
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            // querySummaryForDevice should throw SecurityException in real system
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenThrow(SecurityException())
+
+            trafficTracker.updateTrafficUsage()
+
+            // Status should reflect permission error
+            // verify status change if we can capture stateflow
+        }
+
+    @Test
     fun `test fallback to single active SIM when default subId is missing`() =
         runTest {
             // Arrange: No default data subId

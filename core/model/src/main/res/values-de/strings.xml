@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM-Karten</string>
     <string name="no_sim_card">Keine SIM-Karte erkannt</string>
@@ -31,9 +31,9 @@
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Anrufverfolgung</string>
     <string name="usage_access_rationale">MinuteWatcher benötigt Zugriff auf die Nutzungsdaten, um den mobilen Datenverbrauch genau zu verfolgen. Bitte aktivieren Sie diesen im nächsten Bildschirm.</string>
-    <string name="usage_access_dialog_title">Data Usage Tracking</string>
-    <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission.</string>
-    <string name="phone_permission_permanent_denial">Phone permission is permanently denied.</string>
+    <string name="usage_access_dialog_title">Datenverbrauchsverfolgung</string>
+    <string name="usage_access_dialog_description">Um Ihren mobilen Datenverbrauch zu verfolgen, benötigt MinuteWatcher die Berechtigung „Nutzungszugriff“.</string>
+    <string name="phone_permission_permanent_denial">Telefonberechtigung dauerhaft verweigert.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Widget-Einstellungen</string>
@@ -59,17 +59,17 @@
     <string name="font_size_large">+1</string>
     <string name="font_size_xlarge">+2</string>
     <string name="dual_sim_traffic_note">* Hinweis: Die Datenerfassung für Dual-SIM kann aufgrund von Android-Einschränkungen ungenau sein.</string>
-    <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
-    <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
-    <string name="tracking_banner_phone_permission">Phone permission is required.</string>
-    <string name="tracking_banner_usage_access">Usage Access is required.</string>
-    <string name="tracking_banner_traffic_error">Traffic data error.</string>
-    <string name="tracking_banner_appsearch_error">AppSearch indexing failed.</string>
-    <string name="action_grant">Grant</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_app_settings">App Settings</string>
-    <string name="validation_error_invalid_range">Please enter a value between %1 and %2</string>
-    <string name="validation_error_invalid_number">Please enter a valid number</string>
+    <string name="traffic_tracking_limitation_title">Einschränkung der Verkehrsverfolgung</string>
+    <string name="traffic_tracking_limitation_body">Android stellt den mobilen Datenverbrauch als Gesamtwert für das gesamte Gerät bereit. \n\nMinuteWatcher ordnet den gesamten mobilen Datenverkehr der SIM-Karte zu, die derzeit in Ihren Systemeinstellungen als „Standard-Daten-SIM“ ausgewählt ist.</string>
+    <string name="tracking_banner_phone_permission">Telefonberechtigung erforderlich.</string>
+    <string name="tracking_banner_usage_access">Nutzungszugriff erforderlich.</string>
+    <string name="tracking_banner_traffic_error">Fehler bei Verkehrsdaten.</string>
+    <string name="tracking_banner_appsearch_error">AppSearch-Indizierung fehlgeschlagen.</string>
+    <string name="action_grant">Erteilen</string>
+    <string name="action_settings">Einstellungen</string>
+    <string name="action_app_settings">App-Einstellungen</string>
+    <string name="validation_error_invalid_range">Bitte geben Sie einen Wert zwischen %1$s und %2$s ein</string>
+    <string name="validation_error_invalid_number">Bitte geben Sie eine gültige Zahl ein</string>
     <string name="dynamic_preview">Dynamische Vorschau</string>
     <string name="widget_already_added">Widget bereits zum Startbildschirm hinzugefügt</string>
 
@@ -132,7 +132,3 @@
     <string name="change_auto_reset_day_content_desc">Auto-Reset-Tag ändern</string>
     <string name="toggle_auto_reset_content_desc">Auto-Reset aktivieren oder deaktivieren</string>
 </resources>
-
-
-
-

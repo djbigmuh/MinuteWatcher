@@ -31,9 +31,9 @@
     <string name="language_hi">印地语</string>
     <string name="call_tracking_title">通话追踪</string>
     <string name="usage_access_rationale">MinuteWatcher 需要使用情况访问权限才能准确追踪移动数据使用量。请在下一屏幕中启用它。</string>
-    <string name="usage_access_dialog_title">Data Usage Tracking</string>
-    <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission.</string>
-    <string name="phone_permission_permanent_denial">Phone permission is permanently denied.</string>
+    <string name="usage_access_dialog_title">数据使用追踪</string>
+    <string name="usage_access_dialog_description">为了追踪您的移动数据使用量，MinuteWatcher 需要“使用情况访问”权限。</string>
+    <string name="phone_permission_permanent_denial">通话权限被永久拒绝。</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">小部件设置</string>
@@ -59,17 +59,17 @@
     <string name="font_size_large">+1</string>
     <string name="font_size_xlarge">+2</string>
     <string name="dual_sim_traffic_note">* 注意：由于 Android 限制，双卡流量追踪可能不准确。</string>
-    <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
-    <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
-    <string name="tracking_banner_phone_permission">Phone permission is required.</string>
-    <string name="tracking_banner_usage_access">Usage Access is required.</string>
-    <string name="tracking_banner_traffic_error">Traffic data error.</string>
-    <string name="tracking_banner_appsearch_error">AppSearch indexing failed.</string>
-    <string name="action_grant">Grant</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_app_settings">App Settings</string>
-    <string name="validation_error_invalid_range">Please enter a value between %1 and %2</string>
-    <string name="validation_error_invalid_number">Please enter a valid number</string>
+    <string name="traffic_tracking_limitation_title">流量追踪限制</string>
+    <string name="traffic_tracking_limitation_body">Android 将移动数据使用量作为整个设备的汇总值提供。 \n\nMinuteWatcher 将所有移动流量归因于当前在系统设置中被选为“默认数据 SIM 卡”的 SIM 卡。</string>
+    <string name="tracking_banner_phone_permission">需要通话权限。</string>
+    <string name="tracking_banner_usage_access">需要使用情况访问权限。</string>
+    <string name="tracking_banner_traffic_error">流量数据更新出错。</string>
+    <string name="tracking_banner_appsearch_error">AppSearch 索引失败。</string>
+    <string name="action_grant">授予</string>
+    <string name="action_settings">设置</string>
+    <string name="action_app_settings">应用设置</string>
+    <string name="validation_error_invalid_range">请输入 %1$s 到 %2$s 之间的值</string>
+    <string name="validation_error_invalid_number">请输入有效的数字</string>
     <string name="dynamic_preview">动态预览</string>
     <string name="widget_already_added">小部件已添加到主屏幕</string>
 
@@ -130,7 +130,3 @@
     <string name="change_auto_reset_day_content_desc">更改自动重置日期</string>
     <string name="toggle_auto_reset_content_desc">启用或禁用自动重置</string>
 </resources>
-
-
-
-

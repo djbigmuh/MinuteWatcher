@@ -1,16 +1,19 @@
 package com.example.minutewatcher.core.model.util
 
-object DateUtils {
-    fun getMonthProgressPercentage(resetDay: Int): Int = BillingPeriodCalculator.calculate(resetDay).progressPercentage
+import java.time.ZoneId
 
-    fun getDaysRemainingInMonth(resetDay: Int): Int = BillingPeriodCalculator.calculate(resetDay).daysRemaining
+object DateUtils {
+    fun getMonthProgressPercentage(resetDay: Int): Int = BillingPeriodCalculator.calculate(resetDay, zoneId = ZoneId.systemDefault()).progressPercentage
+
+    fun getDaysRemainingInMonth(resetDay: Int): Int = BillingPeriodCalculator.calculate(resetDay, zoneId = ZoneId.systemDefault()).daysRemaining
 
     fun shouldPerformAutoReset(
         lastResetDate: Long,
         resetDay: Int,
         nowMillis: Long = System.currentTimeMillis(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
     ): Boolean {
-        val periodInfo = BillingPeriodCalculator.calculate(resetDay, nowMillis)
+        val periodInfo = BillingPeriodCalculator.calculate(resetDay, nowMillis, zoneId)
         return lastResetDate < periodInfo.startDate
     }
 }

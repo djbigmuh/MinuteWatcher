@@ -9,9 +9,19 @@ plugins {
     alias(libs.plugins.kotlinKsp) apply false
     alias(libs.plugins.androidxBaselineprofile) apply false
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.detekt)
 }
 
 allprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+        baseline = file("$projectDir/detekt-baseline.xml")
+        buildUponDefaultConfig = true
+        allRules = false
+    }
+
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
     configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {

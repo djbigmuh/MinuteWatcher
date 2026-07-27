@@ -109,6 +109,40 @@ class ResetManagerTest {
         }
 
     @Test
+    fun testPerformAutoReset_NotDue() =
+        runTest {
+            val identity = "sim_0"
+            val snapshot = createSnapshot(listOf(0))
+
+            whenever(simRepository.getSimUsage(identity)).thenReturn(
+                flowOf(
+                    com.example.minutewatcher.core.model.SimUsage(
+                        identity = identity,
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        operator = "MTS",
+                        minutesUsed = 100,
+                        minutesLimit = 500,
+                        trafficUsed = 1024f,
+                        trafficLimitMb = 5120,
+                        manualAdjustment = 0,
+                        trafficAdjustment = 0f,
+                        autoReset = true,
+                        autoResetDay = 1,
+                        lastResetDate = System.currentTimeMillis(), // Already reset recently
+                    ),
+                ),
+            )
+            whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(false)
+
+            resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+
+            // Should still call the method to check, but we verify what happens when it returns false
+            verify(simRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(updateCoordinator, never()).notifyDataChanged(any(), any())
+        }
+
+    @Test
     fun testPerformAutoReset_ConcurrentCalls() =
         runTest {
             val identity = "sim_0"

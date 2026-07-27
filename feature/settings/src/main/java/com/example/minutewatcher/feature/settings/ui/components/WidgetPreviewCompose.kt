@@ -12,6 +12,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -105,15 +107,22 @@ private fun SimItemPreview(
     val fontMultiplier = sim.fontMultiplier
     val textColor = Color(sim.textColor)
     val secondaryColor = Color(sim.secondaryTextColor)
+    
+    val summary = stringResource(id = R.string.sim_status_summary, sim.operatorName, sim.minutesText, sim.trafficText)
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = summary
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         when (layoutMode) {
             WidgetLayoutMode.SINGLE_LINE -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (sim.showIcon) {
                         Image(
                             painter = painterResource(id = sim.operatorIconRes),
-                            contentDescription = null,
+                            contentDescription = sim.operatorName,
                             modifier =
                                 Modifier.size(
                                     (
@@ -173,7 +182,7 @@ private fun SimItemPreview(
                         if (sim.showIcon) {
                             Image(
                                 painter = painterResource(id = sim.operatorIconRes),
-                                contentDescription = null,
+                                contentDescription = sim.operatorName,
                                 modifier =
                                     Modifier.size(
                                         (
@@ -231,7 +240,7 @@ private fun SimItemPreview(
                         if (sim.showIcon) {
                             Image(
                                 painter = painterResource(id = sim.operatorIconRes),
-                                contentDescription = null,
+                                contentDescription = sim.operatorName,
                                 modifier =
                                     Modifier.size(
                                         (
@@ -318,7 +327,7 @@ private fun SimItemPreview(
                 // Line 2: Icon
                 Image(
                     painter = painterResource(id = sim.operatorIconRes),
-                    contentDescription = null,
+                    contentDescription = sim.operatorName,
                     modifier = Modifier.size((16 * fontMultiplier).dp)
                 )
                 // Line 3: Minutes Used

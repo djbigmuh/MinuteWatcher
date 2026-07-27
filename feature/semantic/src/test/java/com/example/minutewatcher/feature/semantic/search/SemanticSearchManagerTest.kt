@@ -1,27 +1,19 @@
 package com.example.minutewatcher.feature.semantic.search
 
-import android.content.Context
 import com.example.minutewatcher.core.model.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
-import org.mockito.kotlin.mock
-import java.lang.reflect.Method
 
 class SemanticSearchManagerTest {
-    private val context: Context = mock()
-    private val scope: CoroutineScope = TestScope()
-    private val manager = SemanticSearchManager(context, scope)
 
     @Test
     fun calculateContentHash_sameContentDifferentTimestamp_returnsSameHash() {
         val snapshot1 = createSnapshot(timestamp = 1000L, remaining = 100)
         val snapshot2 = createSnapshot(timestamp = 2000L, remaining = 100)
 
-        val hash1 = invokeCalculateContentHash(snapshot1)
-        val hash2 = invokeCalculateContentHash(snapshot2)
+        val hash1 = SnapshotHashCalculator.calculate(snapshot1)
+        val hash2 = SnapshotHashCalculator.calculate(snapshot2)
 
         assertEquals("Hash should be the same if core content hasn't changed", hash1, hash2)
     }
@@ -31,8 +23,8 @@ class SemanticSearchManagerTest {
         val snapshot1 = createSnapshot(remaining = 100)
         val snapshot2 = createSnapshot(remaining = 200)
 
-        val hash1 = invokeCalculateContentHash(snapshot1)
-        val hash2 = invokeCalculateContentHash(snapshot2)
+        val hash1 = SnapshotHashCalculator.calculate(snapshot1)
+        val hash2 = SnapshotHashCalculator.calculate(snapshot2)
 
         assertNotEquals("Hash should differ when remaining value changes", hash1, hash2)
     }
@@ -69,11 +61,5 @@ class SemanticSearchManagerTest {
             simSnapshots = listOf(simSnapshot),
             capabilities = emptyList(),
         )
-    }
-
-    private fun invokeCalculateContentHash(snapshot: GlobalSnapshot): Int {
-        val method: Method = SemanticSearchManager::class.java.getDeclaredMethod("calculateContentHash", GlobalSnapshot::class.java)
-        method.isAccessible = true
-        return method.invoke(manager, snapshot) as Int
     }
 }

@@ -85,6 +85,61 @@ class WidgetUiMapperTest {
         assertEquals("100", sim0.minutesText)
         assertTrue(sim0.showMinutesLimit)
         assertEquals(Color.WHITE, sim0.textColor)
+        
+        // Verify full text fields
+        assertTrue(sim0.minutesUsedFullText.contains("100"))
+        assertTrue(sim0.minutesLimitFullText.contains("200"))
+    }
+
+    @Test
+    fun testSnapshotToUiState_EmptySnapshot() {
+        val snapshot = GlobalSnapshot(SchemaVersion(1,0,0), 0L, emptyList(), emptyList())
+        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, emptyList())
+
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+
+        assertTrue(uiState.simUiStates.isEmpty())
+    }
+
+    @Test
+    fun testSnapshotToUiState_ManualAdjustment() {
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            operator = "MTS",
+                            isActive = true,
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to
+                                        SemanticEntity(
+                                            id = "sim_0_MINUTES",
+                                            simSlot = 0,
+                                            operatorName = "MTS",
+                                            packageType = PackageType.MINUTES,
+                                            limit = 200,
+                                            used = 100,
+                                            remaining = 150, // 200 - 100 + 50 adj
+                                            unit = MeasurementUnit.MINUTES,
+                                            periodStart = 0,
+                                            periodEnd = 0,
+                                            lastUpdateTime = 0,
+                                            sourceType = DataSourceType.MANUAL,
+                                        ),
+                                ),
+                        ),
+                    ),
+                capabilities = emptyList(),
+            )
+        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, 
+            listOf(SimSettingsState(true, true, true, true, false, false, false)))
+
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        assertEquals("150", uiState.simUiStates[0].minutesText)
     }
 
     @Test

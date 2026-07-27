@@ -8,13 +8,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.InitialSetupWorker
 import com.example.minutewatcher.core.model.util.AppLogger
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
@@ -37,7 +35,7 @@ class BootReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 AppLogger.e("BootReceiver: Failed to enqueue InitialSetupWorker", e)
             } finally {
-                pendingResult.finish()
+                pendingResult?.finish()
             }
         }
     }

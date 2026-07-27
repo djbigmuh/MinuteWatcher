@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Cartes SIM</string>
     <string name="no_sim_card">Aucune carte SIM détectée</string>
@@ -31,9 +31,9 @@
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Suivi des appels</string>
     <string name="usage_access_rationale">MinuteWatcher a besoin d\'un accès à l\'utilisation pour suivre précisément la consommation de données mobiles. Veuillez l\'activer dans l\'écran suivant.</string>
-    <string name="usage_access_dialog_title">Data Usage Tracking</string>
-    <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission.</string>
-    <string name="phone_permission_permanent_denial">Phone permission is permanently denied.</string>
+    <string name="usage_access_dialog_title">Suivi de l\'utilisation des données</string>
+    <string name="usage_access_dialog_description">Pour suivre votre consommation de données mobiles, MinuteWatcher a besoin de l\'autorisation « Accès aux données d\'utilisation ».</string>
+    <string name="phone_permission_permanent_denial">Autorisation de téléphone refusée de manière permanente.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Paramètres du widget</string>
@@ -59,17 +59,17 @@
     <string name="font_size_large">+1</string>
     <string name="font_size_xlarge">+2</string>
     <string name="dual_sim_traffic_note">* Remarque : Le suivi du trafic pour le Dual SIM peut être imprécis en raison des limitations d\'Android.</string>
-    <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
-    <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
-    <string name="tracking_banner_phone_permission">Phone permission is required.</string>
-    <string name="tracking_banner_usage_access">Usage Access is required.</string>
-    <string name="tracking_banner_traffic_error">Traffic data error.</string>
-    <string name="tracking_banner_appsearch_error">AppSearch indexing failed.</string>
-    <string name="action_grant">Grant</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_app_settings">App Settings</string>
-    <string name="validation_error_invalid_range">Please enter a value between %1 and %2</string>
-    <string name="validation_error_invalid_number">Please enter a valid number</string>
+    <string name="traffic_tracking_limitation_title">Limitation du suivi du trafic</string>
+    <string name="traffic_tracking_limitation_body">Android fournit l\'utilisation des données mobiles en tant que valeur globale pour l\'ensemble de l\'appareil. \n\nMinuteWatcher attribue tout le trafic mobile à la carte SIM actuellement sélectionnée comme « SIM de données par défaut » dans les paramètres de votre système.</string>
+    <string name="tracking_banner_phone_permission">Autorisation de téléphone requise.</string>
+    <string name="tracking_banner_usage_access">Accès à l\'utilisation requis.</string>
+    <string name="tracking_banner_traffic_error">Erreur de données de trafic.</string>
+    <string name="tracking_banner_appsearch_error">Échec de l\'indexation AppSearch.</string>
+    <string name="action_grant">Accorder</string>
+    <string name="action_settings">Paramètres</string>
+    <string name="action_app_settings">Paramètres de l\'application</string>
+    <string name="validation_error_invalid_range">Veuillez saisir une valeur entre %1$s et %2$s</string>
+    <string name="validation_error_invalid_number">Veuillez saisir un nombre valide</string>
     <string name="dynamic_preview">Aperçu dynamique</string>
     <string name="widget_already_added">Widget déjà ajouté à l\'écran d\'accueil</string>
 
@@ -113,12 +113,14 @@
     <string name="gb_abbr"> Go</string>
     <string name="auto_reset_day_suffix">jour du mois</string>
 
-    <plurals name="minutes_plurals" tools:ignore="MissingQuantity">
+    <plurals name="minutes_plurals">
         <item quantity="one">%1$d minute</item>
+        <item quantity="many">%1$d minutes</item>
         <item quantity="other">%1$d minutes</item>
     </plurals>
-    <plurals name="days_plurals" tools:ignore="MissingQuantity">
+    <plurals name="days_plurals">
         <item quantity="one">%1$d jour</item>
+        <item quantity="many">%1$d jours</item>
         <item quantity="other">%1$d jours</item>
     </plurals>
 
@@ -132,7 +134,3 @@
     <string name="change_auto_reset_day_content_desc">Changer le jour de réinitialisation automatique</string>
     <string name="toggle_auto_reset_content_desc">Activer ou désactiver la réinitialisation automatique</string>
 </resources>
-
-
-
-

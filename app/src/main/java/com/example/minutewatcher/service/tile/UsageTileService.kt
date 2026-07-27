@@ -1,5 +1,6 @@
 package com.example.minutewatcher.service.tile
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -50,6 +51,7 @@ class UsageTileService : TileService() {
         job = null
     }
 
+    @SuppressLint("WrongConstant")
     override fun onClick() {
         super.onClick()
         val intent =

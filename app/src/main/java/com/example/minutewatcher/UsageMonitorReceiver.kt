@@ -10,13 +10,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.CallEventWorker
 import com.example.minutewatcher.core.model.util.AppLogger
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@AndroidEntryPoint
 class UsageMonitorReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
@@ -61,7 +59,7 @@ class UsageMonitorReceiver : BroadcastReceiver() {
                 } catch (e: Exception) {
                     AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
                 } finally {
-                    pendingResult.finish()
+                    pendingResult?.finish()
                 }
             }
         }

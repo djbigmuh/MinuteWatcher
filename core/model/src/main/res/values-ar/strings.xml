@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">بطاقات SIM</string>
     <string name="no_sim_card">لم يتم اكتشاف بطاقة SIM</string>
@@ -31,9 +31,9 @@
     <string name="language_hi">الهندية</string>
     <string name="call_tracking_title">تتبع المكالمات</string>
     <string name="usage_access_rationale">يحتاج MinuteWatcher إلى الوصول إلى بيانات الاستخدام لتتبع استخدام البيانات بدقة. يرجى تفعيله في الشاشة التالية.</string>
-    <string name="usage_access_dialog_title">Data Usage Tracking</string>
-    <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission.</string>
-    <string name="phone_permission_permanent_denial">Phone permission is permanently denied.</string>
+    <string name="usage_access_dialog_title">تتبع استخدام البيانات</string>
+    <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".</string>
+    <string name="phone_permission_permanent_denial">تم رفض إذن الهاتف بشكل دائم.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">إعدادات القطعة</string>
@@ -59,17 +59,17 @@
     <string name="font_size_large">+1</string>
     <string name="font_size_xlarge">+2</string>
     <string name="dual_sim_traffic_note">* ملاحظة: قد يكون تتبع حركة البيانات لبطاقتي SIM غير دقيق بسبب قيود أندرويد.</string>
-    <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
-    <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
-    <string name="tracking_banner_phone_permission">Phone permission is required.</string>
-    <string name="tracking_banner_usage_access">Usage Access is required.</string>
-    <string name="tracking_banner_traffic_error">Traffic data error.</string>
-    <string name="tracking_banner_appsearch_error">AppSearch indexing failed.</string>
-    <string name="action_grant">Grant</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_app_settings">App Settings</string>
-    <string name="validation_error_invalid_range">Please enter a value between %1 and %2</string>
-    <string name="validation_error_invalid_number">Please enter a valid number</string>
+    <string name="traffic_tracking_limitation_title">قيود تتبع البيانات</string>
+    <string name="traffic_tracking_limitation_body">يوفر أندرويد استخدام بيانات الهاتف المحمول كقيمة إجمالية للجهاز بالكامل. \n\nيعزو MinuteWatcher جميع حركة البيانات إلى بطاقة SIM المحددة حاليًا كـ \"بطاقة البيانات الافتراضية\" في إعدادات النظام.</string>
+    <string name="tracking_banner_phone_permission">مطلوب إذن الهاتف.</string>
+    <string name="tracking_banner_usage_access">مطلوب الوصول إلى الاستخدام.</string>
+    <string name="tracking_banner_traffic_error">خطأ في بيانات حركة المرور.</string>
+    <string name="tracking_banner_appsearch_error">فشل فهرسة AppSearch.</string>
+    <string name="action_grant">منح</string>
+    <string name="action_settings">الإعدادات</string>
+    <string name="action_app_settings">إعدادات التطبيق</string>
+    <string name="validation_error_invalid_range">يرجى إدخال قيمة بين %1$s و %2$s</string>
+    <string name="validation_error_invalid_number">يرجى إدخال رقم صالح</string>
     <string name="dynamic_preview">معاينة ديناميكية</string>
     <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
 
@@ -140,7 +140,3 @@
     <string name="change_auto_reset_day_content_desc">تغيير يوم إعادة الضبط التلقائي</string>
     <string name="toggle_auto_reset_content_desc">تفعيل أو تعطيل إعادة الضبط التلقائي</string>
 </resources>
-
-
-
-
