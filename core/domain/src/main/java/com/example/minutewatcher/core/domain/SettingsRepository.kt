@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.domain
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.MigrationSkipReason
-import androidx.datastore.preferences.core.MutablePreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -96,5 +95,5 @@ interface SettingsRepository {
 
     suspend fun getActiveCallSubIds(): List<Int>
 
-    suspend fun updateSettings(transform: suspend (MutablePreferences) -> Unit)
+    suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings)
 }

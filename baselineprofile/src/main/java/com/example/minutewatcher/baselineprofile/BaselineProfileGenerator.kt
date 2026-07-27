@@ -12,11 +12,12 @@ class BaselineProfileGenerator {
     val baselineProfileRule = BaselineProfileRule()
 
     @Test
-    fun generate() = baselineProfileRule.collect(
-        packageName = "com.example.minutewatcher",
-        includeInStartupProfile = true
-    ) {
-        pressHome()
-        startActivityAndWait()
-    }
+    fun generate() =
+        baselineProfileRule.collect(
+            packageName = "com.example.minutewatcher",
+            includeInStartupProfile = true,
+        ) {
+            pressHome()
+            startActivityAndWait()
+        }
 }

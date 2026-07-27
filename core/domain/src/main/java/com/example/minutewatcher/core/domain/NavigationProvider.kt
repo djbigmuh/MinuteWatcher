@@ -1,0 +1,11 @@
+package com.example.minutewatcher.core.domain
+
+/**
+ * Interface to provide navigation targets, avoiding hardcoded class names.
+ */
+interface NavigationProvider {
+    /**
+     * The full class name of the MainActivity.
+     */
+    val mainActivityClassName: String
+}

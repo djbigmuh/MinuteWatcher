@@ -16,10 +16,22 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.SimCardMapper
-import com.example.minutewatcher.core.model.util.SimUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,9 +49,10 @@ class UsageStateRepositoryImpl
         @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
         override fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>> {
-            val flows = statusProviders.map { provider ->
-                provider.status.map { status -> provider.key to status }
-            }
+            val flows =
+                statusProviders.map { provider ->
+                    provider.status.map { status -> provider.key to status }
+                }
             return combine(flows) { pairs ->
                 pairs.toMap()
             }
@@ -56,8 +69,6 @@ class UsageStateRepositoryImpl
                     } else {
                         combine(identities.map { simRepository.getSimUsage(it) }) { it.toList() }
                     }
-                }.map { usages ->
-                    usages.filter { !SimUtils.isInactiveSim(it.operator) }
                 }.distinctUntilChanged()
 
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
@@ -68,7 +79,7 @@ class UsageStateRepositoryImpl
                     }
                 }
 
-        private val _snapshot: StateFlow<GlobalSnapshot> =
+        private val snapshotFlow: StateFlow<GlobalSnapshot> =
             dataRefreshNotifier.refreshFlow
                 .flatMapLatest { event ->
                     observeSimUsages().map { usages ->
@@ -76,7 +87,7 @@ class UsageStateRepositoryImpl
                             usages.map { usage ->
                                 val slot = usage.slotIndex
                                 val operator = usage.operator
-                                val isActive = operator.isNotEmpty() && !SimUtils.isInactiveSim(operator)
+                                val isActive = true // Every item in usages corresponds to an active physical SIM
 
                                 val minutes =
                                     MinutesModel.calculate(
@@ -116,11 +127,11 @@ class UsageStateRepositoryImpl
                     }
                 }.stateIn(scope, SharingStarted.Eagerly, createEmptySnapshot())
 
-        override fun observeSnapshot(): StateFlow<GlobalSnapshot> = _snapshot
+        override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
         override suspend fun refresh(): GlobalSnapshot =
             coroutineScope {
-                val nextSnapshot = async { _snapshot.drop(1).first() }
+                val nextSnapshot = async { snapshotFlow.drop(1).first() }
                 dataRefreshNotifier.notifyRefresh()
                 nextSnapshot.await()
             }

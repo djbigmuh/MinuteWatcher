@@ -38,27 +38,24 @@ class WidgetSettingsRepository
         }
 
         suspend fun save(state: WidgetSettingsState) {
-            settingsRepository.updateSettings { prefs ->
-                prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = state.layoutMode
-                prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = state.simArrangement
-                prefs[SettingsKeys.WIDGET_TRANSPARENCY] = state.transparency
-                prefs[SettingsKeys.WIDGET_FONT_SIZE] = state.fontSize
-                prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = state.backgroundColor
-                prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = state.notifyLowMinutes
-                prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = state.notifyLowTraffic
-                prefs[SettingsKeys.CALL_TRACKING_ENABLED] = state.callTrackingEnabled
+            settingsRepository.updateAppSettings { current ->
+                current.copy(
+                    widgetLayoutMode = state.layoutMode,
+                    widgetSimArrangement = state.simArrangement,
+                    widgetTransparency = state.transparency,
+                    widgetFontSize = state.fontSize,
+                    widgetBackgroundColor = state.backgroundColor,
+                    notifyLowMinutes = state.notifyLowMinutes,
+                    notifyLowTraffic = state.notifyLowTraffic,
+                    callTrackingEnabled = state.callTrackingEnabled,
+                )
             }
 
+            val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             for (i in state.simStates.indices) {
                 val identity = simRepository.getIdentity(i)
-                val sim = state.simStates[i]
-                simRepository.setShowSim(identity, sim.showSim)
-                simRepository.setShowSimIcon(identity, sim.showIcon)
-                simRepository.setShowSimName(identity, sim.showName)
-                simRepository.setShowMinutes(identity, sim.showMinutes)
-                simRepository.setShowMinutesLimit(identity, sim.showMinutesLimit)
-                simRepository.setShowTraffic(identity, sim.showTraffic)
-                simRepository.setShowTrafficLimit(identity, sim.showTrafficLimit)
+                simSettingsMap[identity] = state.simStates[i]
             }
+            simRepository.setSimSettingsBatch(simSettingsMap)
         }
     }

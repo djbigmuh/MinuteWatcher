@@ -8,18 +8,21 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PermissionStateNotifierImpl @Inject constructor() : PermissionStateNotifier {
-    private val _changes = MutableSharedFlow<Unit>(
-        replay = 1,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    ).apply {
-        tryEmit(Unit)
-    }
+class PermissionStateNotifierImpl
+    @Inject
+    constructor() : PermissionStateNotifier {
+        private val _changes =
+            MutableSharedFlow<Unit>(
+                replay = 1,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            ).apply {
+                tryEmit(Unit)
+            }
 
-    override val changes = _changes.asSharedFlow()
+        override val changes = _changes.asSharedFlow()
 
-    override fun notifyChanged() {
-        _changes.tryEmit(Unit)
+        override fun notifyChanged() {
+            _changes.tryEmit(Unit)
+        }
     }
-}

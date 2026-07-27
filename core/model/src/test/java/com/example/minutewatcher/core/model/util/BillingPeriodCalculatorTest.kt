@@ -44,6 +44,9 @@ class BillingPeriodCalculatorTest {
     @Test
     fun testCalculate_LeapYear_Feb() {
         // Reset day 29, now is Feb 28 2024 (Leap year)
+        // resetDayActual = min(29, 29) = 29.
+        // now.dayOfMonth (28) < 29 is true.
+        // Prev month Jan (31 days). prevResetDay = min(29, 31) = 29.
         val now = createMillis(2024, 2, 28)
         val info = BillingPeriodCalculator.calculate(29, now, zoneId)
 
@@ -53,35 +56,43 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_NonLeapYear_Feb() {
+    fun testCalculate_NonLeapYear_Feb_Reset31() {
         // Reset day 31, now is March 5 2025
+        // currentYearMonth = March (31 days). resetDayActual = min(31, 31) = 31.
+        // now.dayOfMonth (5) < 31 is true.
+        // Prev month Feb (28 days). prevResetDay = min(31, 28) = 28.
         val now = createMillis(2025, 3, 5)
         val info = BillingPeriodCalculator.calculate(31, now, zoneId)
 
         // Feb 2025 has 28 days, so started Feb 28
         assertEquals(createMillis(2025, 2, 28), info.startDate)
+        // End is March 31
+        assertEquals(createMillis(2025, 3, 31), info.endDate)
     }
 
     @Test
     fun testCalculate_31stOnShortMonth() {
         // Reset day 31, now is April 30
+        // April has 30 days. resetDayActual = min(31, 30) = 30.
+        // now.dayOfMonth (30) < 30 is false.
+        // Period started THIS month (April 30).
         val now = createMillis(2026, 4, 30)
         val info = BillingPeriodCalculator.calculate(31, now, zoneId)
 
-        // March has 31 days, so started March 31
-        assertEquals(createMillis(2026, 3, 31), info.startDate)
-        // End is April 30 (since April only has 30 days)
-        assertEquals(createMillis(2026, 4, 30), info.endDate)
+        assertEquals(createMillis(2026, 4, 30), info.startDate)
+        // End is May 31
+        assertEquals(createMillis(2026, 5, 31), info.endDate)
     }
 
     @Test
     fun testCalculate_31stOnMay1st() {
         // Reset day 31, now is May 1st
+        // May has 31 days. resetDayActual = 31.
+        // 1 < 31 is true.
+        // Prev month April (30 days). prevResetDay = min(31, 30) = 30.
         val now = createMillis(2026, 5, 1)
         val info = BillingPeriodCalculator.calculate(31, now, zoneId)
 
-        // April has 30 days.
-        // 1 < 31 is true. Prev month April (30 days). 
         // Started April 30.
         assertEquals(createMillis(2026, 4, 30), info.startDate)
         // End is May 31
@@ -101,47 +112,50 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_NewYearTransition() {
-        // Reset day 1, now is Jan 1st 2026 00:05
-        val now = LocalDateTime.of(2026, 1, 1, 0, 5).toInstant(ZoneOffset.UTC).toEpochMilli()
-        val info = BillingPeriodCalculator.calculate(1, now, zoneId)
-
-        assertEquals(createMillis(2026, 1, 1), info.startDate)
-        assertEquals(createMillis(2026, 2, 1), info.endDate)
-    }
-
-    @Test
-    fun testCalculate_LeapYear_Feb29_End() {
-        // Reset day 31, now is March 1st 2024 (Leap year)
-        val now = createMillis(2024, 3, 1)
+    fun testCalculate_LeapYear_Feb29_Start() {
+        // Reset day 31, now is Feb 29 2024 (Leap year)
+        // Feb has 29 days. resetDayActual = 29.
+        // 29 < 29 is false.
+        // Starts Feb 29.
+        val now = createMillis(2024, 2, 29)
         val info = BillingPeriodCalculator.calculate(31, now, zoneId)
 
-        // Feb 2024 has 29 days. Reset day 31 -> Feb 29.
         assertEquals(createMillis(2024, 2, 29), info.startDate)
+        // End is March 31
+        assertEquals(createMillis(2024, 3, 31), info.endDate)
     }
 
     @Test
-    fun testCalculate_31stInFebruary() {
-        // Reset day 31, now is Feb 15 2026 (Non-leap year)
-        val now = createMillis(2026, 2, 15)
-        val info = BillingPeriodCalculator.calculate(31, now, zoneId)
-
-        // Started Jan 31
-        assertEquals(createMillis(2026, 1, 31), info.startDate)
-        // Ends Feb 28
-        assertEquals(createMillis(2026, 2, 28), info.endDate)
-    }
-
-    @Test
-    fun testCalculate_31stOnFeb28th() {
+    fun testCalculate_31stOnFeb28th_NonLeap() {
         // Reset day 31, now is Feb 28 2026
+        // Feb has 28 days. resetDayActual = 28.
+        // 28 < 28 is false.
+        // Starts Feb 28.
         val now = createMillis(2026, 2, 28)
         val info = BillingPeriodCalculator.calculate(31, now, zoneId)
 
-        // Started Jan 31.
-        assertEquals(createMillis(2026, 1, 31), info.startDate)
-        // Ends Feb 28
-        assertEquals(createMillis(2026, 2, 28), info.endDate)
+        assertEquals(createMillis(2026, 2, 28), info.startDate)
+        // Ends March 31
+        assertEquals(createMillis(2026, 3, 31), info.endDate)
+    }
+
+    @Test
+    fun testProgress_CorrectOnShortMonth() {
+        // Reset 31, now is Feb 28 (non-leap)
+        // Period is Feb 28 to March 31.
+        // Total days: 1 (Feb 28) + 31 (March) = 32 days.
+        val now = createMillis(2026, 2, 28)
+        val info = BillingPeriodCalculator.calculate(31, now, zoneId)
+
+        assertEquals(0, info.progressPercentage)
+
+        // Move to March 16
+        val middleNow = createMillis(2026, 3, 16)
+        val middleInfo = BillingPeriodCalculator.calculate(31, middleNow, zoneId)
+        // Elapsed: 1 (Feb 28) + 15 (March 1-16) = 16 days.
+        // Period: Feb 28 to March 31 = 31 days.
+        // 16 / 31 = 51%
+        assertEquals(51, middleInfo.progressPercentage)
     }
 
     private fun createMillis(

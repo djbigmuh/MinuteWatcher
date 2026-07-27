@@ -1,0 +1,22 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun SimItem( context: Context, sim: SimUiState, layoutMode: WidgetLayoutMode, )</ID>
+    <ID>CyclomaticComplexMethod:WidgetUiMapper.kt$WidgetUiMapper$fun mapFromSnapshot( context: Context, snapshot: GlobalSnapshot, state: WidgetSettingsState, ): WidgetUiState</ID>
+    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun DualSimLayout( context: Context, sim1: SimUiState, sim2: SimUiState, uiState: WidgetUiState, )</ID>
+    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun SimItem( context: Context, sim: SimUiState, layoutMode: WidgetLayoutMode, )</ID>
+    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun SingleSimLayout( context: Context, sim: SimUiState, layoutMode: WidgetLayoutMode, )</ID>
+    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun WidgetContent( context: Context, uiState: WidgetUiState, navigationProvider: NavigationProvider, )</ID>
+    <ID>LongMethod:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun DualSimLayout( context: Context, sim1: SimUiState, sim2: SimUiState, uiState: WidgetUiState, )</ID>
+    <ID>LongMethod:MinutesGlanceWidget.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun SimItem( context: Context, sim: SimUiState, layoutMode: WidgetLayoutMode, )</ID>
+    <ID>LongMethod:WidgetUiMapper.kt$WidgetUiMapper$fun mapFromSnapshot( context: Context, snapshot: GlobalSnapshot, state: WidgetSettingsState, ): WidgetUiState</ID>
+    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic()</ID>
+    <ID>MagicNumber:MinutesGlanceWidget.kt$0.5f</ID>
+    <ID>MagicNumber:MinutesGlanceWidget.kt$100f</ID>
+    <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$0.5</ID>
+    <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$0.5f</ID>
+    <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$1024</ID>
+    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$trafficLimitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(trafficLimitGb))</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -14,9 +14,17 @@ import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.guava.await
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,7 +37,8 @@ class SemanticSearchManager
     constructor(
         @param:ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : AutoCloseable, TrackingStatusProvider {
+    ) : AutoCloseable,
+        TrackingStatusProvider {
         override val key: String = "appsearch"
 
         private var session: AppSearchSession? = null
@@ -45,7 +54,12 @@ class SemanticSearchManager
             job =
                 scope.launch {
                     _status.value = TrackingStatus.Active
-                    if (!ensureSession()) return@launch
+                    try {
+                        ensureSession()
+                    } catch (t: Throwable) {
+                        AppLogger.e("Fatal error during AppSearch session initialization", t)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, t.message)
+                    }
 
                     snapshotFlow
                         .debounce { if (it.isManualUpdate) 0.seconds else 15.seconds }
@@ -61,47 +75,51 @@ class SemanticSearchManager
             var retries = 3
             var retryDelay = 1000.milliseconds
             while (retries > 0) {
+                var currentSession: AppSearchSession? = null
                 try {
-                    val createdSession =
+                    currentSession =
                         LocalStorage
                             .createSearchSessionAsync(
                                 LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
                             ).await()
 
-                    session = createdSession
+                    currentSession
+                        .setSchemaAsync(
+                            SetSchemaRequest
+                                .Builder()
+                                .addDocumentClasses(UsageDocument::class.java)
+                                .setForceOverride(false)
+                                .build(),
+                        ).await()
 
-                    createdSession.setSchemaAsync(
-                        SetSchemaRequest
-                            .Builder()
-                            .addDocumentClasses(UsageDocument::class.java)
-                            .setForceOverride(false)
-                            .build(),
-                    ).await()
-
+                    session = currentSession
                     return true
                 } catch (e: AppSearchException) {
+                    currentSession?.close()
                     if (e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR || e.resultCode == AppSearchResult.RESULT_IO_ERROR) {
                         AppLogger.e("AppSearch transient error, retrying in $retryDelay...", e)
                         delay(retryDelay)
                         retryDelay *= 2
                         retries--
-                    } else if (e.message?.contains("Schema") == true) {
+                    } else if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
                         // Attempt force override on schema conflict
                         AppLogger.w("AppSearch schema mismatch, forcing override")
-                        val currentSession = session
-                        if (currentSession == null) {
-                            AppLogger.e("AppSearch session is null during schema override")
-                            break
-                        }
-
                         try {
-                            currentSession.setSchemaAsync(
-                                SetSchemaRequest
-                                    .Builder()
-                                    .addDocumentClasses(UsageDocument::class.java)
-                                    .setForceOverride(true)
-                                    .build(),
-                            ).await()
+                            // Re-open session if needed, but usually we just got one
+                            val overrideSession =
+                                currentSession ?: LocalStorage.createSearchSessionAsync(
+                                    LocalStorage.SearchContext.Builder(context, "minute_watcher_db").build(),
+                                ).await()
+
+                            overrideSession
+                                .setSchemaAsync(
+                                    SetSchemaRequest
+                                        .Builder()
+                                        .addDocumentClasses(UsageDocument::class.java)
+                                        .setForceOverride(true)
+                                        .build(),
+                                ).await()
+                            session = overrideSession
                             return true
                         } catch (ex: Exception) {
                             AppLogger.e("Failed to force AppSearch schema override", ex)
@@ -112,6 +130,7 @@ class SemanticSearchManager
                         break
                     }
                 } catch (e: Exception) {
+                    currentSession?.close()
                     AppLogger.e("Unexpected error during AppSearch initialization", e)
                     break
                 }
@@ -129,7 +148,13 @@ class SemanticSearchManager
 
             if (currentHash == lastSnapshotHash) return
 
-            val activeSimSnapshots = snapshot.simSnapshots.filter { it.isActive }
+            if (session == null) {
+                if (!ensureSession()) return
+            }
+
+            val activeSimSnapshots =
+                snapshot.simSnapshots
+                    .filter { it.isActive && it.slot in SimConstants.SUPPORTED_SLOT_INDICES }
 
             // If it's a manual update, ignore the interval
             if (!snapshot.isManualUpdate && activeSimSnapshots.isNotEmpty() && (currentTime - lastIndexTime < minIndexInterval)) return
@@ -177,9 +202,16 @@ class SemanticSearchManager
             } catch (e: AppSearchException) {
                 AppLogger.e("AppSearch error during indexing", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                if (e.resultCode != AppSearchResult.RESULT_INTERNAL_ERROR && e.resultCode != AppSearchResult.RESULT_IO_ERROR) {
+                    // Fatal error, close and reset session to trigger re-init next time
+                    session?.close()
+                    session = null
+                }
             } catch (e: Exception) {
                 AppLogger.e("Failed to update AppSearch index", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                session?.close()
+                session = null
             }
         }
 

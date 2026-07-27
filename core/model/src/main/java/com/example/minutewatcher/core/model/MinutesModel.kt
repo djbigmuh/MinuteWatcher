@@ -12,7 +12,8 @@ data class MinutesModel(
             limit: Int,
             manualAdjustment: Int,
         ): MinutesModel {
-            val remaining = if (limit > 0 || manualAdjustment != 0) limit + manualAdjustment - used else 0
+            val totalLimit = limit + manualAdjustment
+            val remaining = if (limit > 0 || manualAdjustment != 0) maxOf(0, totalLimit - used) else 0
             return MinutesModel(used, limit, manualAdjustment, remaining)
         }
     }

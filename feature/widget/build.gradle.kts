@@ -55,5 +55,7 @@ dependencies {
     implementation(libs.androidxGlanceMaterial3)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockingKotlin)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidxTestCoreKtx)
 }

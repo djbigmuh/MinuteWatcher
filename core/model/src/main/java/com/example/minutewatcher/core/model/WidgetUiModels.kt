@@ -6,6 +6,8 @@ data class WidgetUiState(
     val backgroundColor: Int,
     val transparency: Int,
     val simUiStates: List<SimUiState>,
+    val isHorizontal: Boolean = true,
+    val showSeparator: Boolean = false,
 )
 
 data class SimUiState(
@@ -33,4 +35,32 @@ data class SimUiState(
     val minutesLimitFullText: String = "",
     val trafficUsedFullText: String = "",
     val trafficLimitFullText: String = "",
+    val layoutSpec: SimLayoutSpec = SimLayoutSpec(emptyList()),
 )
+
+data class SimLayoutSpec(
+    val rows: List<SimLayoutRow>,
+)
+
+data class SimLayoutRow(
+    val components: List<SimLayoutComponent>,
+)
+
+sealed class SimLayoutComponent {
+    data class Icon(
+        val iconRes: Int,
+        val sizeDp: Int,
+    ) : SimLayoutComponent()
+
+    data class Text(
+        val text: String,
+        val color: Int,
+        val fontSizeSp: Float,
+        val isBold: Boolean = false,
+    ) : SimLayoutComponent()
+
+    data class Spacer(
+        val widthDp: Int = 0,
+        val heightDp: Int = 0,
+    ) : SimLayoutComponent()
+}

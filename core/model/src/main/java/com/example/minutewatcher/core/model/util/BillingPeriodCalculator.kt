@@ -23,15 +23,15 @@ object BillingPeriodCalculator {
 
         val currentYearMonth = YearMonth.from(now)
 
+        val resetDayActual = minOf(resetDay, currentYearMonth.lengthOfMonth())
         val startDate: ZonedDateTime
-        if (now.dayOfMonth < resetDay) {
+        if (now.dayOfMonth < resetDayActual) {
             // Period started last month
             val prevMonth = currentYearMonth.minusMonths(1)
             val prevResetDay = minOf(resetDay, prevMonth.lengthOfMonth())
             startDate = prevMonth.atDay(prevResetDay).atStartOfDay(zoneId)
         } else {
             // Period started this month
-            val resetDayActual = minOf(resetDay, currentYearMonth.lengthOfMonth())
             startDate = currentYearMonth.atDay(resetDayActual).atStartOfDay(zoneId)
         }
 

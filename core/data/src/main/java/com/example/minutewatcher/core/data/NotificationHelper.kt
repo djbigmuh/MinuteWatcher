@@ -8,6 +8,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.util.AppLogger
@@ -20,6 +21,7 @@ class NotificationHelper
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        private val navigationProvider: NavigationProvider,
     ) {
         private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -49,7 +51,7 @@ class NotificationHelper
                 }
 
                 val intent =
-                    Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+                    Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                         putExtra("sim_slot", simSlot)
                     }

@@ -24,10 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import com.example.minutewatcher.core.data.UsageCheckWorker
+import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.data.di.ApplicationScope
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
@@ -39,9 +36,7 @@ import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -49,8 +44,13 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     @Inject lateinit var permissionManager: PermissionManager
-    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
+
+    @Inject @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
+
     @Inject lateinit var permissionStateNotifier: PermissionStateNotifier
+
+    @Inject lateinit var workScheduler: WorkScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -130,7 +130,7 @@ class MainActivity : AppCompatActivity() {
                         },
                         onOpenAppSettings = {
                             openAppSettings()
-                        }
+                        },
                     )
                 }
             }
@@ -166,7 +166,9 @@ class MainActivity : AppCompatActivity() {
         ) { permissions ->
             val phoneGranted = permissions[Manifest.permission.READ_PHONE_STATE] ?: false
             if (phoneGranted) {
-                scheduleUsageCheck()
+                workScheduler.scheduleInitialSetup()
+                workScheduler.schedulePeriodicUsageCheck()
+                viewModel.setPhonePermissionPermanentlyDenied(false)
                 // Move to next step: Usage Access
                 if (!permissionManager.hasUsageStatsPermission()) {
                     viewModel.openUsageAccessDialog()
@@ -183,7 +185,8 @@ class MainActivity : AppCompatActivity() {
     private fun checkPermissionsAndInit() {
         if (permissionManager.hasPhoneStatePermission()) {
             viewModel.setPhonePermissionPermanentlyDenied(false)
-            scheduleUsageCheck()
+            workScheduler.scheduleInitialSetup()
+            workScheduler.schedulePeriodicUsageCheck()
 
             if (!permissionManager.hasUsageStatsPermission()) {
                 viewModel.openUsageAccessDialog()
@@ -191,7 +194,9 @@ class MainActivity : AppCompatActivity() {
                 checkNotifications()
             }
         } else {
-            // Rationale logic can be added here if we want to show it before the banner
+            // Check if we already requested it and it was denied permanently
+            // This is tricky without a flag.
+            // Most apps show a rationale banner first.
         }
     }
 
@@ -204,24 +209,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openAppSettings() {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = android.net.Uri.fromParts("package", packageName, null)
-        }
+        val intent =
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", packageName, null)
+            }
         startActivity(intent)
-    }
-
-    private fun scheduleUsageCheck() {
-        applicationScope.launch(Dispatchers.IO) {
-            val workRequest =
-                PeriodicWorkRequestBuilder<UsageCheckWorker>(1, TimeUnit.HOURS)
-                    .build()
-
-            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-                "UsageCheckWork",
-                ExistingPeriodicWorkPolicy.KEEP,
-                workRequest,
-            )
-        }
     }
 
     private fun addWidgetToHomeScreen() {
@@ -246,14 +238,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        
+
         val now = SystemClock.elapsedRealtime()
         if (now - lastRefreshAt > 20_000L) {
             lastRefreshAt = now
             viewModel.refreshSimCards()
             viewModel.notifyDataChanged()
         }
-        
+
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastResumeNotifyTime > 1000) {
             permissionStateNotifier.notifyChanged()

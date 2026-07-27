@@ -6,19 +6,25 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(FlowPreview::class)
 @Singleton
@@ -27,15 +33,24 @@ class ShortcutManager
     constructor(
         @ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
+        private val navigationProvider: NavigationProvider,
     ) : AutoCloseable {
         private var job: Job? = null
 
-        fun initialize(snapshotFlow: kotlinx.coroutines.flow.StateFlow<GlobalSnapshot>) {
+        fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
             job =
                 scope.launch {
+                    var isFirst = true
                     snapshotFlow
-                        .debounce(30_000L)
+                        .debounce { snapshot ->
+                            if (isFirst || snapshot.isManualUpdate) {
+                                isFirst = false
+                                0.milliseconds
+                            } else {
+                                30.seconds
+                            }
+                        }
                         .collectLatest { snapshot ->
                             try {
                                 updateShortcuts(snapshot)
@@ -55,7 +70,7 @@ class ShortcutManager
             val shortcuts = mutableListOf<ShortcutInfoCompat>()
 
             // limit shortcuts to supported SIMs
-            snapshot.simSnapshots.filter { it.isActive }.take(SimConstants.MAX_SUPPORTED_SIM_SLOTS).forEach { sim ->
+            snapshot.simSnapshots.filter { it.isActive && it.slot in SimConstants.SUPPORTED_SLOT_INDICES }.forEach { sim ->
                 val slot = sim.slot
                 val operator = sim.operator
                 val minutes = sim.entities[PackageType.MINUTES]
@@ -72,7 +87,7 @@ class ShortcutManager
                                 .setLongLabel(longLabel)
                                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
                                 .setIntent(
-                                    Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+                                    Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                                         action = Intent.ACTION_VIEW
                                         putExtra("sim_slot", slot)
                                     },
@@ -93,7 +108,7 @@ class ShortcutManager
                                 .setLongLabel(longLabel)
                                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
                                 .setIntent(
-                                    Intent().setClassName(context.packageName, "com.example.minutewatcher.MainActivity").apply {
+                                    Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                                         action = Intent.ACTION_VIEW
                                         putExtra("sim_slot", slot)
                                     },

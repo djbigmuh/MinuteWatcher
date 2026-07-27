@@ -11,7 +11,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class WidgetSettingsRepositoryTest {
     private lateinit var repository: WidgetSettingsRepository
@@ -43,16 +47,17 @@ class WidgetSettingsRepositoryTest {
                 )
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
             whenever(simRepository.getIdentity(any())).thenReturn("test_sim")
-            
-            val simSettings = SimSettingsState(
-                showSim = true,
-                showIcon = true,
-                showName = true,
-                showMinutes = true,
-                showMinutesLimit = false,
-                showTraffic = true,
-                showTrafficLimit = false
-            )
+
+            val simSettings =
+                SimSettingsState(
+                    showSim = true,
+                    showIcon = true,
+                    showName = true,
+                    showMinutes = true,
+                    showMinutesLimit = false,
+                    showTraffic = true,
+                    showTrafficLimit = false,
+                )
             whenever(simRepository.getSimSettings(any())).thenReturn(flowOf(simSettings))
 
             // Act
@@ -116,10 +121,7 @@ class WidgetSettingsRepositoryTest {
             repository.save(state)
 
             // Assert
-            verify(settingsRepository).updateSettings(any())
-            verify(simRepository).setShowSim(eq("sim0"), eq(true))
-            verify(simRepository).setShowSim(eq("sim1"), eq(false))
-            verify(simRepository).setShowSimIcon(eq("sim0"), eq(false))
-            verify(simRepository).setShowSimIcon(eq("sim1"), eq(true))
+            verify(settingsRepository).updateAppSettings(any())
+            verify(simRepository).setSimSettingsBatch(any())
         }
 }

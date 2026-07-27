@@ -1,7 +1,10 @@
 package com.example.minutewatcher.core.data.semantic
 
-import com.example.minutewatcher.core.model.*
+import com.example.minutewatcher.core.model.DataSourceType
+import com.example.minutewatcher.core.model.MeasurementUnit
 import com.example.minutewatcher.core.model.MinutesModel
+import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 

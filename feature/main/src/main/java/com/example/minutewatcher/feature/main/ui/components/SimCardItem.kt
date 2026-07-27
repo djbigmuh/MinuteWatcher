@@ -3,11 +3,30 @@ package com.example.minutewatcher.feature.main.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +51,7 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.FormatUtils
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun getStatusColor(status: ColorProvider.UsageStatus): Color =
     when (status) {
@@ -40,6 +60,7 @@ fun getStatusColor(status: ColorProvider.UsageStatus): Color =
         ColorProvider.UsageStatus.NORMAL -> Color(0xFF4CAF50) // Green
     }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun SimCardItem(
     model: SimCardUiModel,
@@ -57,8 +78,8 @@ fun SimCardItem(
     val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
     val trafficInfoDesc = stringResource(id = R.string.traffic_info_content_desc)
 
-    val minutesStatus = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.minutesLimit.toFloat())
-    val trafficStatus = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.trafficLimitMb / Constants.MB_PER_GB)
+    val minutesStatus = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())
+    val trafficStatus = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb)
 
     Card(
         modifier =
@@ -92,9 +113,10 @@ fun SimCardItem(
                 OutlinedButton(
                     onClick = onSetLimits,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp).semantics {
-                        contentDescription = setLimitsDesc
-                    },
+                    modifier =
+                        Modifier.height(32.dp).semantics {
+                            contentDescription = setLimitsDesc
+                        },
                 ) {
                     Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
                 }
@@ -281,6 +303,7 @@ fun SimCardItem(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun EditableValueBox(
     value: String,

@@ -1,7 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -10,7 +11,12 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -188,14 +194,15 @@ class SettingsRepositoryImpl
 
         override suspend fun clearAllCallSessions() {
             dataStore.edit { prefs ->
-                prefs.asMap().keys
+                prefs
+                    .asMap()
+                    .keys
                     .filter { key ->
                         key.name.startsWith("call_start_time_") ||
                             key.name.startsWith("boot_time_") ||
                             key.name.startsWith("call_identity_")
                     }.forEach { key ->
-                        @Suppress("UNCHECKED_CAST")
-                        prefs.remove(key as Preferences.Key<Any>)
+                        prefs.remove(key)
                     }
             }
         }
@@ -209,7 +216,40 @@ class SettingsRepositoryImpl
                 }
             }
 
-        override suspend fun updateSettings(transform: suspend (MutablePreferences) -> Unit) {
-            dataStore.edit { transform(it) }
+        override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
+            dataStore.edit { prefs ->
+                val current =
+                    AppSettings(
+                        theme = AppTheme.fromValue(prefs[SettingsKeys.APP_THEME] ?: -1),
+                        language = prefs[SettingsKeys.APP_LANGUAGE],
+                        notifyLowMinutes = prefs[SettingsKeys.NOTIFY_LOW_MINUTES] ?: true,
+                        notifyLowTraffic = prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: true,
+                        callTrackingEnabled = prefs[SettingsKeys.CALL_TRACKING_ENABLED] ?: true,
+                        widgetLayoutMode = prefs[SettingsKeys.WIDGET_LAYOUT_MODE] ?: 2,
+                        widgetSimArrangement = prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: 0,
+                        widgetTransparency = prefs[SettingsKeys.WIDGET_TRANSPARENCY] ?: 50,
+                        widgetFontSize = prefs[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
+                        widgetBackgroundColor = prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
+                        migrationV1Completed = prefs[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
+                    )
+                val updated = transform(current)
+
+                prefs[SettingsKeys.APP_THEME] = updated.theme.value
+                val language = updated.language
+                if (language == null) {
+                    prefs.remove(SettingsKeys.APP_LANGUAGE)
+                } else {
+                    prefs[SettingsKeys.APP_LANGUAGE] = language
+                }
+                prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
+                prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
+                prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
+                prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
+                prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
+                prefs[SettingsKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
+                prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
+                prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
+                prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
+            }
         }
     }

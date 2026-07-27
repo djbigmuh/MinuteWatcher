@@ -3,9 +3,11 @@ package com.example.minutewatcher.core.model.util
 import java.time.ZoneId
 
 object DateUtils {
-    fun getMonthProgressPercentage(resetDay: Int): Int = BillingPeriodCalculator.calculate(resetDay, zoneId = ZoneId.systemDefault()).progressPercentage
+    fun getMonthProgressPercentage(resetDay: Int): Int =
+        BillingPeriodCalculator.calculate(resetDay, zoneId = ZoneId.systemDefault()).progressPercentage
 
-    fun getDaysRemainingInMonth(resetDay: Int): Int = BillingPeriodCalculator.calculate(resetDay, zoneId = ZoneId.systemDefault()).daysRemaining
+    fun getDaysRemainingInMonth(resetDay: Int): Int =
+        BillingPeriodCalculator.calculate(resetDay, zoneId = ZoneId.systemDefault()).daysRemaining
 
     fun shouldPerformAutoReset(
         lastResetDate: Long,

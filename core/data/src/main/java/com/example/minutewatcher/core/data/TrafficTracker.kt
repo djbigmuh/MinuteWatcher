@@ -13,8 +13,13 @@ import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.core.model.util.PermissionManager
 import com.example.minutewatcher.core.model.util.SimUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -57,10 +62,20 @@ class TrafficTracker
 
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
-                val currentBytes = getCurrentMobileBytes()
-                if (currentBytes != -1L) {
-                    simRepository.setLastTotalBytes(identity, currentBytes)
-                    AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                try {
+                    val currentBytes = getCurrentMobileBytes()
+                    if (currentBytes != -1L) {
+                        simRepository.setLastTotalBytes(identity, currentBytes)
+                        AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                        _status.value = TrackingStatus.Active
+                    } else {
+                        _status.value = TrackingStatus.Idle
+                    }
+                } catch (e: SecurityException) {
+                    AppLogger.e("Permission error in resetBaseline", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+                } catch (e: Exception) {
+                    AppLogger.e("Error in resetBaseline", e)
                 }
             }
         }
@@ -68,7 +83,11 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
-                    val targetInfo = getTargetSimInfo() ?: return
+                    val targetInfo = getTargetSimInfo()
+                    if (targetInfo == null) {
+                        _status.value = TrackingStatus.Idle
+                        return
+                    }
 
                     val (targetSim, currentDataSubId) = targetInfo
                     val targetIdentity = simRepository.getIdentity(targetSim)
@@ -77,6 +96,8 @@ class TrafficTracker
                         AppLogger.d("Traffic stats unavailable, skipping update")
                         if (!permissionManager.hasUsageStatsPermission()) {
                             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+                        } else {
+                            _status.value = TrackingStatus.Idle
                         }
                         return
                     }
@@ -88,6 +109,7 @@ class TrafficTracker
                         simRepository.setLastTotalBytes(targetIdentity, currentBytes)
                         AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
                         settingsRepository.setLastDataSubId(currentDataSubId)
+                        _status.value = TrackingStatus.Active
                         return
                     }
 
@@ -101,6 +123,8 @@ class TrafficTracker
                             settingsRepository.setLastDataSubId(currentDataSubId)
                             _status.value = TrackingStatus.Active
                         }
+                    } else {
+                        _status.value = TrackingStatus.Active
                     }
                 } catch (e: SecurityException) {
                     AppLogger.e("Permission error updating traffic", e)
@@ -125,8 +149,7 @@ class TrafficTracker
                     )
                 bucket.rxBytes + bucket.txBytes
             } catch (e: SecurityException) {
-                AppLogger.e("Permission error in getCurrentMobileBytes", e)
-                -1L
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error querying NetworkStatsManager", e)
                 -1L
@@ -142,6 +165,8 @@ class TrafficTracker
                     val subInfoList = permissionManager.getActiveSubscriptions()
                     targetSim = subInfoList.find { it.subscriptionId == currentDataSubId }?.simSlotIndex ?: -1
                 }
+            } catch (e: SecurityException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error getting default data SIM", e)
             }

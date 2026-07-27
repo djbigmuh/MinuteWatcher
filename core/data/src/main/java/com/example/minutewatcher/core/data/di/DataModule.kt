@@ -7,15 +7,17 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
+import com.example.minutewatcher.core.data.PermissionRepositoryImpl
 import com.example.minutewatcher.core.data.PermissionStateNotifierImpl
 import com.example.minutewatcher.core.data.SettingsRepositoryImpl
 import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
 import com.example.minutewatcher.core.data.SimRepositoryImpl
-import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
-import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
+import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
+import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -79,6 +81,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindPermissionStateNotifier(impl: PermissionStateNotifierImpl): PermissionStateNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindPermissionRepository(impl: PermissionRepositoryImpl): PermissionRepository
 
     @Binds
     @Singleton

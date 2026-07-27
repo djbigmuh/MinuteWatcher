@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.semantic.di
 
 import android.content.Context
 import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.feature.semantic.SemanticRepository
@@ -39,10 +40,12 @@ abstract class SemanticModule {
         fun provideShortcutManager(
             @ApplicationContext context: Context,
             @ApplicationScope scope: CoroutineScope,
-        ): ShortcutManager = ShortcutManager(context, scope)
+            navigationProvider: NavigationProvider,
+        ): ShortcutManager = ShortcutManager(context, scope, navigationProvider)
 
         @Provides
         @Singleton
-        fun provideSemanticRepository(usageStateRepository: UsageStateRepository): SemanticRepository = SemanticRepository(usageStateRepository)
+        fun provideSemanticRepository(usageStateRepository: UsageStateRepository): SemanticRepository =
+            SemanticRepository(usageStateRepository)
     }
 }

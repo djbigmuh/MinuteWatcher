@@ -41,5 +41,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockingKotlin)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.kotlinxCoroutinesTesting)
 }

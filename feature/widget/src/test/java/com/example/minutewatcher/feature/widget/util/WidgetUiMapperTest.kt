@@ -2,7 +2,15 @@ package com.example.minutewatcher.feature.widget.util
 
 import android.content.Context
 import android.graphics.Color
-import com.example.minutewatcher.core.model.*
+import com.example.minutewatcher.core.model.DataSourceType
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.MeasurementUnit
+import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimSettingsState
+import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.WidgetSettingsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -85,7 +93,7 @@ class WidgetUiMapperTest {
         assertEquals("100", sim0.minutesText)
         assertTrue(sim0.showMinutesLimit)
         assertEquals(Color.WHITE, sim0.textColor)
-        
+
         // Verify full text fields
         assertTrue(sim0.minutesUsedFullText.contains("100"))
         assertTrue(sim0.minutesLimitFullText.contains("200"))
@@ -93,7 +101,7 @@ class WidgetUiMapperTest {
 
     @Test
     fun testSnapshotToUiState_EmptySnapshot() {
-        val snapshot = GlobalSnapshot(SchemaVersion(1,0,0), 0L, emptyList(), emptyList())
+        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
         val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, emptyList())
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
@@ -135,8 +143,18 @@ class WidgetUiMapperTest {
                     ),
                 capabilities = emptyList(),
             )
-        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, 
-            listOf(SimSettingsState(true, true, true, true, false, false, false)))
+        val settings =
+            WidgetSettingsState(
+                1,
+                0,
+                50,
+                2,
+                Color.BLACK,
+                true,
+                true,
+                true,
+                listOf(SimSettingsState(true, true, true, true, false, false, false)),
+            )
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
         assertEquals("150", uiState.simUiStates[0].minutesText)

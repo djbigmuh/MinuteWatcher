@@ -7,6 +7,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.InitialSetupWorker
+import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.model.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,13 +28,13 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val workRequest = OneTimeWorkRequestBuilder<InitialSetupWorker>().build()
                 WorkManager.getInstance(appContext).enqueueUniqueWork(
-                    "BOOT_SETUP",
+                    WorkScheduler.INITIAL_SETUP_WORK_NAME,
                     ExistingWorkPolicy.REPLACE,
                     workRequest,
                 )
-                AppLogger.d("BootReceiver: InitialSetupWorker enqueued successfully")
+                AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
             } catch (e: Exception) {
-                AppLogger.e("BootReceiver: Failed to enqueue InitialSetupWorker", e)
+                AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
             } finally {
                 pendingResult?.finish()
             }

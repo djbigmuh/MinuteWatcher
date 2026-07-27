@@ -116,6 +116,8 @@ interface SimRepository {
     // Combined settings for performance
     fun getSimSettings(identity: String): Flow<SimSettingsState>
 
+    suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
+
     // Visibility settings (moved from SettingsRepository)
     fun getShowSim(identity: String): Flow<Boolean>
 

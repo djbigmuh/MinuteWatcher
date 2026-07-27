@@ -16,7 +16,9 @@ data class TrafficModel(
         ): TrafficModel {
             val limitGb = limitMb / Constants.MB_PER_GB
             val usedGb = usedMb / Constants.MB_PER_GB
-            val remainingGb = if (limitMb > 0 || manualAdjustmentGb != 0f) limitGb + manualAdjustmentGb - usedGb else -1f
+            val totalLimitGb = limitGb + manualAdjustmentGb
+            val isLimitSet = limitMb > 0 || manualAdjustmentGb != 0f
+            val remainingGb = if (isLimitSet) maxOf(0f, totalLimitGb - usedGb) else -1f
             return TrafficModel(usedMb, limitMb, manualAdjustmentGb, remainingGb, limitGb, limitMb > 0)
         }
     }

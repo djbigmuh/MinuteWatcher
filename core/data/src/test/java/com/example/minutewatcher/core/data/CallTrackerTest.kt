@@ -4,16 +4,27 @@ import android.content.Context
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -119,7 +130,7 @@ class CallTrackerTest {
             whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
             whenever(settingsRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
             whenever(settingsRepository.getBootTime(2)).thenReturn(flowOf(200L))
-            
+
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(2)
 
             callTracker.onCallEnded(-1)
@@ -137,7 +148,7 @@ class CallTrackerTest {
             whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
             whenever(settingsRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
             whenever(settingsRepository.getBootTime(2)).thenReturn(flowOf(200L))
-            
+
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 
             callTracker.onCallEnded(-1)
@@ -160,5 +171,47 @@ class CallTrackerTest {
             // Assert: verify clearSession was called (which sets 0) before starting new
             verify(settingsRepository, atLeastOnce()).setCallStartTime(1, 0)
             verify(settingsRepository).setCallStartTime(eq(1), argThat { this > 0 })
+        }
+
+    @Test
+    fun `onCallStarted sets permission missing status on SecurityException`() =
+        runTest {
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenThrow(SecurityException())
+
+            callTracker.onCallStarted(-1)
+
+            val status = callTracker.status.first()
+            assert(status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+        }
+
+    @Test
+    fun `onCallEnded sets permission missing status on SecurityException`() =
+        runTest {
+            whenever(settingsRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+            whenever(telephonyManager.callState).thenThrow(SecurityException())
+
+            callTracker.onCallEnded(-1)
+
+            val status = callTracker.status.first()
+            assert(status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+        }
+
+    @Test
+    fun `processCallDuration sets active status on success`() =
+        runTest {
+            val startTime = 1000L
+            val bootTime = 500L
+            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(settingsRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // Advance clock so currentBootTime - savedBootTime > 0
+            org.robolectric.shadows.ShadowSystemClock
+                .advanceBy(java.time.Duration.ofSeconds(10))
+
+            callTracker.onCallEnded(subId = 1)
+
+            val status = callTracker.status.first()
+            assertEquals(TrackingStatus.Active, status)
         }
 }

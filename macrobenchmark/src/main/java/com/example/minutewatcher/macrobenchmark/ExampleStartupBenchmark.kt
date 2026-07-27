@@ -1,7 +1,6 @@
 package com.example.minutewatcher.macrobenchmark
 
 import androidx.benchmark.macro.StartupMode
-import androidx.benchmark.macro.StartupType
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -14,25 +13,27 @@ class ExampleStartupBenchmark {
     val benchmarkRule = MacrobenchmarkRule()
 
     @Test
-    fun startup() = benchmarkRule.measureRepeated(
-        packageName = "com.example.minutewatcher",
-        metrics = listOf(androidx.benchmark.macro.StartupTimingMetric()),
-        iterations = 5,
-        startupMode = StartupMode.COLD
-    ) {
-        pressHome()
-        startActivityAndWait()
-    }
+    fun startup() =
+        benchmarkRule.measureRepeated(
+            packageName = "com.example.minutewatcher",
+            metrics = listOf(androidx.benchmark.macro.StartupTimingMetric()),
+            iterations = 5,
+            startupMode = StartupMode.COLD,
+        ) {
+            pressHome()
+            startActivityAndWait()
+        }
 
     @Test
-    fun startupWithSims() = benchmarkRule.measureRepeated(
-        packageName = "com.example.minutewatcher",
-        metrics = listOf(androidx.benchmark.macro.StartupTimingMetric()),
-        iterations = 5,
-        startupMode = StartupMode.COLD
-    ) {
-        pressHome()
-        // Here we could pass an intent that triggers data simulation if we implemented it
-        startActivityAndWait()
-    }
+    fun startupWithSims() =
+        benchmarkRule.measureRepeated(
+            packageName = "com.example.minutewatcher",
+            metrics = listOf(androidx.benchmark.macro.StartupTimingMetric()),
+            iterations = 5,
+            startupMode = StartupMode.COLD,
+        ) {
+            pressHome()
+            // Here we could pass an intent that triggers data simulation if we implemented it
+            startActivityAndWait()
+        }
 }

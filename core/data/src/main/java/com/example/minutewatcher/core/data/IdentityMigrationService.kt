@@ -1,7 +1,13 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.model.util.AppLogger
@@ -44,8 +50,8 @@ class IdentityMigrationService
             val legacySuffix = "_sim_$slot"
             val newSuffix = "_$identity"
 
-            val appMigrated = migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
-            val simMigrated = migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
+            migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
+            migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
 
             return true // We return true to signify the attempt was made.
         }

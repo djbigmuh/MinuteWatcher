@@ -11,17 +11,21 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
+        val effectiveMinutesLimit = usage.minutesLimit + usage.manualAdjustment
+        val isMinutesLimitSet = usage.minutesLimit > 0 || usage.manualAdjustment != 0
         val remainingMinutes =
-            if (usage.minutesLimit > 0 || usage.manualAdjustment != 0) {
-                usage.minutesLimit + usage.manualAdjustment - usage.minutesUsed
+            if (isMinutesLimitSet) {
+                maxOf(0, effectiveMinutesLimit - usage.minutesUsed)
             } else {
                 0
             }
 
-        val trafficLimitGb = usage.trafficLimitMb / Constants.MB_PER_GB
+        val baseTrafficLimitGb = usage.trafficLimitMb / Constants.MB_PER_GB
+        val effectiveTrafficLimitGb = baseTrafficLimitGb + usage.trafficAdjustment
+        val isTrafficLimitSet = usage.trafficLimitMb > 0 || usage.trafficAdjustment != 0f
         val trafficRemainingGb =
-            if (usage.trafficLimitMb > 0) {
-                trafficLimitGb + usage.trafficAdjustment - (usage.trafficUsed / Constants.MB_PER_GB)
+            if (isTrafficLimitSet) {
+                maxOf(0f, effectiveTrafficLimitGb - (usage.trafficUsed / Constants.MB_PER_GB))
             } else {
                 -1f
             }
@@ -35,10 +39,12 @@ object SimCardMapper {
             minutesLimit = usage.minutesLimit,
             manualAdjustment = usage.manualAdjustment,
             minutesRemaining = remainingMinutes,
+            effectiveMinutesLimit = effectiveMinutesLimit,
             trafficUsedMb = usage.trafficUsed,
             trafficLimitMb = usage.trafficLimitMb,
             trafficRemainingGb = trafficRemainingGb,
-            isTrafficLimitSet = (usage.trafficLimitMb > 0),
+            effectiveTrafficLimitGb = effectiveTrafficLimitGb,
+            isTrafficLimitSet = isTrafficLimitSet,
             autoResetEnabled = usage.autoReset,
             autoResetDay = usage.autoResetDay,
         )

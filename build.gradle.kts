@@ -40,5 +40,7 @@ subprojects {
         filter {
             isFailOnNoMatchingTests = false
         }
+        // Allow Mockito to self-attach on JDK 17+
+        jvmArgs("-Dnet.bytebuddy.experimental=true")
     }
 }

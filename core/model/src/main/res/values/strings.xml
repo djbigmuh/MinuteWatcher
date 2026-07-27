@@ -129,11 +129,11 @@
     <string name="widget_settings_content_desc">Widget Settings</string>
     <string name="choose_color_content_desc">Choose background color</string>
     <string name="sim_card_details_content_desc">%1$s SIM card details</string>
-    <string name="sim_status_summary" translatable="false">%1$s: %2$s, %3$s</string>
+    <string name="sim_status_summary" tools:ignore="MissingTranslation">%1$s: %2$s, %3$s</string>
     <string name="adjust_minutes_content_desc">Adjust remaining minutes</string>
     <string name="adjust_traffic_content_desc">Adjust remaining traffic</string>
-    <string name="traffic_info_content_desc" translatable="false">More information about traffic tracking</string>
-    <string name="set_limits_content_desc" translatable="false">Set limits for %1$s</string>
+    <string name="traffic_info_content_desc" tools:ignore="MissingTranslation">More information about traffic tracking</string>
+    <string name="set_limits_content_desc" tools:ignore="MissingTranslation">Set limits for %1$s</string>
     <string name="change_auto_reset_day_content_desc">Change auto-reset day</string>
     <string name="toggle_auto_reset_content_desc">Enable or disable auto-reset</string>
 

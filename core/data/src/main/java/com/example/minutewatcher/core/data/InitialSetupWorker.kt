@@ -10,6 +10,7 @@ import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.assisted.Assisted
@@ -27,11 +28,16 @@ class InitialSetupWorker
         private val simRepository: SimRepository,
         private val settingsRepository: SettingsRepository,
         private val usageStateRepository: UsageStateRepository,
+        private val usageUseCase: UsageUseCase,
         private val migrationService: IdentityMigrationService,
         private val updateCoordinator: UpdateCoordinator,
+        private val workScheduler: WorkScheduler,
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result {
             try {
+                // Refresh operator metadata first to ensure it's available for migration and UI.
+                usageUseCase.refreshOperatorInfo()
+
                 // Always clear stale call sessions first.
                 // This does not require phone permission and must not be blocked by migration.
                 callTracker.onBoot()
@@ -47,15 +53,8 @@ class InitialSetupWorker
 
                     if (!hasPermission) {
                         if (migrationService.hasLegacyData()) {
-                            if (runAttemptCount > 5) {
-                                AppLogger.w("Migration V1 skipped after retries: permission missing but legacy data exists")
-                                settingsRepository.setMigrationV1Completed(true)
-                                settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_PERMISSION)
-                                return Result.success()
-                            }
-
                             AppLogger.d("Migration V1 deferred: permission missing but legacy data exists")
-                            return Result.retry()
+                            // Do NOT mark as completed. We will try again when permission is granted or next boot.
                         } else {
                             // No legacy data, we can safely mark as completed
                             settingsRepository.setMigrationV1Completed(true)
@@ -66,19 +65,13 @@ class InitialSetupWorker
                         val activeSims = simRepository.observeActiveSims().first()
 
                         if (activeSims.isEmpty()) {
-                            if (migrationService.hasLegacyData() && runAttemptCount <= 5) {
-                                AppLogger.d("Migration V1 deferred: no active SIMs found")
-                                return Result.retry()
-                            }
-
-                            if (!migrationService.hasLegacyData()) {
+                            if (migrationService.hasLegacyData()) {
+                                AppLogger.d("Migration V1 deferred: no active SIMs found but legacy data exists")
+                                // Do NOT mark as completed.
+                            } else {
                                 settingsRepository.setMigrationV1Completed(true)
                                 settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
                                 AppLogger.d("Migration V1 skipped: no legacy data found")
-                            } else {
-                                AppLogger.w("Migration V1 skipped after retries: no active SIMs found")
-                                settingsRepository.setMigrationV1Completed(true)
-                                settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_ACTIVE_SIM)
                             }
                         } else {
                             activeSims.forEach { info ->
@@ -104,6 +97,13 @@ class InitialSetupWorker
 
                 // Refresh widgets and snapshot
                 updateCoordinator.notifyDataChanged(updateWidget = true, force = true)
+
+                // Schedule periodic monitoring if permissions are granted
+                if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.READ_PHONE_STATE) ==
+                    PackageManager.PERMISSION_GRANTED
+                ) {
+                    workScheduler.schedulePeriodicUsageCheck()
+                }
 
                 return Result.success()
             } catch (e: Exception) {

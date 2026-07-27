@@ -25,6 +25,7 @@ data class TrackingBannerState(
         get() = showPhonePermissionBanner || showUsageAccessBanner || showTrafficErrorBanner || showAppSearchErrorBanner
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun EmptyState() {
     Column(
@@ -45,6 +46,7 @@ fun EmptyState() {
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun ErrorState(message: String) {
     Column(

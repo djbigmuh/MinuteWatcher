@@ -9,6 +9,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
@@ -43,6 +44,8 @@ class UsageCheckWorkerModuleTest {
     @Mock lateinit var updateCoordinator: UpdateCoordinator
 
     @Mock lateinit var usageStateRepository: UsageStateRepository
+
+    @Mock lateinit var usageUseCase: UsageUseCase
 
     @Before
     fun setUp() {
@@ -88,6 +91,7 @@ class UsageCheckWorkerModuleTest {
                                     notificationHelper,
                                     updateCoordinator,
                                     usageStateRepository,
+                                    usageUseCase,
                                 )
                         },
                     ).build()

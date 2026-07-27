@@ -5,24 +5,42 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.*
+import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.*
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.provideContent
+import androidx.glance.background
 import androidx.glance.color.ColorProvider
-import androidx.glance.layout.*
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
+import androidx.glance.layout.padding
+import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.minutewatcher.core.data.WidgetSettingsRepository
+import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
-import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.feature.widget.util.WidgetUiMapper
 import dagger.hilt.EntryPoint
@@ -43,6 +61,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         fun simRepository(): SimRepository
 
         fun widgetSettingsRepository(): WidgetSettingsRepository
+
+        fun navigationProvider(): NavigationProvider
     }
 
     override suspend fun provideGlance(
@@ -50,11 +70,19 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         val uiState = getUiState(context)
+        val navigationProvider = getNavigationProvider(context)
         provideContent {
-            GlanceTheme {
-                WidgetContent(context, uiState)
-            }
+            WidgetContent(context, uiState, navigationProvider)
         }
+    }
+
+    private fun getNavigationProvider(context: Context): NavigationProvider {
+        val entryPoint =
+            EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                WidgetEntryPoint::class.java,
+            )
+        return entryPoint.navigationProvider()
     }
 
     private suspend fun getUiState(context: Context): WidgetUiState {
@@ -82,415 +110,193 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             settingsState,
         )
     }
+}
 
-    @Composable
-    private fun WidgetContent(
-        context: Context,
-        uiState: WidgetUiState,
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun WidgetContent(
+    context: Context,
+    uiState: WidgetUiState,
+    navigationProvider: NavigationProvider,
+) {
+    val alpha = uiState.transparency / 100f
+    val bgColor =
+        androidx.compose.ui.graphics
+            .Color(uiState.backgroundColor)
+            .copy(alpha = alpha)
+
+    val luminance =
+        androidx.core.graphics.ColorUtils
+            .calculateLuminance(uiState.backgroundColor)
+    val noDataColorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+    val noDataColor =
+        androidx.compose.ui.graphics
+            .Color(noDataColorInt)
+
+    Box(
+        modifier =
+            GlanceModifier
+                .fillMaxSize()
+                .background(ColorProvider(day = bgColor, night = bgColor))
+                .appWidgetBackground()
+                .clickable(actionStartActivity(ComponentName(context, navigationProvider.mainActivityClassName))),
+        contentAlignment = Alignment.Center,
     ) {
-        val alpha = uiState.transparency / 100f
-        val bgColor =
-            androidx.compose.ui.graphics
-                .Color(uiState.backgroundColor)
-                .copy(alpha = alpha)
+        val simUiStates = uiState.simUiStates.filter { it.showSim }
 
-        val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(uiState.backgroundColor)
-        val noDataColorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-        val noDataColor = androidx.compose.ui.graphics.Color(noDataColorInt)
-
-        Box(
-            modifier =
-                GlanceModifier
-                    .fillMaxSize()
-                    .background(ColorProvider(day = bgColor, night = bgColor))
-                    .appWidgetBackground()
-                    .clickable(actionStartActivity(ComponentName(context, "com.example.minutewatcher.MainActivity"))),
-            contentAlignment = Alignment.Center,
-        ) {
-            val simUiStates = uiState.simUiStates.filter { it.showSim }
-            val layoutMode = WidgetLayoutMode.fromValue(uiState.layoutMode)
-
-            when {
-                simUiStates.size >= 2 -> {
-                    DualSimLayout(context, simUiStates[0], simUiStates[1], uiState)
-                }
-                simUiStates.isNotEmpty() -> {
-                    SingleSimLayout(context, simUiStates[0], layoutMode)
-                }
-                else -> {
-                    Text(
-                        text = context.getString(com.example.minutewatcher.core.model.R.string.no_data),
-                        style =
-                            TextStyle(
-                                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                                color =
-                                    ColorProvider(
-                                        day = noDataColor,
-                                        night = noDataColor,
-                                    ),
-                            ),
-                    )
-                }
+        when {
+            simUiStates.size >= 2 -> {
+                DualSimLayout(context, simUiStates[0], simUiStates[1], uiState)
             }
-        }
-    }
-
-    @Composable
-    private fun DualSimLayout(
-        context: Context,
-        sim1: SimUiState,
-        sim2: SimUiState,
-        uiState: WidgetUiState,
-    ) {
-        val arrangement = uiState.simArrangement
-        val layoutMode = WidgetLayoutMode.fromValue(uiState.layoutMode)
-
-        if (arrangement == 0) { // Horizontal
-            Row(
-                modifier = GlanceModifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                    SimItem(context, sim1, layoutMode)
-                }
-                Spacer(
-                    modifier =
-                        GlanceModifier
-                            .width(
-                                1.dp,
-                            ).fillMaxHeight()
-                            .background(
+            simUiStates.isNotEmpty() -> {
+                SingleSimLayout(context, simUiStates[0])
+            }
+            else -> {
+                Text(
+                    text = context.getString(com.example.minutewatcher.core.model.R.string.no_data),
+                    style =
+                        TextStyle(
+                            fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                            color =
                                 ColorProvider(
-                                    day =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor),
-                                    night =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor),
+                                    day = noDataColor,
+                                    night = noDataColor,
                                 ),
-                            ),
+                        ),
                 )
-                Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                    SimItem(context, sim2, layoutMode)
-                }
-            }
-        } else { // Vertical
-            Column(
-                modifier = GlanceModifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                    SimItem(context, sim1, layoutMode)
-                }
-                Spacer(
-                    modifier =
-                        GlanceModifier
-                            .height(
-                                1.dp,
-                            ).fillMaxWidth()
-                            .background(
-                                ColorProvider(
-                                    day =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor),
-                                    night =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor),
-                                ),
-                            ),
-                )
-                Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                    SimItem(context, sim2, layoutMode)
-                }
             }
         }
     }
+}
 
-    @Composable
-    private fun SingleSimLayout(
-        context: Context,
-        sim: SimUiState,
-        layoutMode: WidgetLayoutMode,
-    ) {
-        Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            SimItem(context, sim, layoutMode)
-        }
-    }
-
-    @Composable
-    private fun SimItem(
-        context: Context,
-        sim: SimUiState,
-        layoutMode: WidgetLayoutMode,
-    ) {
-        val summary = context.getString(com.example.minutewatcher.core.model.R.string.sim_status_summary, sim.operatorName, sim.minutesText, sim.trafficText)
-        
-        Column(
-            modifier = GlanceModifier.padding(4.dp).semantics { contentDescription = summary },
-            horizontalAlignment = Alignment.CenterHorizontally,
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DualSimLayout(
+    context: Context,
+    sim1: SimUiState,
+    sim2: SimUiState,
+    uiState: WidgetUiState,
+) {
+    if (uiState.isHorizontal) {
+        Row(
+            modifier = GlanceModifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val textColor = ColorProvider(day = androidx.compose.ui.graphics.Color(sim.textColor), night = androidx.compose.ui.graphics.Color(sim.textColor))
-            val secondaryColor = ColorProvider(day = androidx.compose.ui.graphics.Color(sim.secondaryTextColor), night = androidx.compose.ui.graphics.Color(sim.secondaryTextColor))
-            
-            when (layoutMode) {
-                WidgetLayoutMode.SINGLE_LINE -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (sim.showIcon) {
+            Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
+                SimItem(context, sim1)
+            }
+            if (uiState.showSeparator) {
+                Spacer(
+                    modifier =
+                        GlanceModifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(
+                                ColorProvider(
+                                    day = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
+                                    night = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
+                                ),
+                            ),
+                )
+            }
+            Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
+                SimItem(context, sim2)
+            }
+        }
+    } else {
+        Column(
+            modifier = GlanceModifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
+                SimItem(context, sim1)
+            }
+            if (uiState.showSeparator) {
+                Spacer(
+                    modifier =
+                        GlanceModifier
+                            .height(1.dp)
+                            .fillMaxWidth()
+                            .background(
+                                ColorProvider(
+                                    day = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
+                                    night = androidx.compose.ui.graphics.Color(sim1.secondaryTextColor).copy(alpha = 0.5f),
+                                ),
+                            ),
+                )
+            }
+            Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
+                SimItem(context, sim2)
+            }
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SingleSimLayout(
+    context: Context,
+    sim: SimUiState,
+) {
+    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        SimItem(context, sim)
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SimItem(
+    context: Context,
+    sim: SimUiState,
+) {
+    val summary =
+        context.getString(
+            com.example.minutewatcher.core.model.R.string.sim_status_summary,
+            sim.operatorName,
+            sim.minutesText,
+            sim.trafficText,
+        )
+
+    Column(
+        modifier = GlanceModifier.padding(4.dp).semantics { contentDescription = summary },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        sim.layoutSpec.rows.forEach { row ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                row.components.forEach { component ->
+                    when (component) {
+                        is SimLayoutComponent.Icon -> {
                             Image(
-                                provider = ImageProvider(sim.operatorIconRes),
-                                contentDescription = sim.operatorName,
-                                modifier = GlanceModifier.size(14.dp),
+                                provider = ImageProvider(component.iconRes),
+                                contentDescription = null,
+                                modifier = GlanceModifier.size(component.sizeDp.dp),
                             )
-                            Spacer(modifier = GlanceModifier.width(4.dp))
                         }
-                        if (sim.showMinutes) {
+                        is SimLayoutComponent.Text -> {
                             Text(
-                                text = sim.minutesText,
+                                text = component.text,
                                 style =
                                     TextStyle(
-                                        fontSize = (11 * sim.fontMultiplier).sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontSize = component.fontSizeSp.sp,
+                                        fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
                                         color =
                                             ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.minutesColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.minutesColor),
-                                            ),
-                                    ),
-                            )
-                            Spacer(modifier = GlanceModifier.width(2.dp))
-                        }
-                        if (sim.showTraffic) {
-                            Text(
-                                text = sim.trafficText,
-                                style =
-                                    TextStyle(
-                                        fontSize = (11 * sim.fontMultiplier).sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.trafficColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.trafficColor),
+                                                day = androidx.compose.ui.graphics.Color(component.color),
+                                                night = androidx.compose.ui.graphics.Color(component.color),
                                             ),
                                     ),
                             )
                         }
-                    }
-                }
-                WidgetLayoutMode.TWO_LINES -> {
-                    // Line 1: Icon & Name
-                    if (sim.showIcon || sim.showName) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (sim.showIcon) {
-                                Image(
-                                    provider = ImageProvider(sim.operatorIconRes),
-                                    contentDescription = sim.operatorName,
-                                    modifier = GlanceModifier.size(16.dp),
-                                )
-                                Spacer(modifier = GlanceModifier.width(4.dp))
+                        is SimLayoutComponent.Spacer -> {
+                            if (component.widthDp > 0) {
+                                Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
                             }
-                            if (sim.showName) {
-                                Text(
-                                    text = sim.operatorName,
-                                    style =
-                                        TextStyle(
-                                            fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                            color = textColor,
-                                        ),
-                                )
+                            if (component.heightDp > 0) {
+                                Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
                             }
                         }
                     }
-                    // Line 2: Minutes and Traffic
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (sim.showMinutes) {
-                            Text(
-                                text = sim.minutesText,
-                                style =
-                                    TextStyle(
-                                        fontSize = (Constants.Widget.FONT_SIZE_MEDIUM * sim.fontMultiplier).sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.minutesColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.minutesColor),
-                                            ),
-                                    ),
-                            )
-                            Spacer(modifier = GlanceModifier.width(4.dp))
-                        }
-                        if (sim.showTraffic) {
-                            Text(
-                                text = sim.trafficText,
-                                style =
-                                    TextStyle(
-                                        fontSize = (Constants.Widget.FONT_SIZE_MEDIUM * sim.fontMultiplier).sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.trafficColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.trafficColor),
-                                            ),
-                                    ),
-                            )
-                        }
-                    }
-                }
-                WidgetLayoutMode.THREE_LINES -> {
-                    if (sim.showIcon || sim.showName) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (sim.showIcon) {
-                                Image(
-                                    provider = ImageProvider(sim.operatorIconRes),
-                                    contentDescription = sim.operatorName,
-                                    modifier = GlanceModifier.size(16.dp),
-                                )
-                                Spacer(modifier = GlanceModifier.width(4.dp))
-                            }
-                            if (sim.showName) {
-                                Text(
-                                    text = sim.operatorName,
-                                    style =
-                                        TextStyle(
-                                            fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                            color = textColor,
-                                        ),
-                                )
-                            }
-                        }
-                        Spacer(modifier = GlanceModifier.height(2.dp))
-                    }
-
-                    if (sim.showMinutes) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = sim.minutesText,
-                                style =
-                                    TextStyle(
-                                        fontSize = (Constants.Widget.FONT_SIZE_MEDIUM * sim.fontMultiplier).sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.minutesColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.minutesColor),
-                                            ),
-                                    ),
-                            )
-                            Spacer(modifier = GlanceModifier.width(2.dp))
-                            Text(
-                                text = context.getString(com.example.minutewatcher.core.model.R.string.minutes_abbr),
-                                style =
-                                    TextStyle(
-                                        fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                        color = secondaryColor,
-                                    ),
-                            )
-                            if (sim.showMinutesLimit) {
-                                Text(
-                                    text = sim.minutesLimitText,
-                                    style =
-                                        TextStyle(
-                                            fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                            color = secondaryColor,
-                                        ),
-                                )
-                            }
-                        }
-                    }
-
-                    if (sim.showTraffic) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = sim.trafficText,
-                                style =
-                                    TextStyle(
-                                        fontSize = (Constants.Widget.FONT_SIZE_MEDIUM * sim.fontMultiplier).sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.trafficColor),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(sim.trafficColor),
-                                            ),
-                                    ),
-                            )
-                            Spacer(modifier = GlanceModifier.width(2.dp))
-                            Text(
-                                text = context.getString(com.example.minutewatcher.core.model.R.string.gb_abbr),
-                                style =
-                                    TextStyle(
-                                        fontSize = (Constants.Widget.FONT_SIZE_SMALL * sim.fontMultiplier).sp,
-                                        color = secondaryColor,
-                                    ),
-                            )
-                            if (sim.showTrafficLimit) {
-                                Text(
-                                    text = sim.trafficLimitText,
-                                    style =
-                                        TextStyle(
-                                            fontSize = (Constants.Widget.FONT_SIZE_SMALL * 0.9f * sim.fontMultiplier).sp,
-                                            color = secondaryColor,
-                                        ),
-                                )
-                            }
-                        }
-                    }
-                }
-                WidgetLayoutMode.SIX_LINES -> {
-                    // Line 1: Name
-                    Text(
-                        text = sim.operatorName,
-                        style = TextStyle(fontSize = (12 * sim.fontMultiplier).sp, color = textColor)
-                    )
-                    // Line 2: Icon
-                    Image(
-                        provider = ImageProvider(sim.operatorIconRes),
-                        contentDescription = sim.operatorName,
-                        modifier = GlanceModifier.size(16.dp)
-                    )
-                    // Line 3: Minutes Used
-                    Text(
-                        text = sim.minutesUsedFullText,
-                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = textColor)
-                    )
-                    // Line 4: Minutes Limit
-                    Text(
-                        text = sim.minutesLimitFullText,
-                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = secondaryColor)
-                    )
-                    // Line 5: Traffic Used
-                    Text(
-                        text = sim.trafficUsedFullText,
-                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = textColor)
-                    )
-                    // Line 6: Traffic Limit
-                    Text(
-                        text = sim.trafficLimitFullText,
-                        style = TextStyle(fontSize = (11 * sim.fontMultiplier).sp, color = secondaryColor)
-                    )
                 }
             }
         }

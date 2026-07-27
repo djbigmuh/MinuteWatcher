@@ -1,6 +1,9 @@
 package com.example.minutewatcher.core.data
 
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 
 object SettingsKeys {
     val APP_THEME = intPreferencesKey("app_theme")

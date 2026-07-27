@@ -69,7 +69,7 @@ class UsageUseCase
             val identity = simRepository.getIdentity(slot)
             val limit = simRepository.getMonthlyLimit(identity).first()
             val used = simRepository.getMinutesUsed(identity).first()
-            
+
             val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
             val adj = (safeRemaining - limit) + used
             simRepository.setManualAdjustment(identity, adj)
@@ -82,7 +82,7 @@ class UsageUseCase
             val identity = simRepository.getIdentity(slot)
             val limitMb = simRepository.getTrafficLimit(identity).first()
             val usedMb = simRepository.getTrafficUsed(identity).first()
-            
+
             val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
             val limitGb = limitMb / Constants.MB_PER_GB
             val usedGb = usedMb / Constants.MB_PER_GB

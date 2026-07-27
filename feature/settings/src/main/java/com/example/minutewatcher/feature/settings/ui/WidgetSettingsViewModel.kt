@@ -6,11 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.core.data.WidgetSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.model.*
+import com.example.minutewatcher.core.model.SimSettingsState
+import com.example.minutewatcher.core.model.WidgetSettingsState
+import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.feature.widget.util.WidgetUiMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -84,10 +92,11 @@ class WidgetSettingsViewModel
         }
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
-            val currentState = _settingsState.value ?: run {
-                onComplete(false)
-                return
-            }
+            val currentState =
+                _settingsState.value ?: run {
+                    onComplete(false)
+                    return
+                }
 
             viewModelScope.launch {
                 try {

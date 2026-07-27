@@ -1,15 +1,25 @@
 package com.example.minutewatcher.feature.main.ui.components
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun AdjustmentComposeDialog(
     currentValue: Float,
@@ -17,14 +27,15 @@ fun AdjustmentComposeDialog(
     onDismiss: () -> Unit,
     onConfirm: (Float) -> Unit,
 ) {
+    val initialValue = maxOf(0f, currentValue)
     var text by remember {
-        mutableStateOf(if (isMinutes) currentValue.toInt().toString() else "%.1f".format(currentValue).replace(",", "."))
+        mutableStateOf(if (isMinutes) initialValue.toInt().toString() else "%.1f".format(initialValue).replace(",", "."))
     }
-    
+
     var errorText by remember { mutableStateOf<String?>(null) }
-    
+
     val maxLimit = if (isMinutes) Constants.MAX_MINUTES_LIMIT.toFloat() else Constants.MAX_TRAFFIC_LIMIT_GB
-    
+
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
     val invalidRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", maxLimit.toInt().toString())
 
@@ -35,7 +46,7 @@ fun AdjustmentComposeDialog(
             Column {
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { 
+                    onValueChange = {
                         text = it.replace(",", ".")
                         errorText = null
                     },

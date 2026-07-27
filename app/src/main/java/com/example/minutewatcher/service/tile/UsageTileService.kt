@@ -9,6 +9,7 @@ import android.service.quicksettings.TileService
 import androidx.core.service.quicksettings.PendingIntentActivityWrapper
 import androidx.core.service.quicksettings.TileServiceCompat
 import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.util.AppLogger
@@ -23,6 +24,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class UsageTileService : TileService() {
     @Inject lateinit var semanticRepository: SemanticRepository
+
+    @Inject lateinit var navigationProvider: NavigationProvider
 
     @Inject @ApplicationScope
     lateinit var applicationScope: CoroutineScope
@@ -55,7 +58,7 @@ class UsageTileService : TileService() {
     override fun onClick() {
         super.onClick()
         val intent =
-            Intent(this, com.example.minutewatcher.MainActivity::class.java).apply {
+            Intent().setClassName(packageName, navigationProvider.mainActivityClassName).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
         val wrapper =

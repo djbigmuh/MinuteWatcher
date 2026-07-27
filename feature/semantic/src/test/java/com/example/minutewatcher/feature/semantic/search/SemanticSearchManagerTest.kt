@@ -1,11 +1,49 @@
 package com.example.minutewatcher.feature.semantic.search
 
-import com.example.minutewatcher.core.model.*
+import android.content.Context
+import com.example.minutewatcher.core.model.DataSourceType
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.MeasurementUnit
+import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
+@OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerTest {
+    private val context: Context = mock()
+    private lateinit var manager: SemanticSearchManager
+
+    @Before
+    fun setup() {
+        // We'll initialize manager inside tests to use the runTest's scope
+    }
+
+    @Test
+    fun `initialize transitions status to Active`() = runTest {
+        manager = SemanticSearchManager(context, backgroundScope)
+        val flow = MutableStateFlow(createSnapshot())
+        manager.initialize(flow)
+        runCurrent()
+        
+        assertEquals(TrackingStatus.Active, manager.status.first())
+    }
 
     @Test
     fun calculateContentHash_sameContentDifferentTimestamp_returnsSameHash() {

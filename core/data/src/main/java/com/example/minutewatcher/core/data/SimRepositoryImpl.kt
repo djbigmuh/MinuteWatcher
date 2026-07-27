@@ -4,7 +4,13 @@ import android.content.Context
 import android.os.Build
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -13,15 +19,24 @@ import com.example.minutewatcher.core.domain.SimInfoProvider
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import com.example.minutewatcher.core.model.util.PermissionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -71,10 +86,20 @@ class SimRepositoryImpl
 
         private suspend fun getSeed(): String =
             seedRepository.getOrCreateSeed {
-                java.util.UUID.randomUUID().toString()
+                java.util.UUID
+                    .randomUUID()
+                    .toString()
             }
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
+            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                return SimIdentity(
+                    stableId = "unsupported_$slot",
+                    subscriptionId = null,
+                    slotIndex = slot,
+                    source = IdentitySource.SLOT_FALLBACK,
+                )
+            }
             val seed = getSeed()
             val identity =
                 permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
@@ -123,7 +148,9 @@ class SimRepositoryImpl
                                 @Suppress("DEPRECATION")
                                 subscriptionManager.addOnSubscriptionsChangedListener(listener)
                             }
-                            trySend(getActiveSimsInternal(seed))
+                            launch {
+                                trySend(getActiveSimsInternal(seed))
+                            }
                         } else {
                             trySend(emptyList())
                         }
@@ -134,16 +161,22 @@ class SimRepositoryImpl
                     }
                 }.distinctUntilChanged()
 
-        private fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
-            val infoList = permissionManager.getActiveSubscriptions()
+        private suspend fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
+            val infoList =
+                permissionManager
+                    .getActiveSubscriptions()
+                    .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
             if (infoList.isEmpty()) return emptyList()
 
             val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()
             val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
 
             return infoList.map { info ->
+                val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
+                saveSimIdentityInfo(identity)
+
                 ActiveSimInfo(
-                    identity = SimIdentityUtils.createIdentityFromInfo(info, seed),
+                    identity = identity,
                     slotIndex = info.simSlotIndex,
                     subscriptionId = info.subscriptionId,
                     displayName = info.displayName?.toString(),
@@ -197,6 +230,20 @@ class SimRepositoryImpl
                     showTrafficLimit = prefs[SettingsKeys.showTrafficLimitKey(identity)] ?: false,
                 )
             }
+
+        override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
+            dataStore.edit { prefs ->
+                settingsMap.forEach { (identity, settings) ->
+                    prefs[SettingsKeys.showSimKey(identity)] = settings.showSim
+                    prefs[SettingsKeys.showSimIconKey(identity)] = settings.showIcon
+                    prefs[SettingsKeys.showSimNameKey(identity)] = settings.showName
+                    prefs[SettingsKeys.showMinutesKey(identity)] = settings.showMinutes
+                    prefs[SettingsKeys.showMinutesLimitKey(identity)] = settings.showMinutesLimit
+                    prefs[SettingsKeys.showTrafficKey(identity)] = settings.showTraffic
+                    prefs[SettingsKeys.showTrafficLimitKey(identity)] = settings.showTrafficLimit
+                }
+            }
+        }
 
         private fun <T> get(
             key: Preferences.Key<T>,

@@ -7,10 +7,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class UsageUseCaseValidationTest {
-
     private val context: Context = mock()
     private val simRepository: SimRepository = mock()
     private val permissionManager: PermissionManager = mock()
@@ -22,31 +23,33 @@ class UsageUseCaseValidationTest {
     }
 
     @Test
-    fun `adjustMinutes clamps negative remaining to zero`() = runTest {
-        val slot = 0
-        val identity = "sim_0"
-        whenever(simRepository.getIdentity(slot)).thenReturn(identity)
-        whenever(simRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
-        whenever(simRepository.getMinutesUsed(identity)).thenReturn(flowOf(10))
+    fun `adjustMinutes clamps negative remaining to zero`() =
+        runTest {
+            val slot = 0
+            val identity = "sim_0"
+            whenever(simRepository.getIdentity(slot)).thenReturn(identity)
+            whenever(simRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
+            whenever(simRepository.getMinutesUsed(identity)).thenReturn(flowOf(10))
 
-        usageUseCase.adjustMinutes(slot, -50)
+            usageUseCase.adjustMinutes(slot, -50)
 
-        // expected safeRemaining = 0
-        // adj = (0 - 100) + 10 = -90
-        verify(simRepository).setManualAdjustment(identity, -90)
-    }
+            // expected safeRemaining = 0
+            // adj = (0 - 100) + 10 = -90
+            verify(simRepository).setManualAdjustment(identity, -90)
+        }
 
     @Test
-    fun `adjustMinutes clamps excessive remaining to max limit`() = runTest {
-        val slot = 0
-        val identity = "sim_0"
-        whenever(simRepository.getIdentity(slot)).thenReturn(identity)
-        whenever(simRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
-        whenever(simRepository.getMinutesUsed(identity)).thenReturn(flowOf(10))
+    fun `adjustMinutes clamps excessive remaining to max limit`() =
+        runTest {
+            val slot = 0
+            val identity = "sim_0"
+            whenever(simRepository.getIdentity(slot)).thenReturn(identity)
+            whenever(simRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
+            whenever(simRepository.getMinutesUsed(identity)).thenReturn(flowOf(10))
 
-        usageUseCase.adjustMinutes(slot, 999999)
+            usageUseCase.adjustMinutes(slot, 999999)
 
-        val expectedAdj = (Constants.MAX_MINUTES_LIMIT - 100) + 10
-        verify(simRepository).setManualAdjustment(identity, expectedAdj)
-    }
+            val expectedAdj = (Constants.MAX_MINUTES_LIMIT - 100) + 10
+            verify(simRepository).setManualAdjustment(identity, expectedAdj)
+        }
 }

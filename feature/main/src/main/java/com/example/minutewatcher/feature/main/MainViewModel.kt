@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.data.ResetManager
 import com.example.minutewatcher.core.data.UpdateCoordinator
+import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimRepository
@@ -15,10 +16,23 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
@@ -33,6 +47,7 @@ class MainViewModel
         private val resetManager: ResetManager,
         private val usageUseCase: UsageUseCase,
         private val settingsUseCase: SettingsUseCase,
+        private val permissionRepository: PermissionRepository,
         private val updateCoordinator: UpdateCoordinator,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
@@ -75,10 +90,10 @@ class MainViewModel
             savedStateHandle["traffic_limitation_dialog"] = false
         }
 
-        private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
+        private val isPhonePermissionPermanentlyDeniedFlow = MutableStateFlow(false)
 
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
-            _isPhonePermissionPermanentlyDenied.value = denied
+            isPhonePermissionPermanentlyDeniedFlow.value = denied
         }
 
         fun openUsageAccessDialog() {
@@ -101,20 +116,20 @@ class MainViewModel
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
-                _isPhonePermissionPermanentlyDenied
-            ) { statusMap, permanentlyDenied ->
-                val calls = statusMap["calls"]
+                permissionRepository.phoneStatePermissionGranted,
+                permissionRepository.usageStatsPermissionGranted,
+                isPhonePermissionPermanentlyDeniedFlow,
+            ) { statusMap, phoneGranted, usageGranted, permanentlyDenied ->
                 val traffic = statusMap["traffic"]
                 val appsearch = statusMap["appsearch"]
 
                 TrackingBannerState(
-                    showPhonePermissionBanner = calls is TrackingStatus.Error &&
-                        calls.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    showPhonePermissionBanner = !phoneGranted,
                     isPhonePermissionPermanentlyDenied = permanentlyDenied,
-                    showUsageAccessBanner = traffic is TrackingStatus.Error &&
-                        traffic.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
-                    showTrafficErrorBanner = traffic is TrackingStatus.Error &&
-                        traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    showUsageAccessBanner = !usageGranted,
+                    showTrafficErrorBanner =
+                        traffic is TrackingStatus.Error &&
+                            traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING,
                     showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
                 )
             }.stateIn(

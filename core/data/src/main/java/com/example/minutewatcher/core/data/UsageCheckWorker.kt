@@ -10,10 +10,13 @@ import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.SemanticEntity
-import com.example.minutewatcher.core.model.util.*
+import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.model.util.DateUtils
+import com.example.minutewatcher.core.model.util.FormatUtils
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +36,7 @@ class UsageCheckWorker
         private val notificationHelper: NotificationHelper,
         private val updateCoordinator: UpdateCoordinator,
         private val usageStateRepository: UsageStateRepository,
+        private val usageUseCase: UsageUseCase,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
             withContext(Dispatchers.IO) {
@@ -43,6 +47,9 @@ class UsageCheckWorker
                     return@withContext Result.success()
                 }
                 try {
+                    // Refresh operator info periodically
+                    usageUseCase.refreshOperatorInfo()
+
                     checkUsageAndNotify()
                     Result.success()
                 } catch (e: Exception) {

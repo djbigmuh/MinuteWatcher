@@ -35,18 +35,20 @@ class WidgetSettingsActivity : AppCompatActivity() {
                         onSave = {
                             viewModel.saveAndNotify { success ->
                                 if (success) {
-                                    Toast.makeText(
-                                        this,
-                                        getString(R.string.settings_saved_toast),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    Toast
+                                        .makeText(
+                                            this,
+                                            getString(R.string.settings_saved_toast),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                     finish()
                                 } else {
-                                    Toast.makeText(
-                                        this,
-                                        getString(R.string.error),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    Toast
+                                        .makeText(
+                                            this,
+                                            getString(R.string.error),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                 }
                             }
                         },

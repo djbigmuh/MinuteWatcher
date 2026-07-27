@@ -25,14 +25,28 @@ jobs:
     - name: Run Ktlint
       run: ./gradlew ktlintCheck
 
-    - name: Run Lint
-      run: ./gradlew lintDebug
-      
     - name: Run Detekt
       run: ./gradlew detekt
+      
+    - name: Run Lint
+      run: ./gradlew lintRelease
 
     - name: Run Unit Tests
       run: ./gradlew testDebugUnitTest
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Build Release APK
+      run: ./gradlew :app:assembleRelease
+
+    - name: Check for uncommitted changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "Error: Uncommitted changes found after build. Please update baselines or format code locally."
+          git status
+          exit 1
+        fi
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: app/build/outputs/apk/release/*.apk

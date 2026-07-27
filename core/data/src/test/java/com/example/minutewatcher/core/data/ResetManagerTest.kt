@@ -3,7 +3,9 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -13,7 +15,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -47,9 +54,7 @@ class ResetManagerTest {
 
     private fun createSnapshot(slots: List<Int>): GlobalSnapshot =
         GlobalSnapshot(
-            version =
-                com.example.minutewatcher.core.model
-                    .SchemaVersion(major = 1, minor = 0, patch = 0),
+            version = SchemaVersion(major = 1, minor = 0, patch = 0),
             timestamp = System.currentTimeMillis(),
             simSnapshots =
                 slots.map {
@@ -63,9 +68,7 @@ class ResetManagerTest {
         runTest {
             val snapshot =
                 GlobalSnapshot(
-                    version =
-                        com.example.minutewatcher.core.model
-                            .SchemaVersion(major = 1, minor = 0, patch = 0),
+                    version = SchemaVersion(major = 1, minor = 0, patch = 0),
                     timestamp = System.currentTimeMillis(),
                     simSnapshots = emptyList(),
                     capabilities = emptyList(),
@@ -84,7 +87,7 @@ class ResetManagerTest {
 
             whenever(simRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
-                    com.example.minutewatcher.core.model.SimUsage(
+                    SimUsage(
                         identity = identity,
                         slotIndex = 0,
                         subscriptionId = 1,
@@ -116,7 +119,7 @@ class ResetManagerTest {
 
             whenever(simRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
-                    com.example.minutewatcher.core.model.SimUsage(
+                    SimUsage(
                         identity = identity,
                         slotIndex = 0,
                         subscriptionId = 1,
@@ -150,7 +153,7 @@ class ResetManagerTest {
 
             whenever(simRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
-                    com.example.minutewatcher.core.model.SimUsage(
+                    SimUsage(
                         identity = identity,
                         slotIndex = 0,
                         subscriptionId = 1,
@@ -170,11 +173,12 @@ class ResetManagerTest {
             whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
             // Launch multiple resets concurrently
-            val jobs = List(5) {
-                launch {
-                    resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+            val jobs =
+                List(5) {
+                    launch {
+                        resetManager.performAutoReset(simRepository, settingsRepository, snapshot)
+                    }
                 }
-            }
             joinAll(*jobs.toTypedArray())
 
             // With Mutex in ResetManager, we still might have multiple calls to performAutoReset,
@@ -182,7 +186,7 @@ class ResetManagerTest {
             // However, verify(..., times(5)) would be wrong if we expect them to be sequential and all attempt reset.
             // The idempotency is REALLY at the SimRepository level (DataStore edit block).
             // But Mutex helps avoiding multiple first() reads and calculations in parallel.
-            
+
             verify(simRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }
