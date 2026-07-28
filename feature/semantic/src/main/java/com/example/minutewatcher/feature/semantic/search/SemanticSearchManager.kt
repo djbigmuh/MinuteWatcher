@@ -37,20 +37,27 @@ class SemanticSearchManager
         @ApplicationScope private val scope: CoroutineScope,
         private val appSearchWrapper: AppSearchWrapper,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    ) : AutoCloseable,
-        TrackingStatusProvider {
+    ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
         private var session: AppSearchSessionWrapper? = null
         private var lastSnapshotHash: Int = 0
         private var job: Job? = null
+        private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
 
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            lastSnapshotFlow = snapshotFlow
             job?.cancel()
+            try {
+                session?.close()
+                session = null
+            } catch (e: Exception) {
+                AppLogger.e("Error closing previous AppSearch session during re-init", e)
+            }
             job =
                 scope.launch {
                     _status.value = TrackingStatus.Active
@@ -77,6 +84,10 @@ class SemanticSearchManager
                             }
                     }
                 }
+        }
+
+        override fun recover() {
+            lastSnapshotFlow?.let { initialize(it) }
         }
 
         private suspend fun ensureSession(): Boolean {
@@ -193,16 +204,6 @@ class SemanticSearchManager
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 session?.close()
                 session = null
-            }
-        }
-
-        override fun close() {
-            try {
-                job?.cancel()
-                session?.close()
-                session = null
-            } catch (e: Exception) {
-                AppLogger.e("Error closing AppSearch session", e)
             }
         }
     }

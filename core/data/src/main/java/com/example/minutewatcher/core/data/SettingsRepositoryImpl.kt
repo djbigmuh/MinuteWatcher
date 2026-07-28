@@ -4,6 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.data.di.AppDataStore
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
@@ -27,7 +30,10 @@ class SettingsRepositoryImpl
         private val seedRepository: SimIdentitySeedRepository,
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
-    ) : SettingsRepository {
+    ) : SettingsRepository,
+        AppSettingsRepository,
+        CallSessionRepository,
+        MigrationFlagsRepository {
         private val appSettingsState =
             dataStore.data
                 .map { prefs ->
@@ -43,6 +49,7 @@ class SettingsRepositoryImpl
                         widgetFontSize = prefs[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
                         widgetBackgroundColor = prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
                         migrationV1Completed = prefs[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
+                        onboardingCompleted = prefs[SettingsKeys.ONBOARDING_COMPLETED] ?: false,
                     )
                 }.stateIn(
                     scope,
@@ -59,6 +66,7 @@ class SettingsRepositoryImpl
                         widgetFontSize = 2,
                         widgetBackgroundColor = Constants.UI.DEFAULT_BG_COLOR,
                         migrationV1Completed = false,
+                        onboardingCompleted = false,
                     ),
                 )
 
@@ -256,6 +264,7 @@ class SettingsRepositoryImpl
                 prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
                 prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
                 prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
+                prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
             }
         }
     }

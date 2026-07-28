@@ -6,22 +6,10 @@ import com.example.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
-interface SettingsRepository {
+interface AppSettingsRepository {
     fun getAppSettings(): Flow<AppSettings>
 
     fun observeAppSettings(): StateFlow<AppSettings>
-
-    fun isMigrationV1Completed(): Flow<Boolean>
-
-    suspend fun setMigrationV1Completed(completed: Boolean)
-
-    fun isMigrationIdentityStabilityCompleted(): Flow<Boolean>
-
-    suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean)
-
-    fun getMigrationV1SkippedReason(): Flow<String?>
-
-    suspend fun setMigrationV1Skipped(reason: MigrationSkipReason)
 
     fun getAppTheme(): Flow<AppTheme>
 
@@ -65,7 +53,10 @@ interface SettingsRepository {
 
     suspend fun setCallTrackingEnabled(enabled: Boolean)
 
-    // Tracking helpers
+    suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings)
+}
+
+interface CallSessionRepository {
     fun getLastDataSubId(): Flow<Int>
 
     suspend fun setLastDataSubId(subId: Int)
@@ -91,13 +82,35 @@ interface SettingsRepository {
         identity: String?,
     )
 
-    fun getSimIdentitySeed(): Flow<String>
-
-    suspend fun setSimIdentitySeed(seed: String)
-
     suspend fun clearAllCallSessions()
 
     suspend fun getActiveCallSubIds(): List<Int>
+}
 
-    suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings)
+interface MigrationFlagsRepository {
+    fun isMigrationV1Completed(): Flow<Boolean>
+
+    suspend fun setMigrationV1Completed(completed: Boolean)
+
+    fun isMigrationIdentityStabilityCompleted(): Flow<Boolean>
+
+    suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean)
+
+    fun getMigrationV1SkippedReason(): Flow<String?>
+
+    suspend fun setMigrationV1Skipped(reason: MigrationSkipReason)
+}
+
+/**
+ * Composite interface for application settings.
+ * In the future, prefer depending on more specific interfaces defined above.
+ */
+interface SettingsRepository :
+    AppSettingsRepository,
+    CallSessionRepository,
+    MigrationFlagsRepository {
+    // Identity seed is still part of general settings for now
+    fun getSimIdentitySeed(): Flow<String>
+
+    suspend fun setSimIdentitySeed(seed: String)
 }

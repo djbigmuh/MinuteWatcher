@@ -12,4 +12,5 @@ data class AppSettings(
     val widgetFontSize: Int = 2,
     val widgetBackgroundColor: Int = 0xFF000000.toInt(),
     val migrationV1Completed: Boolean = false,
+    val onboardingCompleted: Boolean = false,
 )

@@ -34,6 +34,9 @@ class WidgetSettingsViewModel
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()
 
+        private val _loadError = MutableStateFlow(false)
+        val loadError: StateFlow<Boolean> = _loadError.asStateFlow()
+
         val uiState: StateFlow<WidgetUiState?> =
             _settingsState
                 .filterNotNull()
@@ -42,8 +45,23 @@ class WidgetSettingsViewModel
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
         init {
+            loadSettings()
+        }
+
+        fun retryLoad() {
+            loadSettings()
+        }
+
+        private fun loadSettings() {
+            _loadError.value = false
             viewModelScope.launch {
-                _settingsState.value = repository.load()
+                try {
+                    _settingsState.value = repository.load()
+                } catch (e: Exception) {
+                    com.example.minutewatcher.core.model.util.AppLogger
+                        .e("Failed to load widget settings", e)
+                    _loadError.value = true
+                }
             }
         }
 

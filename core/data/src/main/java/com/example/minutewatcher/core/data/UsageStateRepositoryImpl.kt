@@ -48,6 +48,10 @@ class UsageStateRepositoryImpl
         private val dataRefreshNotifier: DataRefreshNotifier,
         @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
+        override fun recoverTracking(key: String) {
+            statusProviders.find { it.key == key }?.recover()
+        }
+
         override fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>> {
             val flows =
                 statusProviders.map { provider ->

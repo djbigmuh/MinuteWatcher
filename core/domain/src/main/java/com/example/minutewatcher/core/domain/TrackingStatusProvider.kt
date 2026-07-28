@@ -6,4 +6,9 @@ import kotlinx.coroutines.flow.Flow
 interface TrackingStatusProvider {
     val key: String
     val status: Flow<TrackingStatus>
+
+    /**
+     * Attempts to recover from an error state.
+     */
+    fun recover() {}
 }

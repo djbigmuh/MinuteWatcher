@@ -9,14 +9,15 @@ import android.service.quicksettings.TileService
 import androidx.core.service.quicksettings.PendingIntentActivityWrapper
 import androidx.core.service.quicksettings.TileServiceCompat
 import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.data.di.MainImmediateDispatcher
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.feature.semantic.SemanticRepository
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +30,11 @@ class UsageTileService : TileService() {
 
     @Inject @ApplicationScope
     lateinit var applicationScope: CoroutineScope
+
+    @Inject
+    @MainImmediateDispatcher
+    lateinit var mainImmediateDispatcher: CoroutineDispatcher
+
     private var job: Job? = null
 
     override fun onStartListening() {
@@ -36,7 +42,7 @@ class UsageTileService : TileService() {
         updateTile()
         job?.cancel()
         job =
-            applicationScope.launch(Dispatchers.Main.immediate) {
+            applicationScope.launch(mainImmediateDispatcher) {
                 semanticRepository.snapshot
                     .collect {
                         try {

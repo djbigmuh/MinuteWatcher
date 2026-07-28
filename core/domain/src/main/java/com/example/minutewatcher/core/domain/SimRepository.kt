@@ -6,9 +6,7 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.Flow
 
-interface SimRepository {
-    fun getSimUsage(identity: String): Flow<SimUsage>
-
+interface SimIdentityRepository {
     suspend fun getIdentity(slot: Int): String
 
     suspend fun getSimIdentity(slot: Int): SimIdentity
@@ -32,22 +30,47 @@ interface SimRepository {
         identity: String,
         code: String,
     )
+}
+
+interface SimUsageRepository {
+    fun getSimUsage(identity: String): Flow<SimUsage>
 
     fun getMinutesUsed(identity: String): Flow<Int>
-
-    fun getMonthlyLimit(identity: String): Flow<Int>
-
-    fun getManualAdjustment(identity: String): Flow<Int>
 
     suspend fun setMinutesUsed(
         identity: String,
         value: Int,
     )
 
-    suspend fun updateSimLimits(
+    suspend fun incrementMinutesUsed(
         identity: String,
-        minutesLimit: Int,
-        trafficLimitMb: Int,
+        delta: Int,
+    )
+
+    fun getTrafficUsed(identity: String): Flow<Float>
+
+    suspend fun setTrafficUsed(
+        identity: String,
+        value: Float,
+    )
+
+    suspend fun incrementTrafficUsed(
+        identity: String,
+        deltaMb: Float,
+    )
+
+    fun getManualAdjustment(identity: String): Flow<Int>
+
+    suspend fun setManualAdjustment(
+        identity: String,
+        value: Int,
+    )
+
+    fun getTrafficAdjustment(identity: String): Flow<Float>
+
+    suspend fun setTrafficAdjustment(
+        identity: String,
+        value: Float,
     )
 
     suspend fun updateSimStats(
@@ -55,27 +78,6 @@ interface SimRepository {
         minutesUsed: Int,
         trafficUsed: Float,
         manualAdjustment: Int,
-    )
-
-    suspend fun setManualAdjustment(
-        identity: String,
-        value: Int,
-    )
-
-    fun getTrafficUsed(identity: String): Flow<Float>
-
-    fun getTrafficLimit(identity: String): Flow<Int>
-
-    fun getTrafficAdjustment(identity: String): Flow<Float>
-
-    suspend fun setTrafficUsed(
-        identity: String,
-        value: Float,
-    )
-
-    suspend fun setTrafficAdjustment(
-        identity: String,
-        value: Float,
     )
 
     suspend fun resetSimUsage(identity: String)
@@ -86,10 +88,6 @@ interface SimRepository {
         nowMillis: Long,
     ): Boolean
 
-    fun getAutoReset(identity: String): Flow<Boolean>
-
-    fun getAutoResetDay(identity: String): Flow<Int>
-
     fun getLastResetDate(identity: String): Flow<Long>
 
     suspend fun setLastResetDate(
@@ -97,28 +95,41 @@ interface SimRepository {
         value: Long,
     )
 
-    suspend fun incrementMinutesUsed(
+    fun getLastTotalBytes(identity: String): Flow<Long>
+
+    suspend fun setLastTotalBytes(
         identity: String,
-        delta: Int,
+        bytes: Long,
+    )
+}
+
+interface SimLimitsRepository {
+    fun getMonthlyLimit(identity: String): Flow<Int>
+
+    fun getTrafficLimit(identity: String): Flow<Int>
+
+    suspend fun updateSimLimits(
+        identity: String,
+        minutesLimit: Int,
+        trafficLimitMb: Int,
     )
 
-    suspend fun incrementTrafficUsed(
-        identity: String,
-        deltaMb: Float,
-    )
+    fun getAutoReset(identity: String): Flow<Boolean>
+
+    fun getAutoResetDay(identity: String): Flow<Int>
 
     suspend fun setAutoReset(
         identity: String,
         day: Int,
         enabled: Boolean,
     )
+}
 
-    // Combined settings for performance
+interface SimWidgetVisibilityRepository {
     fun getSimSettings(identity: String): Flow<SimSettingsState>
 
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
 
-    // Visibility settings (moved from SettingsRepository)
     fun getShowSim(identity: String): Flow<Boolean>
 
     suspend fun setShowSim(
@@ -167,8 +178,9 @@ interface SimRepository {
         identity: String,
         show: Boolean,
     )
+}
 
-    // Notified flags (moved from SettingsRepository)
+interface SimNotificationFlagsRepository {
     fun getNotifiedLowMinutes(identity: String): Flow<Boolean>
 
     suspend fun setNotifiedLowMinutes(
@@ -196,12 +208,15 @@ interface SimRepository {
         identity: String,
         notified: Boolean,
     )
-
-    // Tracking helpers (moved from SettingsRepository)
-    fun getLastTotalBytes(identity: String): Flow<Long>
-
-    suspend fun setLastTotalBytes(
-        identity: String,
-        bytes: Long,
-    )
 }
+
+/**
+ * Composite interface for SIM-related data management.
+ * In the future, prefer depending on more specific interfaces defined above.
+ */
+interface SimRepository :
+    SimIdentityRepository,
+    SimUsageRepository,
+    SimLimitsRepository,
+    SimWidgetVisibilityRepository,
+    SimNotificationFlagsRepository

@@ -1,19 +1,12 @@
 package com.example.minutewatcher.core.model.util
+
 import android.content.Context
-import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.R
 
 /**
- * Централизованный выбор цветов (Этап 4, п. 20).
+ * Централизованный выбор статусов использования.
  */
 object ColorProvider {
-    enum class UsageStatus {
-        NORMAL,
-        LOW,
-        CRITICAL,
-    }
-
     fun getUsageStatus(
         remaining: Float,
         limit: Float,
@@ -30,10 +23,6 @@ object ColorProvider {
         context: Context,
         remaining: Float,
         limit: Float,
-    ): Int =
-        when (getUsageStatus(remaining, limit)) {
-            UsageStatus.CRITICAL -> ContextCompat.getColor(context, R.color.red)
-            UsageStatus.LOW -> ContextCompat.getColor(context, R.color.orange)
-            UsageStatus.NORMAL -> ContextCompat.getColor(context, R.color.green)
-        }
+        isDarkBackground: Boolean = false,
+    ): Int = UsageColors.get(getUsageStatus(remaining, limit), isDarkBackground)
 }

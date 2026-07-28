@@ -18,6 +18,8 @@ import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.FontScaleProvider
 import com.example.minutewatcher.core.model.util.FormatUtils
 import com.example.minutewatcher.core.model.util.SimUtils
+import com.example.minutewatcher.core.model.util.UsageColors
+import com.example.minutewatcher.core.model.util.UsageStatus
 
 object WidgetUiMapper {
     private const val SIZE_ICON_SINGLE = 14
@@ -314,14 +316,10 @@ object WidgetUiMapper {
     }
 
     private fun getStatusColorInt(
-        status: ColorProvider.UsageStatus,
+        status: UsageStatus,
         backgroundLuminance: Double,
     ): Int {
         val isDark = backgroundLuminance < 0.5
-        return when (status) {
-            ColorProvider.UsageStatus.CRITICAL -> if (isDark) 0xFFFF6B6B.toInt() else 0xFFD32F2F.toInt()
-            ColorProvider.UsageStatus.LOW -> if (isDark) 0xFFFFD93D.toInt() else 0xFFF57C00.toInt()
-            ColorProvider.UsageStatus.NORMAL -> if (isDark) 0xFF6BCB77.toInt() else 0xFF388E3C.toInt()
-        }
+        return UsageColors.get(status, isDark)
     }
 }

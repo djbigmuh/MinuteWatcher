@@ -9,13 +9,21 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.CallEventWorker
+import com.example.minutewatcher.core.data.di.IoDispatcher
 import com.example.minutewatcher.core.model.util.AppLogger
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class UsageMonitorReceiver : BroadcastReceiver() {
+    @Inject
+    @IoDispatcher
+    lateinit var ioDispatcher: CoroutineDispatcher
+
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -40,7 +48,7 @@ class UsageMonitorReceiver : BroadcastReceiver() {
                 }
             }
 
-            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            CoroutineScope(SupervisorJob() + ioDispatcher).launch {
                 try {
                     val data =
                         Data

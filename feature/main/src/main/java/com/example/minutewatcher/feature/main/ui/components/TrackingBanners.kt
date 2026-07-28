@@ -24,6 +24,8 @@ fun TrackingBanners(
     onGrantPhonePermission: () -> Unit,
     onOpenUsageSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onRetryAppSearch: () -> Unit,
+    onRetryTraffic: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         if (state.showPhonePermissionBanner) {
@@ -68,8 +70,8 @@ fun TrackingBanners(
         if (state.showTrafficErrorBanner) {
             TrackingBanner(
                 text = stringResource(id = R.string.tracking_banner_traffic_error),
-                actionText = null,
-                onAction = {},
+                actionText = stringResource(id = R.string.action_retry),
+                onAction = onRetryTraffic,
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -77,8 +79,8 @@ fun TrackingBanners(
         if (state.showAppSearchErrorBanner) {
             TrackingBanner(
                 text = stringResource(id = R.string.tracking_banner_appsearch_error),
-                actionText = null,
-                onAction = {},
+                actionText = stringResource(id = R.string.action_retry),
+                onAction = onRetryAppSearch,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -24,6 +24,8 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.feature.main.ui.components.AdjustmentComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
@@ -68,11 +71,32 @@ fun SimCardScreen(
     val highlightedSlot by viewModel.highlightedSlot.collectAsStateWithLifecycle()
     val trackingBannerState by viewModel.trackingBannerState.collectAsStateWithLifecycle()
     val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
+    val showOnboardingDialog by viewModel.showOnboardingDialog.collectAsStateWithLifecycle()
+    val refreshStatus by viewModel.refreshStatus.collectAsStateWithLifecycle()
+
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     var isRefreshing by remember { mutableStateOf(value = false) }
     var showLanguageMenu by remember { mutableStateOf(value = false) }
     var showResetConfirmSlot by remember { mutableStateOf<Int?>(null) }
+
+    val genericErrorMessage = stringResource(id = R.string.error)
+
+    LaunchedEffect(refreshStatus) {
+        when (val status = refreshStatus) {
+            is RefreshState.Error -> {
+                snackbarHostState.showSnackbar(status.message ?: genericErrorMessage)
+                viewModel.consumeRefreshStatus()
+            }
+            is RefreshState.Success -> {
+                // Success is already indicated by data update and pull-to-refresh spinner hiding
+                viewModel.consumeRefreshStatus()
+            }
+            else -> {}
+        }
+    }
 
     // Dialog states from ViewModel
     val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
@@ -126,6 +150,7 @@ fun SimCardScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(id = R.string.app_name)) },
@@ -229,6 +254,8 @@ fun SimCardScreen(
                                 onGrantPhonePermission = onGrantPhonePermission,
                                 onOpenUsageSettings = onOpenUsageSettings,
                                 onOpenAppSettings = onOpenAppSettings,
+                                onRetryAppSearch = { viewModel.retryAppSearch() },
+                                onRetryTraffic = { viewModel.retryTraffic() },
                             )
                         }
 
@@ -336,6 +363,19 @@ fun SimCardScreen(
             dismissButton = {
                 TextButton(onClick = { viewModel.closeUsageAccessDialog() }) {
                     Text(stringResource(id = R.string.cancel_button))
+                }
+            },
+        )
+    }
+
+    if (showOnboardingDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.completeOnboarding() },
+            title = { Text(stringResource(id = R.string.onboarding_title)) },
+            text = { Text(stringResource(id = R.string.onboarding_message)) },
+            confirmButton = {
+                Button(onClick = { viewModel.completeOnboarding() }) {
+                    Text(stringResource(id = R.string.onboarding_button))
                 }
             },
         )

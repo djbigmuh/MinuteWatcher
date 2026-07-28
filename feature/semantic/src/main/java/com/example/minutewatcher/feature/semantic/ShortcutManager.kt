@@ -38,7 +38,7 @@ class ShortcutManager
         @ApplicationScope private val scope: CoroutineScope,
         private val navigationProvider: NavigationProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    ) : AutoCloseable {
+    ) {
         private var job: Job? = null
 
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
@@ -64,11 +64,6 @@ class ShortcutManager
                             }
                         }
                 }
-        }
-
-        override fun close() {
-            job?.cancel()
-            job = null
         }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {

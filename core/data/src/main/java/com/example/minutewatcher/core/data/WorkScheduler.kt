@@ -1,6 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -18,7 +20,14 @@ class WorkScheduler
         @ApplicationContext private val context: Context,
     ) {
         fun scheduleInitialSetup() {
-            val workRequest = OneTimeWorkRequestBuilder<InitialSetupWorker>().build()
+            val workRequest =
+                OneTimeWorkRequestBuilder<InitialSetupWorker>()
+                    .setBackoffCriteria(
+                        BackoffPolicy.EXPONENTIAL,
+                        30,
+                        TimeUnit.SECONDS,
+                    )
+                    .build()
             WorkManager.getInstance(context).enqueueUniqueWork(
                 INITIAL_SETUP_WORK_NAME,
                 ExistingWorkPolicy.REPLACE,
@@ -27,8 +36,19 @@ class WorkScheduler
         }
 
         fun schedulePeriodicUsageCheck() {
+            val constraints =
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+
             val workRequest =
                 PeriodicWorkRequestBuilder<UsageCheckWorker>(1, TimeUnit.HOURS)
+                    .setConstraints(constraints)
+                    .setBackoffCriteria(
+                        BackoffPolicy.EXPONENTIAL,
+                        30,
+                        TimeUnit.SECONDS,
+                    )
                     .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -39,7 +59,7 @@ class WorkScheduler
         }
 
         companion object {
-            const val INITIAL_SETUP_WORK_NAME = "BOOT_SETUP"
+            const val INITIAL_SETUP_WORK_NAME = "INITIAL_SETUP"
             const val USAGE_CHECK_WORK_NAME = "UsageCheckWork"
         }
     }

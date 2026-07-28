@@ -63,7 +63,25 @@ fun WidgetSettingsScreen(
 ) {
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val loadError by viewModel.loadError.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+
+    if (loadError) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(id = R.string.error),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { viewModel.retryLoad() }) {
+                    Text(text = stringResource(id = R.string.action_retry))
+                }
+            }
+        }
+        return
+    }
 
     if (state == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

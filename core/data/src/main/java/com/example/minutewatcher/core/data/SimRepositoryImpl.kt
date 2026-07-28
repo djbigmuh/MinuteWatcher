@@ -14,9 +14,14 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimInfoProvider
+import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
@@ -53,6 +58,11 @@ class SimRepositoryImpl
         @SimDataStore private val dataStore: DataStore<Preferences>,
         private val seedRepository: SimIdentitySeedRepository,
     ) : SimRepository,
+        SimIdentityRepository,
+        SimUsageRepository,
+        SimLimitsRepository,
+        SimWidgetVisibilityRepository,
+        SimNotificationFlagsRepository,
         SimInfoProvider {
         companion object {
             private fun monthlyLimitKey(identity: String) = intPreferencesKey("monthly_limit_$identity")

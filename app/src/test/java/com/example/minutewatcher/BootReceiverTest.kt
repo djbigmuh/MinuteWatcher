@@ -64,11 +64,11 @@ class BootReceiverTest {
 
             var workInfos: List<WorkInfo> = emptyList()
             for (_unused in 1..20) {
-                workInfos = workManager.getWorkInfosForUniqueWork("BOOT_SETUP").get(1, TimeUnit.SECONDS)
+                workInfos = workManager.getWorkInfosForUniqueWork("INITIAL_SETUP").get(1, TimeUnit.SECONDS)
                 if (workInfos.isNotEmpty()) break
                 delay(50.milliseconds)
             }
 
-            assertTrue("Work BOOT_SETUP should be enqueued", workInfos.isNotEmpty())
+            assertTrue("Work INITIAL_SETUP should be enqueued", workInfos.isNotEmpty())
         }
 }

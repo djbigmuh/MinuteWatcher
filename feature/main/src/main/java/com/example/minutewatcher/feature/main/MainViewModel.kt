@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.data.di.IoDispatcher
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -106,6 +107,16 @@ class MainViewModel
             savedStateHandle["usage_access_dialog"] = false
         }
 
+        private val _showOnboardingDialog = MutableStateFlow(false)
+        val showOnboardingDialog: StateFlow<Boolean> = _showOnboardingDialog.asStateFlow()
+
+        fun completeOnboarding() {
+            _showOnboardingDialog.value = false
+            viewModelScope.launch {
+                settingsRepository.updateAppSettings { it.copy(onboardingCompleted = true) }
+            }
+        }
+
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
             usageStateRepository
                 .observeTrackingStatus()
@@ -153,6 +164,13 @@ class MainViewModel
                     initialValue = SimCardListState.Loading,
                 )
 
+        private val _refreshStatus = MutableStateFlow<RefreshState>(RefreshState.Idle)
+        val refreshStatus: StateFlow<RefreshState> = _refreshStatus.asStateFlow()
+
+        fun consumeRefreshStatus() {
+            _refreshStatus.value = RefreshState.Idle
+        }
+
         private val simCheckMutex = Mutex()
 
         val appTheme: StateFlow<AppTheme> =
@@ -169,6 +187,10 @@ class MainViewModel
 
         private fun initializeApp() {
             viewModelScope.launch(ioDispatcher) {
+                val settings = settingsRepository.observeAppSettings().value
+                if (!settings.onboardingCompleted) {
+                    _showOnboardingDialog.value = true
+                }
                 val snapshot = usageStateRepository.observeSnapshot().value
                 resetManager.performAutoReset(simRepository, snapshot)
                 refreshSimCards()
@@ -187,6 +209,14 @@ class MainViewModel
             }
         }
 
+        fun retryAppSearch() {
+            usageStateRepository.recoverTracking("appsearch")
+        }
+
+        fun retryTraffic() {
+            refreshSimCards()
+        }
+
         suspend fun refreshSimCardsNow() {
             refreshSimCardsInternal()
         }
@@ -194,12 +224,15 @@ class MainViewModel
         private suspend fun refreshSimCardsInternal() =
             withContext(ioDispatcher) {
                 simCheckMutex.withLock {
+                    _refreshStatus.value = RefreshState.Loading
                     try {
                         usageUseCase.refreshOperatorInfo()
                         usageStateRepository.refresh()
+                        _refreshStatus.value = RefreshState.Success
                     } catch (e: Exception) {
                         com.example.minutewatcher.core.model.util.AppLogger
                             .e("Error refreshing SIM cards", e)
+                        _refreshStatus.value = RefreshState.Error(e.message)
                     }
                 }
             }

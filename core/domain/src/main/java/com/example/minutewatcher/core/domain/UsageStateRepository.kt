@@ -31,4 +31,9 @@ interface UsageStateRepository {
      * Forces a refresh of the current usage data and returns the updated snapshot.
      */
     suspend fun refresh(): GlobalSnapshot
+
+    /**
+     * Attempts to recover a tracking component by its key.
+     */
+    fun recoverTracking(key: String)
 }

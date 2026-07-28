@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.main.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -51,14 +53,12 @@ import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.FormatUtils
+import com.example.minutewatcher.core.model.util.UsageColors
+import com.example.minutewatcher.core.model.util.UsageStatus
 
 @Composable
-fun getStatusColor(status: ColorProvider.UsageStatus): Color =
-    when (status) {
-        ColorProvider.UsageStatus.CRITICAL -> MaterialTheme.colorScheme.error
-        ColorProvider.UsageStatus.LOW -> Color(0xFFFFA500) // Orange, could use tertiary but orange is standard
-        ColorProvider.UsageStatus.NORMAL -> Color(0xFF4CAF50) // Green
-    }
+fun getStatusColor(status: UsageStatus): Color =
+    Color(UsageColors.get(status, isSystemInDarkTheme()))
 
 @Composable
 fun SimCardItem(
