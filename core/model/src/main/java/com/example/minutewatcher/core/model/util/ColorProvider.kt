@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.model.util
 
-import android.content.Context
 import com.example.minutewatcher.core.model.Constants
 
 /**
@@ -18,11 +17,4 @@ object ColorProvider {
             remaining < limit * Constants.LOW_REMAINING_THRESHOLD_PERCENT -> UsageStatus.LOW
             else -> UsageStatus.NORMAL
         }
-
-    fun getUsageColor(
-        context: Context,
-        remaining: Float,
-        limit: Float,
-        isDarkBackground: Boolean = false,
-    ): Int = UsageColors.get(getUsageStatus(remaining, limit), isDarkBackground)
 }

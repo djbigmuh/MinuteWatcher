@@ -63,9 +63,9 @@ class BootReceiverTest {
             ShadowLooper.idleMainLooper()
 
             var workInfos: List<WorkInfo> = emptyList()
-            for (_unused in 1..20) {
+            repeat(20) {
                 workInfos = workManager.getWorkInfosForUniqueWork("INITIAL_SETUP").get(1, TimeUnit.SECONDS)
-                if (workInfos.isNotEmpty()) break
+                if (workInfos.isNotEmpty()) return@repeat
                 delay(50.milliseconds)
             }
 

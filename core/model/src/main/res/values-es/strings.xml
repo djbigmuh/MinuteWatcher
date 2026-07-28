@@ -55,11 +55,15 @@
     <string name="action_grant">Otorgar</string>
     <string name="action_settings">Ajustes</string>
     <string name="action_app_settings">Ajustes de la aplicación</string>
+    <string name="action_retry">Reintentar</string>
     <string name="validation_error_invalid_range">Por favor, introduzca un valor entre %1$s y %2$s</string>
     <string name="validation_error_invalid_number">Por favor, introduzca un número válido</string>
     <string name="dynamic_preview">Vista previa dinámica</string>
-    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
+    <string name="widget_pin_unsupported">Tu lanzador no admite la colocación automática de widgets. Por favor, añade el widget manualmente.</string>
     <string name="widget_already_added">Widget ya añadido a la pantalla de inicio</string>
+    <string name="onboarding_title">¡Bienvenido a MinuteWatcher!</string>
+    <string name="onboarding_message">MinuteWatcher no puede obtener automáticamente los detalles de su plan de su operador de telefonía móvil.\n\nPara comenzar el seguimiento, establezca manualmente sus límites de minutos/datos y el día de reinicio mensual para cada tarjeta SIM. La aplicación se encargará de todo el monitoreo a partir de ese momento.</string>
+    <string name="onboarding_button">Entendido</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">Cancelar</string>

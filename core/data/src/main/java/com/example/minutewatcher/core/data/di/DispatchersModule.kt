@@ -41,5 +41,6 @@ object DispatchersModule {
 
     @Provides
     @MainImmediateDispatcher
+    @Suppress("unused")
     fun providesMainImmediateDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
 }

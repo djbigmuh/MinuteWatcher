@@ -42,7 +42,6 @@ import kotlin.time.Duration.Companion.seconds
 class MainViewModel
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
         private val simRepository: SimRepository,
         private val settingsRepository: SettingsRepository,
         private val usageStateRepository: UsageStateRepository,

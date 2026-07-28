@@ -55,11 +55,15 @@
     <string name="action_grant">許可</string>
     <string name="action_settings">設定</string>
     <string name="action_app_settings">アプリ設定</string>
+    <string name="action_retry">再試行</string>
     <string name="validation_error_invalid_range">%1$s から %2$s の間の値を入力してください</string>
     <string name="validation_error_invalid_number">有効な数字を入力してください</string>
     <string name="dynamic_preview">ダイナミックプレビュー</string>
-    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
+    <string name="widget_pin_unsupported">お使いのランチャーはウィジェットの自動配置をサポートしていません。ウィジェットを手動で追加してください。</string>
     <string name="widget_already_added">ウィジェットは既にホーム画面に追加されています</string>
+    <string name="onboarding_title">MinuteWatcherへようこそ！</string>
+    <string name="onboarding_message">MinuteWatcherは、携帯電話会社からプランの詳細を自動的に取得することはできません。\n\n追跡を開始するには、各SIMカードの無料通話/データ通信量の制限と毎月のリセット日を手動で設定してください。それ以降の監視はすべてアプリが行います。</string>
+    <string name="onboarding_button">了解</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">キャンセル</string>
