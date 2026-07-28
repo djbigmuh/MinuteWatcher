@@ -51,7 +51,6 @@ import com.example.minutewatcher.feature.main.ui.components.SimLimitComposeDialo
 import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
 import kotlinx.coroutines.launch
 
-@Suppress("ktlint:standard:function-naming")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SimCardScreen(
@@ -73,6 +72,7 @@ fun SimCardScreen(
     val listState = rememberLazyListState()
     var isRefreshing by remember { mutableStateOf(value = false) }
     var showLanguageMenu by remember { mutableStateOf(value = false) }
+    var showResetConfirmSlot by remember { mutableStateOf<Int?>(null) }
 
     // Dialog states from ViewModel
     val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
@@ -240,7 +240,7 @@ fun SimCardScreen(
                                         LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb),
                                     )
                                 },
-                                onResetCounters = { viewModel.resetUsage(model.slot) },
+                                onResetCounters = { showResetConfirmSlot = model.slot },
                                 onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
                                 onEditAutoResetDay = {
                                     viewModel.openDayDialog(DayDialogData(model.slot, model.autoResetDay))
@@ -314,7 +314,7 @@ fun SimCardScreen(
             text = { Text(stringResource(id = R.string.traffic_tracking_limitation_body)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.closeTrafficLimitationDialog() }) {
-                    Text(stringResource(id = android.R.string.ok))
+                    Text(stringResource(id = R.string.action_ok))
                 }
             },
         )
@@ -335,6 +335,29 @@ fun SimCardScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeUsageAccessDialog() }) {
+                    Text(stringResource(id = R.string.cancel_button))
+                }
+            },
+        )
+    }
+
+    showResetConfirmSlot?.let { slot ->
+        AlertDialog(
+            onDismissRequest = { showResetConfirmSlot = null },
+            title = { Text(stringResource(id = R.string.reset_confirmation_title)) },
+            text = { Text(stringResource(id = R.string.reset_confirmation_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetUsage(slot)
+                        showResetConfirmSlot = null
+                    },
+                ) {
+                    Text(stringResource(id = R.string.reset_counters))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirmSlot = null }) {
                     Text(stringResource(id = R.string.cancel_button))
                 }
             },

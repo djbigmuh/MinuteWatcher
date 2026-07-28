@@ -22,7 +22,6 @@ data class TrackingBannerState(
     val showAppSearchErrorBanner: Boolean = false,
 )
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun EmptyState() {
     Column(
@@ -43,7 +42,6 @@ fun EmptyState() {
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun ErrorState(message: String) {
     Column(

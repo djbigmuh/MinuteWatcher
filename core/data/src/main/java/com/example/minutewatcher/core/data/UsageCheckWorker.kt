@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.data.di.IoDispatcher
 import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -19,7 +20,7 @@ import com.example.minutewatcher.core.model.util.DateUtils
 import com.example.minutewatcher.core.model.util.FormatUtils
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
@@ -37,9 +38,10 @@ class UsageCheckWorker
         private val updateCoordinator: UpdateCoordinator,
         private val usageStateRepository: UsageStateRepository,
         private val usageUseCase: UsageUseCase,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.READ_PHONE_STATE) !=
                     PackageManager.PERMISSION_GRANTED
                 ) {

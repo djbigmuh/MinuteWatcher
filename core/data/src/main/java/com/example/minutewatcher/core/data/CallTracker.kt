@@ -44,6 +44,7 @@ class CallTracker
          */
         suspend fun onBoot() {
             settingsRepository.clearAllCallSessions()
+            _status.value = TrackingStatus.Idle
             AppLogger.d("Cleared all stale call sessions on boot")
         }
 
@@ -82,6 +83,7 @@ class CallTracker
                     settingsRepository.setCallStartTime(effectiveSubId, System.currentTimeMillis())
                     settingsRepository.setBootTime(effectiveSubId, currentBootTime)
                     settingsRepository.setCallIdentity(effectiveSubId, identity)
+                    _status.value = TrackingStatus.Active
                     AppLogger.d("Call started for subId $effectiveSubId (identity: $identity)")
                 } else {
                     AppLogger.d("Call already active for subId $effectiveSubId")
@@ -166,12 +168,14 @@ class CallTracker
 
                 if (!callTrackingEnabled.value) {
                     AppLogger.d("Call tracking disabled, skipping minutes increment for subId $subId")
+                    refreshStatus()
                     return
                 }
 
                 // Validate session against reboots/corruption
                 if (savedBootTime == 0L || savedBootTime > currentBootTime) {
                     AppLogger.d("Stale call session detected for subId $subId (reboot or corrupted state)")
+                    refreshStatus()
                     return
                 }
 
@@ -179,6 +183,16 @@ class CallTracker
                 if (durationSeconds > 0) {
                     processCallDuration(durationSeconds.toInt(), subId, savedIdentity)
                 }
+            }
+            refreshStatus()
+        }
+
+        private suspend fun refreshStatus() {
+            val hasActiveCalls = settingsRepository.getActiveCallSubIds().isNotEmpty()
+            _status.value = if (hasActiveCalls) {
+                TrackingStatus.Active
+            } else {
+                TrackingStatus.Idle
             }
         }
 

@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun TrackingBanners(
     state: TrackingBannerState,
@@ -87,7 +86,6 @@ fun TrackingBanners(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun TrackingBanner(
     text: String,

@@ -32,6 +32,11 @@ allprojects {
             reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
         }
     }
+
+    // Workaround for Gradle 10 deprecation in detekt 1.x
+    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+        reportsDir.set(project.layout.buildDirectory.dir("reports/detekt").map { it.asFile })
+    }
 }
 
 subprojects {

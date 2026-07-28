@@ -32,7 +32,6 @@ import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun WidgetPreview(
     uiState: WidgetUiState,

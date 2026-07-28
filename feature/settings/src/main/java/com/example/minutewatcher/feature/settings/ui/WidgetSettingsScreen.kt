@@ -180,7 +180,7 @@ fun WidgetSettingsScreen(
                 value = nonNullState.transparency.toFloat(),
                 onValueChange = { viewModel.updateTransparency(it.toInt()) },
                 valueRange = 0f..100f,
-                steps = 100,
+                steps = 99,
             )
 
             // Font Size
@@ -256,7 +256,6 @@ fun WidgetSettingsScreen(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun SettingLabel(text: String) {
     Text(
@@ -266,7 +265,6 @@ fun SettingLabel(text: String) {
     )
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun CheckboxSetting(
     label: String,
@@ -291,7 +289,6 @@ fun CheckboxSetting(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun SimSettingsSection(
     index: Int,

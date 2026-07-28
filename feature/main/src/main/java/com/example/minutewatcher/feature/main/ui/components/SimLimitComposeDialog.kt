@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun SimLimitComposeDialog(
     operatorName: String,

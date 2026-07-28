@@ -29,6 +29,7 @@ class PermissionManager
                 Manifest.permission.READ_PHONE_STATE,
             ) == PackageManager.PERMISSION_GRANTED
 
+        // Permission is checked manually using hasPhoneStatePermission() before access.
         @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> =
             try {
@@ -42,6 +43,7 @@ class PermissionManager
                 emptyList()
             }
 
+        // Permission is checked manually using hasPhoneStatePermission() before access.
         @SuppressLint("MissingPermission")
         fun getDefaultVoiceSubscriptionId(): Int =
             try {
@@ -54,6 +56,7 @@ class PermissionManager
                 -1
             }
 
+        // Permission is checked manually using hasPhoneStatePermission() before access.
         @SuppressLint("MissingPermission")
         fun getDefaultDataSubscriptionId(): Int =
             try {

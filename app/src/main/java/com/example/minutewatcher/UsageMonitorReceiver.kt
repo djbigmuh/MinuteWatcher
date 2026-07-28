@@ -27,7 +27,18 @@ class UsageMonitorReceiver : BroadcastReceiver() {
             val appContext = context.applicationContext
 
             val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-            val subId = intent.getIntExtra("subscription", -1)
+            
+            // Try to extract subId using various possible keys for better compatibility
+            val subId = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                intent.getIntExtra(TelephonyManager.EXTRA_SUBSCRIPTION_ID, -1)
+            } else {
+                val id = intent.getIntExtra("subscription", -1)
+                if (id == -1) {
+                    intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1)
+                } else {
+                    id
+                }
+            }
 
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {

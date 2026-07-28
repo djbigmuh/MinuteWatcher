@@ -13,9 +13,7 @@ import com.example.minutewatcher.core.model.util.AppLogger
 import com.example.minutewatcher.core.model.util.PermissionManager
 import com.example.minutewatcher.core.model.util.SimUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -45,7 +43,6 @@ class TrafficTracker
         private val simRepository: SimRepository,
         private val settingsRepository: SettingsRepository,
         private val permissionManager: PermissionManager,
-        @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
 
@@ -55,10 +52,7 @@ class TrafficTracker
         private val trafficMutex = Mutex()
         private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
 
-        private val lastDataSubId =
-            settingsRepository
-                .getLastDataSubId()
-                .stateIn(scope, SharingStarted.Eagerly, -1)
+        private var inMemoryLastDataSubId: Int = -1
 
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
@@ -109,6 +103,7 @@ class TrafficTracker
                         simRepository.setLastTotalBytes(targetIdentity, currentBytes)
                         AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
                         settingsRepository.setLastDataSubId(currentDataSubId)
+                        inMemoryLastDataSubId = currentDataSubId
                         _status.value = TrackingStatus.Active
                         return
                     }
@@ -121,6 +116,7 @@ class TrafficTracker
                             simRepository.incrementTrafficUsed(targetIdentity, deltaMB)
                             AppLogger.d("Added $deltaMB MB to identity $targetIdentity (SIM $targetSim)")
                             settingsRepository.setLastDataSubId(currentDataSubId)
+                            inMemoryLastDataSubId = currentDataSubId
                             _status.value = TrackingStatus.Active
                         }
                     } else {
@@ -178,7 +174,11 @@ class TrafficTracker
             if (targetSim == -1) return null
 
             // Detect SIM change for baseline reset
-            val savedLastDataSubId = lastDataSubId.value
+            if (inMemoryLastDataSubId == -1) {
+                inMemoryLastDataSubId = settingsRepository.getLastDataSubId().first()
+            }
+
+            val savedLastDataSubId = inMemoryLastDataSubId
             if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
                 AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")
                 val identity = simRepository.getIdentity(targetSim)
@@ -187,6 +187,7 @@ class TrafficTracker
                     simRepository.setLastTotalBytes(identity, currentBytes)
                 }
                 settingsRepository.setLastDataSubId(currentDataSubId)
+                inMemoryLastDataSubId = currentDataSubId
                 return null // Skip delta for the swap event
             }
 

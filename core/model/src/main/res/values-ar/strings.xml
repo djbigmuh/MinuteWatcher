@@ -1,21 +1,16 @@
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">بطاقات SIM</string>
-    <string name="no_sim_card">لم يتم اكتشاف بطاقة SIM</string>
-    <string name="insert_sim">أدخل بطاقة SIM لتتبع الاستخدام</string>
     <string name="no_sim_found">لم يتم العثور على بطاقات SIM</string>
     <string name="check_permissions_sim">تحقق من الأذونات ووجود بطاقة SIM</string>
     <string name="no_data">لا توجد بيانات</string>
     <string name="error">خطأ</string>
-    <string name="status_on">مفعل</string>
-    <string name="status_off">معطل</string>
 
     <!-- Main Screen Actions -->
     <string name="reset_label">إعادة ضبط</string>
     <string name="theme_switch">تبديل السمة</string>
     <string name="limit_button">الحد</string>
     <string name="add_widget_button">إضافة قطعة</string>
-    <string name="theme_switch_emoji">السمة</string>
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">تم حفظ الإعدادات</string>
@@ -30,7 +25,6 @@
     <string name="language_zh">الصينية</string>
     <string name="language_hi">الهندية</string>
     <string name="call_tracking_title">تتبع المكالمات</string>
-    <string name="usage_access_rationale">يحتاج MinuteWatcher إلى الوصول إلى بيانات الاستخدام لتتبع استخدام البيانات بدقة. يرجى تفعيله في الشاشة التالية.</string>
     <string name="usage_access_dialog_title">تتبع استخدام البيانات</string>
     <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".</string>
     <string name="phone_permission_permanent_denial">تم رفض إذن الهاتف بشكل دائم.</string>
@@ -48,17 +42,10 @@
     <string name="show_sim_checkbox">إظهار هذه البطاقة</string>
     <string name="preview">معاينة</string>
     <string name="layout_mode_title">وضع التخطيط</string>
-    <string name="layout_mode_prompt">اختر وضع التخطيط</string>
     <string name="sim_arrangement_prompt">اختر ترتيب SIM</string>
     <string name="color_background">لون الخلفية:</string>
     <string name="custom_color">مخصص&#8230;</string>
     <string name="font_size">حجم الخط</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">عادي</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="dual_sim_traffic_note">* ملاحظة: قد يكون تتبع حركة البيانات لبطاقتي SIM غير دقيق بسبب قيود أندرويد.</string>
     <string name="traffic_tracking_limitation_title">قيود تتبع البيانات</string>
     <string name="traffic_tracking_limitation_body">يوفر أندرويد استخدام بيانات الهاتف المحمول كقيمة إجمالية للجهاز بالكامل. \n\nيعزو MinuteWatcher جميع حركة البيانات إلى بطاقة SIM المحددة حاليًا كـ \"بطاقة البيانات الافتراضية\" في إعدادات النظام.</string>
     <string name="tracking_banner_phone_permission">مطلوب إذن الهاتف.</string>
@@ -71,14 +58,18 @@
     <string name="validation_error_invalid_range">يرجى إدخال قيمة بين %1$s و %2$s</string>
     <string name="validation_error_invalid_number">يرجى إدخال رقم صالح</string>
     <string name="dynamic_preview">معاينة ديناميكية</string>
+    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">إلغاء</string>
     <string name="save_button">حفظ</string>
     <string name="set_button">تعيين</string>
+    <string name="action_ok">موافق</string>
     <string name="reset_limits_button">إعادة ضبط الحدود</string>
     <string name="reset_counters">إعادة ضبط العدادات</string>
+    <string name="reset_confirmation_title">Reset Counters?</string>
+    <string name="reset_confirmation_body">This will clear all tracked usage and adjustments for this SIM card. This action cannot be undone.</string>
     <string name="click_to_choose">انقر للاختيار:</string>
     <string name="choose_reset_day">اختر يوم الشهر لإعادة الضبط التلقائي:</string>
     <string name="choose_reset_day_dialog_title">اختر يوم إعادة الضبط</string>
@@ -137,6 +128,8 @@
     <string name="sim_card_details_content_desc">تفاصيل بطاقة SIM %1$s</string>
     <string name="adjust_minutes_content_desc">تعديل الدقائق المتبقية</string>
     <string name="adjust_traffic_content_desc">تعديل حركة البيانات المتبقية</string>
+    <string name="traffic_info_content_desc">معلومات إضافية حول تتبع حركة البيانات</string>
+    <string name="set_limits_content_desc">تعيين حدود لـ %1$s</string>
     <string name="change_auto_reset_day_content_desc">تغيير يوم إعادة الضبط التلقائي</string>
     <string name="toggle_auto_reset_content_desc">تفعيل أو تعطيل إعادة الضبط التلقائي</string>
 </resources>

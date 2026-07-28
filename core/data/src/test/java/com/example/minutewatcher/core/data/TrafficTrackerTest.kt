@@ -12,7 +12,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -30,7 +29,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerTest {
     private val context: Context = mock()
@@ -39,8 +38,6 @@ class TrafficTrackerTest {
     private val permissionManager: PermissionManager = mock()
     private val networkStatsManager: NetworkStatsManager = mock()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
 
     private val lastDataSubIdFlow = MutableStateFlow(-1)
 
@@ -66,7 +63,6 @@ class TrafficTrackerTest {
                     simRepository,
                     settingsRepository,
                     permissionManager,
-                    testScope,
                 )
         }
 
@@ -150,8 +146,7 @@ class TrafficTrackerTest {
             trafficTracker.updateTrafficUsage()
 
             // Assert: it should have used sim_0 as fallback
-            val flow = verify(simRepository).getLastTotalBytes(eq("sim_0"))
-            println("Verified call to getLastTotalBytes with $flow")
+            verify(simRepository).getLastTotalBytes(eq("sim_0"))
         }
 
     @Test

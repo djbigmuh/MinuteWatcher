@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShortcutManagerTest {
     private val context: Context = mock()
@@ -48,7 +48,7 @@ class ShortcutManagerTest {
         whenever(context.getString(any(), any())).thenReturn("text")
         whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
 
-        shortcutManager = ShortcutManager(context, testScope, navigationProvider)
+        shortcutManager = ShortcutManager(context, testScope, navigationProvider, kotlinx.coroutines.test.UnconfinedTestDispatcher(testScope.testScheduler))
     }
 
     @Test

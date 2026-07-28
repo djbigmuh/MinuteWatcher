@@ -6,6 +6,7 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.data.di.IoDispatcher
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
@@ -13,6 +14,7 @@ import com.example.minutewatcher.core.model.R
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,6 +37,7 @@ class ShortcutManager
         @ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
         private val navigationProvider: NavigationProvider,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : AutoCloseable {
         private var job: Job? = null
 
@@ -52,7 +56,9 @@ class ShortcutManager
                             }
                         }.collectLatest { snapshot ->
                             try {
-                                updateShortcuts(snapshot)
+                                withContext(ioDispatcher) {
+                                    updateShortcuts(snapshot)
+                                }
                             } catch (e: Exception) {
                                 AppLogger.e("Failed to update dynamic shortcuts", e)
                             }

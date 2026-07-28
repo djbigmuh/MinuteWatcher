@@ -19,7 +19,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.R
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun AdjustmentComposeDialog(
     currentValue: Float,

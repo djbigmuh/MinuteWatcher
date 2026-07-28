@@ -72,6 +72,12 @@ class SettingsRepositoryImpl
             dataStore.edit { it[SettingsKeys.MIGRATION_V1_COMPLETED] = completed }
         }
 
+        override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> = get(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
+
+        override suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean) {
+            dataStore.edit { it[SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }
+        }
+
         override fun getMigrationV1SkippedReason(): Flow<String?> = dataStore.data.map { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] }
 
         override suspend fun setMigrationV1Skipped(reason: MigrationSkipReason) {

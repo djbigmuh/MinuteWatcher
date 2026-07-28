@@ -12,11 +12,12 @@ import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.data.di.IoDispatcher
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +51,7 @@ class MainViewModel
         private val permissionRepository: PermissionRepository,
         private val updateCoordinator: UpdateCoordinator,
         private val savedStateHandle: SavedStateHandle,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         // Dialog States
         val showLimitDialog = savedStateHandle.getStateFlow<LimitDialogData?>("limit_dialog", null)
@@ -166,7 +168,7 @@ class MainViewModel
         }
 
         private fun initializeApp() {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 val snapshot = usageStateRepository.observeSnapshot().value
                 resetManager.performAutoReset(simRepository, snapshot)
                 refreshSimCards()
@@ -190,7 +192,7 @@ class MainViewModel
         }
 
         private suspend fun refreshSimCardsInternal() =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 simCheckMutex.withLock {
                     try {
                         usageUseCase.refreshOperatorInfo()
@@ -221,7 +223,7 @@ class MainViewModel
             minutesLimit: Int,
             trafficLimitMb: Int,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 val identity = simRepository.getIdentity(slot)
                 simRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb)
                 refreshSimCards()
@@ -230,7 +232,7 @@ class MainViewModel
         }
 
         fun resetUsage(slot: Int) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 val identity = simRepository.getIdentity(slot)
                 simRepository.resetSimUsage(identity)
                 refreshSimCards()
@@ -242,7 +244,7 @@ class MainViewModel
             slot: Int,
             enabled: Boolean,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 val identity = simRepository.getIdentity(slot)
                 val currentState = uiState.value
                 val currentDay =
@@ -260,7 +262,7 @@ class MainViewModel
             slot: Int,
             day: Int,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 val identity = simRepository.getIdentity(slot)
                 val currentState = uiState.value
                 val enabled =
@@ -278,7 +280,7 @@ class MainViewModel
             slot: Int,
             remainingMinutes: Int,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 usageUseCase.adjustMinutes(slot, remainingMinutes)
                 refreshSimCards()
                 notifyDataChanged(force = true)
@@ -289,7 +291,7 @@ class MainViewModel
             slot: Int,
             remainingGb: Float,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 usageUseCase.adjustTraffic(slot, remainingGb)
                 refreshSimCards()
                 notifyDataChanged(force = true)

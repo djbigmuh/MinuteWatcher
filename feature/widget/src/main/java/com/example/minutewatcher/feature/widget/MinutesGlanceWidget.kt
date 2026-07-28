@@ -106,7 +106,6 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun WidgetContent(
     context: Context,
@@ -163,7 +162,6 @@ private fun WidgetContent(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun DualSimLayout(
     context: Context,
@@ -238,7 +236,6 @@ private fun DualSimLayout(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SingleSimLayout(
     context: Context,
@@ -249,7 +246,6 @@ private fun SingleSimLayout(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SimItem(
     context: Context,

@@ -1,21 +1,16 @@
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM-Karten</string>
-    <string name="no_sim_card">Keine SIM-Karte erkannt</string>
-    <string name="insert_sim">Legen Sie eine SIM-Karte ein, um den Verbrauch zu verfolgen</string>
     <string name="no_sim_found">Keine SIM-Karten gefunden</string>
     <string name="check_permissions_sim">Berechtigungen und SIM-Präsenz prüfen</string>
     <string name="no_data">Keine Daten</string>
     <string name="error">Fehler</string>
-    <string name="status_on">an</string>
-    <string name="status_off">aus</string>
 
     <!-- Main Screen Actions -->
     <string name="reset_label">Zurücksetzen</string>
     <string name="theme_switch">Design ändern</string>
     <string name="limit_button">Limit</string>
     <string name="add_widget_button">Widget hinzufügen</string>
-    <string name="theme_switch_emoji">Design</string>
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Einstellungen gespeichert</string>
@@ -30,7 +25,6 @@
     <string name="language_zh">Chinesisch</string>
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Anrufverfolgung</string>
-    <string name="usage_access_rationale">MinuteWatcher benötigt Zugriff auf die Nutzungsdaten, um den mobilen Datenverbrauch genau zu verfolgen. Bitte aktivieren Sie diesen im nächsten Bildschirm.</string>
     <string name="usage_access_dialog_title">Datenverbrauchsverfolgung</string>
     <string name="usage_access_dialog_description">Um Ihren mobilen Datenverbrauch zu verfolgen, benötigt MinuteWatcher die Berechtigung „Nutzungszugriff“.</string>
     <string name="phone_permission_permanent_denial">Telefonberechtigung dauerhaft verweigert.</string>
@@ -48,17 +42,10 @@
     <string name="show_sim_checkbox">Diese SIM-Karte anzeigen</string>
     <string name="preview">Vorschau</string>
     <string name="layout_mode_title">Layout-Modus</string>
-    <string name="layout_mode_prompt">Layout-Modus wählen</string>
     <string name="sim_arrangement_prompt">SIM-Anordnung wählen</string>
     <string name="color_background">Hintergrundfarbe:</string>
     <string name="custom_color">Benutzerdefiniert&#8230;</string>
     <string name="font_size">Schriftgröße</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">normal</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="dual_sim_traffic_note">* Hinweis: Die Datenerfassung für Dual-SIM kann aufgrund von Android-Einschränkungen ungenau sein.</string>
     <string name="traffic_tracking_limitation_title">Einschränkung der Verkehrsverfolgung</string>
     <string name="traffic_tracking_limitation_body">Android stellt den mobilen Datenverbrauch als Gesamtwert für das gesamte Gerät bereit. \n\nMinuteWatcher ordnet den gesamten mobilen Datenverkehr der SIM-Karte zu, die derzeit in Ihren Systemeinstellungen als „Standard-Daten-SIM“ ausgewählt ist.</string>
     <string name="tracking_banner_phone_permission">Telefonberechtigung erforderlich.</string>
@@ -71,14 +58,18 @@
     <string name="validation_error_invalid_range">Bitte geben Sie einen Wert zwischen %1$s und %2$s ein</string>
     <string name="validation_error_invalid_number">Bitte geben Sie eine gültige Zahl ein</string>
     <string name="dynamic_preview">Dynamische Vorschau</string>
+    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">Widget bereits zum Startbildschirm hinzugefügt</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">Abbrechen</string>
     <string name="save_button">Speichern</string>
     <string name="set_button">Festlegen</string>
+    <string name="action_ok">OK</string>
     <string name="reset_limits_button">Limits zurücksetzen</string>
     <string name="reset_counters">Zähler zurücksetzen</string>
+    <string name="reset_confirmation_title">Zähler zurücksetzen?</string>
+    <string name="reset_confirmation_body">Dadurch werden alle erfassten Verbrauchsdaten und Anpassungen für diese SIM-Karte gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="click_to_choose">Zum Auswählen klicken:</string>
     <string name="choose_reset_day">Wählen Sie den Tag des Monats für das automatische Zurücksetzen:</string>
     <string name="choose_reset_day_dialog_title">Reset-Tag wählen</string>
@@ -129,6 +120,8 @@
     <string name="sim_card_details_content_desc">Details zur SIM-Karte %1$s</string>
     <string name="adjust_minutes_content_desc">Verbleibende Minuten anpassen</string>
     <string name="adjust_traffic_content_desc">Verbleibenden Traffic anpassen</string>
+    <string name="traffic_info_content_desc">Weitere Informationen zur Datennachverfolgung</string>
+    <string name="set_limits_content_desc">Limits für %1$s festlegen</string>
     <string name="change_auto_reset_day_content_desc">Auto-Reset-Tag ändern</string>
     <string name="toggle_auto_reset_content_desc">Auto-Reset aktivieren oder deaktivieren</string>
 </resources>

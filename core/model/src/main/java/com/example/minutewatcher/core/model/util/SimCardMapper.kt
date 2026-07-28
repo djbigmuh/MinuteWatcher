@@ -40,6 +40,7 @@ object SimCardMapper {
             manualAdjustment = usage.manualAdjustment,
             minutesRemaining = remainingMinutes,
             effectiveMinutesLimit = effectiveMinutesLimit,
+            isMinutesLimitSet = isMinutesLimitSet,
             trafficUsedMb = usage.trafficUsed,
             trafficLimitMb = usage.trafficLimitMb,
             trafficRemainingGb = trafficRemainingGb,

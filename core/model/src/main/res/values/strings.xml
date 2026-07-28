@@ -1,22 +1,17 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- General UI -->
     <string name="app_name" translatable="false">MinuteWatcher</string>
     <string name="sim_cards_title">SIM Cards</string>
-    <string name="no_sim_card">No SIM card detected</string>
-    <string name="insert_sim">Insert a SIM card to track usage</string>
     <string name="no_sim_found">SIM cards not found</string>
     <string name="check_permissions_sim">Check permissions and SIM presence</string>
     <string name="no_data">No data</string>
     <string name="error">Error</string>
-    <string name="status_on">on</string>
-    <string name="status_off">off</string>
 
     <!-- Main Screen Actions -->
     <string name="reset_label">Reset</string>
     <string name="theme_switch">Switch Theme</string>
     <string name="limit_button">Limit</string>
     <string name="add_widget_button">Add Widget</string>
-    <string name="theme_switch_emoji">Theme</string>
     <string name="sim_card_generic" translatable="false">SIM %1$d</string>
 
     <!-- Settings: General -->
@@ -32,7 +27,6 @@
     <string name="language_zh">Chinese</string>
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Call Tracking</string>
-    <string name="usage_access_rationale">MinuteWatcher needs usage access to track mobile data usage accurately. Please enable it in the next screen.</string>
     <string name="usage_access_dialog_title">Data Usage Tracking</string>
     <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission. \n\nThis is a system-level permission that allows the app to see how much data has been sent and received over the cellular network. \n\nWe do not track which apps you use or your browsing history.</string>
     <string name="phone_permission_permanent_denial">Phone permission is permanently denied. Some features will not work until you enable it in App Settings.</string>
@@ -50,17 +44,10 @@
     <string name="show_sim_checkbox">Show this SIM card</string>
     <string name="preview">Preview</string>
     <string name="layout_mode_title">Layout mode</string>
-    <string name="layout_mode_prompt">Choose layout mode</string>
     <string name="sim_arrangement_prompt">Choose SIM arrangement</string>
     <string name="color_background">Background color:</string>
     <string name="custom_color">Custom&#8230;</string>
     <string name="font_size">Font Size</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">normal</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="dual_sim_traffic_note">* Note: Traffic tracking for Dual SIM may be inaccurate due to Android limitations.</string>
     <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
     <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
     <string name="tracking_banner_phone_permission">Phone permission is required to identify SIM cards. Some features may not work.</string>
@@ -73,14 +60,18 @@
     <string name="validation_error_invalid_range">Please enter a value between %1$s and %2$s</string>
     <string name="validation_error_invalid_number">Please enter a valid number</string>
     <string name="dynamic_preview">Dynamic Preview</string>
+    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">Widget already added to the home screen</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">Cancel</string>
     <string name="save_button">Save</string>
     <string name="set_button">Set</string>
+    <string name="action_ok">OK</string>
     <string name="reset_limits_button">Reset limits</string>
     <string name="reset_counters">Reset counters</string>
+    <string name="reset_confirmation_title">Reset Counters?</string>
+    <string name="reset_confirmation_body">This will clear all tracked usage and adjustments for this SIM card. This action cannot be undone.</string>
     <string name="click_to_choose">Click to choose:</string>
     <string name="choose_reset_day">Choose the day of the month for automatic reset:</string>
     <string name="choose_reset_day_dialog_title">Choose reset day</string>
@@ -129,11 +120,11 @@
     <string name="widget_settings_content_desc">Widget Settings</string>
     <string name="choose_color_content_desc">Choose background color</string>
     <string name="sim_card_details_content_desc">%1$s SIM card details</string>
-    <string name="sim_status_summary" tools:ignore="MissingTranslation">%1$s: %2$s, %3$s</string>
+    <string name="sim_status_summary" translatable="false">%1$s: %2$s, %3$s</string>
     <string name="adjust_minutes_content_desc">Adjust remaining minutes</string>
     <string name="adjust_traffic_content_desc">Adjust remaining traffic</string>
-    <string name="traffic_info_content_desc" tools:ignore="MissingTranslation">More information about traffic tracking</string>
-    <string name="set_limits_content_desc" tools:ignore="MissingTranslation">Set limits for %1$s</string>
+    <string name="traffic_info_content_desc">More information about traffic tracking</string>
+    <string name="set_limits_content_desc">Set limits for %1$s</string>
     <string name="change_auto_reset_day_content_desc">Change auto-reset day</string>
     <string name="toggle_auto_reset_content_desc">Enable or disable auto-reset</string>
 
@@ -177,7 +168,6 @@
     <string name="theme_light_icon" translatable="false">☀️</string>
     <string name="theme_dark_icon" translatable="false">🌙</string>
     <string name="fraction_format" translatable="false">/%1$s</string>
-    <string name="placeholder_dash" translatable="false">-</string>
-    <string name="divider_text" translatable="false"> | </string>
-    <string name="adjustment_mark" translatable="false"> *adj</string>
+    <string name="adjustment_mark" translatable="false">*adj</string>
+    <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>
 </resources>

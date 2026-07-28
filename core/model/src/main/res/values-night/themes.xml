@@ -2,14 +2,14 @@
 <resources>
     <style name="Base.Theme.MinuteWatcher" parent="Theme.Material3.DayNight">
         <!-- Material3 цвета для тёмной темы -->
-        <item name="colorPrimary">@color/primary_dark</item>
-        <item name="colorOnPrimary">@color/onPrimary_dark</item>
-        <item name="colorSurface">@color/surface_dark</item>
-        <item name="colorOnSurface">@color/onSurface_dark</item>
-        <item name="colorSurfaceVariant">@color/surfaceVariant_dark</item>
-        <item name="colorOnSurfaceVariant">@color/onSurfaceVariant_dark</item>
-        <item name="colorOutline">@color/outline_dark</item>
-        <item name="colorSurfaceContainer">@color/surface_container_dark</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/onPrimary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/onSurface</item>
+        <item name="colorSurfaceVariant">@color/surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorSurfaceContainer">@color/surface_container</item>
 
         <!-- Стили компонентов -->
         <item name="cardViewStyle">@style/Widget.MaterialComponents.CardView</item>

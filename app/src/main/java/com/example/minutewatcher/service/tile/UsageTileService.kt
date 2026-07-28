@@ -54,6 +54,7 @@ class UsageTileService : TileService() {
         job = null
     }
 
+    // WrongConstant is suppressed because FLAG_ACTIVITY_NEW_TASK is required for starting activity from a service.
     @SuppressLint("WrongConstant")
     override fun onClick() {
         super.onClick()
@@ -105,7 +106,7 @@ class UsageTileService : TileService() {
                     )
             } else {
                 // For older versions, put info in label or content description
-                tile.label = "${activeSim.operator}: $remaining"
+                tile.label = getString(R.string.tile_operator_value_format, activeSim.operator, remaining.toString())
             }
             tile.state = Tile.STATE_ACTIVE
         } else {

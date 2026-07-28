@@ -54,6 +54,10 @@ private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore
     },
 )
 
+/**
+ * app_settings: theme, language, widget general settings, migration flags, call session state.
+ * sim_settings: per-SIM usage, limits, adjustments, widget visibility, notification flags.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 @Suppress("unused")

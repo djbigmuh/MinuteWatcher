@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +52,6 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.FormatUtils
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun getStatusColor(status: ColorProvider.UsageStatus): Color =
     when (status) {
@@ -60,7 +60,6 @@ fun getStatusColor(status: ColorProvider.UsageStatus): Color =
         ColorProvider.UsageStatus.NORMAL -> Color(0xFF4CAF50) // Green
     }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun SimCardItem(
     model: SimCardUiModel,
@@ -136,11 +135,11 @@ fun SimCardItem(
                         )}: ${FormatUtils.formatMinutes(model.minutesUsed)} ${stringResource(id = R.string.minutes_abbr)}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    if (model.minutesLimit > 0) {
+                    if (model.isMinutesLimitSet) {
                         Text(
                             text = "${stringResource(
                                 id = R.string.limit_text,
-                            )}: ${FormatUtils.formatMinutes(model.minutesLimit)} ${stringResource(id = R.string.minutes_abbr)}",
+                            )}: ${FormatUtils.formatMinutes(model.effectiveMinutesLimit)} ${stringResource(id = R.string.minutes_abbr)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -172,9 +171,9 @@ fun SimCardItem(
 
                 if (model.manualAdjustment != 0) {
                     Text(
-                        text = "* ${stringResource(
+                        text = "${stringResource(
                             id = R.string.adjustment_mark,
-                        )}: ${if (model.manualAdjustment > 0) "+" else ""}${model.manualAdjustment} ${stringResource(
+                        )}: ${if (model.manualAdjustment > 0) "+" else ""}${model.manualAdjustment}${stringResource(
                             id = R.string.minutes_abbr,
                         )}",
                         style = MaterialTheme.typography.labelMedium,
@@ -293,6 +292,7 @@ fun SimCardItem(
                     onCheckedChange = onToggleAutoReset,
                     modifier =
                         Modifier
+                            .minimumInteractiveComponentSize()
                             .scale(0.8f)
                             .semantics {
                                 contentDescription = toggleAutoResetDesc

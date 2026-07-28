@@ -22,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class IdentityMigrationServiceTest {
     @get:Rule
@@ -53,12 +53,19 @@ class IdentityMigrationServiceTest {
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
-            val identity = "new_identity"
-            val newKey = intPreferencesKey("test_key_$identity")
+            val identityId = "new_identity"
+            val newKey = intPreferencesKey("test_key_$identityId")
 
             appDataStore.edit { it[legacyKey] = 123 }
 
-            service.migrateLegacyData(0, identity)
+            service.migrateLegacyData(
+                com.example.minutewatcher.core.model.SimIdentity(
+                    stableId = identityId,
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                ),
+            )
 
             val prefs = appDataStore.data.first()
             assertEquals(123, prefs[newKey])
@@ -75,7 +82,14 @@ class IdentityMigrationServiceTest {
             appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
             assertTrue(service.hasLegacyData())
 
-            service.migrateLegacyData(0, "some_id")
+            service.migrateLegacyData(
+                com.example.minutewatcher.core.model.SimIdentity(
+                    stableId = "some_id",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                ),
+            )
             assertFalse(service.hasLegacyData())
         }
 
@@ -84,12 +98,19 @@ class IdentityMigrationServiceTest {
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_1")
-            val identity = "new_identity"
-            val newKey = intPreferencesKey("test_key_$identity")
+            val identityId = "new_identity"
+            val newKey = intPreferencesKey("test_key_$identityId")
 
             appDataStore.edit { it[legacyKey] = 42 }
 
-            service.migrateLegacyData(1, identity)
+            service.migrateLegacyData(
+                com.example.minutewatcher.core.model.SimIdentity(
+                    stableId = identityId,
+                    subscriptionId = 1,
+                    slotIndex = 1,
+                    source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                ),
+            )
 
             val prefs = appDataStore.data.first()
             assertEquals(42, prefs[newKey])

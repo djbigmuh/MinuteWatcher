@@ -1,21 +1,16 @@
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">Tarjetas SIM</string>
-    <string name="no_sim_card">No se detectó tarjeta SIM</string>
-    <string name="insert_sim">Inserte una tarjeta SIM para rastrear el uso</string>
     <string name="no_sim_found">Tarjetas SIM no encontradas</string>
     <string name="check_permissions_sim">Verifique los permisos y la presencia de SIM</string>
     <string name="no_data">Sin datos</string>
     <string name="error">Error</string>
-    <string name="status_on">activado</string>
-    <string name="status_off">desactivado</string>
 
     <!-- Main Screen Actions -->
     <string name="reset_label">Reiniciar</string>
     <string name="theme_switch">Cambiar tema</string>
     <string name="limit_button">Límite</string>
     <string name="add_widget_button">Añadir widget</string>
-    <string name="theme_switch_emoji">Tema</string>
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Ajustes guardados</string>
@@ -30,7 +25,6 @@
     <string name="language_zh">Chino</string>
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Seguimiento de llamadas</string>
-    <string name="usage_access_rationale">MinuteWatcher necesita acceso al uso para rastrear el consumo de datos móviles con precisión. Por favor, actívelo en la siguiente pantalla.</string>
     <string name="usage_access_dialog_title">Seguimiento del uso de datos</string>
     <string name="usage_access_dialog_description">Para rastrear su consumo de datos móviles, MinuteWatcher necesita el permiso de \"Acceso de uso\".</string>
     <string name="phone_permission_permanent_denial">Permiso de teléfono denegado permanentemente.</string>
@@ -48,17 +42,10 @@
     <string name="show_sim_checkbox">Mostrar esta tarjeta SIM</string>
     <string name="preview">Vista previa</string>
     <string name="layout_mode_title">Modo de diseño</string>
-    <string name="layout_mode_prompt">Elegir modo de diseño</string>
     <string name="sim_arrangement_prompt">Elegir disposición de SIM</string>
     <string name="color_background">Color de fondo:</string>
     <string name="custom_color">Personalizado&#8230;</string>
     <string name="font_size">Tamaño de fuente</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">normal</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="dual_sim_traffic_note">* Nota: El seguimiento de tráfico para Dual SIM puede ser inexacto debido a limitaciones de Android.</string>
     <string name="traffic_tracking_limitation_title">Limitación del seguimiento de tráfico</string>
     <string name="traffic_tracking_limitation_body">Android proporciona el uso de datos móviles como un valor agregado para todo el dispositivo. \n\nMinuteWatcher atribuye todo el tráfico móvil a la tarjeta SIM seleccionada actualmente como la \"SIM de datos predeterminada\" en los ajustes de su sistema.</string>
     <string name="tracking_banner_phone_permission">Se requiere permiso de teléfono.</string>
@@ -71,14 +58,18 @@
     <string name="validation_error_invalid_range">Por favor, introduzca un valor entre %1$s y %2$s</string>
     <string name="validation_error_invalid_number">Por favor, introduzca un número válido</string>
     <string name="dynamic_preview">Vista previa dinámica</string>
+    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">Widget ya añadido a la pantalla de inicio</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">Cancelar</string>
     <string name="save_button">Guardar</string>
     <string name="set_button">Establecer</string>
+    <string name="action_ok">Aceptar</string>
     <string name="reset_limits_button">Reiniciar límites</string>
     <string name="reset_counters">Reiniciar contadores</string>
+    <string name="reset_confirmation_title">¿Reiniciar contadores?</string>
+    <string name="reset_confirmation_body">Esto borrará todo el uso rastreado y los ajustes para esta tarjeta SIM. Esta acción no se puede deshacer.</string>
     <string name="click_to_choose">Haga clic para elegir:</string>
     <string name="choose_reset_day">Elija el día del mes para el reinicio automático:</string>
     <string name="choose_reset_day_dialog_title">Elegir día de reinicio</string>
@@ -115,12 +106,10 @@
 
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d minuto</item>
-        <item quantity="many">%1$d minutos</item>
         <item quantity="other">%1$d minutos</item>
     </plurals>
     <plurals name="days_plurals">
         <item quantity="one">%1$d día</item>
-        <item quantity="many">%1$d días</item>
         <item quantity="other">%1$d días</item>
     </plurals>
 
@@ -131,6 +120,8 @@
     <string name="sim_card_details_content_desc">Detalles de la tarjeta SIM %1$s</string>
     <string name="adjust_minutes_content_desc">Ajustar minutos restantes</string>
     <string name="adjust_traffic_content_desc">Ajustar tráfico restante</string>
+    <string name="traffic_info_content_desc">Más información sobre el seguimiento de tráfico</string>
+    <string name="set_limits_content_desc">Establecer límites para %1$s</string>
     <string name="change_auto_reset_day_content_desc">Cambiar día de reinicio automático</string>
     <string name="toggle_auto_reset_content_desc">Activar o desactivar reinicio automático</string>
 </resources>

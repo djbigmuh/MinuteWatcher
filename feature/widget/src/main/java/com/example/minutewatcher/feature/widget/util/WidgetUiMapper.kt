@@ -224,15 +224,94 @@ object WidgetUiMapper {
         return rows
     }
 
-    private fun createSixLinesRows(sim: SimUiState): List<SimLayoutRow> =
-        listOf(
-            SimLayoutRow(listOf(SimLayoutComponent.Text(sim.operatorName, sim.textColor, FONT_MULTI_NAME * sim.fontMultiplier))),
-            SimLayoutRow(listOf(SimLayoutComponent.Icon(sim.operatorIconRes, (SIZE_ICON_MULTI * sim.fontMultiplier).toInt()))),
-            SimLayoutRow(listOf(SimLayoutComponent.Text(sim.minutesUsedFullText, sim.textColor, FONT_FULL * sim.fontMultiplier))),
-            SimLayoutRow(listOf(SimLayoutComponent.Text(sim.minutesLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))),
-            SimLayoutRow(listOf(SimLayoutComponent.Text(sim.trafficUsedFullText, sim.textColor, FONT_FULL * sim.fontMultiplier))),
-            SimLayoutRow(listOf(SimLayoutComponent.Text(sim.trafficLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))),
-        )
+    private fun createSixLinesRows(sim: SimUiState): List<SimLayoutRow> {
+        val rows = mutableListOf<SimLayoutRow>()
+
+        if (sim.showName) {
+            rows.add(
+                SimLayoutRow(
+                    listOf(
+                        SimLayoutComponent.Text(
+                            sim.operatorName,
+                            sim.textColor,
+                            FONT_MULTI_NAME * sim.fontMultiplier,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        if (sim.showIcon) {
+            rows.add(
+                SimLayoutRow(
+                    listOf(
+                        SimLayoutComponent.Icon(
+                            sim.operatorIconRes,
+                            (SIZE_ICON_MULTI * sim.fontMultiplier).toInt(),
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        if (sim.showMinutes) {
+            rows.add(
+                SimLayoutRow(
+                    listOf(
+                        SimLayoutComponent.Text(
+                            sim.minutesUsedFullText,
+                            sim.textColor,
+                            FONT_FULL * sim.fontMultiplier,
+                        ),
+                    ),
+                ),
+            )
+
+            if (sim.showMinutesLimit) {
+                rows.add(
+                    SimLayoutRow(
+                        listOf(
+                            SimLayoutComponent.Text(
+                                sim.minutesLimitFullText,
+                                sim.secondaryTextColor,
+                                FONT_FULL * sim.fontMultiplier,
+                            ),
+                        ),
+                    ),
+                )
+            }
+        }
+
+        if (sim.showTraffic) {
+            rows.add(
+                SimLayoutRow(
+                    listOf(
+                        SimLayoutComponent.Text(
+                            sim.trafficUsedFullText,
+                            sim.textColor,
+                            FONT_FULL * sim.fontMultiplier,
+                        ),
+                    ),
+                ),
+            )
+
+            if (sim.showTrafficLimit) {
+                rows.add(
+                    SimLayoutRow(
+                        listOf(
+                            SimLayoutComponent.Text(
+                                sim.trafficLimitFullText,
+                                sim.secondaryTextColor,
+                                FONT_FULL * sim.fontMultiplier,
+                            ),
+                        ),
+                    ),
+                )
+            }
+        }
+
+        return rows
+    }
 
     private fun getStatusColorInt(
         status: ColorProvider.UsageStatus,

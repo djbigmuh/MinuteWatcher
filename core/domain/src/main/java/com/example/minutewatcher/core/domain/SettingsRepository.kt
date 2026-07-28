@@ -15,6 +15,10 @@ interface SettingsRepository {
 
     suspend fun setMigrationV1Completed(completed: Boolean)
 
+    fun isMigrationIdentityStabilityCompleted(): Flow<Boolean>
+
+    suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean)
+
     fun getMigrationV1SkippedReason(): Flow<String?>
 
     suspend fun setMigrationV1Skipped(reason: MigrationSkipReason)

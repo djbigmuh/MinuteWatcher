@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Тёмная тема Material 3 -->
-    <color name="primary">#F5F5F5</color>
-    <color name="onPrimary">#212121</color>
+    <color name="primary">#D0BCFF</color>
+    <color name="onPrimary">#381E72</color>
     
-    <color name="surface">#191C1B</color>
-    <color name="onSurface">#E0E3E1</color>
+    <color name="surface">#141218</color>
+    <color name="onSurface">#E6E1E5</color>
     
-    <color name="surfaceVariant">#3F4946</color>
-    <color name="onSurfaceVariant">#BEC9C5</color>
-    <color name="outline">#89938F</color>
+    <color name="surfaceVariant">#49454F</color>
+    <color name="onSurfaceVariant">#CAC4D0</color>
+    <color name="outline">#938F99</color>
     
     <!-- Сохраняем семантические цвета -->
     <color name="green">#4CAF50</color>
@@ -17,5 +17,5 @@
     <color name="red">#F44336</color>
     
     <!-- Цвета для прозрачности -->
-    <color name="surface_container">#1D2523</color>
+    <color name="surface_container">#211F26</color>
 </resources>

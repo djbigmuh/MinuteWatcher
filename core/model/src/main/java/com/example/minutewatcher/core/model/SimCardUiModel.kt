@@ -13,6 +13,7 @@ data class SimCardUiModel(
     val manualAdjustment: Int,
     val minutesRemaining: Int,
     val effectiveMinutesLimit: Int,
+    val isMinutesLimitSet: Boolean,
     val trafficUsedMb: Float,
     val trafficLimitMb: Int,
     val trafficRemainingGb: Float,

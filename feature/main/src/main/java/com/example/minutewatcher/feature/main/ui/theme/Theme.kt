@@ -33,7 +33,6 @@ private val LightColorScheme =
      */
     )
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun MinuteWatcherTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

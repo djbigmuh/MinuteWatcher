@@ -18,6 +18,7 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -34,7 +35,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerTest {
     private lateinit var context: Context
     private lateinit var simRepository: SimRepository
@@ -233,6 +235,7 @@ class UsageCheckWorkerTest {
                             updateCoordinator,
                             usageStateRepository,
                             usageUseCase,
+                            kotlinx.coroutines.test.UnconfinedTestDispatcher(),
                         )
                 },
             ).build()

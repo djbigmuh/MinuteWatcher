@@ -19,7 +19,7 @@ data class TrafficModel(
             val totalLimitGb = limitGb + manualAdjustmentGb
             val isLimitSet = limitMb > 0 || manualAdjustmentGb != 0f
             val remainingGb = if (isLimitSet) maxOf(0f, totalLimitGb - usedGb) else -1f
-            return TrafficModel(usedMb, limitMb, manualAdjustmentGb, remainingGb, limitGb, limitMb > 0)
+            return TrafficModel(usedMb, limitMb, manualAdjustmentGb, remainingGb, limitGb, isLimitSet)
         }
     }
 }

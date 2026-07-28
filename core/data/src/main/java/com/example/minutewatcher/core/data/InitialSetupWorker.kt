@@ -43,8 +43,10 @@ class InitialSetupWorker
                 callTracker.onBoot()
 
                 // Perform one-time migration if needed
-                val migrationCompleted = settingsRepository.isMigrationV1Completed().first()
-                if (!migrationCompleted) {
+                val migrationV1Completed = settingsRepository.isMigrationV1Completed().first()
+                val migrationStabilityCompleted = settingsRepository.isMigrationIdentityStabilityCompleted().first()
+
+                if (!migrationV1Completed || !migrationStabilityCompleted) {
                     val hasPermission =
                         ContextCompat.checkSelfPermission(
                             applicationContext,
@@ -53,35 +55,38 @@ class InitialSetupWorker
 
                     if (!hasPermission) {
                         if (migrationService.hasLegacyData()) {
-                            AppLogger.d("Migration V1 deferred: permission missing but legacy data exists")
+                            AppLogger.d("Migration deferred: permission missing but legacy data exists")
                             // Do NOT mark as completed. We will try again when permission is granted or next boot.
                         } else {
                             // No legacy data, we can safely mark as completed
-                            settingsRepository.setMigrationV1Completed(true)
-                            settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                            AppLogger.d("Migration V1 skipped: no legacy data found")
+                            if (!migrationV1Completed) {
+                                settingsRepository.setMigrationV1Completed(true)
+                                settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                                AppLogger.d("Migration V1 skipped: no legacy data found")
+                            }
+                            settingsRepository.setMigrationIdentityStabilityCompleted(true)
                         }
                     } else {
                         val activeSims = simRepository.observeActiveSims().first()
 
                         if (activeSims.isEmpty()) {
                             if (migrationService.hasLegacyData()) {
-                                AppLogger.d("Migration V1 deferred: no active SIMs found but legacy data exists")
-                                // Do NOT mark as completed.
+                                AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
                             } else {
-                                settingsRepository.setMigrationV1Completed(true)
-                                settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                                AppLogger.d("Migration V1 skipped: no legacy data found")
+                                if (!migrationV1Completed) {
+                                    settingsRepository.setMigrationV1Completed(true)
+                                    settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                                    AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
+                                }
+                                settingsRepository.setMigrationIdentityStabilityCompleted(true)
                             }
                         } else {
                             activeSims.forEach { info ->
-                                migrationService.migrateLegacyData(
-                                    info.slotIndex,
-                                    info.identity.stableId,
-                                )
+                                migrationService.migrateLegacyData(info.identity)
                             }
                             settingsRepository.setMigrationV1Completed(true)
-                            AppLogger.d("Migration V1 completed in InitialSetupWorker")
+                            settingsRepository.setMigrationIdentityStabilityCompleted(true)
+                            AppLogger.d("Identity migrations completed in InitialSetupWorker")
                         }
                     }
                 }

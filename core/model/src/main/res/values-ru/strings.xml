@@ -1,21 +1,16 @@
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM-карты</string>
-    <string name="no_sim_card">SIM-карта не обнаружена</string>
-    <string name="insert_sim">Вставьте SIM-карту для отслеживания расхода</string>
     <string name="no_sim_found">SIM-карты не найдены</string>
     <string name="check_permissions_sim">Проверьте разрешения и наличие SIM</string>
     <string name="no_data">Нет данных</string>
     <string name="error">Ошибка</string>
-    <string name="status_on">вкл</string>
-    <string name="status_off">выкл</string>
 
     <!-- Main Screen Actions -->
     <string name="reset_label">Сброс</string>
     <string name="theme_switch">Переключить тему</string>
     <string name="limit_button">Лимит</string>
     <string name="add_widget_button">Добавить виджет</string>
-    <string name="theme_switch_emoji">Тема</string>
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Настройки сохранены</string>
@@ -30,7 +25,6 @@
     <string name="language_zh">Китайский</string>
     <string name="language_hi">Хинди</string>
     <string name="call_tracking_title">Отслеживание звонков</string>
-    <string name="usage_access_rationale">MinuteWatcher необходим доступ к использованию данных для точного учета трафика. Пожалуйста, включите его на следующем экране.</string>
     <string name="usage_access_dialog_title">Учет использования трафика</string>
     <string name="usage_access_dialog_description">Для учета мобильного трафика приложению необходимо разрешение «Доступ к использованию данных». \n\nЭто системное разрешение, которое позволяет приложению видеть объем переданных и полученных данных через мобильную сеть. \n\nМы не отслеживаем, какие приложения вы используете, и не храним историю просмотров.</string>
     <string name="phone_permission_permanent_denial">Доступ к телефону запрещен навсегда. Некоторые функции не будут работать, пока вы не включите его в Настройках приложения.</string>
@@ -48,17 +42,10 @@
     <string name="show_sim_checkbox">Отображать эту SIM-карту</string>
     <string name="preview">Предпросмотр</string>
     <string name="layout_mode_title">Режим компоновки</string>
-    <string name="layout_mode_prompt">Выберите режим компоновки</string>
     <string name="sim_arrangement_prompt">Выберите расположение SIM</string>
     <string name="color_background">Цвет фона:</string>
     <string name="custom_color">Другой&#8230;</string>
     <string name="font_size">Размер шрифта</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">обычный</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="dual_sim_traffic_note">* Примечание: Учет трафика для Dual SIM может быть неточным из-за ограничений Android.</string>
     <string name="traffic_tracking_limitation_title">Ограничение учета трафика</string>
     <string name="traffic_tracking_limitation_body">Android предоставляет данные об использовании мобильного интернета в виде общего значения для всего устройства. \n\nMinuteWatcher приписывает весь мобильный трафик той SIM-карте, которая в данный момент выбрана в настройках системы как «SIM-карта для передачи данных по умолчанию».\n\nПри смене SIM-карты по умолчанию приложение зафиксирует изменения и начнет учитывать трафик для новой карты с этого момента.</string>
     <string name="tracking_banner_phone_permission">Разрешение на доступ к телефону необходимо для идентификации SIM-карт. Некоторые функции могут не работать.</string>
@@ -71,14 +58,18 @@
     <string name="validation_error_invalid_range">Пожалуйста, введите значение от %1$s до %2$s</string>
     <string name="validation_error_invalid_number">Пожалуйста, введите корректное число</string>
     <string name="dynamic_preview">Динамический предпросмотр</string>
+    <string name="widget_pin_unsupported">Ваш лаунчер не поддерживает автоматическое размещение виджетов. Пожалуйста, добавьте виджет вручную.</string>
     <string name="widget_already_added">Виджет уже добавлен на рабочий стол</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">Отмена</string>
     <string name="save_button">Сохранить</string>
     <string name="set_button">Установить</string>
+    <string name="action_ok">ОК</string>
     <string name="reset_limits_button">Сбросить лимиты</string>
     <string name="reset_counters">Сбросить счётчики</string>
+    <string name="reset_confirmation_title">Сбросить счётчики?</string>
+    <string name="reset_confirmation_body">Это действие обнулит весь накопленный расход и корректировки для этой SIM-карты. Отменить это действие невозможно.</string>
     <string name="click_to_choose">Нажмите для выбора:</string>
     <string name="choose_reset_day">Выберите число месяца для автоматического сброса:</string>
     <string name="choose_reset_day_dialog_title">Выберите день сброса</string>
@@ -117,13 +108,13 @@
         <item quantity="one">%1$d минута</item>
         <item quantity="few">%1$d минуты</item>
         <item quantity="many">%1$d минут</item>
-        <item quantity="other">%1$d минут</item>
+        <item quantity="other">%1$d минуты</item>
     </plurals>
     <plurals name="days_plurals">
         <item quantity="one">%1$d день</item>
         <item quantity="few">%1$d дня</item>
         <item quantity="many">%1$d дней</item>
-        <item quantity="other">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
     </plurals>
 
     <!-- Accessibility -->
@@ -131,7 +122,6 @@
     <string name="widget_settings_content_desc">Настройки виджета</string>
     <string name="choose_color_content_desc">Выбрать цвет фона</string>
     <string name="sim_card_details_content_desc">Детали SIM-карты %1$s</string>
-    <string name="sim_status_summary">%1$s: %2$s, %3$s</string>
     <string name="adjust_minutes_content_desc">Изменить остаток минут</string>
     <string name="adjust_traffic_content_desc">Изменить остаток трафика</string>
     <string name="traffic_info_content_desc">Дополнительная информация об учете трафика</string>

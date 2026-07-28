@@ -1,21 +1,16 @@
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIMカード</string>
-    <string name="no_sim_card">SIMカードが検出されません</string>
-    <string name="insert_sim">使用状況を追跡するにはSIMカードを挿入してください</string>
     <string name="no_sim_found">SIMカードが見つかりません</string>
     <string name="check_permissions_sim">権限とSIMの存在を確認してください</string>
     <string name="no_data">データなし</string>
     <string name="error">エラー</string>
-    <string name="status_on">オン</string>
-    <string name="status_off">オフ</string>
 
     <!-- Main Screen Actions -->
     <string name="reset_label">リセット</string>
     <string name="theme_switch">テーマ切り替え</string>
     <string name="limit_button">制限</string>
     <string name="add_widget_button">ウィジェットを追加</string>
-    <string name="theme_switch_emoji">テーマ</string>
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">設定を保存しました</string>
@@ -30,7 +25,6 @@
     <string name="language_zh">中国語</string>
     <string name="language_hi">ヒンディー語</string>
     <string name="call_tracking_title">通話トラッキング</string>
-    <string name="usage_access_rationale">MinuteWatcherがモバイルデータ使用量を正確に追跡するには、使用状況へのアクセス権限が必要です。次の画面で有効にしてください。</string>
     <string name="usage_access_dialog_title">データ使用量の追跡</string>
     <string name="usage_access_dialog_description">モバイルデータ使用量を追跡するために、MinuteWatcherは「使用状況へのアクセス」権限を必要とします。</string>
     <string name="phone_permission_permanent_denial">電話の権限が永続的に拒否されました。</string>
@@ -48,17 +42,10 @@
     <string name="show_sim_checkbox">このSIMカードを表示</string>
     <string name="preview">プレビュー</string>
     <string name="layout_mode_title">レイアウトモード</string>
-    <string name="layout_mode_prompt">レイアウトモードを選択</string>
     <string name="sim_arrangement_prompt">SIMの配置を選択</string>
     <string name="color_background">背景色:</string>
     <string name="custom_color">カスタム&#8230;</string>
     <string name="font_size">フォントサイズ</string>
-    <string name="font_size_small">-2</string>
-    <string name="font_size_medium">-1</string>
-    <string name="font_size_normal">標準</string>
-    <string name="font_size_large">+1</string>
-    <string name="font_size_xlarge">+2</string>
-    <string name="dual_sim_traffic_note">* 注意: デュアルSIMの通信量トラッキングは、Androidの制限により不正確な場合があります。</string>
     <string name="traffic_tracking_limitation_title">通信量トラッキングの制限</string>
     <string name="traffic_tracking_limitation_body">Androidは、デバイス全体の合計値としてモバイルデータ使用量を提供します。 \n\nMinuteWatcherは、すべてのモバイルトラフィックを、システム設定で現在「デフォルトのデータSIM」として選択されているSIMカードに割り当てます。</string>
     <string name="tracking_banner_phone_permission">電話の権限が必要です。</string>
@@ -71,14 +58,18 @@
     <string name="validation_error_invalid_range">%1$s から %2$s の間の値を入力してください</string>
     <string name="validation_error_invalid_number">有効な数字を入力してください</string>
     <string name="dynamic_preview">ダイナミックプレビュー</string>
+    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">ウィジェットは既にホーム画面に追加されています</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">キャンセル</string>
     <string name="save_button">保存</string>
     <string name="set_button">設定</string>
+    <string name="action_ok">OK</string>
     <string name="reset_limits_button">制限をリセット</string>
     <string name="reset_counters">カウンターをリセット</string>
+    <string name="reset_confirmation_title">カウンターをリセットしますか？</string>
+    <string name="reset_confirmation_body">これにより、このSIMカードのすべての追跡された使用状況と調整がクリアされます。この操作は取り消すことができません。</string>
     <string name="click_to_choose">クリックして選択:</string>
     <string name="choose_reset_day">自動リセットを行う日を選択してください:</string>
     <string name="choose_reset_day_dialog_title">リセット日を選択</string>
@@ -127,6 +118,8 @@
     <string name="sim_card_details_content_desc">%1$s SIMカードの詳細</string>
     <string name="adjust_minutes_content_desc">残り時間を調整</string>
     <string name="adjust_traffic_content_desc">残り通信量を調整</string>
+    <string name="traffic_info_content_desc">通信量トラッキングの詳細情報</string>
+    <string name="set_limits_content_desc">%1$s の上限を設定</string>
     <string name="change_auto_reset_day_content_desc">自動リセット日を変更</string>
     <string name="toggle_auto_reset_content_desc">自動リセットを有効または無効にする</string>
 </resources>

@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.R
 import kotlin.math.abs
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun DayPickerComposeDialog(
     initialDay: Int,

@@ -24,7 +24,7 @@ class ResetManager
         ) {
             resetMutex.withLock {
                 try {
-                    var anyReset = false
+                    val resetIdentities = mutableSetOf<String>()
                     for (simSnapshot in snapshot.simSnapshots) {
                         if (!simSnapshot.isActive) continue
 
@@ -40,16 +40,14 @@ class ResetManager
                                     System.currentTimeMillis(),
                                 )
                             if (reset) {
-                                anyReset = true
+                                resetIdentities.add(identity)
                                 AppLogger.d("Auto reset performed for SIM $slot ($identity), day: ${usage.autoResetDay}")
                             }
                         }
                     }
-                    if (anyReset) {
-                        for (simSnapshot in snapshot.simSnapshots) {
-                            if (simSnapshot.isActive) {
-                                trafficTracker.resetBaseline(simRepository.getIdentity(simSnapshot.slot))
-                            }
+                    if (resetIdentities.isNotEmpty()) {
+                        resetIdentities.forEach { identity ->
+                            trafficTracker.resetBaseline(identity)
                         }
                         updateCoordinator.notifyDataChanged()
                     }

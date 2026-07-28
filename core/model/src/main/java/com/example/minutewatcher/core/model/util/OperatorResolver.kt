@@ -37,6 +37,7 @@ object OperatorResolver {
         }
     }
 
+    // Usage of getIdentifier is intended here to dynamically map MCC/MNC keys to localized string resources.
     @SuppressLint("DiscouragedApi")
     fun resolve(
         context: Context,

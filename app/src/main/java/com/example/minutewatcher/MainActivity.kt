@@ -123,7 +123,7 @@ class MainActivity : AppCompatActivity() {
                             viewModel.setLanguage(lang)
                         },
                         onGrantPhonePermission = {
-                            requestPermissionLauncher.launch(arrayOf(Manifest.permission.READ_PHONE_STATE))
+                            phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                         },
                         onOpenUsageSettings = {
                             viewModel.openUsageAccessDialog()
@@ -159,28 +159,37 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(this, WidgetSettingsActivity::class.java))
     }
 
-    private val requestPermissionLauncher =
+    private val phonePermissionLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts
-                .RequestMultiplePermissions(),
-        ) { permissions ->
-            val phoneGranted = permissions[Manifest.permission.READ_PHONE_STATE] ?: false
-            if (phoneGranted) {
-                workScheduler.scheduleInitialSetup()
-                workScheduler.schedulePeriodicUsageCheck()
-                viewModel.setPhonePermissionPermanentlyDenied(false)
-                // Move to next step: Usage Access
-                if (!permissionManager.hasUsageStatsPermission()) {
-                    viewModel.openUsageAccessDialog()
-                } else {
-                    checkNotifications()
-                }
-            } else {
-                val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)
-                viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
-            }
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            handlePhonePermissionResult(granted)
+        }
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        ) {
             permissionStateNotifier.notifyChanged()
         }
+
+    private fun handlePhonePermissionResult(granted: Boolean) {
+        if (granted) {
+            workScheduler.scheduleInitialSetup()
+            workScheduler.schedulePeriodicUsageCheck()
+            viewModel.setPhonePermissionPermanentlyDenied(false)
+            // Move to next step: Usage Access
+            if (!permissionManager.hasUsageStatsPermission()) {
+                viewModel.openUsageAccessDialog()
+            } else {
+                checkNotifications()
+            }
+        } else {
+            val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)
+            viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
+        }
+        permissionStateNotifier.notifyChanged()
+    }
 
     private fun checkPermissionsAndInit() {
         if (permissionManager.hasPhoneStatePermission()) {
@@ -203,7 +212,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkNotifications() {
         if (!permissionManager.hasNotificationPermission()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -229,7 +238,7 @@ class MainActivity : AppCompatActivity() {
         if (appWidgetManager.isRequestPinAppWidgetSupported) {
             appWidgetManager.requestPinAppWidget(myProvider, null, null)
         } else {
-            Toast.makeText(this, getString(R.string.dynamic_preview), Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.widget_pin_unsupported), Toast.LENGTH_SHORT).show()
         }
     }
 

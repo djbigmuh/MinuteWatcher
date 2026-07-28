@@ -19,18 +19,6 @@
     <!-- Новые семантические цвета -->
     <color name="surface_container">#F3EDF7</color>
 
-    <!-- Цвета для тёмной темы -->
-    <color name="primary_dark">#D0BCFF</color>
-    <color name="onPrimary_dark">#381E72</color>
-
-    <color name="surface_dark">#141218</color>
-    <color name="onSurface_dark">#E6E1E5</color>
-
-    <color name="surfaceVariant_dark">#49454F</color>
-    <color name="onSurfaceVariant_dark">#CAC4D0</color>
-    <color name="outline_dark">#938F99</color>
-
-    <color name="surface_container_dark">#211F26</color>
     <color name="white">#FFFFFFFF</color>
     <color name="light_gray">#FFCCCCCC</color>
     <color name="dark_gray">#FF666666</color>

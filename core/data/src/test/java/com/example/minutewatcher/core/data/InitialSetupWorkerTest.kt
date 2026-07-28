@@ -27,7 +27,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [35])
 class InitialSetupWorkerTest {
     private lateinit var context: Context
     private lateinit var callTracker: CallTracker
@@ -53,13 +53,16 @@ class InitialSetupWorkerTest {
         updateCoordinator = mock()
         workScheduler = mock()
 
-        whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+        whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+        whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
         whenever(simRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
     }
 
     @Test
     fun `doWork marks migration as completed when no legacy data exists`() =
         runTest {
+            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData()).thenReturn(false)
             whenever(usageStateRepository.refresh()).thenReturn(mock())
 
@@ -69,12 +72,15 @@ class InitialSetupWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
             verify(settingsRepository).setMigrationV1Completed(true)
             verify(settingsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+            verify(settingsRepository).setMigrationIdentityStabilityCompleted(true)
             verify(usageStateRepository).refresh()
         }
 
     @Test
     fun `doWork does not mark migration as completed when permission is missing but legacy data exists`() =
         runTest {
+            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData()).thenReturn(true)
             whenever(usageStateRepository.refresh()).thenReturn(mock())
 
@@ -95,6 +101,8 @@ class InitialSetupWorkerTest {
                 .shadowOf(app)
                 .grantPermissions(android.Manifest.permission.READ_PHONE_STATE)
 
+            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData()).thenReturn(true)
             whenever(simRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
             whenever(usageStateRepository.refresh()).thenReturn(mock())
