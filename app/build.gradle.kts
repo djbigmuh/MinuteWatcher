@@ -6,10 +6,11 @@ plugins {
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
+    alias(libs.plugins.androidxBaselineprofile)
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 configure<ApplicationExtension> {
@@ -85,6 +86,8 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:semantic"))
 
+    baselineProfile(project(":baselineprofile"))
+
     coreLibraryDesugaring(libs.desugarJdkLibs)
     implementation(libs.skydovesColorpickerview)
     implementation(libs.androidxAppsearch)
@@ -140,5 +143,6 @@ dependencies {
     debugImplementation(libs.androidxUiTooling)
     debugImplementation(libs.androidxUiTestManifest)
 }
+
 
 

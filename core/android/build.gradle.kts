@@ -6,7 +6,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -21,6 +21,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -30,6 +36,8 @@ dependencies {
 
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppcompat)
+    implementation(libs.googleMaterial)
+    implementation(libs.androidxMaterial3)
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
 
@@ -39,5 +47,6 @@ dependencies {
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxJunit)
 }
+
 
 

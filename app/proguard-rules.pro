@@ -1,19 +1,17 @@
-# Hilt / Dagger
--keep class * extends androidx.lifecycle.ViewModel
--keep class * extends android.app.Service
--keep class * extends android.app.Activity
--keep class * extends android.app.Application
--keep class * extends android.content.BroadcastReceiver
--keep class * extends android.content.ContentProvider
-
-# DataStore
--keep class androidx.datastore.preferences.core.Preferences { *; }
+# MinuteWatcher R8/ProGuard Configuration
 
 # AppSearch
+# Preserves classes and members annotated with @Document for reflection-based indexing
 -keep @androidx.appsearch.annotation.Document class * { *; }
 -keepclassmembers @androidx.appsearch.annotation.Document class * {
     <fields>;
+    <init>(...);
 }
 
-# ProtoBuf (used by DataStore)
--keep class com.google.protobuf.** { *; }
+# Hilt, ViewModel, and standard Android components (Activity, Service, etc.)
+# are automatically handled by AGP and library-bundled consumer rules.
+# DataStore and Protobuf also provide their own rules.
+
+# General optimization settings
+# -repackageclasses '' # Can be enabled for further size reduction if needed
+-allowaccessmodification

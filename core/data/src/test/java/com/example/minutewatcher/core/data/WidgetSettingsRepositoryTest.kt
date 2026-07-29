@@ -1,7 +1,8 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.SimSettingsState
@@ -19,18 +20,18 @@ import org.mockito.kotlin.whenever
 
 class WidgetSettingsRepositoryTest {
     private lateinit var repository: WidgetSettingsRepository
-    private val settingsRepository: SettingsRepository = mock()
-    private val simRepository: SimRepository = mock()
+    private val settingsRepository: AppSettingsRepository = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
 
     @Before
     fun setup() {
-        repository = WidgetSettingsRepository(settingsRepository, simRepository, simRepository)
+        repository = WidgetSettingsRepository(settingsRepository, simIdentityRepository, simWidgetVisibilityRepository)
     }
 
     @Test
     fun `load should return state populated from app settings`() =
         runTest {
-            // Arrange
             val appSettings =
                 AppSettings(
                     theme = AppTheme.LIGHT,
@@ -46,7 +47,7 @@ class WidgetSettingsRepositoryTest {
                     migrationV1Completed = true,
                 )
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
-            whenever(simRepository.getIdentity(any())).thenReturn("test_sim")
+            whenever(simIdentityRepository.getIdentity(any())).thenReturn("test_sim")
 
             val simSettings =
                 SimSettingsState(
@@ -58,12 +59,10 @@ class WidgetSettingsRepositoryTest {
                     showTraffic = true,
                     showTrafficLimit = false,
                 )
-            whenever(simRepository.getSimSettings(any())).thenReturn(flowOf(simSettings))
+            whenever(simWidgetVisibilityRepository.getSimSettings(any())).thenReturn(flowOf(simSettings))
 
-            // Act
             val result = repository.load()
 
-            // Assert
             assertEquals(1, result.layoutMode)
             assertEquals(1, result.simArrangement)
             assertEquals(80, result.transparency)
@@ -75,13 +74,12 @@ class WidgetSettingsRepositoryTest {
             assertEquals(2, result.simStates.size)
 
             verify(settingsRepository).getAppSettings()
-            verify(simRepository, times(2)).getSimSettings(any())
+            verify(simWidgetVisibilityRepository, times(2)).getSimSettings(any())
         }
 
     @Test
     fun `save should update general and sim specific settings`() =
         runTest {
-            // Arrange
             val state =
                 WidgetSettingsState(
                     layoutMode = 2,
@@ -114,15 +112,12 @@ class WidgetSettingsRepositoryTest {
                             ),
                         ),
                 )
-            whenever(simRepository.getIdentity(0)).thenReturn("sim0")
-            whenever(simRepository.getIdentity(1)).thenReturn("sim1")
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
+            whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim1")
 
-            // Act
             repository.save(state)
 
-            // Assert
             verify(settingsRepository).updateAppSettings(any())
-            verify(simRepository).setSimSettingsBatch(any())
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(any())
         }
 }
-

@@ -7,7 +7,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -63,5 +63,6 @@ dependencies {
     debugImplementation(libs.androidxUiTestManifest)
     testImplementation(libs.mockingKotlin)
 }
+
 
 

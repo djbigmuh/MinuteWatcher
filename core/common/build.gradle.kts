@@ -5,7 +5,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -32,5 +32,6 @@ dependencies {
     implementation(libs.kotlinxCoroutinesCore)
     implementation(libs.javaxInject)
 }
+
 
 

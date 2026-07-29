@@ -7,7 +7,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -64,5 +64,6 @@ dependencies {
     androidTestImplementation(libs.androidxJunit)
     androidTestImplementation(libs.androidxEspressoCore)
 }
+
 
 

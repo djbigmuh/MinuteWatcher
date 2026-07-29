@@ -52,6 +52,6 @@ subprojects {
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Default SDK for Robolectric
-        jvmArgs("-Drobolectric.sdk=36")
+        jvmArgs("-Drobolectric.sdk=37")
     }
 }
