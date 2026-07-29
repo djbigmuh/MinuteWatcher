@@ -28,11 +28,10 @@ import org.mockito.ArgumentMatchers.isNull
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -55,8 +54,7 @@ class TrafficTrackerTest {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
-        val lastDataSubIdFlow = MutableStateFlow(-1)
-        whenever(callSessionRepository.getLastDataSubId()).thenReturn(lastDataSubIdFlow)
+        whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
         runTest {
             whenever(simIdentityRepository.getIdentity(any())).thenReturn("test_id")
@@ -217,7 +215,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // 50 bytes is < 0.0001 MB, should not increment usage but status is Active
-            org.mockito.kotlin.verify(simUsageRepository, org.mockito.kotlin.never()).incrementTrafficUsed(any(), any())
+            verify(simUsageRepository, never()).incrementTrafficUsed(any(), any())
             assertEquals(TrackingStatus.Active, tracker.status.first())
         }
 
@@ -253,5 +251,6 @@ class TrafficTrackerTest {
             verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
         }
 }
+
 
 

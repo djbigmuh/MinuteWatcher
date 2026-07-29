@@ -170,9 +170,9 @@ class SemanticSearchManager
             return try {
                 Class.forName("org.junit.Test")
                 true
-            } catch (e: ClassNotFoundException) {
+            } catch (_: ClassNotFoundException) {
                 false
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
         }

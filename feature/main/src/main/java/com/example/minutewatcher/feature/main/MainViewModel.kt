@@ -158,6 +158,7 @@ class MainViewModel
                 isNotificationPermissionPermanentlyDeniedFlow,
                 appSettingsRepository.observeAppSettings(),
             ) { args ->
+                @Suppress("UNCHECKED_CAST")
                 val statusMap = args[0] as Map<String, TrackingStatus>
                 val phoneGranted = args[1] as Boolean
                 val usageGranted = args[2] as Boolean

@@ -39,8 +39,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -263,4 +261,5 @@ class UsageCheckWorkerTest {
         rolloverEnabled = false
     )
 }
+
 

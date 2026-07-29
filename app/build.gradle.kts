@@ -53,6 +53,7 @@ configure<ApplicationExtension> {
 
     bundle {
         language {
+            @Suppress("UnstableApiUsage")
             enableSplit = false
         }
     }

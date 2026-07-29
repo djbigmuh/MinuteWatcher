@@ -31,7 +31,7 @@ class DialogsTest {
                 initialMinutes = 0,
                 initialTrafficMb = 0,
                 onDismiss = {},
-                onConfirm = { minutes, _ -> capturedMinutes = minutes },
+                onConfirm = { minutes, _, _ -> capturedMinutes = minutes },
                 onReset = {},
             )
         }
@@ -60,7 +60,7 @@ class DialogsTest {
                 initialMinutes = 0,
                 initialTrafficMb = 0,
                 onDismiss = {},
-                onConfirm = { _, traffic -> capturedTrafficMb = traffic },
+                onConfirm = { _, traffic, _ -> capturedTrafficMb = traffic },
                 onReset = {},
             )
         }
@@ -78,4 +78,3 @@ class DialogsTest {
         assert(capturedTrafficMb == 1536)
     }
 }
-

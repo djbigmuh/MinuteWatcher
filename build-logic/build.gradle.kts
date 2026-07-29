@@ -4,7 +4,10 @@ plugins {
 
 group = "com.example.minutewatcher.buildlogic"
 
+// Use provider for version catalog access
+val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
+
 dependencies {
-    compileOnly("com.android.tools.build:gradle:9.3.1")
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.0") 
+    compileOnly(libs.findLibrary("androidGradlePlugin").get())
+    compileOnly(libs.findLibrary("kotlinGradlePlugin").get())
 }

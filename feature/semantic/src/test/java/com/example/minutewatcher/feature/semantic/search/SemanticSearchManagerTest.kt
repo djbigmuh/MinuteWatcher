@@ -29,8 +29,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -163,6 +161,16 @@ class SemanticSearchManagerTest {
         assertFalse(lastRemove.ids.contains("sim_0_MINUTES"))
     }
 
+    @Test
+    fun `indexSnapshot works with slot 1`() = runTest(testDispatcher) {
+        val manager = createManager(backgroundScope)
+        val snapshot = createSnapshot(listOf(SimSnapshot(1, "B", true, mapOf(PackageType.MINUTES to createEntity(1, PackageType.MINUTES, 50)))))
+        manager.indexSnapshot(snapshot)
+        
+        val lastPut = fakeWrapper.lastSession!!.putRequests.last()
+        assertTrue(lastPut.genericDocuments.isNotEmpty())
+    }
+
     private fun createManager(scope: CoroutineScope) = SemanticSearchManager(
         context = context,
         scope = scope,
@@ -248,5 +256,6 @@ class SemanticSearchManagerTest {
         override fun close() {}
     }
 }
+
 
 

@@ -26,8 +26,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -194,5 +192,6 @@ class SimRepositoryImplTest {
             assertEquals(1.5f, (usage.trafficLimitMb / 1024f) + usage.trafficAdjustment, 0.001f)
         }
 }
+
 
 

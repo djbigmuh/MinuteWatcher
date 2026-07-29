@@ -29,8 +29,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -243,5 +241,6 @@ class CallTrackerTest {
             assertEquals(TrackingStatus.Idle, callTracker.status.first())
         }
 }
+
 
 

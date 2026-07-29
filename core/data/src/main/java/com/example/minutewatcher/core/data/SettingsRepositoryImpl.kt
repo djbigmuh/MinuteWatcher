@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
-import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
@@ -29,8 +28,7 @@ class SettingsRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
-    ) : SettingsRepository,
-        AppSettingsRepository,
+    ) : AppSettingsRepository,
         CallSessionRepository,
         MigrationFlagsRepository {
         private val appSettingsState =

@@ -20,7 +20,6 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimInfoProvider
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
-import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -68,8 +67,7 @@ class SimRepositoryImpl
         private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
-    ) : SimRepository,
-        SimIdentityRepository,
+    ) : SimIdentityRepository,
         SimUsageRepository,
         SimLimitsRepository,
         SimWidgetVisibilityRepository,
@@ -496,7 +494,6 @@ class SimRepositoryImpl
             return didReset
         }
 
-        // Visibility settings (moved from SettingsRepository)
         override fun getShowSim(identity: String): Flow<Boolean> = get(SettingsKeys.showSimKey(identity), true)
 
         override suspend fun setShowSim(
@@ -566,7 +563,6 @@ class SimRepositoryImpl
             }
         }
 
-        // Notified flags (moved from SettingsRepository)
         override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> = get(SettingsKeys.notifiedLowMinutesKey(identity), false)
 
         override suspend fun setNotifiedLowMinutes(
@@ -617,7 +613,6 @@ class SimRepositoryImpl
             }
         }
 
-        // Tracking helpers (moved from SettingsRepository)
         override fun getLastTotalBytes(identity: String): Flow<Long> = get(SettingsKeys.lastTotalBytesKey(identity), -1L)
 
         override suspend fun setLastTotalBytes(
@@ -630,5 +625,3 @@ class SimRepositoryImpl
             }
         }
     }
-
-

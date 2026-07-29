@@ -23,7 +23,6 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
@@ -166,5 +165,6 @@ class ShortcutManagerTest {
             capabilities = emptyList(),
         )
 }
+
 
 

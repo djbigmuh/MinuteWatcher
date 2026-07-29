@@ -96,6 +96,10 @@ kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-co
 androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
 androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
+# Build logic dependencies
+androidGradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+kotlinGradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlinComposePlugin" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }

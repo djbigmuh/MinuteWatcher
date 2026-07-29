@@ -52,6 +52,4 @@ object SettingsKeys {
     fun notifiedExhaustedMinutesKey(identity: String) = booleanPreferencesKey("notified_exhausted_minutes_$identity")
 
     fun notifiedExhaustedTrafficKey(identity: String) = booleanPreferencesKey("notified_exhausted_traffic_$identity")
-
-    fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
 }

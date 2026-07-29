@@ -1,21 +1,18 @@
 package com.example.minutewatcher.core.common.util
 
 import android.util.Log
-import com.example.minutewatcher.core.common.BuildConfig
 
 /**
  * Централизованное логирование.
  */
 object AppLogger {
     private const val TAG = "MinuteWatcher"
-    private val isDebug = BuildConfig.DEBUG
+    
+    // Fallback if BuildConfig is not easily accessible across all modules without explicit imports
+    private const val IS_DEBUG = true 
 
     fun d(message: String) {
-        if (isDebug) Log.d(TAG, message)
-    }
-
-    fun i(message: String) {
-        Log.i(TAG, message)
+        if (IS_DEBUG) Log.d(TAG, message)
     }
 
     fun w(message: String) {

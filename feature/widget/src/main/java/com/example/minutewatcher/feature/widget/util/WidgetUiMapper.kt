@@ -151,7 +151,6 @@ object WidgetUiMapper {
         luminance: Double,
     ): PackageUiData {
         val limitMb = entity?.limit ?: 0L
-        val usedMb = (entity?.used ?: 0L).toFloat() / (1024 * 1024) // Simplified for usedMb
         val limitGb = limitMb.toFloat() / (1024 * 1024 * 1024)
         val remGb = if (limitMb > 0) maxOf(0f, (entity?.remaining ?: 0L).toFloat() / (1024 * 1024 * 1024)) else -1f
         val usedGb = (entity?.used ?: 0L).toFloat() / (1024 * 1024 * 1024)

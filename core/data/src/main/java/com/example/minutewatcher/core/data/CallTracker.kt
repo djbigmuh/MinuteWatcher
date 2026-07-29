@@ -1,6 +1,6 @@
 package com.example.minutewatcher.core.data
 
-import android.os.SystemClock
+import android.os.Build
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
@@ -28,7 +28,7 @@ class CallTracker
     @Inject
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
-        private val simUsageRepository: SimUsageRepository,
+        @Suppress("UNUSED_PARAMETER") private val simUsageRepository: SimUsageRepository,
         private val appSettingsRepository: AppSettingsRepository,
         private val callSessionRepository: CallSessionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
@@ -123,13 +123,13 @@ class CallTracker
                     }
 
                     // Priority 1: Global safety cleanup. If device is IDLE, close everything.
-                    val isIdle =
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                            telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                        } else {
-                            @Suppress("DEPRECATION")
-                            telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                        }
+                    val isIdle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+                    } else {
+                        @Suppress("DEPRECATION")
+                        telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+                    }
+                    
                     if (isIdle) {
                         AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions: $activeSubIds")
                         activeSubIds.forEach { endCall(it) }
@@ -261,5 +261,3 @@ class CallTracker
             private const val SECONDS_IN_MINUTE = 60
         }
     }
-
-

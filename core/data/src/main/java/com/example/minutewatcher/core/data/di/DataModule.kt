@@ -31,13 +31,11 @@ import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
-import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimInfoProvider
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
-import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -86,10 +84,6 @@ abstract class DataModule {
 
     @Binds
     @Singleton
-    abstract fun bindSimRepository(impl: SimRepositoryImpl): SimRepository
-
-    @Binds
-    @Singleton
     abstract fun bindSimIdentityRepository(impl: SimRepositoryImpl): SimIdentityRepository
 
     @Binds
@@ -111,10 +105,6 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindSimInfoProvider(impl: SimRepositoryImpl): SimInfoProvider
-
-    @Binds
-    @Singleton
-    abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
 
     @Binds
     @Singleton

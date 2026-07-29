@@ -41,7 +41,9 @@
         <receiver
             android:name=".benchmark.BenchmarkReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.DUMP"
+            tools:ignore="ExportedReceiver">
             <intent-filter>
                 <action android:name="com.example.minutewatcher.benchmark.POPULATE_DATA" />
             </intent-filter>

@@ -158,7 +158,7 @@ class UsageCheckWorker
             }
         }
 
-        private suspend fun sendNotification(
+        private fun sendNotification(
             operator: String,
             bodyOrResId: Any,
             slot: Int,

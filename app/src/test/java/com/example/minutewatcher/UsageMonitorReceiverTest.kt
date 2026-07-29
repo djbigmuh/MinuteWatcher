@@ -18,7 +18,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
@@ -89,10 +88,11 @@ class UsageMonitorReceiverTest {
             for (j in 1..20) {
                 workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_UNKNOWN").get(1, TimeUnit.SECONDS)
                 if (workInfos.isNotEmpty()) break
-                delay(50)
+                delay(50.milliseconds)
             }
 
             assertTrue("Work CALL_EVENT_UNKNOWN should be enqueued", workInfos.isNotEmpty())
         }
 }
+
 

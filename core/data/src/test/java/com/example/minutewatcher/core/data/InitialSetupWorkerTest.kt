@@ -27,8 +27,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 class InitialSetupWorkerTest {
@@ -165,4 +163,5 @@ class InitialSetupWorkerTest {
             }
         }
 }
+
 

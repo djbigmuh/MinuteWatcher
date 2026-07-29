@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Process
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
-import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -82,33 +81,20 @@ class PermissionManager
 
         fun hasUsageStatsPermission(): Boolean {
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-            val mode =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    appOps.unsafeCheckOpNoThrow(
-                        AppOpsManager.OPSTR_GET_USAGE_STATS,
-                        Process.myUid(),
-                        context.packageName,
-                    )
-                } else {
-                    appOps.checkOpNoThrow(
-                        AppOpsManager.OPSTR_GET_USAGE_STATS,
-                        Process.myUid(),
-                        context.packageName,
-                    )
-                }
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName
+                )
+            }
             return mode == AppOpsManager.MODE_ALLOWED
         }
-
-        /**
-         * Helper to run an action only if phone permission is granted.
-         * Note: Does not suppress lint, callers must still handle the permission.
-         */
-        @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
-        inline fun <T> withPhonePermission(action: () -> T): T? =
-            if (hasPhoneStatePermission()) {
-                action()
-            } else {
-                null
-            }
     }
-

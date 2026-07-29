@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
-import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
@@ -20,8 +19,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 @RunWith(RobolectricTestRunner::class)
 
 class ResetManagerTest {
@@ -160,4 +157,5 @@ class ResetManagerTest {
             verify(simUsageRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }
+
 

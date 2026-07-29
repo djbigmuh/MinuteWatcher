@@ -13,44 +13,64 @@ import org.mockito.kotlin.whenever
 
 class UsageUseCaseValidationTest {
     private val context: Context = mock()
-    private val simRepository: SimRepository = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simUsageRepository: SimUsageRepository = mock()
+    private val simLimitsRepository: SimLimitsRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private lateinit var usageUseCase: UsageUseCase
 
     @Before
     fun setup() {
-        usageUseCase = UsageUseCase(context, simRepository, permissionManager)
+        usageUseCase = UsageUseCase(
+            context,
+            simIdentityRepository,
+            simUsageRepository,
+            simLimitsRepository,
+            permissionManager
+        )
     }
 
     @Test
     fun `adjustMinutes clamps negative remaining to zero`() =
         runTest {
-            val slot = 0
             val identity = "sim_0"
-            whenever(simRepository.getIdentity(slot)).thenReturn(identity)
-            whenever(simRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
-            whenever(simRepository.getMinutesUsed(identity)).thenReturn(flowOf(10))
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
+            whenever(simUsageRepository.getMinutesUsed(identity)).thenReturn(flowOf(0))
 
-            usageUseCase.adjustMinutes(slot, -50)
+            // target = -50 (clamped to 0)
+            // formula: (0 - 100) + 0 = -100
+            usageUseCase.adjustMinutes(0, -50)
 
-            // expected safeRemaining = 0
-            // adj = (0 - 100) + 10 = -90
-            verify(simRepository).setManualAdjustment(identity, -90)
+            verify(simUsageRepository).setManualAdjustment(identity, -100)
         }
 
     @Test
-    fun `adjustMinutes clamps excessive remaining to max limit`() =
+    fun `adjustMinutes clamps excessive remaining to MAX_MINUTES_LIMIT`() =
         runTest {
-            val slot = 0
             val identity = "sim_0"
-            whenever(simRepository.getIdentity(slot)).thenReturn(identity)
-            whenever(simRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
-            whenever(simRepository.getMinutesUsed(identity)).thenReturn(flowOf(10))
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(0))
+            whenever(simUsageRepository.getMinutesUsed(identity)).thenReturn(flowOf(0))
 
-            usageUseCase.adjustMinutes(slot, 999999)
+            usageUseCase.adjustMinutes(0, Constants.MAX_MINUTES_LIMIT + 1000)
 
-            val expectedAdj = (Constants.MAX_MINUTES_LIMIT - 100) + 10
-            verify(simRepository).setManualAdjustment(identity, expectedAdj)
+            verify(simUsageRepository).setManualAdjustment(identity, Constants.MAX_MINUTES_LIMIT)
+        }
+
+    @Test
+    fun `adjustTraffic clamps negative remainingGb to zero`() =
+        runTest {
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240)) // 10 GB
+            whenever(simUsageRepository.getTrafficUsed(identity)).thenReturn(flowOf(0f))
+
+            // target = -1f (clamped to 0)
+            // limitGb = 10, usedGb = 0
+            // adj = 0 - (10 - 0) = -10
+            usageUseCase.adjustTraffic(0, -1f)
+
+            verify(simUsageRepository).setTrafficAdjustment(identity, -10f)
         }
 }
-
