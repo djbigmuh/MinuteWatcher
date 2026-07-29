@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 
 @Composable
 fun AdjustmentComposeDialog(
@@ -86,3 +86,4 @@ fun AdjustmentComposeDialog(
         },
     )
 }
+

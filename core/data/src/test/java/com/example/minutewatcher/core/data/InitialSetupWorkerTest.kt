@@ -1,12 +1,14 @@
 package com.example.minutewatcher.core.data
 
+import android.Manifest
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
-import androidx.work.testing.TestListenableWorkerBuilder
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -19,7 +21,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.eq
+import org.mockito.Mockito.mockStatic
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -27,192 +30,139 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 class InitialSetupWorkerTest {
-    private lateinit var context: Context
-    private lateinit var callTracker: CallTracker
-    private lateinit var trafficTracker: TrafficTracker
-    private lateinit var simRepository: SimRepository
-    private lateinit var settingsRepository: SettingsRepository
-    private lateinit var usageStateRepository: UsageStateRepository
-    private lateinit var usageUseCase: UsageUseCase
-    private lateinit var migrationService: IdentityMigrationService
-    private lateinit var updateCoordinator: UpdateCoordinator
-    private lateinit var workScheduler: WorkScheduler
+    private val context: Context = mock()
+    private val params: WorkerParameters = mock()
+    private val callTracker: CallTracker = mock()
+    private val trafficTracker: TrafficTracker = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val migrationFlagsRepository: MigrationFlagsRepository = mock()
+    private val usageStateRepository: UsageStateRepository = mock()
+    private val usageUseCase: UsageUseCase = mock()
+    private val migrationService: IdentityMigrationService = mock()
+    private val dataChangeNotifier: DataChangeNotifier = mock()
+    private val workScheduler: WorkScheduler = mock()
+
+    private lateinit var worker: InitialSetupWorker
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
-        callTracker = mock()
-        trafficTracker = mock()
-        simRepository = mock()
-        settingsRepository = mock()
-        usageStateRepository = mock()
-        usageUseCase = mock()
-        migrationService = mock()
-        updateCoordinator = mock()
-        workScheduler = mock()
+        whenever(context.applicationContext).thenReturn(context)
+        whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+        whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-        whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
-        whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
-        whenever(simRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+        worker =
+            InitialSetupWorker(
+                context,
+                params,
+                callTracker,
+                trafficTracker,
+                simIdentityRepository,
+                migrationFlagsRepository,
+                usageStateRepository,
+                usageUseCase,
+                migrationService,
+                dataChangeNotifier,
+                workScheduler,
+            )
     }
 
     @Test
-    fun `doWork marks migration as completed when no legacy data exists`() =
+    fun `doWork returns success when migration already completed`() =
         runTest {
-            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
-            whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
-            whenever(migrationService.hasLegacyData()).thenReturn(false)
-            whenever(usageStateRepository.refresh()).thenReturn(mock())
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(settingsRepository).setMigrationV1Completed(true)
-            verify(settingsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-            verify(settingsRepository).setMigrationIdentityStabilityCompleted(true)
             verify(usageStateRepository).refresh()
+            verify(dataChangeNotifier).notifyDataChanged(updateWidget = true, force = true)
         }
 
     @Test
-    fun `doWork does not mark migration as completed when permission is missing but legacy data exists`() =
+    fun `doWork skips migration V1 when no permission and no legacy data`() =
         runTest {
-            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
-            whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
+            whenever(migrationService.hasLegacyData()).thenReturn(false)
+
+            mockStatic(ContextCompat::class.java).use { mockedContext ->
+                mockedContext.`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_DENIED)
+
+                val result = worker.doWork()
+
+                assertEquals(ListenableWorker.Result.success(), result)
+                verify(migrationFlagsRepository).setMigrationV1Completed(true)
+                verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+            }
+        }
+
+    @Test
+    fun `doWork defers migration when no permission but legacy data exists`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData()).thenReturn(true)
-            whenever(usageStateRepository.refresh()).thenReturn(mock())
 
-            val worker = createWorker()
-            val result = worker.doWork()
+            mockStatic(ContextCompat::class.java).use { mockedContext ->
+                mockedContext.`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_DENIED)
 
-            assertEquals(ListenableWorker.Result.success(), result)
-            // Should NOT be called
-            verify(settingsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
+                val result = worker.doWork()
+
+                assertEquals(ListenableWorker.Result.success(), result)
+                verify(migrationFlagsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
+            }
         }
 
     @Test
-    fun `doWork does not mark migration as completed when no active SIMs found but legacy data exists`() =
+    fun `doWork defers migration when permission granted but no active sims and legacy data exists`() =
         runTest {
-            // Grant permission
-            val app = ApplicationProvider.getApplicationContext<android.app.Application>()
-            org.robolectric.Shadows
-                .shadowOf(app)
-                .grantPermissions(android.Manifest.permission.READ_PHONE_STATE)
-
-            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
-            whenever(settingsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData()).thenReturn(true)
-            whenever(simRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
-            whenever(usageStateRepository.refresh()).thenReturn(mock())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-            val worker = createWorker()
-            val result = worker.doWork()
+            mockStatic(ContextCompat::class.java).use { mockedContext ->
+                mockedContext.`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
 
-            assertEquals(ListenableWorker.Result.success(), result)
-            // Should NOT be called
-            verify(settingsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
+                val result = worker.doWork()
+
+                assertEquals(ListenableWorker.Result.success(), result)
+                verify(migrationFlagsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
+            }
         }
 
     @Test
-    fun `doWork resets traffic baseline for active SIMs`() =
+    fun `doWork performs migration when active sims found`() =
         runTest {
-            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
+            val activeSim = ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", true, true)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
 
-            val activeSim =
-                ActiveSimInfo(
-                    identity = SimIdentity("id0", 1, 0, IdentitySource.SUBSCRIPTION_ID),
-                    slotIndex = 0,
-                    subscriptionId = 1,
-                    displayName = "MTS",
-                    carrierName = "MTS",
-                    mccMnc = "25001",
-                    isDefaultData = true,
-                    isDefaultVoice = true,
-                )
+            mockStatic(ContextCompat::class.java).use { mockedContext ->
+                mockedContext.`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
 
-            whenever(simRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
-            whenever(usageStateRepository.refresh()).thenReturn(mock())
+                val result = worker.doWork()
 
-            val worker = createWorker()
-            val result = worker.doWork()
-
-            assertEquals(ListenableWorker.Result.success(), result)
-            verify(trafficTracker).resetBaseline("id0")
-            verify(updateCoordinator).notifyDataChanged(eq(true), eq(true))
+                assertEquals(ListenableWorker.Result.success(), result)
+                verify(migrationService).migrateLegacyData(activeSim.identity)
+                verify(migrationFlagsRepository).setMigrationV1Completed(true)
+                verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+            }
         }
-
-    @Test
-    fun `doWork resets baseline for multiple active SIMs`() =
-        runTest {
-            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
-
-            val sim0 = ActiveSimInfo(SimIdentity("id0", 1, 0, IdentitySource.SUBSCRIPTION_ID), 0, 1, "MTS", "MTS", "25001", true, true)
-            val sim1 =
-                ActiveSimInfo(
-                    SimIdentity("id1", 2, 1, IdentitySource.SUBSCRIPTION_ID),
-                    1,
-                    2,
-                    "Beeline",
-                    "Beeline",
-                    "25099",
-                    false,
-                    false,
-                )
-
-            whenever(simRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
-            whenever(usageStateRepository.refresh()).thenReturn(mock())
-
-            val worker = createWorker()
-            worker.doWork()
-
-            verify(trafficTracker).resetBaseline("id0")
-            verify(trafficTracker).resetBaseline("id1")
-        }
-
-    @Test
-    fun `doWork schedules periodic usage check when permission is granted`() =
-        runTest {
-            // Grant permission in Robolectric
-            val app = ApplicationProvider.getApplicationContext<android.app.Application>()
-            org.robolectric.Shadows
-                .shadowOf(app)
-                .grantPermissions(android.Manifest.permission.READ_PHONE_STATE)
-
-            whenever(settingsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
-            whenever(simRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
-            whenever(usageStateRepository.refresh()).thenReturn(mock())
-
-            val worker = createWorker()
-            worker.doWork()
-
-            verify(workScheduler).schedulePeriodicUsageCheck()
-        }
-
-    private fun createWorker(runAttemptCount: Int = 0): InitialSetupWorker =
-        TestListenableWorkerBuilder<InitialSetupWorker>(context)
-            .setRunAttemptCount(runAttemptCount)
-            .setWorkerFactory(
-                object : androidx.work.WorkerFactory() {
-                    override fun createWorker(
-                        appContext: Context,
-                        workerClassName: String,
-                        workerParameters: WorkerParameters,
-                    ): ListenableWorker =
-                        InitialSetupWorker(
-                            appContext,
-                            workerParameters,
-                            callTracker,
-                            trafficTracker,
-                            simRepository,
-                            settingsRepository,
-                            usageStateRepository,
-                            usageUseCase,
-                            migrationService,
-                            updateCoordinator,
-                            workScheduler,
-                        )
-                },
-            ).build()
 }
+

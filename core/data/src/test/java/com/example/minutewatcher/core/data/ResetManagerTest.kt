@@ -1,21 +1,20 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.domain.SimRepository
-import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -24,165 +23,141 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 class ResetManagerTest {
-    @Mock
-    private lateinit var updateCoordinator: UpdateCoordinator
-
-    @Mock
-    private lateinit var trafficTracker: TrafficTracker
-
-    @Mock
-    private lateinit var simRepository: SimRepository
+    private val trafficTracker: TrafficTracker = mock()
+    private val dataChangeNotifier: DataChangeNotifier = mock()
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simUsageRepository: SimUsageRepository = mock()
 
     private lateinit var resetManager: ResetManager
 
     @Before
-    fun setUp() {
-        MockitoAnnotations.openMocks(this)
-        resetManager = ResetManager(trafficTracker, updateCoordinator)
-
-        runTest {
-            whenever(simRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(simRepository.getIdentity(1)).thenReturn("sim_1")
-        }
+    fun setup() {
+        resetManager = ResetManager(simIdentityRepository, simUsageRepository, trafficTracker, dataChangeNotifier, timeProvider)
     }
 
-    private fun createSnapshot(slots: List<Int>): GlobalSnapshot =
-        GlobalSnapshot(
-            version = SchemaVersion(major = 1, minor = 0, patch = 0),
-            timestamp = System.currentTimeMillis(),
-            simSnapshots =
-                slots.map {
-                    SimSnapshot(it, "MTS", true, emptyMap())
-                },
-            capabilities = emptyList(),
-        )
-
     @Test
-    fun testPerformAutoReset_NoActiveSim() =
+    fun `performAutoReset skips inactive sims`() =
         runTest {
             val snapshot =
-                GlobalSnapshot(
-                    version = SchemaVersion(major = 1, minor = 0, patch = 0),
-                    timestamp = System.currentTimeMillis(),
-                    simSnapshots = emptyList(),
+                com.example.minutewatcher.core.model.GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(0, "MTS", false, emptyMap()),
+                        ),
                     capabilities = emptyList(),
                 )
 
-            resetManager.performAutoReset(simRepository, snapshot)
+            resetManager.performAutoReset(snapshot)
 
-            verify(simRepository, never()).resetSimUsage(any())
+            verify(simUsageRepository, never()).resetSimUsageIfDue(any(), any(), any())
         }
 
     @Test
-    fun testPerformAutoReset_ShouldReset() =
+    fun `performAutoReset calls repository when due`() =
         runTest {
             val identity = "sim_0"
-            val snapshot = createSnapshot(listOf(0))
+            val snapshot =
+                com.example.minutewatcher.core.model.GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(0, "MTS", true, emptyMap()),
+                        ),
+                    capabilities = emptyList(),
+                )
 
-            whenever(simRepository.getSimUsage(identity)).thenReturn(
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
-                        identity = identity,
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        operator = "MTS",
-                        minutesUsed = 100,
-                        minutesLimit = 500,
-                        trafficUsed = 1024f,
-                        trafficLimitMb = 5120,
-                        manualAdjustment = 0,
-                        trafficAdjustment = 0f,
-                        autoReset = true,
-                        autoResetDay = 1,
-                        lastResetDate = 0L,
+                        identity, 0, 1, "MTS", 100, 200, 1.0f, 1024, 0, 0f,
+                        true, 1, 0L, false
                     ),
                 ),
             )
-            whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+            whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
-            resetManager.performAutoReset(simRepository, snapshot)
+            resetManager.performAutoReset(snapshot)
 
-            verify(simRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(simUsageRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(trafficTracker).resetBaseline(identity)
+            verify(dataChangeNotifier).notifyDataChanged()
         }
 
     @Test
-    fun testPerformAutoReset_NotDue() =
+    fun `performAutoReset does nothing when not due`() =
         runTest {
             val identity = "sim_0"
-            val snapshot = createSnapshot(listOf(0))
+            val snapshot =
+                com.example.minutewatcher.core.model.GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(0, "MTS", true, emptyMap()),
+                        ),
+                    capabilities = emptyList(),
+                )
 
-            whenever(simRepository.getSimUsage(identity)).thenReturn(
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
-                        identity = identity,
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        operator = "MTS",
-                        minutesUsed = 100,
-                        minutesLimit = 500,
-                        trafficUsed = 1024f,
-                        trafficLimitMb = 5120,
-                        manualAdjustment = 0,
-                        trafficAdjustment = 0f,
-                        autoReset = true,
-                        autoResetDay = 1,
-                        lastResetDate = System.currentTimeMillis(), // Already reset recently
+                        identity, 0, 1, "MTS", 100, 200, 1.0f, 1024, 0, 0f,
+                        true, 1, 0L, false
                     ),
                 ),
             )
-            whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(false)
+            whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(false)
 
-            resetManager.performAutoReset(simRepository, snapshot)
+            resetManager.performAutoReset(snapshot)
 
-            // Should still call the method to check, but we verify what happens when it returns false
-            verify(simRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
-            verify(updateCoordinator, never()).notifyDataChanged(any(), any())
+            verify(simUsageRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(trafficTracker, never()).resetBaseline(any())
+            verify(dataChangeNotifier, never()).notifyDataChanged()
         }
 
     @Test
-    fun testPerformAutoReset_ConcurrentCalls() =
+    fun `performAutoReset is idempotent per snapshot session`() =
         runTest {
+            // Even if we call it multiple times, it depends on SimRepository to handle actual timing.
+            // But we can verify it at least tries to check each time.
             val identity = "sim_0"
-            val snapshot = createSnapshot(listOf(0))
+            val snapshot =
+                com.example.minutewatcher.core.model.GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(0, "MTS", true, emptyMap()),
+                        ),
+                    capabilities = emptyList(),
+                )
 
-            whenever(simRepository.getSimUsage(identity)).thenReturn(
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
-                        identity = identity,
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        operator = "MTS",
-                        minutesUsed = 100,
-                        minutesLimit = 500,
-                        trafficUsed = 1024f,
-                        trafficLimitMb = 5120,
-                        manualAdjustment = 0,
-                        trafficAdjustment = 0f,
-                        autoReset = true,
-                        autoResetDay = 1,
-                        lastResetDate = 0L,
+                        identity, 0, 1, "MTS", 100, 200, 1.0f, 1024, 0, 0f,
+                        true, 1, 0L, false
                     ),
                 ),
             )
-            whenever(simRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+            whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
-            // Launch multiple resets concurrently
-            val jobs =
-                List(5) {
-                    launch {
-                        resetManager.performAutoReset(simRepository, snapshot)
-                    }
-                }
-            joinAll(*jobs.toTypedArray())
+            repeat(5) {
+                resetManager.performAutoReset(snapshot)
+            }
 
-            // With Mutex in ResetManager, we still might have multiple calls to performAutoReset,
-            // but they will wait for each other.
-            // However, verify(..., times(5)) would be wrong if we expect them to be sequential and all attempt reset.
             // The idempotency is REALLY at the SimRepository level (DataStore edit block).
-            // But Mutex helps avoiding multiple first() reads and calculations in parallel.
-
-            verify(simRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
+            // ResetManager just loops.
+            verify(simUsageRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }
+

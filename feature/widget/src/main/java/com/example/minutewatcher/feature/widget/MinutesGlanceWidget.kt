@@ -33,9 +33,9 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.example.minutewatcher.core.data.WidgetSettingsRepository
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
@@ -54,7 +54,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     interface WidgetEntryPoint {
         fun usageStateRepository(): UsageStateRepository
 
-        fun widgetSettingsRepository(): WidgetSettingsRepository
+        fun widgetSettingsLoader(): WidgetSettingsLoader
 
         fun navigationProvider(): NavigationProvider
     }
@@ -86,7 +86,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                 WidgetEntryPoint::class.java,
             )
         val usageRepository = entryPoint.usageStateRepository()
-        val widgetSettingsRepository = entryPoint.widgetSettingsRepository()
+        val widgetSettingsLoader = entryPoint.widgetSettingsLoader()
 
         var snapshot = usageRepository.observeSnapshot().value
         if (snapshot.timestamp == 0L) {
@@ -96,7 +96,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             } ?: snapshot
         }
 
-        val settingsState = widgetSettingsRepository.load()
+        val settingsState = widgetSettingsLoader.load()
 
         return WidgetUiMapper.mapFromSnapshot(
             context,
@@ -146,7 +146,7 @@ private fun WidgetContent(
             }
             else -> {
                 Text(
-                    text = context.getString(com.example.minutewatcher.core.model.R.string.no_data),
+                    text = context.getString(com.example.minutewatcher.core.resources.R.string.no_data),
                     style =
                         TextStyle(
                             fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
@@ -253,7 +253,7 @@ private fun SimItem(
 ) {
     val summary =
         context.getString(
-            com.example.minutewatcher.core.model.R.string.sim_status_summary,
+            com.example.minutewatcher.core.resources.R.string.sim_status_summary,
             sim.operatorName,
             sim.minutesText,
             sim.trafficText,
@@ -308,3 +308,4 @@ private fun SimItem(
         }
     }
 }
+

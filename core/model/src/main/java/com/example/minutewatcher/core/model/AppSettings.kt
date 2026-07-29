@@ -13,4 +13,5 @@ data class AppSettings(
     val widgetBackgroundColor: Int = 0xFF000000.toInt(),
     val migrationV1Completed: Boolean = false,
     val onboardingCompleted: Boolean = false,
+    val notificationPermissionRequested: Boolean = false,
 )

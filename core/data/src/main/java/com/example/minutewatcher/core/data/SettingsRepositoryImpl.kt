@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
@@ -23,35 +22,21 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@Suppress("TooManyFunctions")
 @Singleton
 class SettingsRepositoryImpl
     @Inject
     constructor(
-        private val seedRepository: SimIdentitySeedRepository,
         @AppDataStore private val dataStore: DataStore<Preferences>,
-        @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
+        @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : SettingsRepository,
         AppSettingsRepository,
         CallSessionRepository,
         MigrationFlagsRepository {
         private val appSettingsState =
             dataStore.data
-                .map { prefs ->
-                    AppSettings(
-                        theme = AppTheme.fromValue(prefs[SettingsKeys.APP_THEME] ?: -1),
-                        language = prefs[SettingsKeys.APP_LANGUAGE],
-                        notifyLowMinutes = prefs[SettingsKeys.NOTIFY_LOW_MINUTES] ?: true,
-                        notifyLowTraffic = prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: true,
-                        callTrackingEnabled = prefs[SettingsKeys.CALL_TRACKING_ENABLED] ?: true,
-                        widgetLayoutMode = prefs[SettingsKeys.WIDGET_LAYOUT_MODE] ?: 2,
-                        widgetSimArrangement = prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: 0,
-                        widgetTransparency = prefs[SettingsKeys.WIDGET_TRANSPARENCY] ?: 50,
-                        widgetFontSize = prefs[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
-                        widgetBackgroundColor = prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
-                        migrationV1Completed = prefs[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
-                        onboardingCompleted = prefs[SettingsKeys.ONBOARDING_COMPLETED] ?: false,
-                    )
-                }.stateIn(
+                .map { prefs -> prefs.toAppSettings() }
+                .stateIn(
                     scope,
                     SharingStarted.Eagerly,
                     AppSettings(
@@ -62,7 +47,7 @@ class SettingsRepositoryImpl
                         callTrackingEnabled = true,
                         widgetLayoutMode = 2,
                         widgetSimArrangement = 0,
-                        widgetTransparency = 50,
+                        widgetTransparency = DEFAULT_TRANSPARENCY,
                         widgetFontSize = 2,
                         widgetBackgroundColor = Constants.UI.DEFAULT_BG_COLOR,
                         migrationV1Completed = false,
@@ -80,7 +65,8 @@ class SettingsRepositoryImpl
             dataStore.edit { it[SettingsKeys.MIGRATION_V1_COMPLETED] = completed }
         }
 
-        override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> = get(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
+        override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> =
+            get(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
 
         override suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean) {
             dataStore.edit { it[SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }
@@ -127,7 +113,7 @@ class SettingsRepositoryImpl
             dataStore.edit { it[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = arrangement }
         }
 
-        override fun getWidgetTransparency(): Flow<Int> = get(SettingsKeys.WIDGET_TRANSPARENCY, 50)
+        override fun getWidgetTransparency(): Flow<Int> = get(SettingsKeys.WIDGET_TRANSPARENCY, DEFAULT_TRANSPARENCY)
 
         override suspend fun setWidgetTransparency(transparency: Int) {
             dataStore.edit { it[SettingsKeys.WIDGET_TRANSPARENCY] = transparency }
@@ -202,10 +188,6 @@ class SettingsRepositoryImpl
             }
         }
 
-        override fun getSimIdentitySeed(): Flow<String> = seedRepository.getSeed()
-
-        override suspend fun setSimIdentitySeed(seed: String) = seedRepository.setSeed(seed)
-
         override suspend fun clearAllCallSessions() {
             dataStore.edit { prefs ->
                 prefs
@@ -232,20 +214,7 @@ class SettingsRepositoryImpl
 
         override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
             dataStore.edit { prefs ->
-                val current =
-                    AppSettings(
-                        theme = AppTheme.fromValue(prefs[SettingsKeys.APP_THEME] ?: -1),
-                        language = prefs[SettingsKeys.APP_LANGUAGE],
-                        notifyLowMinutes = prefs[SettingsKeys.NOTIFY_LOW_MINUTES] ?: true,
-                        notifyLowTraffic = prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: true,
-                        callTrackingEnabled = prefs[SettingsKeys.CALL_TRACKING_ENABLED] ?: true,
-                        widgetLayoutMode = prefs[SettingsKeys.WIDGET_LAYOUT_MODE] ?: 2,
-                        widgetSimArrangement = prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: 0,
-                        widgetTransparency = prefs[SettingsKeys.WIDGET_TRANSPARENCY] ?: 50,
-                        widgetFontSize = prefs[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
-                        widgetBackgroundColor = prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
-                        migrationV1Completed = prefs[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
-                    )
+                val current = prefs.toAppSettings()
                 val updated = transform(current)
 
                 prefs[SettingsKeys.APP_THEME] = updated.theme.value
@@ -265,6 +234,28 @@ class SettingsRepositoryImpl
                 prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
                 prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
                 prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
+                prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
             }
+        }
+
+        private fun Preferences.toAppSettings(): AppSettings =
+            AppSettings(
+                theme = AppTheme.fromValue(this[SettingsKeys.APP_THEME] ?: -1),
+                language = this[SettingsKeys.APP_LANGUAGE],
+                notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: true,
+                notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: true,
+                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: true,
+                widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: 2,
+                widgetSimArrangement = this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: 0,
+                widgetTransparency = this[SettingsKeys.WIDGET_TRANSPARENCY] ?: DEFAULT_TRANSPARENCY,
+                widgetFontSize = this[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
+                widgetBackgroundColor = this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
+                migrationV1Completed = this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
+                onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: false,
+                notificationPermissionRequested = this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: false,
+            )
+
+        companion object {
+            private const val DEFAULT_TRANSPARENCY = 50
         }
     }

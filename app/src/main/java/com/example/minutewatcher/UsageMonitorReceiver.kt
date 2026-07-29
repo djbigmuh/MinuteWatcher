@@ -9,21 +9,9 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.CallEventWorker
-import com.example.minutewatcher.core.data.di.IoDispatcher
-import com.example.minutewatcher.core.model.util.AppLogger
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import com.example.minutewatcher.core.common.util.AppLogger
 
-@AndroidEntryPoint
 class UsageMonitorReceiver : BroadcastReceiver() {
-    @Inject
-    @IoDispatcher
-    lateinit var ioDispatcher: CoroutineDispatcher
-
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -31,56 +19,46 @@ class UsageMonitorReceiver : BroadcastReceiver() {
         val action = intent.action
 
         if (action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
-            val pendingResult = goAsync()
             val appContext = context.applicationContext
 
             val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-            
+
             // Try to extract subId using various possible keys for better compatibility
-            val subId = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                intent.getIntExtra(TelephonyManager.EXTRA_SUBSCRIPTION_ID, -1)
-            } else {
-                val id = intent.getIntExtra("subscription", -1)
-                if (id == -1) {
-                    intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1)
-                } else {
-                    id
+            val subId =
+                intent.getIntExtra("subscription", -1).let {
+                    if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
                 }
-            }
 
-            CoroutineScope(SupervisorJob() + ioDispatcher).launch {
-                try {
-                    val data =
-                        Data
-                            .Builder()
-                            .putString("state", state)
-                            .putInt("subId", subId)
-                            .build()
+            try {
+                val data =
+                    Data
+                        .Builder()
+                        .putString("state", state)
+                        .putInt("subId", subId)
+                        .build()
 
-                    val workRequest =
-                        OneTimeWorkRequestBuilder<CallEventWorker>()
-                            .setInputData(data)
-                            .build()
+                val workRequest =
+                    OneTimeWorkRequestBuilder<CallEventWorker>()
+                        .setInputData(data)
+                        .build()
 
-                    val uniqueWorkName =
-                        if (subId != -1) {
-                            "CALL_EVENT_$subId"
-                        } else {
-                            "CALL_EVENT_UNKNOWN"
-                        }
+                val uniqueWorkName =
+                    if (subId != -1) {
+                        "CALL_EVENT_$subId"
+                    } else {
+                        "CALL_EVENT_UNKNOWN"
+                    }
 
-                    WorkManager.getInstance(appContext).enqueueUniqueWork(
-                        uniqueWorkName,
-                        ExistingWorkPolicy.APPEND,
-                        workRequest,
-                    )
-                    AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
-                } catch (e: Exception) {
-                    AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
-                } finally {
-                    pendingResult?.finish()
-                }
+                WorkManager.getInstance(appContext).enqueueUniqueWork(
+                    uniqueWorkName,
+                    ExistingWorkPolicy.APPEND,
+                    workRequest,
+                )
+                AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
+            } catch (e: Exception) {
+                AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
             }
         }
     }
 }
+

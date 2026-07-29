@@ -6,13 +6,14 @@ import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
-import com.example.minutewatcher.core.data.di.ApplicationScope
-import com.example.minutewatcher.core.data.di.IoDispatcher
+import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +26,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class SemanticSearchManager
@@ -34,6 +34,7 @@ class SemanticSearchManager
         @param:ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
         private val appSearchWrapper: AppSearchWrapper,
+        private val timeProvider: TimeProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
@@ -53,8 +54,10 @@ class SemanticSearchManager
             try {
                 session?.close()
                 session = null
+            } catch (e: AppSearchException) {
+                AppLogger.e("AppSearch error closing session during re-init", e)
             } catch (e: Exception) {
-                AppLogger.e("Error closing previous AppSearch session during re-init", e)
+                AppLogger.e("Unexpected error closing session during re-init", e)
             }
             job =
                 scope.launch {
@@ -63,10 +66,17 @@ class SemanticSearchManager
                         withContext(ioDispatcher) {
                             try {
                                 ensureSession()
-                            } catch (t: Throwable) {
-                                AppLogger.e("Fatal error during AppSearch session initialization", t)
-                                _status.value =
-                                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, t.message)
+                            } catch (e: AppSearchException) {
+                                AppLogger.e("AppSearch session initialization failed", e)
+                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                                false
+                            } catch (e: java.io.IOException) {
+                                AppLogger.e("IO error during AppSearch initialization", e)
+                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO Error: ${e.message}")
+                                false
+                            } catch (e: Exception) {
+                                AppLogger.e("Unexpected error during AppSearch session initialization", e)
+                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                                 false
                             }
                         }
@@ -96,9 +106,9 @@ class SemanticSearchManager
                 session = currentSession
                 _status.value = TrackingStatus.Active
                 return true
-            } catch (e: Throwable) {
+            } catch (e: AppSearchException) {
                 currentSession?.close()
-                if (e is AppSearchException && e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
                     AppLogger.w("AppSearch schema mismatch, forcing override")
                     var overrideSession: AppSearchSessionWrapper? = null
                     try {
@@ -108,37 +118,73 @@ class SemanticSearchManager
                         session = overrideSession
                         _status.value = TrackingStatus.Active
                         return true
-                    } catch (ex: Exception) {
+                    } catch (ex: AppSearchException) {
                         overrideSession?.close()
                         AppLogger.e("Failed to force AppSearch schema override", ex)
+                    } catch (ex: Exception) {
+                        overrideSession?.close()
+                        AppLogger.e("Unexpected error forcing AppSearch schema override", ex)
                     }
                 } else {
                     AppLogger.e("AppSearch error during session creation: ${e.message}", e)
                 }
+                _status.value = TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Failed to init AppSearch: ${e.message}",
+                )
+                return false
+            } catch (e: java.io.IOException) {
+                currentSession?.close()
+                AppLogger.e("IO error during AppSearch session creation", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO error: ${e.message}")
+                return false
+            } catch (e: Exception) {
+                currentSession?.close()
+                AppLogger.e("Unexpected error during AppSearch session creation", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                return false
             }
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "Failed to init AppSearch")
-            return false
         }
 
         private fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest {
             val builder = SetSchemaRequest.Builder().setForceOverride(forceOverride)
             try {
                 builder.addDocumentClasses(UsageDocument::class.java)
-            } catch (e: Throwable) {
-                // Generated code might be missing in some environments (e.g. unit tests)
-                AppLogger.w("UsageDocument converter not found, proceeding with empty schema for logic verification")
+            } catch (e: NoClassDefFoundError) {
+                if (isTestEnvironment()) {
+                    AppLogger.w("UsageDocument converter not found in test environment, proceeding with empty schema")
+                } else {
+                    throw e
+                }
+            } catch (e: ClassNotFoundException) {
+                if (isTestEnvironment()) {
+                    AppLogger.w("UsageDocument converter not found in test environment, proceeding with empty schema")
+                } else {
+                    throw e
+                }
             }
             return builder.build()
+        }
+
+        private fun isTestEnvironment(): Boolean {
+            return try {
+                Class.forName("org.junit.Test")
+                true
+            } catch (e: ClassNotFoundException) {
+                false
+            } catch (e: Exception) {
+                false
+            }
         }
 
         private var lastIndexTime = 0L
         private val minIndexInterval = 5 * 60 * 1000L // 5 minutes
 
-        private suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
+        internal suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
             val currentHash = SnapshotHashCalculator.calculate(snapshot)
             if (currentHash == lastSnapshotHash) return
 
-            val currentTime = System.currentTimeMillis()
+            val currentTime = timeProvider.now()
             // If it's a manual update, ignore the interval
             if (!snapshot.isManualUpdate && (currentTime - lastIndexTime < minIndexInterval)) return
 
@@ -166,18 +212,27 @@ class SemanticSearchManager
 
             try {
                 if (documents.isNotEmpty()) {
-                    session?.putDocuments(PutDocumentsRequest.Builder().addDocuments(documents).build())
+                    try {
+                        session?.putDocuments(PutDocumentsRequest.Builder().addDocuments(documents).build())
+                    } catch (e: AppSearchException) {
+                        AppLogger.w("AppSearch error putting documents: ${e.message}")
+                    } catch (e: java.io.IOException) {
+                        AppLogger.w("IO error putting documents to AppSearch: ${e.message}")
+                    }
                 }
 
                 lastIndexTime = currentTime
                 lastSnapshotHash = currentHash
 
-                val activeSimSlots = activeSimSnapshots.map { it.slot }.toSet()
-                val allSimSlots = SimConstants.SUPPORTED_SLOT_INDICES.toSet()
-                val inactiveSimSlots = allSimSlots - activeSimSlots
+                // Remove stale documents (active IDs that are no longer in the snapshot)
+                val activeDocumentIds = documents.map { it.id }.toSet()
+                val allPossibleDocumentIds =
+                    SimConstants.SUPPORTED_SLOT_INDICES.flatMap { slot ->
+                        listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
+                    }.toSet()
+                val idsToRemove = allPossibleDocumentIds - activeDocumentIds
 
-                inactiveSimSlots.forEach { slot ->
-                    val idsToRemove = listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
+                if (idsToRemove.isNotEmpty()) {
                     session?.removeByDocumentId(
                         RemoveByDocumentIdRequest
                             .Builder("usage")
@@ -205,3 +260,5 @@ class SemanticSearchManager
             }
         }
     }
+
+

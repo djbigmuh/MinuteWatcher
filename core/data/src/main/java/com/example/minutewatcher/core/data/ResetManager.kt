@@ -1,8 +1,12 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
-import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,15 +17,15 @@ import javax.inject.Singleton
 class ResetManager
     @Inject
     constructor(
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simUsageRepository: SimUsageRepository,
         private val trafficTracker: TrafficTracker,
-        private val updateCoordinator: UpdateCoordinator,
-    ) {
+        private val dataChangeNotifier: DataChangeNotifier,
+        private val timeProvider: TimeProvider,
+    ) : AutoResetUseCase {
         private val resetMutex = Mutex()
 
-        suspend fun performAutoReset(
-            simRepository: SimRepository,
-            snapshot: GlobalSnapshot,
-        ) {
+        override suspend fun performAutoReset(snapshot: GlobalSnapshot) {
             resetMutex.withLock {
                 try {
                     val resetIdentities = mutableSetOf<String>()
@@ -29,15 +33,15 @@ class ResetManager
                         if (!simSnapshot.isActive) continue
 
                         val slot = simSnapshot.slot
-                        val identity = simRepository.getIdentity(slot)
+                        val identity = simIdentityRepository.getIdentity(slot)
 
-                        val usage = simRepository.getSimUsage(identity).first()
+                        val usage = simUsageRepository.getSimUsage(identity).first()
                         if (usage.autoReset) {
                             val reset =
-                                simRepository.resetSimUsageIfDue(
+                                simUsageRepository.resetSimUsageIfDue(
                                     identity,
                                     usage.autoResetDay,
-                                    System.currentTimeMillis(),
+                                    timeProvider.now(),
                                 )
                             if (reset) {
                                 resetIdentities.add(identity)
@@ -49,7 +53,7 @@ class ResetManager
                         resetIdentities.forEach { identity ->
                             trafficTracker.resetBaseline(identity)
                         }
-                        updateCoordinator.notifyDataChanged()
+                        dataChangeNotifier.notifyDataChanged()
                     }
                 } catch (e: Exception) {
                     AppLogger.e("Error in auto reset: ${e.message}")
@@ -57,3 +61,5 @@ class ResetManager
             }
         }
     }
+
+

@@ -35,7 +35,11 @@ allprojects {
 
     // Workaround for Gradle 10 deprecation in detekt 1.x
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-        reportsDir.set(project.layout.buildDirectory.dir("reports/detekt").map { it.asFile })
+        reportsDir.set(
+            project.layout.buildDirectory
+                .dir("reports/detekt")
+                .map { it.asFile },
+        )
     }
 }
 
@@ -47,5 +51,7 @@ subprojects {
         }
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
+        // Default SDK for Robolectric
+        jvmArgs("-Drobolectric.sdk=36")
     }
 }

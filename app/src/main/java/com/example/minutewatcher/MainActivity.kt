@@ -25,11 +25,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.core.data.WorkScheduler
-import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.R
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.resources.R
+import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
@@ -101,16 +101,8 @@ class MainActivity : AppCompatActivity() {
                             openWidgetSettings()
                         },
                         onAddWidget = { addWidgetToHomeScreen() },
-                        onToggleTheme = {
-                            val currentTheme = viewModel.appTheme.value
-                            val isCurrentlyDark =
-                                if (currentTheme == AppTheme.FOLLOW_SYSTEM) {
-                                    (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                                        android.content.res.Configuration.UI_MODE_NIGHT_YES
-                                } else {
-                                    currentTheme == AppTheme.DARK
-                                }
-                            viewModel.setTheme(if (isCurrentlyDark) AppTheme.LIGHT else AppTheme.DARK)
+                        onThemeChange = { theme ->
+                            viewModel.setTheme(theme)
                         },
                         onLanguageChange = { lang ->
                             val appLocale: LocaleListCompat =
@@ -130,6 +122,9 @@ class MainActivity : AppCompatActivity() {
                         },
                         onOpenAppSettings = {
                             openAppSettings()
+                        },
+                        onGrantNotificationPermission = {
+                            requestNotificationPermission()
                         },
                     )
                 }
@@ -161,15 +156,23 @@ class MainActivity : AppCompatActivity() {
 
     private val phonePermissionLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+            androidx.activity.result.contract.ActivityResultContracts
+                .RequestPermission(),
         ) { granted ->
             handlePhonePermissionResult(granted)
         }
 
     private val notificationPermissionLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
-        ) {
+            androidx.activity.result.contract.ActivityResultContracts
+                .RequestPermission(),
+        ) { granted ->
+            if (!granted) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)
+                    viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+                }
+            }
             permissionStateNotifier.notifyChanged()
         }
 
@@ -182,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             if (!permissionManager.hasUsageStatsPermission()) {
                 viewModel.openUsageAccessDialog()
             } else {
-                checkNotifications()
+                checkNotifications(autoRequest = true)
             }
         } else {
             val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)
@@ -200,7 +203,7 @@ class MainActivity : AppCompatActivity() {
             if (!permissionManager.hasUsageStatsPermission()) {
                 viewModel.openUsageAccessDialog()
             } else {
-                checkNotifications()
+                checkNotifications(autoRequest = true)
             }
         } else {
             // Check if we already requested it and it was denied permanently
@@ -209,11 +212,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkNotifications() {
+    private fun checkNotifications(autoRequest: Boolean) {
         if (!permissionManager.hasNotificationPermission()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            val settings = viewModel.appSettings.value
+            if (autoRequest && !settings.notificationPermissionRequested) {
+                requestNotificationPermission()
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Determine if it was permanently denied based on rationale
+                val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)
+                viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
             }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            viewModel.setNotificationPermissionRequested()
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
@@ -265,8 +280,10 @@ class MainActivity : AppCompatActivity() {
         if (permissionManager.hasPhoneStatePermission()) {
             viewModel.setPhonePermissionPermanentlyDenied(false)
             if (permissionManager.hasUsageStatsPermission()) {
-                checkNotifications()
+                checkNotifications(autoRequest = false)
             }
         }
     }
 }
+
+

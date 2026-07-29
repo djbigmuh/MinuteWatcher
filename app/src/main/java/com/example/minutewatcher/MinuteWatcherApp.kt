@@ -3,7 +3,7 @@ package com.example.minutewatcher
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
@@ -64,3 +64,4 @@ class MinuteWatcherApp :
                 .setWorkerFactory(workerFactory)
                 .build()
 }
+

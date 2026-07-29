@@ -24,10 +24,9 @@ class WorkScheduler
                 OneTimeWorkRequestBuilder<InitialSetupWorker>()
                     .setBackoffCriteria(
                         BackoffPolicy.EXPONENTIAL,
-                        30,
+                        BACKOFF_SECONDS,
                         TimeUnit.SECONDS,
-                    )
-                    .build()
+                    ).build()
             WorkManager.getInstance(context).enqueueUniqueWork(
                 INITIAL_SETUP_WORK_NAME,
                 ExistingWorkPolicy.REPLACE,
@@ -37,7 +36,8 @@ class WorkScheduler
 
         fun schedulePeriodicUsageCheck() {
             val constraints =
-                Constraints.Builder()
+                Constraints
+                    .Builder()
                     .setRequiresBatteryNotLow(true)
                     .build()
 
@@ -46,10 +46,9 @@ class WorkScheduler
                     .setConstraints(constraints)
                     .setBackoffCriteria(
                         BackoffPolicy.EXPONENTIAL,
-                        30,
+                        BACKOFF_SECONDS,
                         TimeUnit.SECONDS,
-                    )
-                    .build()
+                    ).build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 USAGE_CHECK_WORK_NAME,
@@ -61,5 +60,6 @@ class WorkScheduler
         companion object {
             const val INITIAL_SETUP_WORK_NAME = "INITIAL_SETUP"
             const val USAGE_CHECK_WORK_NAME = "UsageCheckWork"
+            private const val BACKOFF_SECONDS = 30L
         }
     }

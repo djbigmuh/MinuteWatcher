@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
 @Composable
@@ -26,6 +26,7 @@ fun TrackingBanners(
     onOpenAppSettings: () -> Unit,
     onRetryAppSearch: () -> Unit,
     onRetryTraffic: () -> Unit,
+    onGrantNotificationPermission: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         if (state.showPhonePermissionBanner) {
@@ -85,6 +86,36 @@ fun TrackingBanners(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (state.showNotificationPermissionBanner) {
+            val text =
+                if (state.isNotificationPermissionPermanentlyDenied) {
+                    stringResource(id = R.string.notification_permission_permanent_denial)
+                } else {
+                    stringResource(id = R.string.tracking_banner_notification_permission)
+                }
+
+            val actionText =
+                if (state.isNotificationPermissionPermanentlyDenied) {
+                    stringResource(id = R.string.action_app_settings)
+                } else {
+                    stringResource(id = R.string.action_grant)
+                }
+
+            val onAction =
+                if (state.isNotificationPermissionPermanentlyDenied) {
+                    onOpenAppSettings
+                } else {
+                    onGrantNotificationPermission
+                }
+
+            TrackingBanner(
+                text = text,
+                actionText = actionText,
+                onAction = onAction,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
     }
 }
 
@@ -123,3 +154,4 @@ private fun TrackingBanner(
         }
     }
 }
+

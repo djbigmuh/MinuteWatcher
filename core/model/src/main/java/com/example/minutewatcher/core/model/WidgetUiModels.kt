@@ -30,6 +30,8 @@ data class SimUiState(
     val fontMultiplier: Float,
     val textColor: Int,
     val secondaryTextColor: Int,
+    val hasMinutesData: Boolean = true,
+    val hasTrafficData: Boolean = true,
     // Detailed fields for SIX_LINES mode
     val minutesUsedFullText: String = "",
     val minutesLimitFullText: String = "",

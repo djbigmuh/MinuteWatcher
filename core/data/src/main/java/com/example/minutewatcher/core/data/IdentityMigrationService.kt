@@ -11,7 +11,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.SimDataStore
-import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.common.util.AppLogger
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,24 +24,22 @@ class IdentityMigrationService
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
         suspend fun hasLegacyData(): Boolean {
-            val appHasLegacy =
-                appDataStore.data
-                    .first()
-                    .asMap()
-                    .keys
-                    .any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
-            val simHasLegacy =
-                simDataStore.data
-                    .first()
-                    .asMap()
-                    .keys
-                    .any { it.name.endsWith("_sim_0") || it.name.endsWith("_sim_1") }
+            val appHasLegacy = appDataStore.data.first().asMap().keys.any { it.isLegacyKey() }
+            val simHasLegacy = simDataStore.data.first().asMap().keys.any { it.isLegacyKey() }
             return appHasLegacy || simHasLegacy
         }
 
-        suspend fun migrateLegacyData(
-            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
-        ) {
+        private fun Preferences.Key<*>.isLegacyKey(): Boolean {
+            val name = this.name
+            if (name.startsWith("conflict_")) return false
+            return name.endsWith("_sim_0") ||
+                name.endsWith("_sim_1") ||
+                name.contains("_sub_") ||
+                name.contains("_icc_") ||
+                name.startsWith("subscription_id_icc_")
+        }
+
+        suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {
             val slot = activeIdentity.slotIndex ?: return
             val identity = activeIdentity.stableId
 
@@ -52,6 +50,22 @@ class IdentityMigrationService
                 if (legacySuffix == newSuffix) continue
                 migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
                 migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
+            }
+
+            // Cleanup mapping keys that were used for this identity
+            if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
+                val subId = activeIdentity.subscriptionId
+                if (subId != null) {
+                    simDataStore.edit { prefs ->
+                        val keysToRemove =
+                            prefs
+                                .asMap()
+                                .keys
+                                .filter { it.name.startsWith("subscription_id_icc_") }
+                                .filter { prefs[it] == subId }
+                        keysToRemove.forEach { prefs.remove(it) }
+                    }
+                }
             }
         }
 
@@ -75,7 +89,10 @@ class IdentityMigrationService
                 val subId = activeIdentity.subscriptionId
                 if (subId != null) {
                     val iccIdentities =
-                        simDataStore.data.first().asMap().keys
+                        simDataStore.data
+                            .first()
+                            .asMap()
+                            .keys
                             .filter { it.name.startsWith("subscription_id_icc_") }
                             .filter { simDataStore.data.first()[it] == subId }
                             .map { it.name.substringAfter("subscription_id_") }
@@ -121,19 +138,21 @@ class IdentityMigrationService
             storeName: String,
         ): Boolean {
             val value = this[oldKey] ?: return false
+            val conflictKeyName = "conflict_${oldKey.name}"
 
             return when (value) {
-                is Int -> migrateIfAbsent(intPreferencesKey(newKeyName), value, storeName)
-                is Float -> migrateIfAbsent(floatPreferencesKey(newKeyName), value, storeName)
-                is Long -> migrateIfAbsent(longPreferencesKey(newKeyName), value, storeName)
-                is Boolean -> migrateIfAbsent(booleanPreferencesKey(newKeyName), value, storeName)
-                is String -> migrateIfAbsent(stringPreferencesKey(newKeyName), value, storeName)
+                is Int -> migrateOrBackup(intPreferencesKey(newKeyName), intPreferencesKey(conflictKeyName), value, storeName)
+                is Float -> migrateOrBackup(floatPreferencesKey(newKeyName), floatPreferencesKey(conflictKeyName), value, storeName)
+                is Long -> migrateOrBackup(longPreferencesKey(newKeyName), longPreferencesKey(conflictKeyName), value, storeName)
+                is Boolean -> migrateOrBackup(booleanPreferencesKey(newKeyName), booleanPreferencesKey(conflictKeyName), value, storeName)
+                is String -> migrateOrBackup(stringPreferencesKey(newKeyName), stringPreferencesKey(conflictKeyName), value, storeName)
                 else -> false
             }
         }
 
-        private fun <T> MutablePreferences.migrateIfAbsent(
+        private fun <T> MutablePreferences.migrateOrBackup(
             newKey: Preferences.Key<T>,
+            conflictKey: Preferences.Key<T>,
             value: T,
             storeName: String,
         ): Boolean {
@@ -141,8 +160,10 @@ class IdentityMigrationService
                 this[newKey] = value
                 return true
             } else {
-                AppLogger.w("Migration conflict in $storeName: ${newKey.name} already exists. Legacy value skipped.")
+                this[conflictKey] = value
+                AppLogger.w("Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}")
                 return false
             }
-        }
     }
+}
+

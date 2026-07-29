@@ -37,7 +37,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -49,16 +48,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
-import com.example.minutewatcher.core.model.util.FormatUtils
+import com.example.minutewatcher.core.android.util.FormatUtils
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
 
 @Composable
-fun getStatusColor(status: UsageStatus): Color =
-    Color(UsageColors.get(status, isSystemInDarkTheme()))
+fun getStatusColor(status: UsageStatus): Color = Color(UsageColors.get(status, isSystemInDarkTheme()))
 
 @Composable
 fun SimCardItem(
@@ -77,7 +75,11 @@ fun SimCardItem(
     val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
     val trafficInfoDesc = stringResource(id = R.string.traffic_info_content_desc)
 
-    val minutesStatus = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())
+    val minutesStatus =
+        ColorProvider.getUsageStatus(
+            model.minutesRemaining.toFloat(),
+            model.effectiveMinutesLimit.toFloat(),
+        )
     val trafficStatus = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb)
 
     Card(
@@ -341,3 +343,5 @@ fun EditableValueBox(
         )
     }
 }
+
+

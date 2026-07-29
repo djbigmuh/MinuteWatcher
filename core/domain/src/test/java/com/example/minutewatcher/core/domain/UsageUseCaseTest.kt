@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.domain
 
 import android.content.Context
 import android.telephony.SubscriptionInfo
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.android.util.PermissionManager
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -70,3 +70,4 @@ class UsageUseCaseTest {
             verify(simRepository).setTrafficAdjustment(identity, -3f)
         }
 }
+

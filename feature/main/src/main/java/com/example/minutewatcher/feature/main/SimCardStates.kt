@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 
 data class TrackingBannerState(
     val showPhonePermissionBanner: Boolean = false,
@@ -20,6 +20,8 @@ data class TrackingBannerState(
     val showUsageAccessBanner: Boolean = false,
     val showTrafficErrorBanner: Boolean = false,
     val showAppSearchErrorBanner: Boolean = false,
+    val showNotificationPermissionBanner: Boolean = false,
+    val isNotificationPermissionPermanentlyDenied: Boolean = false,
 )
 
 @Composable
@@ -58,3 +60,4 @@ fun ErrorState(message: String) {
         Text(text = message, style = MaterialTheme.typography.bodyMedium)
     }
 }
+

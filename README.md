@@ -49,6 +49,10 @@ The app follows modern Android development best practices:
 - **Data Storage**: DataStore (for usage data and UI settings).
 - **Static Analysis**: Detekt and Ktlint enforced.
 
+## Contributing
+
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our testing policy, architectural guidelines, and code quality standards.
+
 ## License
 
 MIT License

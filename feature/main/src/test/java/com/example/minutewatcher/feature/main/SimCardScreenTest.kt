@@ -5,7 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,7 +13,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 class SimCardScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -37,3 +37,5 @@ class SimCardScreenTest {
         composeTestRule.onNodeWithText(errorMessage).assertIsDisplayed()
     }
 }
+
+

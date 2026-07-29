@@ -1,16 +1,18 @@
 package com.example.minutewatcher.feature.main
 
-import android.content.Context
 import androidx.lifecycle.SavedStateHandle
-import com.example.minutewatcher.core.data.ResetManager
-import com.example.minutewatcher.core.data.UpdateCoordinator
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionRepository
-import com.example.minutewatcher.core.domain.SettingsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,17 +33,18 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
-    private val context: Context = mock()
-    private val simRepository: SimRepository = mock()
-    private val settingsRepository: SettingsRepository = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simUsageRepository: SimUsageRepository = mock()
+    private val simLimitsRepository: SimLimitsRepository = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
-    private val resetManager: ResetManager = mock()
+    private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
-    private val updateCoordinator: UpdateCoordinator = mock()
+    private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val savedStateHandle = SavedStateHandle()
 
@@ -62,7 +65,7 @@ class MainViewModelTest {
         whenever(usageStateRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
-        whenever(settingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(mock()))
     }
 
@@ -105,18 +108,70 @@ class MainViewModelTest {
             assertTrue(bannerState.isPhonePermissionPermanentlyDenied)
         }
 
+    @Test
+    fun `trackingBannerState shows notification banner when alerts enabled but not granted`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = true, notifyLowTraffic = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = false
+
+            val viewModel = createViewModel()
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.showNotificationPermissionBanner)
+        }
+
+    @Test
+    fun `trackingBannerState hides notification banner when granted even if alerts enabled`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = true
+
+            val viewModel = createViewModel()
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertFalse(bannerState.showNotificationPermissionBanner)
+        }
+
+    @Test
+    fun `trackingBannerState hides notification banner when alerts disabled`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = false, notifyLowTraffic = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = false
+
+            val viewModel = createViewModel()
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertFalse(bannerState.showNotificationPermissionBanner)
+        }
+
+    @Test
+    fun `setTheme calls settingsUseCase`() =
+        runTest {
+            val viewModel = createViewModel()
+            val theme = AppTheme.DARK
+
+            viewModel.setTheme(theme)
+
+            org.mockito.kotlin.verify(settingsUseCase).setTheme(theme)
+        }
+
     private fun createViewModel() =
         MainViewModel(
-            context,
-            simRepository,
-            settingsRepository,
+            simIdentityRepository,
+            simUsageRepository,
+            simLimitsRepository,
+            appSettingsRepository,
             usageStateRepository,
-            resetManager,
+            autoResetUseCase,
             usageUseCase,
             settingsUseCase,
             permissionRepository,
-            updateCoordinator,
+            dataChangeNotifier,
             savedStateHandle,
             testDispatcher,
         )
 }
+

@@ -2,9 +2,9 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.glance.appwidget.updateAll
-import com.example.minutewatcher.core.data.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.WidgetUpdater
-import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -23,10 +23,14 @@ class WidgetUpdaterImpl
                 try {
                     MinutesGlanceWidget().updateAll(context)
                 } catch (e: IllegalArgumentException) {
-                    AppLogger.e("Widget update failed: illegal argument (possible PendingIntent issue)", e)
+                    AppLogger.e("Widget update failed: invalid arguments (possible PendingIntent issue)", e)
+                } catch (e: java.util.concurrent.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
-                    AppLogger.e("Error updating widgets", e)
+                    AppLogger.e("Unexpected error updating widgets", e)
                 }
             }
         }
     }
+
+

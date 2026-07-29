@@ -5,7 +5,8 @@ import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -15,7 +16,8 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
-import com.example.minutewatcher.core.model.util.SimCardMapper
+import com.example.minutewatcher.core.android.util.SimCardMapper
+import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,12 +43,14 @@ class UsageStateRepositoryImpl
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val simRepository: SimRepository,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simUsageRepository: SimUsageRepository,
         private val capabilities: SemanticCapabilities,
         private val version: SemanticVersion,
         private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
         private val dataRefreshNotifier: DataRefreshNotifier,
-        @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
+        @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
+        private val timeProvider: TimeProvider,
     ) : UsageStateRepository {
         override fun recoverTracking(key: String) {
             statusProviders.find { it.key == key }?.recover()
@@ -64,14 +68,14 @@ class UsageStateRepositoryImpl
 
         override fun observeSimUsages(): Flow<List<SimUsage>> =
             combine(
-                simRepository.observeIdentities(),
+                simIdentityRepository.observeIdentities(),
                 dataRefreshNotifier.refreshFlow,
             ) { identities, _ -> identities }
                 .flatMapLatest { identities ->
                     if (identities.isEmpty()) {
                         flowOf(emptyList())
                     } else {
-                        combine(identities.map { simRepository.getSimUsage(it) }) { it.toList() }
+                        combine(identities.map { simUsageRepository.getSimUsage(it) }) { it.toList() }
                     }
                 }.distinctUntilChanged()
 
@@ -87,6 +91,7 @@ class UsageStateRepositoryImpl
             dataRefreshNotifier.refreshFlow
                 .flatMapLatest { event ->
                     observeSimUsages().map { usages ->
+                        val timestamp = timeProvider.now()
                         val simSnapshots =
                             usages.map { usage ->
                                 val slot = usage.slotIndex
@@ -109,8 +114,8 @@ class UsageStateRepositoryImpl
 
                                 val entities =
                                     mutableMapOf(
-                                        PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay),
-                                        PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay),
+                                        PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay, timestamp),
+                                        PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay, timestamp),
                                     )
 
                                 SimSnapshot(
@@ -123,7 +128,7 @@ class UsageStateRepositoryImpl
 
                         GlobalSnapshot(
                             version = version.getVersion(),
-                            timestamp = System.currentTimeMillis(),
+                            timestamp = timestamp,
                             simSnapshots = simSnapshots,
                             capabilities = capabilities.getCapabilities(),
                             isManualUpdate = event.isManual,
@@ -148,3 +153,5 @@ class UsageStateRepositoryImpl
                 capabilities = capabilities.getCapabilities(),
             )
     }
+
+

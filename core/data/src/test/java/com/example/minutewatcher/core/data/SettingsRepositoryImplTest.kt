@@ -4,11 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -17,26 +15,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsRepositoryImplTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
     private lateinit var dataStore: DataStore<Preferences>
-    private lateinit var seedRepository: SimIdentitySeedRepository
 
     @Before
     fun setup() {
-        seedRepository = mock()
-        whenever(seedRepository.getSeed()).thenReturn(flowOf("test_seed"))
-
         dataStore =
             PreferenceDataStoreFactory.create(
                 produceFile = { tmpFolder.newFile("test_settings.preferences_pb") },
@@ -47,7 +38,7 @@ class SettingsRepositoryImplTest {
     fun testClearAllCallSessions_RemovesExpectedKeys() =
         runTest {
             // Use backgroundScope for the repository so stateIn doesn't block runTest completion
-            val repository = SettingsRepositoryImpl(seedRepository, dataStore, backgroundScope)
+            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
 
             // 1. Setup call sessions for different subIds
             dataStore.edit { prefs ->
@@ -80,7 +71,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testGetActiveCallSubIds() =
         runTest {
-            val repository = SettingsRepositoryImpl(seedRepository, dataStore, backgroundScope)
+            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
 
             dataStore.edit { prefs ->
                 prefs[SettingsKeys.callStartTimeKey(1)] = 1000L
@@ -95,7 +86,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_AtomicUpdate() =
         runTest {
-            val repository = SettingsRepositoryImpl(seedRepository, dataStore, backgroundScope)
+            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
 
             repository.updateAppSettings { current ->
                 current.copy(
@@ -107,5 +98,45 @@ class SettingsRepositoryImplTest {
             val prefs = dataStore.data.first()
             assertEquals(AppTheme.LIGHT.value, prefs[SettingsKeys.APP_THEME])
             assertEquals(75, prefs[SettingsKeys.WIDGET_TRANSPARENCY])
+        }
+
+    @Test
+    fun testUpdateAppSettings_PreservesOnboardingCompleted() =
+        runTest {
+            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+
+            // 1. Set onboardingCompleted to true
+            dataStore.edit { it[SettingsKeys.ONBOARDING_COMPLETED] = true }
+
+            // 2. Update unrelated setting
+            repository.updateAppSettings { current ->
+                current.copy(widgetTransparency = 10)
+            }
+
+            // 3. Verify onboardingCompleted is still true
+            val prefs = dataStore.data.first()
+            assertEquals(true, prefs[SettingsKeys.ONBOARDING_COMPLETED])
+            assertEquals(10, prefs[SettingsKeys.WIDGET_TRANSPARENCY])
+        }
+
+    @Test
+    fun testUpdateAppSettings_SavesOnboardingCompleted() =
+        runTest {
+            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+
+            // 1. Initial state: false
+            val initialSettings = repository.getAppSettings().first()
+            assertEquals(false, initialSettings.onboardingCompleted)
+
+            // 2. Set to true
+            repository.updateAppSettings { it.copy(onboardingCompleted = true) }
+
+            // 3. Verify in DataStore
+            val prefs = dataStore.data.first()
+            assertEquals(true, prefs[SettingsKeys.ONBOARDING_COMPLETED])
+
+            // 4. Verify in Settings flow
+            val finalSettings = repository.getAppSettings().first()
+            assertEquals(true, finalSettings.onboardingCompleted)
         }
 }

@@ -6,7 +6,7 @@ import androidx.core.graphics.ColorUtils
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimLayoutRow
 import com.example.minutewatcher.core.model.SimLayoutSpec
@@ -16,8 +16,8 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.FontScaleProvider
-import com.example.minutewatcher.core.model.util.FormatUtils
-import com.example.minutewatcher.core.model.util.SimUtils
+import com.example.minutewatcher.core.android.util.FormatUtils
+import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
 
@@ -77,29 +77,8 @@ object WidgetUiMapper {
         val minutesEntity = sim.entities[PackageType.MINUTES]
         val trafficEntity = sim.entities[PackageType.DATA]
 
-        val minutesRemaining = minutesEntity?.remaining ?: 0L
-        val minutesLimit = minutesEntity?.limit ?: 0L
-        val minutesUsed = minutesEntity?.used ?: 0L
-
-        val trafficLimitBytes = trafficEntity?.limit ?: 0L
-        val trafficRemainingBytes = trafficEntity?.remaining ?: 0L
-        val trafficUsedBytes = trafficEntity?.used ?: 0L
-        val trafficLimitGb = trafficLimitBytes.toFloat() / (1024 * 1024 * 1024)
-        val trafficRemainingGb =
-            if (trafficLimitBytes > 0) {
-                maxOf(0f, trafficRemainingBytes.toFloat() / (1024 * 1024 * 1024))
-            } else {
-                -1f
-            }
-        val trafficUsedGb = trafficUsedBytes.toFloat() / (1024 * 1024 * 1024)
-
-        val minutesStatus = ColorProvider.getUsageStatus(minutesRemaining.toFloat(), minutesLimit.toFloat())
-        val trafficStatus = ColorProvider.getUsageStatus(trafficRemainingGb, trafficLimitGb)
-
-        val usedLabel = context.getString(R.string.used_text)
-        val limitLabel = context.getString(R.string.limit_text)
-        val minutesAbbr = context.getString(R.string.minutes_abbr)
-        val gbAbbr = context.getString(R.string.gb_abbr)
+        val minData = mapMinutesData(context, minutesEntity, simConfig, luminance)
+        val trafData = mapTrafficData(context, trafficEntity, simConfig, luminance)
 
         return SimUiState(
             slot = sim.slot,
@@ -108,30 +87,86 @@ object WidgetUiMapper {
             showSim = simConfig?.showSim ?: true,
             showIcon = simConfig?.showIcon ?: true,
             showName = simConfig?.showName ?: true,
-            showMinutes = simConfig?.showMinutes ?: true,
-            minutesText =
-                if (minutesLimit > 0 ||
-                    (minutesEntity?.sourceType == DataSourceType.MANUAL)
-                ) {
-                    minutesRemaining.toString()
-                } else {
-                    "-"
-                },
-            minutesColor = getStatusColorInt(minutesStatus, luminance),
-            showMinutesLimit = (simConfig?.showMinutesLimit ?: false) && minutesLimit > 0,
-            minutesLimitText = context.getString(R.string.fraction_format, minutesLimit.toString()),
-            showTraffic = simConfig?.showTraffic ?: true,
-            trafficText = if (trafficLimitGb > 0) FormatUtils.formatTrafficGb(trafficRemainingGb) else "-",
-            trafficColor = getStatusColorInt(trafficStatus, luminance),
-            showTrafficLimit = (simConfig?.showTrafficLimit ?: false) && trafficLimitGb > 0,
-            trafficLimitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(trafficLimitGb)),
+            showMinutes = minData.show,
+            minutesText = minData.text,
+            minutesColor = minData.color,
+            showMinutesLimit = minData.showLimit,
+            minutesLimitText = minData.limitText,
+            showTraffic = trafData.show,
+            trafficText = trafData.text,
+            trafficColor = trafData.color,
+            showTrafficLimit = trafData.showLimit,
+            trafficLimitText = trafData.limitText,
             fontMultiplier = fontMultiplier,
             textColor = textColor,
             secondaryTextColor = secondaryTextColor,
-            minutesUsedFullText = "$usedLabel: $minutesUsed$minutesAbbr",
-            minutesLimitFullText = "$limitLabel: $minutesLimit$minutesAbbr",
-            trafficUsedFullText = "$usedLabel: ${FormatUtils.formatTrafficGb(trafficUsedGb)}$gbAbbr",
-            trafficLimitFullText = "$limitLabel: ${FormatUtils.formatTrafficGb(trafficLimitGb)}$gbAbbr",
+            hasMinutesData = minData.hasData,
+            hasTrafficData = trafData.hasData,
+            minutesUsedFullText = minData.usedFull,
+            minutesLimitFullText = minData.limitFull,
+            trafficUsedFullText = trafData.usedFull,
+            trafficLimitFullText = trafData.limitFull,
+        )
+    }
+
+    private data class PackageUiData(
+        val show: Boolean,
+        val text: String,
+        val color: Int,
+        val showLimit: Boolean,
+        val limitText: String,
+        val hasData: Boolean,
+        val usedFull: String,
+        val limitFull: String,
+    )
+
+    private fun mapMinutesData(
+        context: Context,
+        entity: com.example.minutewatcher.core.model.SemanticEntity?,
+        config: com.example.minutewatcher.core.model.SimSettingsState?,
+        luminance: Double,
+    ): PackageUiData {
+        val limit = entity?.limit ?: 0L
+        val used = entity?.used ?: 0L
+        val rem = entity?.remaining ?: 0L
+        val hasData = limit > 0 || used > 0
+        val status = ColorProvider.getUsageStatus(rem.toFloat(), limit.toFloat())
+        
+        return PackageUiData(
+            show = (config?.showMinutes ?: true) && entity != null && hasData,
+            text = if (entity != null && (limit > 0 || entity.sourceType == DataSourceType.MANUAL)) rem.toString() else "-",
+            color = getStatusColorInt(status, luminance),
+            showLimit = (config?.showMinutesLimit ?: false) && limit > 0,
+            limitText = context.getString(R.string.fraction_format, limit.toString()),
+            hasData = hasData,
+            usedFull = "${context.getString(R.string.used_text)}: $used${context.getString(R.string.minutes_abbr)}",
+            limitFull = "${context.getString(R.string.limit_text)}: $limit${context.getString(R.string.minutes_abbr)}",
+        )
+    }
+
+    private fun mapTrafficData(
+        context: Context,
+        entity: com.example.minutewatcher.core.model.SemanticEntity?,
+        config: com.example.minutewatcher.core.model.SimSettingsState?,
+        luminance: Double,
+    ): PackageUiData {
+        val limitMb = entity?.limit ?: 0L
+        val usedMb = (entity?.used ?: 0L).toFloat() / (1024 * 1024) // Simplified for usedMb
+        val limitGb = limitMb.toFloat() / (1024 * 1024 * 1024)
+        val remGb = if (limitMb > 0) maxOf(0f, (entity?.remaining ?: 0L).toFloat() / (1024 * 1024 * 1024)) else -1f
+        val usedGb = (entity?.used ?: 0L).toFloat() / (1024 * 1024 * 1024)
+        val hasData = limitGb > 0 || usedGb > 0
+        val status = ColorProvider.getUsageStatus(remGb, limitGb)
+
+        return PackageUiData(
+            show = (config?.showTraffic ?: true) && entity != null && hasData,
+            text = if (entity != null && limitGb > 0) FormatUtils.formatTrafficGb(remGb) else "-",
+            color = getStatusColorInt(status, luminance),
+            showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0,
+            limitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(limitGb)),
+            hasData = hasData,
+            usedFull = "${context.getString(R.string.used_text)}: ${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",
+            limitFull = "${context.getString(R.string.limit_text)}: ${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}",
         )
     }
 
@@ -230,85 +265,24 @@ object WidgetUiMapper {
         val rows = mutableListOf<SimLayoutRow>()
 
         if (sim.showName) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Text(
-                            sim.operatorName,
-                            sim.textColor,
-                            FONT_MULTI_NAME * sim.fontMultiplier,
-                        ),
-                    ),
-                ),
-            )
+            rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.operatorName, sim.textColor, FONT_MULTI_NAME * sim.fontMultiplier))))
         }
 
         if (sim.showIcon) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Icon(
-                            sim.operatorIconRes,
-                            (SIZE_ICON_MULTI * sim.fontMultiplier).toInt(),
-                        ),
-                    ),
-                ),
-            )
+            rows.add(SimLayoutRow(listOf(SimLayoutComponent.Icon(sim.operatorIconRes, (SIZE_ICON_MULTI * sim.fontMultiplier).toInt()))))
         }
 
         if (sim.showMinutes) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Text(
-                            sim.minutesUsedFullText,
-                            sim.textColor,
-                            FONT_FULL * sim.fontMultiplier,
-                        ),
-                    ),
-                ),
-            )
-
+            rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.minutesUsedFullText, sim.textColor, FONT_FULL * sim.fontMultiplier))))
             if (sim.showMinutesLimit) {
-                rows.add(
-                    SimLayoutRow(
-                        listOf(
-                            SimLayoutComponent.Text(
-                                sim.minutesLimitFullText,
-                                sim.secondaryTextColor,
-                                FONT_FULL * sim.fontMultiplier,
-                            ),
-                        ),
-                    ),
-                )
+                rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.minutesLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))))
             }
         }
 
         if (sim.showTraffic) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Text(
-                            sim.trafficUsedFullText,
-                            sim.textColor,
-                            FONT_FULL * sim.fontMultiplier,
-                        ),
-                    ),
-                ),
-            )
-
+            rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.trafficUsedFullText, sim.textColor, FONT_FULL * sim.fontMultiplier))))
             if (sim.showTrafficLimit) {
-                rows.add(
-                    SimLayoutRow(
-                        listOf(
-                            SimLayoutComponent.Text(
-                                sim.trafficLimitFullText,
-                                sim.secondaryTextColor,
-                                FONT_FULL * sim.fontMultiplier,
-                            ),
-                        ),
-                    ),
-                )
+                rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.trafficLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))))
             }
         }
 

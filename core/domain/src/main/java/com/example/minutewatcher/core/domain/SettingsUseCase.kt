@@ -10,22 +10,22 @@ import javax.inject.Singleton
 class SettingsUseCase
     @Inject
     constructor(
-        private val settingsRepository: SettingsRepository,
-        private val simRepository: SimRepository,
+        private val appSettingsRepository: AppSettingsRepository,
+        private val simIdentityRepository: SimIdentityRepository,
     ) {
-        val appTheme: Flow<AppTheme> = settingsRepository.getAppTheme()
-        val appLanguage: Flow<String?> = settingsRepository.getAppLanguage()
+        val appTheme: Flow<AppTheme> = appSettingsRepository.getAppTheme()
+        val appLanguage: Flow<String?> = appSettingsRepository.getAppLanguage()
 
         suspend fun setTheme(theme: AppTheme) {
-            settingsRepository.setAppTheme(theme)
+            appSettingsRepository.setAppTheme(theme)
         }
 
         suspend fun setLanguage(language: String?) {
-            settingsRepository.setAppLanguage(language)
+            appSettingsRepository.setAppLanguage(language)
         }
 
         suspend fun getSimOperator(slot: Int): String {
-            val identity = simRepository.getIdentity(slot)
-            return simRepository.getSimOperator(identity).first()
+            val identity = simIdentityRepository.getIdentity(slot)
+            return simIdentityRepository.getSimOperator(identity).first()
         }
     }

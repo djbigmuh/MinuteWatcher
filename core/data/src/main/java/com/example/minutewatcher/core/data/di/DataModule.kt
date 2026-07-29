@@ -11,14 +11,21 @@ import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
 import com.example.minutewatcher.core.data.PermissionRepositoryImpl
 import com.example.minutewatcher.core.data.PermissionStateNotifierImpl
+import com.example.minutewatcher.core.data.ResetManager
 import com.example.minutewatcher.core.data.SettingsRepositoryImpl
 import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
 import com.example.minutewatcher.core.data.SimRepositoryImpl
 import com.example.minutewatcher.core.data.TrafficTracker
+import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
-import com.example.minutewatcher.core.domain.DataRefreshNotifier
+import com.example.minutewatcher.core.data.WidgetSettingsRepository
+import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.DefaultDispatcher
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -33,6 +40,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
 import dagger.Binds
 import dagger.Module
@@ -68,7 +76,7 @@ private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore
  */
 @Module
 @InstallIn(SingletonComponent::class)
-@Suppress("unused")
+@Suppress("unused", "TooManyFunctions")
 abstract class DataModule {
     @Binds
     @Singleton
@@ -133,6 +141,18 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindUsageStateRepository(impl: UsageStateRepositoryImpl): UsageStateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAutoResetUseCase(impl: ResetManager): AutoResetUseCase
+
+    @Binds
+    @Singleton
+    abstract fun bindDataChangeNotifier(impl: UpdateCoordinator): DataChangeNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindWidgetSettingsLoader(impl: WidgetSettingsRepository): WidgetSettingsLoader
 
     @Binds
     @IntoSet

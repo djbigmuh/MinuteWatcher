@@ -2,24 +2,24 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:SimCardScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun SimCardScreen( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onToggleTheme: () -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onOpenUsageSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, )</ID>
-    <ID>CyclomaticComplexMethod:SimLimitComposeDialog.kt$@Suppress("ktlint:standard:function-naming") @Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
-    <ID>FunctionNaming:AdjustmentComposeDialog.kt$@Suppress("ktlint:standard:function-naming") @Composable fun AdjustmentComposeDialog( currentValue: Float, isMinutes: Boolean, onDismiss: () -&gt; Unit, onConfirm: (Float) -&gt; Unit, )</ID>
-    <ID>FunctionNaming:DayPickerComposeDialog.kt$@Suppress("ktlint:standard:function-naming") @Composable fun DayPickerComposeDialog( initialDay: Int, onDismiss: () -&gt; Unit, onDaySelected: (Int) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:SimCardScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SimCardScreen( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onToggleTheme: () -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onOpenUsageSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, )</ID>
+    <ID>CyclomaticComplexMethod:SimLimitComposeDialog.kt$@Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:AdjustmentComposeDialog.kt$@Composable fun AdjustmentComposeDialog( currentValue: Float, isMinutes: Boolean, onDismiss: () -&gt; Unit, onConfirm: (Float) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:DayPickerComposeDialog.kt$@Composable fun DayPickerComposeDialog( initialDay: Int, onDismiss: () -&gt; Unit, onDaySelected: (Int) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:SimCardItem.kt$@Composable fun SimCardItem( model: SimCardUiModel, onSetLimits: () -&gt; Unit = {}, onResetCounters: () -&gt; Unit = {}, onToggleAutoReset: (Boolean) -&gt; Unit = {}, onEditAutoResetDay: () -&gt; Unit = {}, onAdjustMinutes: () -&gt; Unit = {}, onAdjustTraffic: () -&gt; Unit = {}, onShowTrafficInfo: () -&gt; Unit = {}, )</ID>
     <ID>FunctionNaming:SimCardItem.kt$@Suppress("ktlint:standard:function-naming") @Composable fun EditableValueBox( value: String, color: Color, onClick: () -&gt; Unit, horizontalPadding: Int = 12, contentDescription: String? = null, )</ID>
-    <ID>FunctionNaming:SimCardItem.kt$@Suppress("ktlint:standard:function-naming") @Composable fun SimCardItem( model: SimCardUiModel, onSetLimits: () -&gt; Unit = {}, onResetCounters: () -&gt; Unit = {}, onToggleAutoReset: (Boolean) -&gt; Unit = {}, onEditAutoResetDay: () -&gt; Unit = {}, onAdjustMinutes: () -&gt; Unit = {}, onAdjustTraffic: () -&gt; Unit = {}, onShowTrafficInfo: () -&gt; Unit = {}, )</ID>
-    <ID>FunctionNaming:SimCardScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun SimCardScreen( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onToggleTheme: () -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onOpenUsageSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, )</ID>
-    <ID>FunctionNaming:SimCardStates.kt$@Suppress("ktlint:standard:function-naming") @Composable fun EmptyState()</ID>
-    <ID>FunctionNaming:SimCardStates.kt$@Suppress("ktlint:standard:function-naming") @Composable fun ErrorState(message: String)</ID>
-    <ID>FunctionNaming:SimLimitComposeDialog.kt$@Suppress("ktlint:standard:function-naming") @Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
-    <ID>FunctionNaming:Theme.kt$@Suppress("ktlint:standard:function-naming") @Composable fun MinuteWatcherTheme( darkTheme: Boolean = isSystemInDarkTheme(), // Dynamic color is available on Android 12+ dynamicColor: Boolean = true, content: @Composable () -&gt; Unit, )</ID>
-    <ID>FunctionNaming:TrackingBanners.kt$@Suppress("ktlint:standard:function-naming") @Composable fun TrackingBanners( state: TrackingBannerState, onGrantPhonePermission: () -&gt; Unit, onOpenUsageSettings: () -&gt; Unit, onOpenAppSettings: () -&gt; Unit, )</ID>
-    <ID>FunctionNaming:TrackingBanners.kt$@Suppress("ktlint:standard:function-naming") @Composable private fun TrackingBanner( text: String, actionText: String?, onAction: () -&gt; Unit, containerColor: Color, contentColor: Color, )</ID>
-    <ID>LongMethod:DayPickerComposeDialog.kt$@Suppress("ktlint:standard:function-naming") @Composable fun DayPickerComposeDialog( initialDay: Int, onDismiss: () -&gt; Unit, onDaySelected: (Int) -&gt; Unit, )</ID>
-    <ID>LongMethod:SimCardItem.kt$@Suppress("ktlint:standard:function-naming") @Composable fun SimCardItem( model: SimCardUiModel, onSetLimits: () -&gt; Unit = {}, onResetCounters: () -&gt; Unit = {}, onToggleAutoReset: (Boolean) -&gt; Unit = {}, onEditAutoResetDay: () -&gt; Unit = {}, onAdjustMinutes: () -&gt; Unit = {}, onAdjustTraffic: () -&gt; Unit = {}, onShowTrafficInfo: () -&gt; Unit = {}, )</ID>
-    <ID>LongMethod:SimCardScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun SimCardScreen( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onToggleTheme: () -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onOpenUsageSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, )</ID>
-    <ID>LongMethod:SimLimitComposeDialog.kt$@Suppress("ktlint:standard:function-naming") @Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
-    <ID>LongParameterList:MainViewModel.kt$MainViewModel$( @param:ApplicationContext private val context: Context, private val simRepository: SimRepository, private val settingsRepository: SettingsRepository, private val usageStateRepository: UsageStateRepository, private val resetManager: ResetManager, private val usageUseCase: UsageUseCase, private val settingsUseCase: SettingsUseCase, private val permissionRepository: PermissionRepository, private val updateCoordinator: UpdateCoordinator, private val savedStateHandle: SavedStateHandle, )</ID>
+    <ID>FunctionNaming:SimCardScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SimCardScreen( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onToggleTheme: () -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onOpenUsageSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, )</ID>
+    <ID>FunctionNaming:SimCardStates.kt$@Composable fun EmptyState()</ID>
+    <ID>FunctionNaming:SimCardStates.kt$@Composable fun ErrorState(message: String)</ID>
+    <ID>FunctionNaming:SimLimitComposeDialog.kt$@Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun MinuteWatcherTheme( darkTheme: Boolean = isSystemInDarkTheme(), // Dynamic color is available on Android 12+ dynamicColor: Boolean = true, content: @Composable () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:TrackingBanners.kt$@Composable fun TrackingBanners( state: TrackingBannerState, onGrantPhonePermission: () -&gt; Unit, onOpenUsageSettings: () -&gt; Unit, onOpenAppSettings: () -&gt; Unit, onRetryAppSearch: () -&gt; Unit, onRetryTraffic: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:TrackingBanners.kt$@Composable private fun TrackingBanner( text: String, actionText: String?, onAction: () -&gt; Unit, containerColor: Color, contentColor: Color, )</ID>
+    <ID>LongMethod:DayPickerComposeDialog.kt$@Composable fun DayPickerComposeDialog( initialDay: Int, onDismiss: () -&gt; Unit, onDaySelected: (Int) -&gt; Unit, )</ID>
+    <ID>LongMethod:SimCardItem.kt$@Composable fun SimCardItem( model: SimCardUiModel, onSetLimits: () -&gt; Unit = {}, onResetCounters: () -&gt; Unit = {}, onToggleAutoReset: (Boolean) -&gt; Unit = {}, onEditAutoResetDay: () -&gt; Unit = {}, onAdjustMinutes: () -&gt; Unit = {}, onAdjustTraffic: () -&gt; Unit = {}, onShowTrafficInfo: () -&gt; Unit = {}, )</ID>
+    <ID>LongMethod:SimCardScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SimCardScreen( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onToggleTheme: () -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onOpenUsageSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, )</ID>
+    <ID>LongMethod:SimLimitComposeDialog.kt$@Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:MainViewModel.kt$MainViewModel$( private val simRepository: SimRepository, private val settingsRepository: SettingsRepository, private val usageStateRepository: UsageStateRepository, private val resetManager: ResetManager, private val usageUseCase: UsageUseCase, private val settingsUseCase: SettingsUseCase, private val permissionRepository: PermissionRepository, private val updateCoordinator: UpdateCoordinator, private val savedStateHandle: SavedStateHandle, @IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
     <ID>MagicNumber:Color.kt$0xFF4CAF50</ID>
     <ID>MagicNumber:Color.kt$0xFF625b71</ID>
     <ID>MagicNumber:Color.kt$0xFF6650a4</ID>
@@ -33,8 +33,6 @@
     <ID>MagicNumber:DayPickerComposeDialog.kt$31</ID>
     <ID>MagicNumber:MainViewModel.kt$MainViewModel$5_000</ID>
     <ID>MagicNumber:SimCardItem.kt$0.8f</ID>
-    <ID>MagicNumber:SimCardItem.kt$0xFF4CAF50</ID>
-    <ID>MagicNumber:SimCardItem.kt$0xFFFFA500</ID>
     <ID>MatchingDeclarationName:SimCardStates.kt$TrackingBannerState</ID>
     <ID>MaxLineLength:AdjustmentComposeDialog.kt$keyboardOptions = KeyboardOptions(keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal)</ID>
     <ID>MaxLineLength:AdjustmentComposeDialog.kt$mutableStateOf(if (isMinutes) initialValue.toInt().toString() else "%.1f".format(initialValue).replace(",", "."))</ID>
@@ -52,7 +50,6 @@
     <ID>SerialVersionUIDInSerializableClass:SimCardUiModels.kt$DayDialogData : Serializable</ID>
     <ID>SerialVersionUIDInSerializableClass:SimCardUiModels.kt$LimitDialogData : Serializable</ID>
     <ID>TooManyFunctions:MainViewModel.kt$MainViewModel : ViewModel</ID>
-    <ID>UnusedPrivateProperty:MainViewModel.kt$MainViewModel$@param:ApplicationContext private val context: Context</ID>
-    <ID>UnusedPrivateProperty:MainViewModel.kt$MainViewModel$private val settingsRepository: SettingsRepository</ID>
+    <ID>UnusedImports:SimCardItem.kt$import androidx.compose.ui.graphics.toArgb</ID>
   </CurrentIssues>
 </SmellBaseline>

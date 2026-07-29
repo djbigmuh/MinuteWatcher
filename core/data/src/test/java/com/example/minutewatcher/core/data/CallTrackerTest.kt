@@ -1,15 +1,19 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.TelephonyManager
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.android.util.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -28,14 +32,18 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerTest {
-    private val simRepository: SimRepository = mock()
-    private val settingsRepository: SettingsRepository = mock()
-    private val updateCoordinator: UpdateCoordinator = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simUsageRepository: SimUsageRepository = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
+    private val callSessionRepository: CallSessionRepository = mock()
+    private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionManager: PermissionManager = mock()
     private val telephonyManager: TelephonyManager = mock()
+
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 500000L)
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
@@ -45,24 +53,27 @@ class CallTrackerTest {
     @Before
     fun setup() =
         runTest {
-            whenever(settingsRepository.getCallTrackingEnabled()).thenReturn(flowOf(true))
-            whenever(settingsRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
-            whenever(settingsRepository.getBootTime(any())).thenReturn(flowOf(0L))
-            whenever(settingsRepository.getCallIdentity(any())).thenReturn(flowOf(null))
+            whenever(appSettingsRepository.getCallTrackingEnabled()).thenReturn(flowOf(true))
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
 
-            whenever(simRepository.getIdentity(0)).thenReturn("id_0")
-            whenever(simRepository.getIdentity(1)).thenReturn("id_1")
-            whenever(simRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("id_0")
+            whenever(simIdentityRepository.getIdentity(1)).thenReturn("id_1")
+            whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
             callTracker =
                 CallTracker(
-                    simRepository,
-                    settingsRepository,
-                    updateCoordinator,
+                    simIdentityRepository,
+                    simUsageRepository,
+                    appSettingsRepository,
+                    callSessionRepository,
+                    dataChangeNotifier,
                     permissionManager,
                     telephonyManager,
                     testScope,
+                    timeProvider,
                 )
         }
 
@@ -71,20 +82,20 @@ class CallTrackerTest {
         runTest {
             callTracker.onCallStarted(subId = 1)
 
-            verify(settingsRepository).setCallStartTime(eq(1), any())
-            verify(settingsRepository).setCallIdentity(eq(1), anyOrNull())
+            verify(callSessionRepository).setCallStartTime(eq(1), any())
+            verify(callSessionRepository).setCallIdentity(eq(1), anyOrNull())
         }
 
     @Test
     fun `test call end with same subId clears state`() =
         runTest {
-            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
 
             callTracker.onCallEnded(subId = 1)
 
-            verify(settingsRepository).setCallStartTime(1, 0)
-            verify(settingsRepository).setBootTime(1, 0)
+            verify(callSessionRepository).setCallStartTime(1, 0)
+            verify(callSessionRepository).setBootTime(1, 0)
         }
 
     @Test
@@ -92,11 +103,11 @@ class CallTrackerTest {
         runTest {
             // Start call on subId 1
             callTracker.onCallStarted(subId = 1)
-            verify(settingsRepository).setCallStartTime(eq(1), any())
+            verify(callSessionRepository).setCallStartTime(eq(1), any())
 
             // Start call on subId 2
             callTracker.onCallStarted(subId = 2)
-            verify(settingsRepository).setCallStartTime(eq(2), any())
+            verify(callSessionRepository).setCallStartTime(eq(2), any())
         }
 
     @Test
@@ -104,70 +115,71 @@ class CallTrackerTest {
         runTest {
             callTracker.onBoot()
 
-            verify(settingsRepository).clearAllCallSessions()
+            verify(callSessionRepository).clearAllCallSessions()
         }
 
     @Test
     fun `onCallEnded with unknown subId and single active call attributes correctly`() =
         runTest {
-            whenever(settingsRepository.getActiveCallSubIds()).thenReturn(listOf(1))
-            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
 
             callTracker.onCallEnded(-1)
 
-            verify(settingsRepository).setCallStartTime(1, 0)
+            verify(callSessionRepository).setCallStartTime(1, 0)
         }
 
     @Test
     fun `onCallEnded with unknown subId and multiple calls uses default voice attribution`() =
         runTest {
-            whenever(settingsRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(settingsRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
-            whenever(settingsRepository.getBootTime(2)).thenReturn(flowOf(200L))
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
+            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
 
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(2)
 
             callTracker.onCallEnded(-1)
 
             // Should attribute to subId 2
-            verify(settingsRepository).setCallStartTime(2, 0)
-            verify(settingsRepository, never()).setCallStartTime(1, 0)
+            verify(callSessionRepository).setCallStartTime(2, 0)
+            verify(callSessionRepository, never()).setCallStartTime(1, 0)
         }
 
     @Test
     fun `onCallEnded with unknown subId and global IDLE cleans up all`() =
         runTest {
-            whenever(settingsRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(settingsRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
-            whenever(settingsRepository.getBootTime(2)).thenReturn(flowOf(200L))
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
+            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
 
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 
             callTracker.onCallEnded(-1)
 
             // Both should be closed due to global IDLE safety
-            verify(settingsRepository).setCallStartTime(1, 0)
-            verify(settingsRepository).setCallStartTime(2, 0)
+            verify(callSessionRepository).setCallStartTime(1, 0)
+            verify(callSessionRepository).setCallStartTime(2, 0)
         }
 
     @Test
     fun `onCallStarted clears stale session if boot time is invalid`() =
         runTest {
-            // Arrange: saved boot time is in the future relative to current (0 in test)
-            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
-            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(10000L))
+            // Arrange: saved boot time is in the future relative to current
+            timeProvider.setRealtime(5000L)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(10000L))
 
             // Act
             callTracker.onCallStarted(subId = 1)
 
             // Assert: verify clearSession was called (which sets 0) before starting new
-            verify(settingsRepository, atLeastOnce()).setCallStartTime(1, 0)
-            verify(settingsRepository).setCallStartTime(eq(1), argThat { this > 0 })
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(1, 0)
+            verify(callSessionRepository).setCallStartTime(eq(1), argThat { this > 0 })
         }
 
     @Test
@@ -184,7 +196,7 @@ class CallTrackerTest {
     @Test
     fun `onCallEnded sets permission missing status on SecurityException`() =
         runTest {
-            whenever(settingsRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             whenever(telephonyManager.callState).thenThrow(SecurityException())
 
             callTracker.onCallEnded(-1)
@@ -198,17 +210,38 @@ class CallTrackerTest {
         runTest {
             val startTime = 1000L
             val bootTime = 500L
-            whenever(settingsRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
-            whenever(settingsRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
-            whenever(settingsRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             // Advance clock so currentBootTime - savedBootTime > 0
-            org.robolectric.shadows.ShadowSystemClock
-                .advanceBy(java.time.Duration.ofSeconds(10))
+            timeProvider.advance(10000)
 
             callTracker.onCallEnded(subId = 1)
 
             val status = callTracker.status.first()
             assertEquals(TrackingStatus.Active, status)
         }
+
+    @Test
+    fun `test recover updates status from repository`() =
+        runTest {
+            // Arrange
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+            
+            // Act
+            callTracker.recover()
+            testScope.advanceUntilIdle()
+
+            // Assert
+            assertEquals(TrackingStatus.Active, callTracker.status.first())
+            
+            // And now verify it goes back to Idle if repository is empty
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+            callTracker.recover()
+            testScope.advanceUntilIdle()
+            assertEquals(TrackingStatus.Idle, callTracker.status.first())
+        }
 }
+
+

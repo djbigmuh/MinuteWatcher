@@ -2,12 +2,16 @@ package com.example.minutewatcher.core.data
 
 import android.os.SystemClock
 import android.telephony.TelephonyManager
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.AppLogger
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,20 +27,29 @@ import javax.inject.Singleton
 class CallTracker
     @Inject
     constructor(
-        private val simRepository: SimRepository,
-        private val settingsRepository: SettingsRepository,
-        private val updateCoordinator: UpdateCoordinator,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simUsageRepository: SimUsageRepository,
+        private val appSettingsRepository: AppSettingsRepository,
+        private val callSessionRepository: CallSessionRepository,
+        private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
         private val telephonyManager: TelephonyManager,
-        @com.example.minutewatcher.core.data.di.ApplicationScope private val scope: CoroutineScope,
+        @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
+        private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
         override val key: String = "calls"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        override fun recover() {
+            scope.launch {
+                refreshStatus()
+            }
+        }
+
         private val callTrackingEnabled =
-            settingsRepository
+            appSettingsRepository
                 .getCallTrackingEnabled()
                 .stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -43,7 +57,7 @@ class CallTracker
          * Called on device boot to clean up any stale state.
          */
         suspend fun onBoot() {
-            settingsRepository.clearAllCallSessions()
+            callSessionRepository.clearAllCallSessions()
             _status.value = TrackingStatus.Idle
             AppLogger.d("Cleared all stale call sessions on boot")
         }
@@ -67,9 +81,9 @@ class CallTracker
                     return
                 }
 
-                val startTime = settingsRepository.getCallStartTime(effectiveSubId).first()
-                val savedBootTime = settingsRepository.getBootTime(effectiveSubId).first()
-                val currentBootTime = SystemClock.elapsedRealtime()
+                val startTime = callSessionRepository.getCallStartTime(effectiveSubId).first()
+                val savedBootTime = callSessionRepository.getBootTime(effectiveSubId).first()
+                val currentBootTime = timeProvider.elapsedRealtime()
 
                 val isStale = startTime == 0L || savedBootTime == 0L || savedBootTime > currentBootTime
 
@@ -80,9 +94,9 @@ class CallTracker
                     }
 
                     val identity = resolveIdentity(effectiveSubId)
-                    settingsRepository.setCallStartTime(effectiveSubId, System.currentTimeMillis())
-                    settingsRepository.setBootTime(effectiveSubId, currentBootTime)
-                    settingsRepository.setCallIdentity(effectiveSubId, identity)
+                    callSessionRepository.setCallStartTime(effectiveSubId, timeProvider.now())
+                    callSessionRepository.setBootTime(effectiveSubId, currentBootTime)
+                    callSessionRepository.setCallIdentity(effectiveSubId, identity)
                     _status.value = TrackingStatus.Active
                     AppLogger.d("Call started for subId $effectiveSubId (identity: $identity)")
                 } else {
@@ -102,7 +116,7 @@ class CallTracker
         suspend fun onCallEnded(subId: Int) {
             try {
                 if (subId == -1) {
-                    val activeSubIds = settingsRepository.getActiveCallSubIds()
+                    val activeSubIds = callSessionRepository.getActiveCallSubIds()
                     if (activeSubIds.isEmpty()) {
                         AppLogger.d("Call ended with unknown subId and no active sessions found")
                         return
@@ -134,7 +148,7 @@ class CallTracker
                             val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
                             val target =
                                 activeSubIds.firstOrNull { it == defaultVoice }
-                                    ?: activeSubIds.minByOrNull { settingsRepository.getCallStartTime(it).first() }
+                                    ?: activeSubIds.minByOrNull { callSessionRepository.getCallStartTime(it).first() }
 
                             if (target != null) {
                                 AppLogger.d("Call ended with unknown subId, attributing to session: $target")
@@ -157,10 +171,10 @@ class CallTracker
         }
 
         private suspend fun endCall(subId: Int) {
-            val startTime = settingsRepository.getCallStartTime(subId).first()
-            val savedBootTime = settingsRepository.getBootTime(subId).first()
-            val savedIdentity = settingsRepository.getCallIdentity(subId).first()
-            val currentBootTime = SystemClock.elapsedRealtime()
+            val startTime = callSessionRepository.getCallStartTime(subId).first()
+            val savedBootTime = callSessionRepository.getBootTime(subId).first()
+            val savedIdentity = callSessionRepository.getCallIdentity(subId).first()
+            val currentBootTime = timeProvider.elapsedRealtime()
 
             if (startTime > 0) {
                 // Clear session state first
@@ -179,7 +193,7 @@ class CallTracker
                     return
                 }
 
-                val durationSeconds = (currentBootTime - savedBootTime) / 1000
+                val durationSeconds = (currentBootTime - savedBootTime) / MILLIS_IN_SECOND
                 if (durationSeconds > 0) {
                     processCallDuration(durationSeconds.toInt(), subId, savedIdentity)
                 }
@@ -188,25 +202,26 @@ class CallTracker
         }
 
         private suspend fun refreshStatus() {
-            val hasActiveCalls = settingsRepository.getActiveCallSubIds().isNotEmpty()
-            _status.value = if (hasActiveCalls) {
-                TrackingStatus.Active
-            } else {
-                TrackingStatus.Idle
-            }
+            val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
+            _status.value =
+                if (hasActiveCalls) {
+                    TrackingStatus.Active
+                } else {
+                    TrackingStatus.Idle
+                }
         }
 
         private suspend fun clearSession(subId: Int) {
-            settingsRepository.setCallStartTime(subId, 0)
-            settingsRepository.setBootTime(subId, 0)
-            settingsRepository.setCallIdentity(subId, null)
+            callSessionRepository.setCallStartTime(subId, 0)
+            callSessionRepository.setBootTime(subId, 0)
+            callSessionRepository.setCallIdentity(subId, null)
         }
 
         private suspend fun resolveIdentity(subId: Int): String? {
             val subInfoList = permissionManager.getActiveSubscriptions()
             val info = subInfoList.find { it.subscriptionId == subId }
             return if (info != null) {
-                simRepository.getIdentity(info.simSlotIndex)
+                simIdentityRepository.getIdentity(info.simSlotIndex)
             } else {
                 null
             }
@@ -218,7 +233,7 @@ class CallTracker
             savedIdentity: String?,
         ) {
             // Rounding policy: ceil (any second counts as a full minute)
-            val durationMinutes = (durationSeconds + 59) / 60
+            val durationMinutes = (durationSeconds + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE
 
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 
@@ -231,13 +246,20 @@ class CallTracker
             }
 
             if (targetIdentity != null) {
-                simRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
+                simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
                 AppLogger.d("Added $durationMinutes min to identity $targetIdentity for subId $subId")
-                updateCoordinator.notifyDataChanged()
+                dataChangeNotifier.notifyDataChanged()
                 _status.value = TrackingStatus.Active
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed")
             }
         }
+
+        companion object {
+            private const val MILLIS_IN_SECOND = 1000L
+            private const val SECONDS_IN_MINUTE = 60
+        }
     }
+
+

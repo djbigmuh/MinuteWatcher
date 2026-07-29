@@ -1,7 +1,9 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
+import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -13,16 +15,17 @@ import javax.inject.Singleton
 class WidgetSettingsRepository
     @Inject
     constructor(
-        private val settingsRepository: SettingsRepository,
-        private val simRepository: SimRepository,
-    ) {
-        suspend fun load(): WidgetSettingsState {
-            val settings = settingsRepository.getAppSettings().first()
+        private val appSettingsRepository: AppSettingsRepository,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
+    ) : WidgetSettingsLoader {
+        override suspend fun load(): WidgetSettingsState {
+            val settings = appSettingsRepository.getAppSettings().first()
 
             val simStates =
                 SimConstants.SUPPORTED_SLOT_INDICES.map { i ->
-                    val identity = simRepository.getIdentity(i)
-                    simRepository.getSimSettings(identity).first()
+                    val identity = simIdentityRepository.getIdentity(i)
+                    simWidgetVisibilityRepository.getSimSettings(identity).first()
                 }
             return WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,
@@ -37,8 +40,8 @@ class WidgetSettingsRepository
             )
         }
 
-        suspend fun save(state: WidgetSettingsState) {
-            settingsRepository.updateAppSettings { current ->
+        override suspend fun save(state: WidgetSettingsState) {
+            appSettingsRepository.updateAppSettings { current ->
                 current.copy(
                     widgetLayoutMode = state.layoutMode,
                     widgetSimArrangement = state.simArrangement,
@@ -53,9 +56,9 @@ class WidgetSettingsRepository
 
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             for (i in state.simStates.indices) {
-                val identity = simRepository.getIdentity(i)
+                val identity = simIdentityRepository.getIdentity(i)
                 simSettingsMap[identity] = state.simStates[i]
             }
-            simRepository.setSimSettingsBatch(simSettingsMap)
+            simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
         }
     }

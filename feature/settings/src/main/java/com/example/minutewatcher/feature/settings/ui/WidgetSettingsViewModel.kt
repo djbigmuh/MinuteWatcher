@@ -3,9 +3,9 @@ package com.example.minutewatcher.feature.settings.ui
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.minutewatcher.core.data.UpdateCoordinator
-import com.example.minutewatcher.core.data.WidgetSettingsRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
@@ -27,8 +27,8 @@ class WidgetSettingsViewModel
     @Inject
     constructor(
         @ApplicationContext context: Context,
-        private val repository: WidgetSettingsRepository,
-        private val updateCoordinator: UpdateCoordinator,
+        private val loader: WidgetSettingsLoader,
+        private val dataChangeNotifier: DataChangeNotifier,
         private val usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
@@ -56,9 +56,9 @@ class WidgetSettingsViewModel
             _loadError.value = false
             viewModelScope.launch {
                 try {
-                    _settingsState.value = repository.load()
+                    _settingsState.value = loader.load()
                 } catch (e: Exception) {
-                    com.example.minutewatcher.core.model.util.AppLogger
+                    com.example.minutewatcher.core.common.util.AppLogger
                         .e("Failed to load widget settings", e)
                     _loadError.value = true
                 }
@@ -118,14 +118,15 @@ class WidgetSettingsViewModel
 
             viewModelScope.launch {
                 try {
-                    repository.save(currentState)
-                    updateCoordinator.notifyDataChanged()
+                    loader.save(currentState)
+                    dataChangeNotifier.notifyDataChanged()
                     onComplete(true)
                 } catch (e: Exception) {
-                    com.example.minutewatcher.core.model.util.AppLogger
+                    com.example.minutewatcher.core.common.util.AppLogger
                         .e("Failed to save widget settings", e)
                     onComplete(false)
                 }
             }
         }
     }
+

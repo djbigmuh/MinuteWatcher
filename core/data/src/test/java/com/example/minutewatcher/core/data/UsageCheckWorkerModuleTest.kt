@@ -6,8 +6,12 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
@@ -29,24 +33,20 @@ import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
-    @Mock lateinit var simRepository: SimRepository
-
-    @Mock lateinit var settingsRepository: SettingsRepository
-
-    @Mock lateinit var resetManager: ResetManager
-
+    @Mock lateinit var simIdentityRepository: SimIdentityRepository
+    @Mock lateinit var simUsageRepository: SimUsageRepository
+    @Mock lateinit var simNotificationFlagsRepository: SimNotificationFlagsRepository
+    @Mock lateinit var appSettingsRepository: AppSettingsRepository
+    @Mock lateinit var autoResetUseCase: AutoResetUseCase
     @Mock lateinit var trafficTracker: TrafficTracker
-
     @Mock lateinit var notificationHelper: NotificationHelper
-
-    @Mock lateinit var updateCoordinator: UpdateCoordinator
-
+    @Mock lateinit var dataChangeNotifier: DataChangeNotifier
     @Mock lateinit var usageStateRepository: UsageStateRepository
-
     @Mock lateinit var usageUseCase: UsageUseCase
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     @Before
     fun setUp() {
@@ -65,7 +65,7 @@ class UsageCheckWorkerModuleTest {
             )
         runTest {
             whenever(usageStateRepository.refresh()).thenReturn(emptySnapshot)
-            whenever(settingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         }
     }
 
@@ -85,14 +85,17 @@ class UsageCheckWorkerModuleTest {
                                 UsageCheckWorker(
                                     appContext,
                                     workerParameters,
-                                    simRepository,
-                                    settingsRepository,
-                                    resetManager,
+                                    simIdentityRepository,
+                                    simUsageRepository,
+                                    simNotificationFlagsRepository,
+                                    appSettingsRepository,
+                                    autoResetUseCase,
                                     trafficTracker,
                                     notificationHelper,
-                                    updateCoordinator,
+                                    dataChangeNotifier,
                                     usageStateRepository,
                                     usageUseCase,
+                                    timeProvider,
                                     kotlinx.coroutines.test.UnconfinedTestDispatcher(),
                                 )
                         },
@@ -105,3 +108,4 @@ class UsageCheckWorkerModuleTest {
             verify(usageStateRepository, times(2)).refresh()
         }
 }
+

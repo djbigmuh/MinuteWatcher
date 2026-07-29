@@ -2,7 +2,7 @@
 import com.android.build.api.dsl.ApplicationExtension
 
 plugins {
-    alias(libs.plugins.androidApplication)
+    id("minutewatcher.android-application")
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
@@ -57,10 +57,6 @@ configure<ApplicationExtension> {
     }
 
     lint {
-        abortOnError = true
-        checkReleaseBuilds = true
-        warningsAsErrors = true
-        error += "MissingTranslation"
         baseline = file("lint-baseline.xml")
     }
 
@@ -79,6 +75,9 @@ configure<ApplicationExtension> {
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:common"))
+    implementation(project(":core:android"))
+    implementation(project(":core:resources"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
     implementation(project(":feature:main"))
@@ -141,3 +140,5 @@ dependencies {
     debugImplementation(libs.androidxUiTooling)
     debugImplementation(libs.androidxUiTestManifest)
 }
+
+

@@ -26,17 +26,20 @@ interface AppSearchSessionWrapper : AutoCloseable {
 }
 
 @Singleton
-class AppSearchWrapperImpl @Inject constructor() : AppSearchWrapper {
-    override suspend fun createSearchSession(
-        context: Context,
-        databaseName: String,
-    ): AppSearchSessionWrapper {
-        val future = LocalStorage.createSearchSessionAsync(
-            LocalStorage.SearchContext.Builder(context, databaseName).build()
-        )
-        return AppSearchSessionWrapperImpl(future.await())
+class AppSearchWrapperImpl
+    @Inject
+    constructor() : AppSearchWrapper {
+        override suspend fun createSearchSession(
+            context: Context,
+            databaseName: String,
+        ): AppSearchSessionWrapper {
+            val future =
+                LocalStorage.createSearchSessionAsync(
+                    LocalStorage.SearchContext.Builder(context, databaseName).build(),
+                )
+            return AppSearchSessionWrapperImpl(future.await())
+        }
     }
-}
 
 private class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,

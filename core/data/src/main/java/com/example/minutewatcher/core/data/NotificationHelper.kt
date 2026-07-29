@@ -10,8 +10,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.R
-import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.resources.R
+import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,7 +59,7 @@ class NotificationHelper
                 val pendingIntent =
                     PendingIntent.getActivity(
                         context,
-                        100 + simSlot,
+                        BASE_REQUEST_CODE + simSlot,
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
@@ -77,7 +77,7 @@ class NotificationHelper
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                         .build()
 
-                val notificationId = 1000 + (simSlot * 10) + type
+                val notificationId = BASE_NOTIFICATION_ID + (simSlot * SLOT_OFFSET) + type
                 notificationManager.notify(notificationId, notification)
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
@@ -85,4 +85,11 @@ class NotificationHelper
                 AppLogger.e("Failed to send notification", e)
             }
         }
+
+        companion object {
+            private const val BASE_REQUEST_CODE = 100
+            private const val BASE_NOTIFICATION_ID = 1000
+            private const val SLOT_OFFSET = 10
+        }
     }
+

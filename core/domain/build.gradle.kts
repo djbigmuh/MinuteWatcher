@@ -1,6 +1,6 @@
 // DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 36, compileSdk 37 are project requirements.
 plugins {
-    alias(libs.plugins.androidLibrary)
+    id("minutewatcher.android-library")
     alias(libs.plugins.kotlinKsp)
 }
 
@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.googleMaterial)
     implementation(libs.androidxMaterial3)
     implementation(project(":core:model"))
+    implementation(project(":core:android"))
+    implementation(project(":core:common"))
     implementation(libs.androidxDatastorePreferences)
     implementation(libs.kotlinxCoroutinesGuava) // For Flow if needed, but core ktx is enough
 
@@ -46,3 +48,5 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxTestCoreKtx)
 }
+
+

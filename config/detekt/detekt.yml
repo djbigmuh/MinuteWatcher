@@ -27,6 +27,12 @@ exceptions:
 
 naming:
   active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][A-Za-z0-9]*'
+    excludeClassPattern: '.*Test$'
+    ignoreAnnotated:
+      - 'Composable'
   VariableNaming:
     active: true
     variablePattern: '[a-z][A-Za-z0-9]*'
@@ -36,6 +42,9 @@ naming:
 
 style:
   active: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
   UnusedImports:
     active: true
 

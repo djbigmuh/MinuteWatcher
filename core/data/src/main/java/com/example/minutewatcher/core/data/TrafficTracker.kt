@@ -3,21 +3,25 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.NetworkCapabilities
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.AppLogger
-import com.example.minutewatcher.core.model.util.PermissionManager
-import com.example.minutewatcher.core.model.util.SimUtils
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.android.util.SimUtils
+import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -40,14 +44,23 @@ class TrafficTracker
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val simRepository: SimRepository,
-        private val settingsRepository: SettingsRepository,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simUsageRepository: SimUsageRepository,
+        private val callSessionRepository: CallSessionRepository,
         private val permissionManager: PermissionManager,
+        private val timeProvider: TimeProvider,
+        @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+        override fun recover() {
+            scope.launch {
+                updateTrafficUsage()
+            }
+        }
 
         private val trafficMutex = Mutex()
         private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
@@ -59,7 +72,7 @@ class TrafficTracker
                 try {
                     val currentBytes = getCurrentMobileBytes()
                     if (currentBytes != -1L) {
-                        simRepository.setLastTotalBytes(identity, currentBytes)
+                        simUsageRepository.setLastTotalBytes(identity, currentBytes)
                         AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
                         _status.value = TrackingStatus.Active
                     } else {
@@ -80,11 +93,11 @@ class TrafficTracker
                     val targetInfo = getTargetSimInfo()
                     if (targetInfo == null) {
                         _status.value = TrackingStatus.Idle
-                        return
+                        return@withLock
                     }
 
                     val (targetSim, currentDataSubId) = targetInfo
-                    val targetIdentity = simRepository.getIdentity(targetSim)
+                    val targetIdentity = simIdentityRepository.getIdentity(targetSim)
                     val currentBytes = getCurrentMobileBytes()
                     if (currentBytes == -1L) {
                         AppLogger.d("Traffic stats unavailable, skipping update")
@@ -93,29 +106,29 @@ class TrafficTracker
                         } else {
                             _status.value = TrackingStatus.Idle
                         }
-                        return
+                        return@withLock
                     }
 
-                    val lastTotalBytes = simRepository.getLastTotalBytes(targetIdentity).first()
+                    val lastTotalBytes = simUsageRepository.getLastTotalBytes(targetIdentity).first()
 
                     if (lastTotalBytes == -1L || currentBytes < lastTotalBytes) {
                         // First run or reboot/overflow
-                        simRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                        simUsageRepository.setLastTotalBytes(targetIdentity, currentBytes)
                         AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
-                        settingsRepository.setLastDataSubId(currentDataSubId)
+                        callSessionRepository.setLastDataSubId(currentDataSubId)
                         inMemoryLastDataSubId = currentDataSubId
                         _status.value = TrackingStatus.Active
-                        return
+                        return@withLock
                     }
 
                     val deltaBytes = currentBytes - lastTotalBytes
                     if (deltaBytes.compareTo(0L) > 0) {
                         val deltaMB = deltaBytes.toFloat() / Constants.BYTES_PER_MB
                         if (deltaMB >= 0.0001f) {
-                            simRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                            simRepository.incrementTrafficUsed(targetIdentity, deltaMB)
+                            simUsageRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                            simUsageRepository.incrementTrafficUsed(targetIdentity, deltaMB)
                             AppLogger.d("Added $deltaMB MB to identity $targetIdentity (SIM $targetSim)")
-                            settingsRepository.setLastDataSubId(currentDataSubId)
+                            callSessionRepository.setLastDataSubId(currentDataSubId)
                             inMemoryLastDataSubId = currentDataSubId
                             _status.value = TrackingStatus.Active
                         }
@@ -141,7 +154,7 @@ class TrafficTracker
                         NetworkCapabilities.TRANSPORT_CELLULAR,
                         null,
                         0,
-                        System.currentTimeMillis(),
+                        timeProvider.now(),
                     )
                 bucket.rxBytes + bucket.txBytes
             } catch (e: SecurityException) {
@@ -175,18 +188,18 @@ class TrafficTracker
 
             // Detect SIM change for baseline reset
             if (inMemoryLastDataSubId == -1) {
-                inMemoryLastDataSubId = settingsRepository.getLastDataSubId().first()
+                inMemoryLastDataSubId = callSessionRepository.getLastDataSubId().first()
             }
 
             val savedLastDataSubId = inMemoryLastDataSubId
             if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
                 AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")
-                val identity = simRepository.getIdentity(targetSim)
+                val identity = simIdentityRepository.getIdentity(targetSim)
                 val currentBytes = getCurrentMobileBytes()
                 if (currentBytes != -1L) {
-                    simRepository.setLastTotalBytes(identity, currentBytes)
+                    simUsageRepository.setLastTotalBytes(identity, currentBytes)
                 }
-                settingsRepository.setLastDataSubId(currentDataSubId)
+                callSessionRepository.setLastDataSubId(currentDataSubId)
                 inMemoryLastDataSubId = currentDataSubId
                 return null // Skip delta for the swap event
             }
@@ -200,8 +213,8 @@ class TrafficTracker
             // We support up to 2 SIM slots
             for (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
                 try {
-                    val identity = simRepository.getIdentity(slot)
-                    val operator = simRepository.getSimOperator(identity).first()
+                    val identity = simIdentityRepository.getIdentity(slot)
+                    val operator = simIdentityRepository.getSimOperator(identity).first()
 
                     if (!SimUtils.isInactiveSim(operator)) {
                         activeSlots.add(slot)

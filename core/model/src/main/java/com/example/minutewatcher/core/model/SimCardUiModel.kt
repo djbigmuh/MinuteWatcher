@@ -21,4 +21,5 @@ data class SimCardUiModel(
     val isTrafficLimitSet: Boolean,
     val autoResetEnabled: Boolean,
     val autoResetDay: Int,
+    val rolloverEnabled: Boolean,
 )

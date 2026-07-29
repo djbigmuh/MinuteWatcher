@@ -21,6 +21,7 @@ object SettingsKeys {
     val MIGRATION_V1_SKIPPED_REASON = stringPreferencesKey("migration_v1_skipped_reason")
     val MIGRATION_IDENTITY_STABILITY_COMPLETED = booleanPreferencesKey("migration_identity_stability_completed")
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+    val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
 
     fun callStartTimeKey(subId: Int) = longPreferencesKey("call_start_time_$subId")
 
@@ -51,4 +52,6 @@ object SettingsKeys {
     fun notifiedExhaustedMinutesKey(identity: String) = booleanPreferencesKey("notified_exhausted_minutes_$identity")
 
     fun notifiedExhaustedTrafficKey(identity: String) = booleanPreferencesKey("notified_exhausted_traffic_$identity")
+
+    fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
 }

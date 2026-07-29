@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -29,6 +30,9 @@ dependencyResolutionManagement {
 rootProject.name = "MinuteWatcher"
 include(":app")
 include(":core:model")
+include(":core:common")
+include(":core:android")
+include(":core:resources")
 include(":core:domain")
 include(":core:data")
 include(":feature:main")

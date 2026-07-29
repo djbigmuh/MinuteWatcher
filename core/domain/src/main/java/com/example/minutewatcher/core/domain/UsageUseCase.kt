@@ -5,8 +5,8 @@ import android.os.Build
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
-import com.example.minutewatcher.core.model.util.OperatorResolver
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.android.util.OperatorResolver
+import com.example.minutewatcher.core.android.util.PermissionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -17,7 +17,9 @@ class UsageUseCase
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val simRepository: SimRepository,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simUsageRepository: SimUsageRepository,
+        private val simLimitsRepository: SimLimitsRepository,
         private val permissionManager: PermissionManager,
     ) {
         suspend fun refreshOperatorInfo() {
@@ -27,7 +29,7 @@ class UsageUseCase
                 for (info in activeList) {
                     val slot = info.simSlotIndex
                     if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
-                        val identity = simRepository.getIdentity(slot)
+                        val identity = simIdentityRepository.getIdentity(slot)
                         val displayName = info.displayName?.toString() ?: ""
                         val carrierName = info.carrierName?.toString() ?: ""
 
@@ -36,12 +38,12 @@ class UsageUseCase
                         val mccMnc = if (mcc.isNotEmpty() && mnc.isNotEmpty()) "$mcc$mnc" else ""
 
                         val opName = OperatorResolver.resolve(context, displayName.ifEmpty { carrierName }, mccMnc, slot)
-                        simRepository.setSimOperator(identity, opName)
-                        simRepository.setSimCode(identity, mccMnc)
+                        simIdentityRepository.setSimOperator(identity, opName)
+                        simIdentityRepository.setSimCode(identity, mccMnc)
                     }
                 }
             } catch (e: Exception) {
-                com.example.minutewatcher.core.model.util.AppLogger
+                com.example.minutewatcher.core.common.util.AppLogger
                     .e("Error refreshing operator info", e)
             }
         }
@@ -66,27 +68,28 @@ class UsageUseCase
             slot: Int,
             remainingMinutes: Int,
         ) {
-            val identity = simRepository.getIdentity(slot)
-            val limit = simRepository.getMonthlyLimit(identity).first()
-            val used = simRepository.getMinutesUsed(identity).first()
+            val identity = simIdentityRepository.getIdentity(slot)
+            val limit = simLimitsRepository.getMonthlyLimit(identity).first()
+            val used = simUsageRepository.getMinutesUsed(identity).first()
 
             val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
             val adj = (safeRemaining - limit) + used
-            simRepository.setManualAdjustment(identity, adj)
+            simUsageRepository.setManualAdjustment(identity, adj)
         }
 
         suspend fun adjustTraffic(
             slot: Int,
             remainingGb: Float,
         ) {
-            val identity = simRepository.getIdentity(slot)
-            val limitMb = simRepository.getTrafficLimit(identity).first()
-            val usedMb = simRepository.getTrafficUsed(identity).first()
+            val identity = simIdentityRepository.getIdentity(slot)
+            val limitMb = simLimitsRepository.getTrafficLimit(identity).first()
+            val usedMb = simUsageRepository.getTrafficUsed(identity).first()
 
             val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
             val limitGb = limitMb / Constants.MB_PER_GB
             val usedGb = usedMb / Constants.MB_PER_GB
             val adj = safeRemainingGb - (limitGb - usedGb)
-            simRepository.setTrafficAdjustment(identity, adj)
+            simUsageRepository.setTrafficAdjustment(identity, adj)
         }
     }
+

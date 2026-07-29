@@ -2,10 +2,15 @@ package com.example.minutewatcher.feature.main.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -15,20 +20,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 
 @Composable
 fun SimLimitComposeDialog(
     operatorName: String,
     initialMinutes: Int,
     initialTrafficMb: Int,
+    initialRolloverEnabled: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirm: (minutes: Int, trafficMb: Int) -> Unit,
+    onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -> Unit,
     onReset: () -> Unit,
 ) {
     var minutesText by remember { mutableStateOf(if (initialMinutes > 0) initialMinutes.toString() else "") }
@@ -36,14 +43,23 @@ fun SimLimitComposeDialog(
         val gb = initialTrafficMb / Constants.MB_PER_GB
         mutableStateOf(if (gb > 0) "%.1f".format(gb).replace(",", ".") else "")
     }
+    var rolloverEnabled by remember { mutableStateOf(initialRolloverEnabled) }
 
     var minutesError by remember { mutableStateOf<String?>(null) }
     var trafficError by remember { mutableStateOf<String?>(null) }
 
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
-    val minutesRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_MINUTES_LIMIT.toString())
+    val minutesRangeMsg = stringResource(
+        id = R.string.validation_error_invalid_range,
+        "0",
+        Constants.MAX_MINUTES_LIMIT.toString(),
+    )
     val trafficRangeMsg =
-        stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString())
+        stringResource(
+            id = R.string.validation_error_invalid_range,
+            "0",
+            Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString(),
+        )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -80,6 +96,20 @@ fun SimLimitComposeDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = rolloverEnabled,
+                        onCheckedChange = { rolloverEnabled = it },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(id = R.string.rollover_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -110,7 +140,7 @@ fun SimLimitComposeDialog(
                         }
 
                         if (!hasError) {
-                            onConfirm(min ?: 0, ((trafGb ?: 0f) * Constants.MB_PER_GB).toInt())
+                            onConfirm(min ?: 0, ((trafGb ?: 0f) * Constants.MB_PER_GB).toInt(), rolloverEnabled)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -136,3 +166,4 @@ fun SimLimitComposeDialog(
         dismissButton = null,
     )
 }
+

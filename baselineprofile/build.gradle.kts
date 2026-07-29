@@ -1,6 +1,6 @@
 // DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 36, compileSdk 37 are project requirements.
 plugins {
-    alias(libs.plugins.androidTest)
+    id("minutewatcher.android-test")
     alias(libs.plugins.androidxBaselineprofile)
 }
 
@@ -32,3 +32,5 @@ dependencies {
     implementation(libs.androidxUiautomator)
     implementation(libs.androidxJunit)
 }
+
+

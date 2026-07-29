@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = TestMinuteWatcherApp::class)
+@Config(application = TestMinuteWatcherApp::class)
 class UsageMonitorReceiverTest {
     private lateinit var context: Context
     private lateinit var workManager: WorkManager
@@ -95,3 +95,4 @@ class UsageMonitorReceiverTest {
             assertTrue("Work CALL_EVENT_UNKNOWN should be enqueued", workInfos.isNotEmpty())
         }
 }
+

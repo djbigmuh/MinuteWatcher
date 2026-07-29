@@ -7,12 +7,13 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.minutewatcher.core.domain.SettingsRepository
-import com.example.minutewatcher.core.domain.SimRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.MigrationSkipReason
-import com.example.minutewatcher.core.model.util.AppLogger
+import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -25,12 +26,12 @@ class InitialSetupWorker
         @Assisted workerParams: WorkerParameters,
         private val callTracker: CallTracker,
         private val trafficTracker: TrafficTracker,
-        private val simRepository: SimRepository,
-        private val settingsRepository: SettingsRepository,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val migrationFlagsRepository: MigrationFlagsRepository,
         private val usageStateRepository: UsageStateRepository,
         private val usageUseCase: UsageUseCase,
         private val migrationService: IdentityMigrationService,
-        private val updateCoordinator: UpdateCoordinator,
+        private val dataChangeNotifier: DataChangeNotifier,
         private val workScheduler: WorkScheduler,
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result {
@@ -42,57 +43,10 @@ class InitialSetupWorker
                 // This does not require phone permission and must not be blocked by migration.
                 callTracker.onBoot()
 
-                // Perform one-time migration if needed
-                val migrationV1Completed = settingsRepository.isMigrationV1Completed().first()
-                val migrationStabilityCompleted = settingsRepository.isMigrationIdentityStabilityCompleted().first()
-
-                if (!migrationV1Completed || !migrationStabilityCompleted) {
-                    val hasPermission =
-                        ContextCompat.checkSelfPermission(
-                            applicationContext,
-                            Manifest.permission.READ_PHONE_STATE,
-                        ) == PackageManager.PERMISSION_GRANTED
-
-                    if (!hasPermission) {
-                        if (migrationService.hasLegacyData()) {
-                            AppLogger.d("Migration deferred: permission missing but legacy data exists")
-                            // Do NOT mark as completed. We will try again when permission is granted or next boot.
-                        } else {
-                            // No legacy data, we can safely mark as completed
-                            if (!migrationV1Completed) {
-                                settingsRepository.setMigrationV1Completed(true)
-                                settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                                AppLogger.d("Migration V1 skipped: no legacy data found")
-                            }
-                            settingsRepository.setMigrationIdentityStabilityCompleted(true)
-                        }
-                    } else {
-                        val activeSims = simRepository.observeActiveSims().first()
-
-                        if (activeSims.isEmpty()) {
-                            if (migrationService.hasLegacyData()) {
-                                AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
-                            } else {
-                                if (!migrationV1Completed) {
-                                    settingsRepository.setMigrationV1Completed(true)
-                                    settingsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                                    AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
-                                }
-                                settingsRepository.setMigrationIdentityStabilityCompleted(true)
-                            }
-                        } else {
-                            activeSims.forEach { info ->
-                                migrationService.migrateLegacyData(info.identity)
-                            }
-                            settingsRepository.setMigrationV1Completed(true)
-                            settingsRepository.setMigrationIdentityStabilityCompleted(true)
-                            AppLogger.d("Identity migrations completed in InitialSetupWorker")
-                        }
-                    }
-                }
+                checkAndPerformMigrations()
 
                 // Reset traffic baseline after reboot for active SIMs
-                val activeSimsForTraffic = simRepository.observeActiveSims().first()
+                val activeSimsForTraffic = simIdentityRepository.observeActiveSims().first()
                 activeSimsForTraffic.forEach { info ->
                     trafficTracker.resetBaseline(info.identity.stableId)
                 }
@@ -101,7 +55,7 @@ class InitialSetupWorker
                 usageStateRepository.refresh()
 
                 // Refresh widgets and snapshot
-                updateCoordinator.notifyDataChanged(updateWidget = true, force = true)
+                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
 
                 // Schedule periodic monitoring if permissions are granted
                 if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.READ_PHONE_STATE) ==
@@ -111,9 +65,72 @@ class InitialSetupWorker
                 }
 
                 return Result.success()
-            } catch (e: Exception) {
-                AppLogger.e("InitialSetupWorker failed", e)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: java.io.IOException) {
+                AppLogger.w("InitialSetupWorker: Network or storage error, retrying. ${e.message}")
                 return Result.retry()
+            } catch (e: SecurityException) {
+                AppLogger.e("InitialSetupWorker: Permission error (unexpected)", e)
+                return Result.failure()
+            } catch (e: Exception) {
+                AppLogger.e("InitialSetupWorker failed due to unexpected error", e)
+                return Result.failure()
+            }
+        }
+
+        private suspend fun checkAndPerformMigrations() {
+            val migrationV1Completed = migrationFlagsRepository.isMigrationV1Completed().first()
+            val migrationStabilityCompleted = migrationFlagsRepository.isMigrationIdentityStabilityCompleted().first()
+
+            if (migrationV1Completed && migrationStabilityCompleted) return
+
+            val hasPermission = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_PHONE_STATE,
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!hasPermission) {
+                handleMigrationWithoutPermission(migrationV1Completed)
+            } else {
+                handleMigrationWithPermission(migrationV1Completed)
+            }
+        }
+
+        private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean) {
+            if (migrationService.hasLegacyData()) {
+                AppLogger.d("Migration deferred: permission missing but legacy data exists")
+            } else {
+                if (!v1Completed) {
+                    migrationFlagsRepository.setMigrationV1Completed(true)
+                    migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                    AppLogger.d("Migration V1 skipped: no legacy data found")
+                }
+                migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+            }
+        }
+
+        private suspend fun handleMigrationWithPermission(v1Completed: Boolean) {
+            val activeSims = simIdentityRepository.observeActiveSims().first()
+            if (activeSims.isEmpty()) {
+                if (migrationService.hasLegacyData()) {
+                    AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
+                } else {
+                    if (!v1Completed) {
+                        migrationFlagsRepository.setMigrationV1Completed(true)
+                        migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                        AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
+                    }
+                    migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                }
+            } else {
+                activeSims.forEach { info ->
+                    migrationService.migrateLegacyData(info.identity)
+                }
+                migrationFlagsRepository.setMigrationV1Completed(true)
+                migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                AppLogger.d("Identity migrations completed in InitialSetupWorker")
             }
         }
     }
+

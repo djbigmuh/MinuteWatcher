@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -23,29 +24,37 @@ import com.example.minutewatcher.core.domain.SimRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+@Suppress("TooManyFunctions")
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class SimRepositoryImpl
@@ -57,6 +66,8 @@ class SimRepositoryImpl
         private val permissionStateNotifier: PermissionStateNotifier,
         @SimDataStore private val dataStore: DataStore<Preferences>,
         private val seedRepository: SimIdentitySeedRepository,
+        @ApplicationScope private val scope: CoroutineScope,
+        private val timeProvider: TimeProvider,
     ) : SimRepository,
         SimIdentityRepository,
         SimUsageRepository,
@@ -90,52 +101,13 @@ class SimRepositoryImpl
             private fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
 
             private fun subscriptionIdKey(identity: String) = intPreferencesKey("subscription_id_$identity")
+
+            private fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
         }
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
-        private suspend fun getSeed(): String =
-            seedRepository.getOrCreateSeed {
-                java.util.UUID
-                    .randomUUID()
-                    .toString()
-            }
-
-        override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                return SimIdentity(
-                    stableId = "unsupported_$slot",
-                    subscriptionId = null,
-                    slotIndex = slot,
-                    source = IdentitySource.SLOT_FALLBACK,
-                )
-            }
-            val seed = getSeed()
-            val identity =
-                permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                    val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
-                    saveSimIdentityInfo(resolved)
-                    resolved
-                }
-
-            return identity ?: SimIdentity(
-                stableId = "sim_$slot",
-                subscriptionId = null,
-                slotIndex = slot,
-                source = IdentitySource.SLOT_FALLBACK,
-            ).also { fallback ->
-                saveSimIdentityInfo(fallback)
-            }
-        }
-
-        private suspend fun saveSimIdentityInfo(identity: SimIdentity) {
-            dataStore.edit { prefs ->
-                identity.slotIndex?.let { prefs[slotIndexKey(identity.stableId)] = it }
-                identity.subscriptionId?.let { prefs[subscriptionIdKey(identity.stableId)] = it }
-            }
-        }
-
-        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
+        private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
             combine(
                 seedRepository.getSeed(),
                 permissionStateNotifier.changes,
@@ -169,7 +141,69 @@ class SimRepositoryImpl
                             subscriptionManager.removeOnSubscriptionsChangedListener(listener)
                         }
                     }
-                }.distinctUntilChanged()
+                }
+                .distinctUntilChanged()
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.Eagerly,
+                    initialValue = emptyList(),
+                )
+
+        private suspend fun getSeed(): String =
+            seedRepository.getOrCreateSeed {
+                java.util.UUID
+                    .randomUUID()
+                    .toString()
+            }
+
+        override suspend fun getSimIdentity(slot: Int): SimIdentity {
+            activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                return it.identity
+            }
+
+            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                return SimIdentity(
+                    stableId = "unsupported_$slot",
+                    subscriptionId = null,
+                    slotIndex = slot,
+                    source = IdentitySource.SLOT_FALLBACK,
+                )
+            }
+            val seed = getSeed()
+            val identity =
+                permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                    val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
+                    saveSimIdentityInfo(resolved)
+                    resolved
+                }
+
+            return identity ?: SimIdentity(
+                stableId = "sim_$slot",
+                subscriptionId = null,
+                slotIndex = slot,
+                source = IdentitySource.SLOT_FALLBACK,
+            ).also { fallback ->
+                saveSimIdentityInfo(fallback)
+            }
+        }
+
+        private suspend fun saveSimIdentityInfo(identity: SimIdentity) {
+            val slot = identity.slotIndex
+            val subId = identity.subscriptionId
+
+            val currentPrefs = dataStore.data.first()
+            val currentSlot = currentPrefs[slotIndexKey(identity.stableId)]
+            val currentSub = currentPrefs[subscriptionIdKey(identity.stableId)]
+
+            if (currentSlot == slot && currentSub == subId) return
+
+            dataStore.edit { prefs ->
+                slot?.let { prefs[slotIndexKey(identity.stableId)] = it }
+                subId?.let { prefs[subscriptionIdKey(identity.stableId)] = it }
+            }
+        }
+
+        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache
 
         private suspend fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
             val infoList =
@@ -225,6 +259,7 @@ class SimRepositoryImpl
                     autoReset = prefs[autoResetKey(identity)] ?: false,
                     autoResetDay = prefs[autoResetDayKey(identity)] ?: 1,
                     lastResetDate = prefs[lastResetDateKey(identity)] ?: 0L,
+                    rolloverEnabled = prefs[rolloverEnabledKey(identity)] ?: false,
                 )
             }
 
@@ -346,10 +381,12 @@ class SimRepositoryImpl
             identity: String,
             minutesLimit: Int,
             trafficLimitMb: Int,
+            rolloverEnabled: Boolean,
         ) {
             dataStore.edit {
                 it[monthlyLimitKey(identity)] = minutesLimit
                 it[trafficLimitKey(identity)] = trafficLimitMb
+                it[rolloverEnabledKey(identity)] = rolloverEnabled
             }
         }
 
@@ -381,17 +418,35 @@ class SimRepositoryImpl
         }
 
         override suspend fun resetSimUsage(identity: String) {
-            dataStore.edit {
-                it[minutesUsedKey(identity)] = 0
-                it[trafficUsedKey(identity)] = 0f
-                it[manualAdjustmentKey(identity)] = 0
-                it[trafficAdjustmentKey(identity)] = 0f
-                it[lastResetDateKey(identity)] = System.currentTimeMillis()
+            dataStore.edit { prefs ->
+                val rollover = prefs[rolloverEnabledKey(identity)] ?: false
+                if (rollover) {
+                    val minutesLimit = prefs[monthlyLimitKey(identity)] ?: 0
+                    val minutesUsed = prefs[minutesUsedKey(identity)] ?: 0
+                    val manualAdj = prefs[manualAdjustmentKey(identity)] ?: 0
+                    val remainingMinutes = maxOf(0, (minutesLimit + manualAdj) - minutesUsed)
 
-                it[SettingsKeys.notifiedLowMinutesKey(identity)] = false
-                it[SettingsKeys.notifiedLowTrafficKey(identity)] = false
-                it[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-                it[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+                    val trafficLimitMb = prefs[trafficLimitKey(identity)] ?: 0
+                    val trafficUsedMb = prefs[trafficUsedKey(identity)] ?: 0f
+                    val trafficAdjGb = prefs[trafficAdjustmentKey(identity)] ?: 0f
+                    val trafficLimitGb = trafficLimitMb.toFloat() / Constants.MB_PER_GB
+                    val remainingTrafficGb = maxOf(0f, (trafficLimitGb + trafficAdjGb) - (trafficUsedMb / Constants.MB_PER_GB))
+
+                    prefs[manualAdjustmentKey(identity)] = remainingMinutes
+                    prefs[trafficAdjustmentKey(identity)] = remainingTrafficGb
+                } else {
+                    prefs[manualAdjustmentKey(identity)] = 0
+                    prefs[trafficAdjustmentKey(identity)] = 0f
+                }
+
+                prefs[minutesUsedKey(identity)] = 0
+                prefs[trafficUsedKey(identity)] = 0f
+                prefs[lastResetDateKey(identity)] = timeProvider.now()
+
+                prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
+                prefs[SettingsKeys.notifiedLowTrafficKey(identity)] = false
+                prefs[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+                prefs[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
             }
         }
 
@@ -406,10 +461,28 @@ class SimRepositoryImpl
                 val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
 
                 if (lastResetDate < periodStart) {
+                    val rollover = prefs[rolloverEnabledKey(identity)] ?: false
+                    if (rollover) {
+                        val minutesLimit = prefs[monthlyLimitKey(identity)] ?: 0
+                        val minutesUsed = prefs[minutesUsedKey(identity)] ?: 0
+                        val manualAdj = prefs[manualAdjustmentKey(identity)] ?: 0
+                        val remainingMinutes = maxOf(0, (minutesLimit + manualAdj) - minutesUsed)
+
+                        val trafficLimitMb = prefs[trafficLimitKey(identity)] ?: 0
+                        val trafficUsedMb = prefs[trafficUsedKey(identity)] ?: 0f
+                        val trafficAdjGb = prefs[trafficAdjustmentKey(identity)] ?: 0f
+                        val trafficLimitGb = trafficLimitMb.toFloat() / Constants.MB_PER_GB
+                        val remainingTrafficGb = maxOf(0f, (trafficLimitGb + trafficAdjGb) - (trafficUsedMb / Constants.MB_PER_GB))
+
+                        prefs[manualAdjustmentKey(identity)] = remainingMinutes
+                        prefs[trafficAdjustmentKey(identity)] = remainingTrafficGb
+                    } else {
+                        prefs[manualAdjustmentKey(identity)] = 0
+                        prefs[trafficAdjustmentKey(identity)] = 0f
+                    }
+
                     prefs[minutesUsedKey(identity)] = 0
                     prefs[trafficUsedKey(identity)] = 0f
-                    prefs[manualAdjustmentKey(identity)] = 0
-                    prefs[trafficAdjustmentKey(identity)] = 0f
                     prefs[lastResetDateKey(identity)] = nowMillis
 
                     prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
@@ -557,3 +630,5 @@ class SimRepositoryImpl
             }
         }
     }
+
+

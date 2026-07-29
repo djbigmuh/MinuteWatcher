@@ -8,10 +8,12 @@ import com.example.minutewatcher.core.model.MeasurementUnit
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,7 +22,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 class WidgetUiMapperTest {
     private val context: Context = RuntimeEnvironment.getApplication()
 
@@ -191,4 +193,81 @@ class WidgetUiMapperTest {
 
         assertEquals(Color.BLACK, sim0.textColor)
     }
+
+    @Test
+    fun testSnapshotToUiState_HidesEmptyTraffic() {
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            operator = "MTS",
+                            isActive = true,
+                            entities =
+                                mapOf(
+                                    PackageType.DATA to
+                                        SemanticEntity(
+                                            id = "sim_0_DATA",
+                                            simSlot = 0,
+                                            operatorName = "MTS",
+                                            packageType = PackageType.DATA,
+                                            limit = 0, // No limit
+                                            used = 0, // No usage
+                                            remaining = 0,
+                                            unit = MeasurementUnit.BYTES,
+                                            periodStart = 0,
+                                            periodEnd = 0,
+                                            lastUpdateTime = 0,
+                                            sourceType = DataSourceType.SYSTEM,
+                                        ),
+                                ),
+                        ),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        val settings =
+            WidgetSettingsState(
+                layoutMode = 3, // SIX_LINES
+                simArrangement = 0,
+                fontSize = 2,
+                transparency = 50,
+                backgroundColor = Color.BLACK,
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                callTrackingEnabled = true,
+                simStates =
+                    listOf(
+                        SimSettingsState(
+                            showSim = true,
+                            showIcon = true,
+                            showName = true,
+                            showMinutes = true,
+                            showMinutesLimit = true,
+                            showTraffic = true, // Enabled in settings but data is empty
+                            showTrafficLimit = true,
+                        ),
+                    ),
+            )
+
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val sim0 = uiState.simUiStates[0]
+
+        // Should be hidden because limit and used are 0
+        assertFalse(sim0.showTraffic)
+        assertFalse(sim0.hasTrafficData)
+
+        // Verify layout spec does not contain traffic rows
+        val trafficRows =
+            sim0.layoutSpec.rows.filter { row ->
+                row.components.any { component ->
+                    component is SimLayoutComponent.Text && component.text.contains("Used:") && component.text.contains("GB")
+                }
+            }
+        assertTrue(trafficRows.isEmpty())
+    }
 }
+

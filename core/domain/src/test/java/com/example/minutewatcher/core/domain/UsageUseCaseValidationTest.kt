@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.domain
 
 import android.content.Context
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.android.util.PermissionManager
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -53,3 +53,4 @@ class UsageUseCaseValidationTest {
             verify(simRepository).setManualAdjustment(identity, expectedAdj)
         }
 }
+

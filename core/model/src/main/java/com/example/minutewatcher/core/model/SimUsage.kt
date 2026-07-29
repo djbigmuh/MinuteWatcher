@@ -14,4 +14,5 @@ data class SimUsage(
     val autoReset: Boolean,
     val autoResetDay: Int,
     val lastResetDate: Long,
+    val rolloverEnabled: Boolean = false,
 )

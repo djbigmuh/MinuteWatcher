@@ -24,7 +24,7 @@ class WidgetSettingsRepositoryTest {
 
     @Before
     fun setup() {
-        repository = WidgetSettingsRepository(settingsRepository, simRepository)
+        repository = WidgetSettingsRepository(settingsRepository, simRepository, simRepository)
     }
 
     @Test
@@ -125,3 +125,4 @@ class WidgetSettingsRepositoryTest {
             verify(simRepository).setSimSettingsBatch(any())
         }
 }
+

@@ -1,6 +1,6 @@
 // DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 36, compileSdk 37 are project requirements.
 plugins {
-    alias(libs.plugins.androidLibrary)
+    id("minutewatcher.android-library")
     alias(libs.plugins.kotlinKsp)
 }
 
@@ -31,25 +31,17 @@ android {
             isIncludeAndroidResources = true
         }
     }
-
-    lint {
-        abortOnError = true
-        warningsAsErrors = true
-        error += "MissingTranslation"
-    }
 }
 
 dependencies {
     implementation(libs.androidxAppcompat)
-    implementation(libs.googleMaterial)
-    implementation(libs.androidxMaterial3)
-    implementation(libs.daggerHiltAndroid)
-    ksp(libs.daggerHiltCompiler)
+    implementation(libs.kotlinxCoroutinesCore)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockingCore)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.kotlinxCoroutinesTesting)
     testImplementation(libs.robolectric)
-    testImplementation(libs.androidxTestCoreKtx)
 }
+
+

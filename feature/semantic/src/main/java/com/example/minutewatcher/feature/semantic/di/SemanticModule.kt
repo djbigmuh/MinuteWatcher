@@ -20,5 +20,7 @@ interface SemanticModule {
 
     @Binds
     @Singleton
-    fun bindAppSearchWrapper(impl: com.example.minutewatcher.feature.semantic.search.AppSearchWrapperImpl): com.example.minutewatcher.feature.semantic.search.AppSearchWrapper
+    fun bindAppSearchWrapper(
+        impl: com.example.minutewatcher.feature.semantic.search.AppSearchWrapperImpl,
+    ): com.example.minutewatcher.feature.semantic.search.AppSearchWrapper
 }

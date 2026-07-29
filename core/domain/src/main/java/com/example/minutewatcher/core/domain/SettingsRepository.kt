@@ -103,14 +103,10 @@ interface MigrationFlagsRepository {
 
 /**
  * Composite interface for application settings.
- * In the future, prefer depending on more specific interfaces defined above.
+ * @deprecated Use specific sub-interfaces instead: [AppSettingsRepository], [CallSessionRepository], [MigrationFlagsRepository].
  */
+@Deprecated("Use specific sub-interfaces instead")
 interface SettingsRepository :
     AppSettingsRepository,
     CallSessionRepository,
-    MigrationFlagsRepository {
-    // Identity seed is still part of general settings for now
-    fun getSimIdentitySeed(): Flow<String>
-
-    suspend fun setSimIdentitySeed(seed: String)
-}
+    MigrationFlagsRepository

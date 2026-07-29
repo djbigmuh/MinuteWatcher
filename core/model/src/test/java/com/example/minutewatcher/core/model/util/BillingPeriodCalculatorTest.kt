@@ -158,6 +158,20 @@ class BillingPeriodCalculatorTest {
         assertEquals(51, middleInfo.progressPercentage)
     }
 
+    @Test
+    fun testCalculate_31stOnFeb29th_Leap() {
+        // Reset 31, now is Feb 29 2024 (Leap)
+        // lengthOfMonth = 29. resetDayActual = 29.
+        // 29 < 29 is false.
+        // Starts Feb 29.
+        val now = createMillis(2024, 2, 29)
+        val info = BillingPeriodCalculator.calculate(31, now, zoneId)
+
+        assertEquals(createMillis(2024, 2, 29), info.startDate)
+        // End is March 31
+        assertEquals(createMillis(2024, 3, 31), info.endDate)
+    }
+
     private fun createMillis(
         year: Int,
         month: Int,

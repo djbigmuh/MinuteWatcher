@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsScreen
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsViewModel
@@ -64,3 +64,4 @@ class WidgetSettingsActivity : AppCompatActivity() {
         return true
     }
 }
+

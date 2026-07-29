@@ -5,7 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
-import com.example.minutewatcher.core.model.R
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+
 class WidgetSettingsScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -46,6 +46,7 @@ class WidgetSettingsScreenTest {
 
         whenever(viewModel.settingsState).thenReturn(MutableStateFlow(defaultState))
         whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
+        whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))
 
         composeTestRule.setContent {
             WidgetSettingsScreen(
@@ -60,3 +61,5 @@ class WidgetSettingsScreenTest {
         composeTestRule.onNodeWithText(expectedTitle).assertIsDisplayed()
     }
 }
+
+

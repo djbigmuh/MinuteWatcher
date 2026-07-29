@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
-import com.example.minutewatcher.core.model.util.PermissionManager
+import com.example.minutewatcher.core.android.util.PermissionManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -30,3 +30,4 @@ class PermissionRepositoryImpl
                 permissionManager.hasNotificationPermission()
             }
     }
+

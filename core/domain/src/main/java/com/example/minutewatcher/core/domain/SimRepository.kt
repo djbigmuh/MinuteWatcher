@@ -112,6 +112,7 @@ interface SimLimitsRepository {
         identity: String,
         minutesLimit: Int,
         trafficLimitMb: Int,
+        rolloverEnabled: Boolean = false,
     )
 
     fun getAutoReset(identity: String): Flow<Boolean>
@@ -212,8 +213,9 @@ interface SimNotificationFlagsRepository {
 
 /**
  * Composite interface for SIM-related data management.
- * In the future, prefer depending on more specific interfaces defined above.
+ * @deprecated Use specific sub-interfaces instead: [SimIdentityRepository], [SimUsageRepository], [SimLimitsRepository], etc.
  */
+@Deprecated("Use specific sub-interfaces instead")
 interface SimRepository :
     SimIdentityRepository,
     SimUsageRepository,
