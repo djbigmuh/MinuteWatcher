@@ -30,7 +30,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
-
+@Suppress("DEPRECATION")
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerTest {
     private val simIdentityRepository: SimIdentityRepository = mock()

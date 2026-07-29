@@ -39,7 +39,7 @@ class PermissionManager
                     emptyList()
                 }
             } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in getActiveSubscriptions")
+                AppLogger.e("SecurityException in getActiveSubscriptions", e)
                 emptyList()
             }
 
@@ -53,6 +53,7 @@ class PermissionManager
                     -1
                 }
             } catch (e: SecurityException) {
+                AppLogger.e("SecurityException in getDefaultVoiceSubscriptionId", e)
                 -1
             }
 
@@ -66,6 +67,7 @@ class PermissionManager
                     -1
                 }
             } catch (e: SecurityException) {
+                AppLogger.e("SecurityException in getDefaultVoiceSubscriptionId", e)
                 -1
             }
 
@@ -86,7 +88,7 @@ class PermissionManager
                 appOps.unsafeCheckOpNoThrow(
                     AppOpsManager.OPSTR_GET_USAGE_STATS,
                     Process.myUid(),
-                    context.packageName
+                    context.packageName,
                 )
             } else {
                 @Suppress("DEPRECATION")

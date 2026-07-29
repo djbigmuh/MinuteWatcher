@@ -29,7 +29,7 @@ class WidgetSettingsViewModel
         @ApplicationContext private val context: Context,
         private val loader: WidgetSettingsLoader,
         private val dataChangeNotifier: DataChangeNotifier,
-        private val usageStateRepository: UsageStateRepository,
+        usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()

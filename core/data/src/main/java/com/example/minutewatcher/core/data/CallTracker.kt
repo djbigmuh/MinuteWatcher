@@ -29,7 +29,7 @@ class CallTracker
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
-        private val appSettingsRepository: AppSettingsRepository,
+        appSettingsRepository: AppSettingsRepository,
         private val callSessionRepository: CallSessionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,

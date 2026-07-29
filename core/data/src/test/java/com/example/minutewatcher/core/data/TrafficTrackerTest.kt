@@ -25,6 +25,9 @@ import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -152,8 +155,7 @@ class TrafficTrackerTest {
 
             // Slot 1 inactive
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
-            val emptyFlow = flowOf("")
-            whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(emptyFlow) // empty/inactive
+            whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(flowOf("")) // empty/inactive
 
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)

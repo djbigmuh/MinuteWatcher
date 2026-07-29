@@ -50,7 +50,7 @@ class MainViewModel
         private val autoResetUseCase: AutoResetUseCase,
         private val usageUseCase: UsageUseCase,
         private val settingsUseCase: SettingsUseCase,
-        private val permissionRepository: PermissionRepository,
+        permissionRepository: PermissionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
         private val savedStateHandle: SavedStateHandle,
         @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -59,8 +59,8 @@ class MainViewModel
         val showLimitDialog = savedStateHandle.getStateFlow<LimitDialogData?>("limit_dialog", null)
         val showDayDialog = savedStateHandle.getStateFlow<DayDialogData?>("day_dialog", null)
         val showAdjustDialog = savedStateHandle.getStateFlow<AdjustDialogData?>("adjust_dialog", null)
-        val showTrafficLimitationDialog = savedStateHandle.getStateFlow<Boolean>("traffic_limitation_dialog", false)
-        val showUsageAccessDialog = savedStateHandle.getStateFlow<Boolean>("usage_access_dialog", false)
+        val showTrafficLimitationDialog = savedStateHandle.getStateFlow("traffic_limitation_dialog", false)
+        val showUsageAccessDialog = savedStateHandle.getStateFlow("usage_access_dialog", false)
 
         fun openLimitDialog(data: LimitDialogData) {
             savedStateHandle["limit_dialog"] = data
@@ -175,8 +175,8 @@ class MainViewModel
                     isPhonePermissionPermanentlyDenied = phonePermanentlyDenied,
                     showUsageAccessBanner = !usageGranted,
                     showTrafficErrorBanner =
-                        traffic is TrackingStatus.Error &&
-                            traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING,
+                        (traffic is TrackingStatus.Error &&
+                            traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
                     showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
                     showNotificationPermissionBanner = (settings.notifyLowMinutes || settings.notifyLowTraffic) && !notificationsGranted,
                     isNotificationPermissionPermanentlyDenied = notificationPermanentlyDenied,

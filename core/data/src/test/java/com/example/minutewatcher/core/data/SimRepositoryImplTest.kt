@@ -8,10 +8,8 @@ import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -95,7 +93,7 @@ class SimRepositoryImplTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockInfo))
 
             // Discovery
-            val sims = repository.observeActiveSims().filter { it.isNotEmpty() }.first()
+            val sims = repository.observeActiveSims().first { it.isNotEmpty() }
             val identity = sims.first().identity.stableId
 
             // Verify usage has slot 1
