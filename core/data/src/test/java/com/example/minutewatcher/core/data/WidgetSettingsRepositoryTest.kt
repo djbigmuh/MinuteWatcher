@@ -46,7 +46,8 @@ class WidgetSettingsRepositoryTest {
                     widgetBackgroundColor = 0xFF0000FF.toInt(),
                     migrationV1Completed = true,
                 )
-            whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+            val appSettingsFlow = flowOf(appSettings)
+            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
             whenever(simIdentityRepository.getIdentity(any())).thenReturn("test_sim")
 
             val simSettings =
@@ -59,7 +60,8 @@ class WidgetSettingsRepositoryTest {
                     showTraffic = true,
                     showTrafficLimit = false,
                 )
-            whenever(simWidgetVisibilityRepository.getSimSettings(any())).thenReturn(flowOf(simSettings))
+            val simSettingsFlow = flowOf(simSettings)
+            whenever(simWidgetVisibilityRepository.getSimSettings(any())).thenReturn(simSettingsFlow)
 
             val result = repository.load()
 

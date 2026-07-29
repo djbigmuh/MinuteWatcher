@@ -62,7 +62,7 @@ class SimRepositoryImpl
         @param:ApplicationContext private val context: Context,
         private val subscriptionManager: SubscriptionManager,
         private val permissionManager: PermissionManager,
-        private val permissionStateNotifier: PermissionStateNotifier,
+        permissionStateNotifier: PermissionStateNotifier,
         @SimDataStore private val dataStore: DataStore<Preferences>,
         private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,

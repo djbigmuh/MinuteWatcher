@@ -13,7 +13,7 @@ class PermissionRepositoryImpl
     @Inject
     constructor(
         private val permissionManager: PermissionManager,
-        private val notifier: PermissionStateNotifier,
+        notifier: PermissionStateNotifier,
     ) : PermissionRepository {
         override val phoneStatePermissionGranted: Flow<Boolean> =
             notifier.changes.map {

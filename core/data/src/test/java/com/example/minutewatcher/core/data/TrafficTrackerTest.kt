@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.android.util.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
@@ -153,7 +152,8 @@ class TrafficTrackerTest {
 
             // Slot 1 inactive
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
-            whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(flowOf("")) // empty/inactive
+            val emptyFlow = flowOf("")
+            whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(emptyFlow) // empty/inactive
 
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)

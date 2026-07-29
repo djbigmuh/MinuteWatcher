@@ -30,7 +30,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -232,6 +231,7 @@ class UsageCheckWorkerTest {
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
+    @Suppress("SameParameterValue")
     private fun createUtcMillis(year: Int, month: Int, day: Int): Long {
         return java.time.LocalDateTime.of(year, month, day, 12, 0)
             .toInstant(java.time.ZoneOffset.UTC).toEpochMilli()

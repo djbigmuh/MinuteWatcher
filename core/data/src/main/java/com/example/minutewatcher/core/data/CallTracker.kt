@@ -28,7 +28,7 @@ class CallTracker
     @Inject
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
-        @Suppress("UNUSED_PARAMETER") private val simUsageRepository: SimUsageRepository,
+        private val simUsageRepository: SimUsageRepository,
         private val appSettingsRepository: AppSettingsRepository,
         private val callSessionRepository: CallSessionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
@@ -123,10 +123,10 @@ class CallTracker
                     }
 
                     // Priority 1: Global safety cleanup. If device is IDLE, close everything.
+                    @Suppress("DEPRECATION")
                     val isIdle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
                     } else {
-                        @Suppress("DEPRECATION")
                         telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
                     }
                     
