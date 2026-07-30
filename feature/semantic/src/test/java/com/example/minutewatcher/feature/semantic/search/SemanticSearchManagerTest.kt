@@ -19,7 +19,10 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -112,22 +115,32 @@ class SemanticSearchManagerTest {
     }
 
     @Test
-    fun `indexSnapshot respects throttle`() = runTest(testDispatcher) {
+    fun `indexSnapshot eventually indexes delayed snapshot`() = runTest(testDispatcher) {
         val manager = createManager(backgroundScope)
 
+        // 1. First indexing (Manual, so no throttle)
         val s1 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))), isManual = true)
         manager.indexSnapshot(s1)
         val session = fakeWrapper.lastSession!!
-        val initialPuts = session.putRequests.size
+        assertEquals(1, session.putRequests.size)
 
-        advanceTime(60_000)
+        // 2. Second indexing (Within throttle interval)
+        advanceTime(60_000) // 1 minute passed
         val s2 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))), isManual = false)
-        manager.indexSnapshot(s2)
-        assertEquals("Should skip due to throttle", initialPuts, session.putRequests.size)
+        
+        launch { manager.indexSnapshot(s2) }
+        runCurrent()
+        
+        // Should NOT be indexed yet
+        assertEquals("Should wait for throttle", 1, session.putRequests.size)
 
-        advanceTime(300_000)
-        manager.indexSnapshot(s2)
-        // Throttle check passed if it reached end of method
+        // 3. Advance time to pass the 5-minute interval
+        advanceTime(240_000) // 4 more minutes passed, total 5
+        advanceTimeBy(300_000) // Advance virtual clock of dispatcher
+        runCurrent()
+
+        // Should BE indexed now
+        assertEquals("Should be indexed after delay", 2, session.putRequests.size)
     }
 
     @Test

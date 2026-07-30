@@ -66,11 +66,8 @@ class UsageStateRepositoryImpl
             }
         }
 
-        override fun observeSimUsages(): Flow<List<SimUsage>> =
-            combine(
-                simIdentityRepository.observeIdentities(),
-                dataRefreshNotifier.refreshFlow,
-            ) { identities, _ -> identities }
+        private val simUsagesFlow: Flow<List<SimUsage>> =
+            simIdentityRepository.observeIdentities()
                 .flatMapLatest { identities ->
                     if (identities.isEmpty()) {
                         flowOf(emptyList())
@@ -78,6 +75,9 @@ class UsageStateRepositoryImpl
                         combine(identities.map { simUsageRepository.getSimUsage(it) }) { it.toList() }
                     }
                 }.distinctUntilChanged()
+
+        override fun observeSimUsages(): Flow<List<SimUsage>> =
+            combine(simUsagesFlow, dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
 
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
             observeSimUsages()
@@ -88,53 +88,71 @@ class UsageStateRepositoryImpl
                 }
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =
-            dataRefreshNotifier.refreshFlow
-                .flatMapLatest { event ->
-                    observeSimUsages().map { usages ->
-                        val timestamp = timeProvider.now()
-                        val simSnapshots =
-                            usages.map { usage ->
-                                val slot = usage.slotIndex
-                                val operator = usage.operator
-                                val isActive = true // Every item in usages corresponds to an active physical SIM
+            combine(simUsagesFlow, dataRefreshNotifier.refreshFlow) { usages, event ->
+                createSnapshot(usages, event)
+            }.stateIn(scope, SharingStarted.Eagerly, createEmptySnapshot())
 
-                                val minutes =
-                                    MinutesModel.calculate(
-                                        used = usage.minutesUsed,
-                                        limit = usage.minutesLimit,
-                                        manualAdjustment = usage.manualAdjustment,
-                                    )
+        private fun createSnapshot(
+            usages: List<SimUsage>,
+            event: DataRefreshNotifier.RefreshEvent,
+        ): GlobalSnapshot {
+            val timestamp = timeProvider.now()
+            val simSnapshots =
+                usages.map { usage ->
+                    val slot = usage.slotIndex
+                    val operator = usage.operator
+                    val isActive = true // Every item in usages corresponds to an active physical SIM
 
-                                val traffic =
-                                    TrafficModel.calculate(
-                                        usedMb = usage.trafficUsed,
-                                        limitMb = usage.trafficLimitMb,
-                                        manualAdjustmentGb = usage.trafficAdjustment,
-                                    )
-
-                                val entities =
-                                    mutableMapOf(
-                                        PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay, timestamp),
-                                        PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay, timestamp),
-                                    )
-
-                                SimSnapshot(
-                                    slot = slot,
-                                    operator = operator,
-                                    isActive = isActive,
-                                    entities = entities,
-                                )
-                            }
-
-                        GlobalSnapshot(
-                            version = version.getVersion(),
-                            timestamp = timestamp,
-                            simSnapshots = simSnapshots,
-                            capabilities = capabilities.getCapabilities(),
-                            isManualUpdate = event.isManual,
+                    val minutes =
+                        MinutesModel.calculate(
+                            used = usage.minutesUsed,
+                            limit = usage.minutesLimit,
+                            manualAdjustment = usage.manualAdjustment,
                         )
-                    }
-                }.stateIn(scope, SharingStarted.Eagerly, createEmptySnapshot())
+
+                    val traffic =
+                        TrafficModel.calculate(
+                            usedMb = usage.trafficUsed,
+                            limitMb = usage.trafficLimitMb,
+                            manualAdjustmentGb = usage.trafficAdjustment,
+                        )
+
+                    val entities =
+                        mutableMapOf(
+                            PackageType.MINUTES to
+                                SemanticMapper.mapMinutes(
+                                    slot,
+                                    operator,
+                                    minutes,
+                                    usage.autoResetDay,
+                                    timestamp,
+                                ),
+                            PackageType.DATA to
+                                SemanticMapper.mapTraffic(
+                                    slot,
+                                    operator,
+                                    traffic,
+                                    usage.autoResetDay,
+                                    timestamp,
+                                ),
+                        )
+
+                    SimSnapshot(
+                        slot = slot,
+                        operator = operator,
+                        isActive = isActive,
+                        entities = entities,
+                    )
+                }
+
+            return GlobalSnapshot(
+                version = version.getVersion(),
+                timestamp = timestamp,
+                simSnapshots = simSnapshots,
+                capabilities = capabilities.getCapabilities(),
+                isManualUpdate = event.isManual,
+            )
+        }
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 

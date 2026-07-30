@@ -28,6 +28,6 @@ object Constants {
 }
 
 object SimConstants {
-    const val MAX_SUPPORTED_SIM_SLOTS = 2
+    const val MAX_SUPPORTED_SIM_SLOTS = 10
     val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
 }

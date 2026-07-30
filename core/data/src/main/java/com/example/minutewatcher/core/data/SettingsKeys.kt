@@ -22,6 +22,7 @@ object SettingsKeys {
     val MIGRATION_IDENTITY_STABILITY_COMPLETED = booleanPreferencesKey("migration_identity_stability_completed")
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
+    val PHONE_PERMISSION_REQUESTED = booleanPreferencesKey("phone_permission_requested")
     val DATA_SCHEMA_VERSION = intPreferencesKey("data_schema_version")
 
     const val CURRENT_DATA_SCHEMA_VERSION = 2

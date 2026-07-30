@@ -7,15 +7,22 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.minutewatcher.core.data.AppSettingsRepositoryImpl
 import com.example.minutewatcher.core.data.BenchmarkUseCaseImpl
+import com.example.minutewatcher.core.data.CallSessionRepositoryImpl
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
+import com.example.minutewatcher.core.data.MigrationFlagsRepositoryImpl
 import com.example.minutewatcher.core.data.PermissionRepositoryImpl
 import com.example.minutewatcher.core.data.PermissionStateNotifierImpl
 import com.example.minutewatcher.core.data.ResetManager
-import com.example.minutewatcher.core.data.SettingsRepositoryImpl
+import com.example.minutewatcher.core.data.SimIdentityRepositoryImpl
 import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
-import com.example.minutewatcher.core.data.SimRepositoryImpl
+import com.example.minutewatcher.core.data.SimInfoProviderImpl
+import com.example.minutewatcher.core.data.SimLimitsRepositoryImpl
+import com.example.minutewatcher.core.data.SimNotificationFlagsRepositoryImpl
+import com.example.minutewatcher.core.data.SimUsageRepositoryImpl
+import com.example.minutewatcher.core.data.SimWidgetVisibilityRepositoryImpl
 import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
@@ -86,39 +93,39 @@ abstract class DataModule {
 
     @Binds
     @Singleton
-    abstract fun bindSimIdentityRepository(impl: SimRepositoryImpl): SimIdentityRepository
+    abstract fun bindSimIdentityRepository(impl: SimIdentityRepositoryImpl): SimIdentityRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimUsageRepository(impl: SimRepositoryImpl): SimUsageRepository
+    abstract fun bindSimUsageRepository(impl: SimUsageRepositoryImpl): SimUsageRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimLimitsRepository(impl: SimRepositoryImpl): SimLimitsRepository
+    abstract fun bindSimLimitsRepository(impl: SimLimitsRepositoryImpl): SimLimitsRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimWidgetVisibilityRepository(impl: SimRepositoryImpl): SimWidgetVisibilityRepository
+    abstract fun bindSimWidgetVisibilityRepository(impl: SimWidgetVisibilityRepositoryImpl): SimWidgetVisibilityRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimNotificationFlagsRepository(impl: SimRepositoryImpl): SimNotificationFlagsRepository
+    abstract fun bindSimNotificationFlagsRepository(impl: SimNotificationFlagsRepositoryImpl): SimNotificationFlagsRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimInfoProvider(impl: SimRepositoryImpl): SimInfoProvider
+    abstract fun bindSimInfoProvider(impl: SimInfoProviderImpl): SimInfoProvider
 
     @Binds
     @Singleton
-    abstract fun bindAppSettingsRepository(impl: SettingsRepositoryImpl): AppSettingsRepository
+    abstract fun bindAppSettingsRepository(impl: AppSettingsRepositoryImpl): AppSettingsRepository
 
     @Binds
     @Singleton
-    abstract fun bindCallSessionRepository(impl: SettingsRepositoryImpl): CallSessionRepository
+    abstract fun bindCallSessionRepository(impl: CallSessionRepositoryImpl): CallSessionRepository
 
     @Binds
     @Singleton
-    abstract fun bindMigrationFlagsRepository(impl: SettingsRepositoryImpl): MigrationFlagsRepository
+    abstract fun bindMigrationFlagsRepository(impl: MigrationFlagsRepositoryImpl): MigrationFlagsRepository
 
     @Binds
     @Singleton

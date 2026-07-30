@@ -29,7 +29,7 @@
     <string name="language_hi">印地语</string>
     <string name="call_tracking_title">通话追踪</string>
     <string name="usage_access_dialog_title">数据使用追踪</string>
-    <string name="usage_access_dialog_description">为了追踪您的移动数据使用量，MinuteWatcher 需要“使用情况访问”权限。</string>
+    <string name="usage_access_dialog_description">为了追踪您的移动数据使用量，MinuteWatcher 需要“使用情况访问”权限。\n\n这是一种系统级权限，允许应用程序查看通过蜂窝网络发送和接收的数据量。\n\n我们不会追踪您使用的应用程序或您的浏览历史。</string>
     <string name="phone_permission_permanent_denial">通话权限被永久拒绝。</string>
 
     <!-- Settings: Widget -->
@@ -96,9 +96,9 @@
     <string name="notification_channel_name">使用情况监控</string>
     <string name="notification_channel_desc">追踪通话分钟和流量使用情况</string>
     <string name="notification_minutes_title">%1$s 通话分钟使用情况</string>
-    <string name="notification_minutes_body">%1$s 通话分钟使用！剩余 %2$s (%3$d)。本月还剩 %4$s。</string>
+    <string name="notification_minutes_body">%1$s 通话分钟使用！剩余 %2$s (%3$d%%)。本月还剩 %4$s。</string>
     <string name="notification_traffic_title">%1$s 流量使用情况</string>
-    <string name="notification_traffic_body">%1$s 流量使用！剩余 %2$.1f GB (%3$d)。本月还剩 %4$s。</string>
+    <string name="notification_traffic_body">%1$s 流量使用！剩余 %2$.1f GB (%3$d%%)。本月还剩 %4$s。</string>
     <string name="notification_minutes_exhausted_body">本周期通话分钟套餐已用完。</string>
     <string name="notification_traffic_exhausted_body">本周期流量套餐已用完。</string>
     <string name="usage_level_low">不足</string>

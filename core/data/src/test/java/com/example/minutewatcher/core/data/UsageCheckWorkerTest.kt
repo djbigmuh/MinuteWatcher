@@ -277,6 +277,26 @@ class UsageCheckWorkerTest {
             )
         }
 
+    @Test
+    fun `doWork continues even when READ_PHONE_STATE is missing`() =
+        runTest {
+            // 1. Revoke permission in shadow
+            val application = ApplicationProvider.getApplicationContext<Application>()
+            Shadows.shadowOf(application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            // 2. Setup mocks to return empty/idle state (which is what happens without permission)
+            whenever(usageStateRepository.refresh()).thenReturn(createEmptySnapshot())
+
+            // 3. Act
+            val result = worker.doWork()
+
+            // 4. Assert
+            assertEquals(ListenableWorker.Result.success(), result)
+            // Verify that it still reached the logic and called refresh
+            verify(usageStateRepository, atLeastOnce()).refresh()
+            verify(usageUseCase, atLeastOnce()).refreshOperatorInfo()
+        }
+
     @Suppress("SameParameterValue")
     private fun createUtcMillis(year: Int, month: Int, day: Int): Long {
         return java.time.LocalDateTime.of(year, month, day, 12, 0)

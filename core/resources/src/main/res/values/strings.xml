@@ -57,6 +57,7 @@
     <string name="tracking_banner_usage_access">Usage Access is required to track mobile data usage accurately.</string>
     <string name="tracking_banner_traffic_error">There was an error updating traffic data.</string>
     <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated.</string>
+    <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
     <string name="tracking_banner_notification_permission">Notification permission is recommended to receive usage alerts.</string>
     <string name="notification_permission_permanent_denial">Notifications are disabled. Please enable them in App Settings to receive alerts.</string>
     <string name="action_grant">Grant</string>
@@ -98,9 +99,9 @@
     <string name="notification_channel_name">Usage Monitoring</string>
     <string name="notification_channel_desc">Tracking minutes and traffic usage</string>
     <string name="notification_minutes_title">Minutes usage %1$s</string>
-    <string name="notification_minutes_body">%1$s minutes usage! Left %2$s (%3$d). Month ends in %4$s.</string>
+    <string name="notification_minutes_body">%1$s minutes usage! Left %2$s (%3$d%%). Month ends in %4$s.</string>
     <string name="notification_traffic_title">Traffic usage %1$s</string>
-    <string name="notification_traffic_body">%1$s traffic usage! Left %2$.1f GB (%3$d). Month ends in %4$s.</string>
+    <string name="notification_traffic_body">%1$s traffic usage! Left %2$.1f GB (%3$d%%). Month ends in %4$s.</string>
     <string name="notification_minutes_exhausted_body">Minutes package for the period has ended.</string>
     <string name="notification_traffic_exhausted_body">Traffic package for the period has ended.</string>
     <string name="usage_level_low">LOW</string>

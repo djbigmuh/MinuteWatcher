@@ -109,6 +109,8 @@ class CallTracker
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Error in onCallStarted", e)
+            } finally {
+                refreshStatus()
             }
         }
 
@@ -170,6 +172,8 @@ class CallTracker
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Error in onCallEnded", e)
+            } finally {
+                refreshStatus()
             }
         }
 
@@ -185,14 +189,12 @@ class CallTracker
 
                 if (!callTrackingEnabled.value) {
                     AppLogger.d("Call tracking disabled, skipping minutes increment for subId $subId")
-                    refreshStatus()
                     return
                 }
 
                 // Validate session against reboots/corruption
                 if (savedBootTime == 0L || savedBootTime > currentBootTime) {
                     AppLogger.d("Stale call session detected for subId $subId (reboot or corrupted state)")
-                    refreshStatus()
                     return
                 }
 
@@ -201,7 +203,6 @@ class CallTracker
                     processCallDuration(durationSeconds.toInt(), subId, savedIdentity)
                 }
             }
-            refreshStatus()
         }
 
         private suspend fun refreshStatus(force: Boolean = false) {

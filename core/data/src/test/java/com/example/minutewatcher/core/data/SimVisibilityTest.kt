@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
@@ -84,7 +83,6 @@ class SimVisibilityTest {
             // Initial value from StateFlow (initialValue = emptyList())
             runCurrent()
             assertTrue(simsList.isNotEmpty())
-            val initialSize = simsList.size
 
             // Trigger first re-evaluation
             permissionChanges.emit(0)
@@ -100,10 +98,10 @@ class SimVisibilityTest {
 
             permissionChanges.emit(1)
             runCurrent()
-            advanceUntilIdle()
 
-            // Should have emitted again
-            assertTrue("Should have more than $initialSize emissions, but had ${simsList.size}. List: $simsList", simsList.size > initialSize)
+            // Should have emitted again with the new SIM
+            assertTrue("Should have emitted exactly 3 times (initial, re-eval 1, re-eval 2), but had ${simsList.size}", simsList.size >= 3)
+            assertTrue("Last emission should contain the SIM", simsList.last().isNotEmpty())
 
             job.cancel()
         }

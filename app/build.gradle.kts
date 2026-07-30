@@ -42,6 +42,13 @@ configure<ApplicationExtension> {
         debug {
             manifestPlaceholders["benchmarkReceiverEnabled"] = true
         }
+        create("benchmark") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("debug")
+            manifestPlaceholders["benchmarkReceiverEnabled"] = true
+            proguardFiles("benchmark-rules.pro")
+        }
     }
 
     compileOptions {

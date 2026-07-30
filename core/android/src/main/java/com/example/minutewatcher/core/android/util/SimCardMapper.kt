@@ -1,9 +1,10 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
-import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.model.TrafficModel
 
 object SimCardMapper {
     fun map(
@@ -11,24 +12,17 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
-        val effectiveMinutesLimit = usage.minutesLimit + usage.manualAdjustment
-        val isMinutesLimitSet = usage.minutesLimit > 0 || usage.manualAdjustment != 0
-        val remainingMinutes =
-            if (isMinutesLimitSet) {
-                maxOf(0, effectiveMinutesLimit - usage.minutesUsed)
-            } else {
-                0
-            }
+        val minutesModel = MinutesModel.calculate(
+            used = usage.minutesUsed,
+            limit = usage.minutesLimit,
+            manualAdjustment = usage.manualAdjustment
+        )
 
-        val baseTrafficLimitGb = usage.trafficLimitMb / Constants.MB_PER_GB
-        val effectiveTrafficLimitGb = baseTrafficLimitGb + usage.trafficAdjustment
-        val isTrafficLimitSet = usage.trafficLimitMb > 0 || usage.trafficAdjustment != 0f
-        val trafficRemainingGb =
-            if (isTrafficLimitSet) {
-                maxOf(0f, effectiveTrafficLimitGb - (usage.trafficUsed / Constants.MB_PER_GB))
-            } else {
-                -1f
-            }
+        val trafficModel = TrafficModel.calculate(
+            usedMb = usage.trafficUsed,
+            limitMb = usage.trafficLimitMb,
+            manualAdjustmentGb = usage.trafficAdjustment
+        )
 
         return SimCardUiModel(
             slot = slot,
@@ -38,15 +32,15 @@ object SimCardMapper {
             minutesUsed = usage.minutesUsed,
             minutesLimit = usage.minutesLimit,
             manualAdjustment = usage.manualAdjustment,
-            minutesRemaining = remainingMinutes,
-            effectiveMinutesLimit = effectiveMinutesLimit,
-            isMinutesLimitSet = isMinutesLimitSet,
+            minutesRemaining = minutesModel.remaining,
+            effectiveMinutesLimit = minutesModel.effectiveLimit,
+            isMinutesLimitSet = usage.minutesLimit > 0 || usage.manualAdjustment != 0,
             trafficUsedMb = usage.trafficUsed,
             trafficLimitMb = usage.trafficLimitMb,
-            trafficRemainingGb = trafficRemainingGb,
-            effectiveTrafficLimitGb = effectiveTrafficLimitGb,
+            trafficRemainingGb = trafficModel.remainingGb,
+            effectiveTrafficLimitGb = trafficModel.effectiveLimitGb,
             trafficAdjustmentGb = usage.trafficAdjustment,
-            isTrafficLimitSet = isTrafficLimitSet,
+            isTrafficLimitSet = trafficModel.isLimitSet,
             autoResetEnabled = usage.autoReset,
             autoResetDay = usage.autoResetDay,
             rolloverEnabled = usage.rolloverEnabled,

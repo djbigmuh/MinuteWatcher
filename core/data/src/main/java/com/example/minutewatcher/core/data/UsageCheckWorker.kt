@@ -50,14 +50,8 @@ class UsageCheckWorker
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
-                if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.READ_PHONE_STATE) !=
-                    PackageManager.PERMISSION_GRANTED
-                ) {
-                    AppLogger.d("READ_PHONE_STATE not granted, skipping UsageCheckWorker")
-                    return@withContext Result.success()
-                }
                 try {
-                    // Refresh operator info periodically
+                    // Refresh operator info periodically (if permissions allow)
                     usageUseCase.refreshOperatorInfo()
 
                     checkUsageAndNotify()

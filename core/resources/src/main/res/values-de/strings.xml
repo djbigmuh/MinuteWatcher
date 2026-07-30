@@ -29,7 +29,7 @@
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Anrufverfolgung</string>
     <string name="usage_access_dialog_title">Datenverbrauchsverfolgung</string>
-    <string name="usage_access_dialog_description">Um Ihren mobilen Datenverbrauch zu verfolgen, benötigt MinuteWatcher die Berechtigung „Nutzungszugriff“.</string>
+    <string name="usage_access_dialog_description">Um Ihren mobilen Datenverbrauch zu verfolgen, benötigt MinuteWatcher die Berechtigung „Nutzungszugriff“.\n\nDies ist eine Berechtigung auf Systemebene, die es der App ermöglicht zu sehen, wie viele Daten über das Mobilfunknetz gesendet und empfangen wurden.\n\nWir verfolgen nicht, welche Apps Sie verwenden oder Ihren Browserverlauf.</string>
     <string name="phone_permission_permanent_denial">Telefonberechtigung dauerhaft verweigert.</string>
 
     <!-- Settings: Widget -->
@@ -96,9 +96,9 @@
     <string name="notification_channel_name">Verbrauchskontrolle</string>
     <string name="notification_channel_desc">Verfolgung von Minuten und Datenvolumen</string>
     <string name="notification_minutes_title">Minutenverbrauch %1$s</string>
-    <string name="notification_minutes_body">%1$s Minutenverbrauch! Verbleibend %2$s (%3$d). Monat endet in %4$s.</string>
+    <string name="notification_minutes_body">%1$s Minutenverbrauch! Verbleibend %2$s (%3$d%%). Monat endet in %4$s.</string>
     <string name="notification_traffic_title">Datenverbrauch %1$s</string>
-    <string name="notification_traffic_body">%1$s Datenverbrauch! Verbleibend %2$.1f GB (%3$d). Monat endet in %4$s.</string>
+    <string name="notification_traffic_body">%1$s Datenverbrauch! Verbleibend %2$.1f GB (%3$d%%). Monat endet in %4$s.</string>
     <string name="notification_minutes_exhausted_body">Minutenpaket für den Zeitraum ist aufgebraucht.</string>
     <string name="notification_traffic_exhausted_body">Datenpaket für den Zeitraum ist aufgebraucht.</string>
     <string name="usage_level_low">NIEDRIG</string>

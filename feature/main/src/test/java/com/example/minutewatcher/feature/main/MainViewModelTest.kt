@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.PermissionUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +65,8 @@ class MainViewModelTest {
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
-        whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(mock()))
+        whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
+        whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
     }
 
     @After
@@ -80,7 +82,7 @@ class MainViewModelTest {
             phonePermissionFlow.value = false
 
             val bannerState = viewModel.trackingBannerState.first()
-            assertTrue(bannerState.showPhonePermissionBanner)
+            assertTrue(bannerState.phonePermissionState != PermissionUiState.GRANTED)
         }
 
     @Test
@@ -92,7 +94,7 @@ class MainViewModelTest {
             usageStatsPermissionFlow.value = true
 
             val bannerState = viewModel.trackingBannerState.first()
-            assertFalse(bannerState.showPhonePermissionBanner)
+            assertTrue(bannerState.phonePermissionState == PermissionUiState.GRANTED)
         }
 
     @Test
@@ -103,7 +105,7 @@ class MainViewModelTest {
             viewModel.setPhonePermissionPermanentlyDenied(true)
 
             val bannerState = viewModel.trackingBannerState.first()
-            assertTrue(bannerState.isPhonePermissionPermanentlyDenied)
+            assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
         }
 
     @Test
@@ -116,7 +118,7 @@ class MainViewModelTest {
             val viewModel = createViewModel()
 
             val bannerState = viewModel.trackingBannerState.first()
-            assertTrue(bannerState.showNotificationPermissionBanner)
+            assertTrue(bannerState.notificationPermissionState != PermissionUiState.GRANTED)
         }
 
     @Test
@@ -129,7 +131,25 @@ class MainViewModelTest {
             val viewModel = createViewModel()
 
             val bannerState = viewModel.trackingBannerState.first()
-            assertFalse(bannerState.showNotificationPermissionBanner)
+            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+        }
+
+    @Test
+    fun `trackingBannerState correctly identifies NOT_REQUESTED vs DENIED states`() =
+        runTest {
+            // Case 1: Not requested
+            val settingsFlow = MutableStateFlow(AppSettings(phonePermissionRequested = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            phonePermissionFlow.value = false
+            
+            val viewModel = createViewModel()
+            var bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
+
+            // Case 2: Requested but denied
+            settingsFlow.value = AppSettings(phonePermissionRequested = true)
+            bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.phonePermissionState == PermissionUiState.DENIED)
         }
 
     @Test
@@ -142,7 +162,56 @@ class MainViewModelTest {
             val viewModel = createViewModel()
 
             val bannerState = viewModel.trackingBannerState.first()
-            assertFalse(bannerState.showNotificationPermissionBanner)
+            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+        }
+
+    @Test
+    fun `trackingBannerState shows usage access banner when permission missing`() =
+        runTest {
+            val trackingFlow = MutableStateFlow(mapOf(
+                "traffic" to com.example.minutewatcher.core.model.TrackingStatus.Error(
+                    com.example.minutewatcher.core.model.TrackingStatus.ErrorType.PERMISSION_MISSING
+                )
+            ))
+            whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
+            
+            val viewModel = createViewModel()
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.showUsageAccessBanner)
+        }
+
+    @Test
+    fun `trackingBannerState shows traffic error banner when other tracking error occurs`() =
+        runTest {
+            val trackingFlow = MutableStateFlow(mapOf(
+                "traffic" to com.example.minutewatcher.core.model.TrackingStatus.Error(
+                    com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN, "Some error"
+                )
+            ))
+            whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
+            
+            val viewModel = createViewModel()
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.showTrafficErrorBanner)
+            assertFalse(bannerState.showUsageAccessBanner)
+        }
+
+    @Test
+    fun `trackingBannerState shows shortcuts error banner when shortcuts error occurs`() =
+        runTest {
+            val trackingFlow = MutableStateFlow(mapOf(
+                "shortcuts" to com.example.minutewatcher.core.model.TrackingStatus.Error(
+                    com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN, "Some error"
+                )
+            ))
+            whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
+            
+            val viewModel = createViewModel()
+
+            val bannerState = viewModel.trackingBannerState.first()
+            assertTrue(bannerState.showShortcutsErrorBanner)
         }
 
     @Test
@@ -172,5 +241,3 @@ class MainViewModelTest {
             testDispatcher,
         )
 }
-
-

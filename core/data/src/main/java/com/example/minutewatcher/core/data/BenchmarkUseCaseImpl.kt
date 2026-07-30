@@ -17,7 +17,7 @@ class BenchmarkUseCaseImpl @Inject constructor(
 ) : BenchmarkUseCase {
 
     override suspend fun populateMockData(simCount: Int) {
-        val safeCount = simCount.coerceIn(1, 2)
+        val safeCount = simCount.coerceIn(1, 10)
         
         for (i in 0 until safeCount) {
             val identity = simIdentityRepository.getIdentity(i)

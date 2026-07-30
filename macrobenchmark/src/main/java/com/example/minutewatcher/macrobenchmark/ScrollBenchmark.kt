@@ -1,15 +1,14 @@
 package com.example.minutewatcher.macrobenchmark
 
-import android.content.Intent
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.Until
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,11 +26,12 @@ class ScrollBenchmark {
         startupMode = StartupMode.WARM,
         iterations = 5,
         setupBlock = {
-            // Populate data with 2 SIMs
-            val intent = Intent("com.example.minutewatcher.benchmark.POPULATE_DATA")
-            intent.setPackage("com.example.minutewatcher")
-            intent.putExtra("sim_count", 2)
-            InstrumentationRegistry.getInstrumentation().context.sendBroadcast(intent)
+            // Populate data with 10 SIMs to ensure scrollable list
+            device.executeShellCommand(
+                "am broadcast -a com.example.minutewatcher.benchmark.POPULATE_DATA " +
+                    "-n com.example.minutewatcher/com.example.minutewatcher.benchmark.BenchmarkReceiver " +
+                    "--ei sim_count 10"
+            )
         }
     ) {
         startActivityAndWait()
@@ -40,7 +40,9 @@ class ScrollBenchmark {
         device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000)
 
         // Find the list and scroll
-        val list = device.findObject(By.scrollable(true))
+        val list = device.wait(Until.findObject(By.scrollable(true)), 5000)
+        assertNotNull("Scrollable list not found. Ensure more than 3-4 items are displayed.", list)
+        
         list.setGestureMargin(device.displayWidth / 5)
         
         list.fling(Direction.DOWN)

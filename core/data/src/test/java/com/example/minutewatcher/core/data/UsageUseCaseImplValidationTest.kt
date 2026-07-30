@@ -1,8 +1,11 @@
-package com.example.minutewatcher.core.domain
+package com.example.minutewatcher.core.data
 
 import android.content.Context
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -11,17 +14,17 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-class UsageUseCaseValidationTest {
+class UsageUseCaseImplValidationTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val permissionManager: PermissionManager = mock()
-    private lateinit var usageUseCase: UsageUseCase
+    private lateinit var usageUseCase: UsageUseCaseImpl
 
     @Before
     fun setup() {
-        usageUseCase = UsageUseCase(
+        usageUseCase = UsageUseCaseImpl(
             context,
             simIdentityRepository,
             simUsageRepository,

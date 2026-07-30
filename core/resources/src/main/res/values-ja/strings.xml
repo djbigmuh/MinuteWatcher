@@ -29,7 +29,7 @@
     <string name="language_hi">ヒンディー語</string>
     <string name="call_tracking_title">通話トラッキング</string>
     <string name="usage_access_dialog_title">データ使用量の追跡</string>
-    <string name="usage_access_dialog_description">モバイルデータ使用量を追跡するために、MinuteWatcherは「使用状況へのアクセス」権限を必要とします。</string>
+    <string name="usage_access_dialog_description">モバイルデータ使用量を追跡するために、MinuteWatcherは「使用状況へのアクセス」権限を必要とします。\n\nこれは、モバイルネットワーク経由で送信および受信されたデータ量をアプリが確認できるようにするシステムレベルの権限です。\n\n弊社がお客様の使用しているアプリやブラウザの履歴を追跡することはありません。</string>
     <string name="phone_permission_permanent_denial">電話の権限が永続的に拒否されました。</string>
 
     <!-- Settings: Widget -->
@@ -96,9 +96,9 @@
     <string name="notification_channel_name">使用状況の監視</string>
     <string name="notification_channel_desc">通話時間と通信量の使用状況を追跡します</string>
     <string name="notification_minutes_title">通話時間の使用状況 %1$s</string>
-    <string name="notification_minutes_body">%1$s 通話時間を使用しています！残り %2$s (%3$d)。月末まであと %4$s。</string>
+    <string name="notification_minutes_body">%1$s 通話時間を使用しています！残り %2$s (%3$d%%)。月末まであと %4$s。</string>
     <string name="notification_traffic_title">通信量の使用状況 %1$s</string>
-    <string name="notification_traffic_body">%1$s 通信量を使用しています！残り %2$.1f GB (%3$d)。月末まであと %4$s。</string>
+    <string name="notification_traffic_body">%1$s 通信量を使用しています！残り %2$.1f GB (%3$d%%)。月末まであと %4$s。</string>
     <string name="notification_minutes_exhausted_body">期間内の通話時間パッケージが終了しました。</string>
     <string name="notification_traffic_exhausted_body">期間内の通信量パッケージが終了しました。</string>
     <string name="usage_level_low">少なめ</string>

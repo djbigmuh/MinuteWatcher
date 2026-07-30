@@ -95,7 +95,11 @@ class TrafficTracker
                 try {
                     val targetInfo = getTargetSimInfo()
                     if (targetInfo == null) {
-                        _status.value = TrackingStatus.Idle
+                        if (!permissionManager.hasPhoneStatePermission()) {
+                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+                        } else {
+                            _status.value = TrackingStatus.Idle
+                        }
                         return@withLock
                     }
 
@@ -118,8 +122,10 @@ class TrafficTracker
                         // First run or reboot/overflow
                         simUsageRepository.setLastTotalBytes(targetIdentity, currentBytes)
                         AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
-                        callSessionRepository.setLastDataSubId(currentDataSubId)
-                        inMemoryLastDataSubId = currentDataSubId
+                        if (currentDataSubId != -1) {
+                            callSessionRepository.setLastDataSubId(currentDataSubId)
+                            inMemoryLastDataSubId = currentDataSubId
+                        }
                         _status.value = TrackingStatus.Active
                         return@withLock
                     }
@@ -131,8 +137,10 @@ class TrafficTracker
                             simUsageRepository.setLastTotalBytes(targetIdentity, currentBytes)
                             simUsageRepository.incrementTrafficUsed(targetIdentity, deltaMB)
                             AppLogger.d("Added $deltaMB MB to identity $targetIdentity (SIM $targetSim)")
-                            callSessionRepository.setLastDataSubId(currentDataSubId)
-                            inMemoryLastDataSubId = currentDataSubId
+                            if (currentDataSubId != -1) {
+                                callSessionRepository.setLastDataSubId(currentDataSubId)
+                                inMemoryLastDataSubId = currentDataSubId
+                            }
                             _status.value = TrackingStatus.Active
                         }
                     } else {

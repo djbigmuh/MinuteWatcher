@@ -29,7 +29,7 @@
     <string name="language_hi">الهندية</string>
     <string name="call_tracking_title">تتبع المكالمات</string>
     <string name="usage_access_dialog_title">تتبع استخدام البيانات</string>
-    <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".</string>
+    <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".\n\nهذا إذن على مستوى النظام يسمح للتطبيق بمعرفة كمية البيانات التي تم إرسالها واستلامها عبر الشبكة الخلوية.\n\nنحن لا نتتبع التطبيقات التي تستخدمها أو سجل المتصفح الخاص بك.</string>
     <string name="phone_permission_permanent_denial">تم رفض إذن الهاتف بشكل دائم.</string>
 
     <!-- Settings: Widget -->
@@ -96,9 +96,9 @@
     <string name="notification_channel_name">مراقبة الاستخدام</string>
     <string name="notification_channel_desc">تتبع استخدام الدقائق وحركة البيانات</string>
     <string name="notification_minutes_title">استخدام الدقائق %1$s</string>
-    <string name="notification_minutes_body">%1$s استخدام الدقائق! المتبقي %2$s (%3$d). ينتهي الشهر خلال %4$s.</string>
+    <string name="notification_minutes_body">%1$s استخدام الدقائق! المتبقي %2$s (%3$d%%). ينتهي الشهر خلال %4$s.</string>
     <string name="notification_traffic_title">استخدام البيانات %1$s</string>
-    <string name="notification_traffic_body">%1$s استخدام البيانات! المتبقي %2$.1f جيجابايت (%3$d). ينتهي الشهر خلال %4$s.</string>
+    <string name="notification_traffic_body">%1$s استخدام البيانات! المتبقي %2$.1f جيجابايت (%3$d%%). ينتهي الشهر خلال %4$s.</string>
     <string name="notification_minutes_exhausted_body">انتهت باقة الدقائق للفترة.</string>
     <string name="notification_traffic_exhausted_body">انتهت باقة البيانات للفترة.</string>
     <string name="usage_level_low">منخفض</string>

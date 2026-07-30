@@ -115,7 +115,7 @@ private fun WidgetContent(
     uiState: WidgetUiState,
     navigationProvider: NavigationProvider,
 ) {
-    val alpha = uiState.transparency / 100f
+    val alpha = 1f - uiState.transparency / 100f
     val bgColor =
         androidx.compose.ui.graphics
             .Color(uiState.backgroundColor)

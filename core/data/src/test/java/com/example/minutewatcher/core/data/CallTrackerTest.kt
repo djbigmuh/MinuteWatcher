@@ -215,7 +215,7 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId = 1)
 
             val status = callTracker.status.first()
-            assertEquals(TrackingStatus.Active, status)
+            assertEquals(TrackingStatus.Idle, status)
         }
 
     @Test

@@ -25,27 +25,29 @@ fun TrackingBanners(
     onShowUsageAccessDialog: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onRetryAppSearch: () -> Unit,
+    onRetryShortcuts: () -> Unit,
     onRetryTraffic: () -> Unit,
     onGrantNotificationPermission: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (state.showPhonePermissionBanner) {
+        if (state.phonePermissionState != com.example.minutewatcher.core.model.PermissionUiState.GRANTED) {
+            val isPermanentlyDenied = state.phonePermissionState == com.example.minutewatcher.core.model.PermissionUiState.PERMANENTLY_DENIED
             val text =
-                if (state.isPhonePermissionPermanentlyDenied) {
+                if (isPermanentlyDenied) {
                     stringResource(id = R.string.phone_permission_permanent_denial)
                 } else {
                     stringResource(id = R.string.tracking_banner_phone_permission)
                 }
 
             val actionText =
-                if (state.isPhonePermissionPermanentlyDenied) {
+                if (isPermanentlyDenied) {
                     stringResource(id = R.string.action_app_settings)
                 } else {
                     stringResource(id = R.string.action_grant)
                 }
 
             val onAction =
-                if (state.isPhonePermissionPermanentlyDenied) {
+                if (isPermanentlyDenied) {
                     onOpenAppSettings
                 } else {
                     onGrantPhonePermission
@@ -86,23 +88,33 @@ fun TrackingBanners(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (state.showNotificationPermissionBanner) {
+        if (state.showShortcutsErrorBanner) {
+            TrackingBanner(
+                text = stringResource(id = R.string.tracking_banner_shortcuts_error),
+                actionText = stringResource(id = R.string.action_retry),
+                onAction = onRetryShortcuts,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (state.notificationPermissionState != com.example.minutewatcher.core.model.PermissionUiState.GRANTED) {
+            val isPermanentlyDenied = state.notificationPermissionState == com.example.minutewatcher.core.model.PermissionUiState.PERMANENTLY_DENIED
             val text =
-                if (state.isNotificationPermissionPermanentlyDenied) {
+                if (isPermanentlyDenied) {
                     stringResource(id = R.string.notification_permission_permanent_denial)
                 } else {
                     stringResource(id = R.string.tracking_banner_notification_permission)
                 }
 
             val actionText =
-                if (state.isNotificationPermissionPermanentlyDenied) {
+                if (isPermanentlyDenied) {
                     stringResource(id = R.string.action_app_settings)
                 } else {
                     stringResource(id = R.string.action_grant)
                 }
 
             val onAction =
-                if (state.isNotificationPermissionPermanentlyDenied) {
+                if (isPermanentlyDenied) {
                     onOpenAppSettings
                 } else {
                     onGrantNotificationPermission

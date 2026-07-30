@@ -37,13 +37,18 @@ fun WidgetPreview(
     uiState: WidgetUiState,
     modifier: Modifier = Modifier,
 ) {
-    val alpha = uiState.transparency / 100f
+    val alpha = 1f - uiState.transparency / 100f
     val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
 
     val luminance =
         androidx.core.graphics.ColorUtils
             .calculateLuminance(uiState.backgroundColor)
-    val noDataColor = if (luminance > 0.5f) Color.Black else Color.White
+    
+    val noDataColor = if (uiState.useSystemColors) {
+        androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+    } else {
+        if (luminance > 0.5f) Color.Black else Color.White
+    }
 
     Box(
         modifier =
@@ -68,19 +73,24 @@ fun WidgetPreview(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[0])
+                        SimItemPreview(simUiStates[0], uiState)
                     }
                     if (uiState.showSeparator) {
+                        val separatorColor = if (uiState.useSystemColors) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.outline
+                        } else {
+                            Color(simUiStates[0].secondaryTextColor).copy(alpha = 0.5f)
+                        }
                         Spacer(
                             modifier =
                                 Modifier
                                     .width(1.dp)
                                     .fillMaxHeight()
-                                    .background(Color(simUiStates[0].secondaryTextColor).copy(alpha = 0.5f)),
+                                    .background(separatorColor),
                         )
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[1])
+                        SimItemPreview(simUiStates[1], uiState)
                     }
                 }
             } else if (!uiState.isHorizontal && simUiStates.size >= 2) {
@@ -89,24 +99,29 @@ fun WidgetPreview(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[0])
+                        SimItemPreview(simUiStates[0], uiState)
                     }
                     if (uiState.showSeparator) {
+                        val separatorColor = if (uiState.useSystemColors) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.outline
+                        } else {
+                            Color(simUiStates[0].secondaryTextColor).copy(alpha = 0.5f)
+                        }
                         Spacer(
                             modifier =
                                 Modifier
                                     .height(1.dp)
                                     .fillMaxWidth()
-                                    .background(Color(simUiStates[0].secondaryTextColor).copy(alpha = 0.5f)),
+                                    .background(separatorColor),
                         )
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[1])
+                        SimItemPreview(simUiStates[1], uiState)
                     }
                 }
             } else {
                 Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                    SimItemPreview(simUiStates[0])
+                    SimItemPreview(simUiStates[0], uiState)
                 }
             }
         }
@@ -114,7 +129,10 @@ fun WidgetPreview(
 }
 
 @Composable
-private fun SimItemPreview(sim: SimUiState) {
+private fun SimItemPreview(
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
     val summary = stringResource(id = R.string.sim_status_summary, sim.operatorName, sim.minutesText, sim.trafficText)
 
     Column(
@@ -136,9 +154,16 @@ private fun SimItemPreview(sim: SimUiState) {
                             )
                         }
                         is SimLayoutComponent.Text -> {
+                            val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
+                                androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                            } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                                androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                Color(component.color)
+                            }
                             Text(
                                 text = component.text,
-                                color = Color(component.color),
+                                color = textColor,
                                 fontSize = component.fontSizeSp.sp,
                                 fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
                             )

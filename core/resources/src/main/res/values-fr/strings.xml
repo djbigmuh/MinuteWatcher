@@ -29,7 +29,7 @@
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Suivi des appels</string>
     <string name="usage_access_dialog_title">Suivi de l\'utilisation des données</string>
-    <string name="usage_access_dialog_description">Pour suivre votre consommation de données mobiles, MinuteWatcher a besoin de l\'autorisation « Accès aux données d\'utilisation ».</string>
+    <string name="usage_access_dialog_description">Pour suivre votre consommation de données mobiles, MinuteWatcher a besoin de l\'autorisation « Accès aux données d\'utilisation ».\n\nIl s\'agit d\'une autorisation au niveau du système qui permet à l\'application de voir quelle quantité de données a été envoyée et reçue sur le réseau cellulaire.\n\nNous ne suivons pas les applications que vous utilisez ni votre historique de navigation.</string>
     <string name="phone_permission_permanent_denial">Autorisation de téléphone refusée de manière permanente.</string>
 
     <!-- Settings: Widget -->
@@ -96,9 +96,9 @@
     <string name="notification_channel_name">Surveillance de l\'utilisation</string>
     <string name="notification_channel_desc">Suivi des minutes et du trafic</string>
     <string name="notification_minutes_title">Utilisation des minutes %1$s</string>
-    <string name="notification_minutes_body">Utilisation des minutes %1$s ! Restant %2$s (%3$d). Fin du mois dans %4$s.</string>
+    <string name="notification_minutes_body">Utilisation des minutes %1$s ! Restant %2$s (%3$d%%). Fin du mois dans %4$s.</string>
     <string name="notification_traffic_title">Utilisation du trafic %1$s</string>
-    <string name="notification_traffic_body">Utilisation du trafic %1$s ! Restant %2$.1f Go (%3$d). Fin du mois dans %4$s.</string>
+    <string name="notification_traffic_body">Utilisation du trafic %1$s ! Restant %2$.1f Go (%3$d%%). Fin du mois dans %4$s.</string>
     <string name="notification_minutes_exhausted_body">Le forfait de minutes pour la période est terminé.</string>
     <string name="notification_traffic_exhausted_body">Le forfait de données pour la période est terminé.</string>
     <string name="usage_level_low">FAIBLE</string>

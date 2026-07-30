@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -113,6 +114,12 @@ class MainViewModel
             }
         }
 
+        fun setPhonePermissionRequested() {
+            viewModelScope.launch {
+                appSettingsRepository.updateAppSettings { it.copy(phonePermissionRequested = true) }
+            }
+        }
+
         fun openUsageAccessDialog() {
             savedStateHandle["usage_access_dialog"] = true
         }
@@ -129,7 +136,7 @@ class MainViewModel
                 .observeAppSettings()
                 .stateIn(
                     scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5_000),
+                    started = SharingStarted.Eagerly,
                     initialValue = com.example.minutewatcher.core.model.AppSettings(),
                 )
 
@@ -173,17 +180,32 @@ class MainViewModel
 
                 val traffic = statusMap["traffic"]
                 val appsearch = statusMap["appsearch"]
+                val shortcuts = statusMap["shortcuts"]
+
+                val phonePermissionState = when {
+                    phoneGranted -> PermissionUiState.GRANTED
+                    phonePermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
+                    settings.phonePermissionRequested -> PermissionUiState.DENIED
+                    else -> PermissionUiState.NOT_REQUESTED
+                }
+
+                val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
+                val notificationPermissionState = when {
+                    !showNotifications || notificationsGranted -> PermissionUiState.GRANTED
+                    notificationPermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
+                    settings.notificationPermissionRequested -> PermissionUiState.DENIED
+                    else -> PermissionUiState.NOT_REQUESTED
+                }
 
                 TrackingBannerState(
-                    showPhonePermissionBanner = !phoneGranted,
-                    isPhonePermissionPermanentlyDenied = phonePermanentlyDenied,
+                    phonePermissionState = phonePermissionState,
                     showUsageAccessBanner = !usageGranted,
                     showTrafficErrorBanner =
                         (traffic is TrackingStatus.Error &&
                             traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
                     showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
-                    showNotificationPermissionBanner = (settings.notifyLowMinutes || settings.notifyLowTraffic) && !notificationsGranted,
-                    isNotificationPermissionPermanentlyDenied = notificationPermanentlyDenied,
+                    showShortcutsErrorBanner = shortcuts is TrackingStatus.Error,
+                    notificationPermissionState = notificationPermissionState,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -234,7 +256,7 @@ class MainViewModel
 
         private fun initializeApp() {
             viewModelScope.launch(ioDispatcher) {
-                val settings = appSettingsRepository.observeAppSettings().value
+                val settings = appSettingsRepository.getAppSettings().first()
                 if (!settings.onboardingCompleted) {
                     _showOnboardingDialog.value = true
                 }
@@ -258,6 +280,10 @@ class MainViewModel
 
         fun retryAppSearch() {
             usageStateRepository.recoverTracking("appsearch")
+        }
+
+        fun retryShortcuts() {
+            usageStateRepository.recoverTracking("shortcuts")
         }
 
         fun retryTraffic() {

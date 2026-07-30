@@ -14,4 +14,5 @@ data class AppSettings(
     val migrationV1Completed: Boolean = false,
     val onboardingCompleted: Boolean = false,
     val notificationPermissionRequested: Boolean = false,
+    val phonePermissionRequested: Boolean = false,
 )

@@ -329,6 +329,7 @@ private fun MainScreenContent(
                             onShowUsageAccessDialog = onShowUsageAccessDialog,
                             onOpenAppSettings = onOpenAppSettings,
                             onRetryAppSearch = { viewModel.retryAppSearch() },
+                            onRetryShortcuts = { viewModel.retryShortcuts() },
                             onRetryTraffic = { viewModel.retryTraffic() },
                             onGrantNotificationPermission = onGrantNotificationPermission,
                         )

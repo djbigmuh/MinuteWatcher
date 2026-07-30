@@ -6,12 +6,10 @@ import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
-import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -62,12 +60,7 @@ class UsageMonitorReceiverTest {
 
             ShadowLooper.idleMainLooper()
 
-            var workInfos: List<WorkInfo> = emptyList()
-            repeat(20) {
-                workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_1").get(1, TimeUnit.SECONDS)
-                if (workInfos.isNotEmpty()) return@repeat
-                delay(50.milliseconds)
-            }
+            val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_1").get()
 
             assertTrue("Work CALL_EVENT_1 should be enqueued", workInfos.isNotEmpty())
         }
@@ -85,12 +78,7 @@ class UsageMonitorReceiverTest {
 
             ShadowLooper.idleMainLooper()
 
-            var workInfos: List<WorkInfo> = emptyList()
-            repeat(20) {
-                workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_UNKNOWN").get(1, TimeUnit.SECONDS)
-                if (workInfos.isNotEmpty()) return@repeat
-                delay(50.milliseconds)
-            }
+            val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_UNKNOWN").get()
 
             assertTrue("Work CALL_EVENT_UNKNOWN should be enqueued", workInfos.isNotEmpty())
         }

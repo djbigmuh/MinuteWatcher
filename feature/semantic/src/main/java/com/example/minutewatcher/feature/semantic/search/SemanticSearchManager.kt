@@ -19,6 +19,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -164,9 +165,13 @@ open class SemanticSearchManager
             val currentHash = SnapshotHashCalculator.calculate(snapshot)
             if (currentHash == lastSnapshotHash) return
 
-            val currentTime = timeProvider.now()
-            // If it's a manual update, ignore the interval
-            if (!snapshot.isManualUpdate && (currentTime - lastIndexTime < minIndexInterval)) return
+            if (!snapshot.isManualUpdate) {
+                val currentTime = timeProvider.now()
+                val timeSinceLast = currentTime - lastIndexTime
+                if (timeSinceLast < minIndexInterval) {
+                    delay(minIndexInterval - timeSinceLast)
+                }
+            }
 
             if (session == null) {
                 if (!ensureSession()) return
@@ -218,7 +223,7 @@ open class SemanticSearchManager
                     session?.removeByDocumentId(createRemoveRequest(idsToRemove))
                 }
 
-                lastIndexTime = currentTime
+                lastIndexTime = timeProvider.now()
                 lastSnapshotHash = currentHash
                 _status.value = TrackingStatus.Active
             } catch (e: AppSearchException) {

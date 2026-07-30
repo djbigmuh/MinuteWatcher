@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.first
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -116,6 +117,7 @@ class MainActivity : AppCompatActivity() {
                             viewModel.setLanguage(lang)
                         },
                         onGrantPhonePermission = {
+                            viewModel.setPhonePermissionRequested()
                             phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                         },
                         onShowUsageAccessDialog = {
@@ -199,32 +201,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionsAndInit() {
-        if (permissionManager.hasPhoneStatePermission()) {
-            viewModel.setPhonePermissionPermanentlyDenied(false)
-            workScheduler.scheduleInitialSetup()
-            workScheduler.schedulePeriodicUsageCheck()
+        lifecycleScope.launch {
+            val settings = viewModel.appSettings.first()
+            if (permissionManager.hasPhoneStatePermission()) {
+                viewModel.setPhonePermissionPermanentlyDenied(false)
+                workScheduler.scheduleInitialSetup()
+                workScheduler.schedulePeriodicUsageCheck()
 
-            if (!permissionManager.hasUsageStatsPermission()) {
-                viewModel.openUsageAccessDialog()
-            } else {
-                checkNotifications(autoRequest = true)
+                if (!permissionManager.hasUsageStatsPermission()) {
+                    viewModel.openUsageAccessDialog()
+                } else {
+                    checkNotifications(autoRequest = true)
+                }
+            } else if (settings.phonePermissionRequested) {
+                val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.READ_PHONE_STATE)
+                viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
             }
-        } else {
-            // Check if we already requested it and it was denied permanently
-            // This is tricky without a flag.
-            // Most apps show a rationale banner first.
         }
     }
 
     private fun checkNotifications(autoRequest: Boolean) {
-        if (!permissionManager.hasNotificationPermission()) {
-            val settings = viewModel.appSettings.value
-            if (autoRequest && !settings.notificationPermissionRequested) {
-                requestNotificationPermission()
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Determine if it was permanently denied based on rationale
-                val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)
-                viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+        lifecycleScope.launch {
+            if (!permissionManager.hasNotificationPermission()) {
+                val settings = viewModel.appSettings.first()
+                if (autoRequest && !settings.notificationPermissionRequested) {
+                    requestNotificationPermission()
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Determine if it was permanently denied based on rationale
+                    val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS)
+                    viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+                }
             }
         }
     }

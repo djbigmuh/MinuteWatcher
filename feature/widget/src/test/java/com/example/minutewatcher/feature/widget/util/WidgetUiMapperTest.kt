@@ -267,6 +267,29 @@ class WidgetUiMapperTest {
             }
         assertTrue(trafficRows.isEmpty())
     }
+
+    @Test
+    fun testTransparencyMapping() {
+        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())
+        val settings = WidgetSettingsState(
+            layoutMode = 1,
+            simArrangement = 0,
+            fontSize = 2,
+            transparency = 81,
+            backgroundColor = Color.BLACK,
+            notifyLowMinutes = true,
+            notifyLowTraffic = true,
+            callTrackingEnabled = true,
+            simStates = emptyList(),
+        )
+
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        assertTrue("useSystemColors should be true for transparency > 80", uiState.useSystemColors)
+
+        val settingsOpaque = settings.copy(transparency = 80)
+        val uiStateOpaque = WidgetUiMapper.mapFromSnapshot(context, snapshot, settingsOpaque)
+        assertFalse("useSystemColors should be false for transparency <= 80", uiStateOpaque.useSystemColors)
+    }
 }
 
 

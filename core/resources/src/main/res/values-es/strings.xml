@@ -29,7 +29,7 @@
     <string name="language_hi">Hindi</string>
     <string name="call_tracking_title">Seguimiento de llamadas</string>
     <string name="usage_access_dialog_title">Seguimiento del uso de datos</string>
-    <string name="usage_access_dialog_description">Para rastrear su consumo de datos móviles, MinuteWatcher necesita el permiso de \"Acceso de uso\".</string>
+    <string name="usage_access_dialog_description">Para rastrear su consumo de datos móviles, MinuteWatcher necesita el permiso de \"Acceso de uso\".\n\nEste es un permiso a nivel de sistema que permite que la aplicación vea cuántos datos se han enviado y recibido a través de la red celular.\n\nNo rastreamos qué aplicaciones usa ni su historial de navegación.</string>
     <string name="phone_permission_permanent_denial">Permiso de teléfono denegado permanentemente.</string>
 
     <!-- Settings: Widget -->
@@ -96,9 +96,9 @@
     <string name="notification_channel_name">Monitoreo de uso</string>
     <string name="notification_channel_desc">Seguimiento de uso de minutos y tráfico</string>
     <string name="notification_minutes_title">Uso de minutos %1$s</string>
-    <string name="notification_minutes_body">¡Uso de minutos %1$s! Quedan %2$s (%3$d). El mes termina en %4$s.</string>
+    <string name="notification_minutes_body">¡Uso de minutos %1$s! Quedan %2$s (%3$d%%). El mes termina en %4$s.</string>
     <string name="notification_traffic_title">Uso de tráfico %1$s</string>
-    <string name="notification_traffic_body">¡Uso de tráfico %1$s! Quedan %2$.1f GB (%3$d). El mes termina en %4$s.</string>
+    <string name="notification_traffic_body">¡Uso de tráfico %1$s! Quedan %2$.1f GB (%3$d%%). El mes termina en %4$s.</string>
     <string name="notification_minutes_exhausted_body">El paquete de minutos para el periodo ha finalizado.</string>
     <string name="notification_traffic_exhausted_body">El paquete de tráfico para el periodo ha finalizado.</string>
     <string name="usage_level_low">BAJO</string>
