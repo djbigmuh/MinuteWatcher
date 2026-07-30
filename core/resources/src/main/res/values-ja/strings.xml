@@ -8,7 +8,6 @@
 
     <!-- Main Screen Actions -->
     <string name="reset_label">リセット</string>
-    <string name="theme_switch">テーマ切り替え</string>
     <string name="theme_system">システム</string>
     <string name="theme_light">ライト</string>
     <string name="theme_dark">ダーク</string>
@@ -34,7 +33,6 @@
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">ウィジェット設定</string>
-    <string name="widget_display_settings">ウィジェット表示設定</string>
     <string name="background_transparency">背景の透明度</string>
     <string name="display_minutes">分を表示</string>
     <string name="display_minutes_limit">分の制限を表示</string>
@@ -63,7 +61,6 @@
     <string name="action_retry">再試行</string>
     <string name="validation_error_invalid_range">%1$s から %2$s の間の値を入力してください</string>
     <string name="validation_error_invalid_number">有効な数字を入力してください</string>
-    <string name="dynamic_preview">ダイナミックプレビュー</string>
     <string name="widget_pin_unsupported">お使いのランチャーはウィジェットの自動配置をサポートしていません。ウィジェットを手動で追加してください。</string>
     <string name="widget_already_added">ウィジェットは既にホーム画面に追加されています</string>
     <string name="onboarding_title">MinuteWatcherへようこそ！</string>
@@ -79,7 +76,6 @@
     <string name="reset_counters">カウンターをリセット</string>
     <string name="reset_confirmation_title">カウンターをリセットしますか？</string>
     <string name="reset_confirmation_body">これにより、このSIMカードのすべての追跡された使用状況と調整がクリアされます。この操作は取り消すことができません。</string>
-    <string name="click_to_choose">クリックして選択:</string>
     <string name="choose_reset_day">自動リセットを行う日を選択してください:</string>
     <string name="choose_reset_day_dialog_title">リセット日を選択</string>
     <string name="rollover_label">残量を繰り越す</string>
@@ -124,7 +120,6 @@
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIMカードアイコン</string>
     <string name="widget_settings_content_desc">ウィジェット設定</string>
-    <string name="choose_color_content_desc">背景色を選択</string>
     <string name="sim_card_details_content_desc">%1$s SIMカードの詳細</string>
     <string name="adjust_minutes_content_desc">残り時間を調整</string>
     <string name="adjust_traffic_content_desc">残り通信量を調整</string>

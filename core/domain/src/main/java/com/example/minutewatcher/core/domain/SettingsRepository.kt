@@ -100,13 +100,3 @@ interface MigrationFlagsRepository {
 
     suspend fun setMigrationV1Skipped(reason: MigrationSkipReason)
 }
-
-/**
- * Composite interface for application settings.
- * @deprecated Use specific sub-interfaces instead: [AppSettingsRepository], [CallSessionRepository], [MigrationFlagsRepository].
- */
-@Deprecated("Use specific sub-interfaces instead")
-interface SettingsRepository :
-    AppSettingsRepository,
-    CallSessionRepository,
-    MigrationFlagsRepository

@@ -36,8 +36,8 @@ class WidgetSettingsScreenTest {
         notifyLowMinutes = true,
         notifyLowTraffic = true,
         callTrackingEnabled = true,
-        simStates = listOf(
-            SimSettingsState(true, true, true, true, true, true, true)
+        simStates = mapOf(
+            0 to SimSettingsState(true, true, true, true, true, true, true)
         )
     )
 

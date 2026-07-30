@@ -8,7 +8,6 @@
 
     <!-- Main Screen Actions -->
     <string name="reset_label">Reiniciar</string>
-    <string name="theme_switch">Cambiar tema</string>
     <string name="theme_system">Sistema</string>
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
@@ -34,7 +33,6 @@
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Ajustes del widget</string>
-    <string name="widget_display_settings">Ajustes de pantalla del widget</string>
     <string name="background_transparency">Transparencia de fondo</string>
     <string name="display_minutes">Mostrar minutos</string>
     <string name="display_minutes_limit">Mostrar límite de minutos</string>
@@ -63,7 +61,6 @@
     <string name="action_retry">Reintentar</string>
     <string name="validation_error_invalid_range">Por favor, introduzca un valor entre %1$s y %2$s</string>
     <string name="validation_error_invalid_number">Por favor, introduzca un número válido</string>
-    <string name="dynamic_preview">Vista previa dinámica</string>
     <string name="widget_pin_unsupported">Tu lanzador no admite la colocación automática de widgets. Por favor, añade el widget manualmente.</string>
     <string name="widget_already_added">Widget ya añadido a la pantalla de inicio</string>
     <string name="onboarding_title">¡Bienvenido a MinuteWatcher!</string>
@@ -79,7 +76,6 @@
     <string name="reset_counters">Reiniciar contadores</string>
     <string name="reset_confirmation_title">¿Reiniciar contadores?</string>
     <string name="reset_confirmation_body">Esto borrará todo el uso rastreado y los ajustes para esta tarjeta SIM. Esta acción no se puede deshacer.</string>
-    <string name="click_to_choose">Haga clic para elegir:</string>
     <string name="choose_reset_day">Elija el día del mes para el reinicio automático:</string>
     <string name="choose_reset_day_dialog_title">Elegir día de reinicio</string>
     <string name="rollover_label">Acumular restos</string>
@@ -126,7 +122,6 @@
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Icono de tarjeta SIM</string>
     <string name="widget_settings_content_desc">Ajustes del widget</string>
-    <string name="choose_color_content_desc">Elegir color de fondo</string>
     <string name="sim_card_details_content_desc">Detalles de la tarjeta SIM %1$s</string>
     <string name="adjust_minutes_content_desc">Ajustar minutos restantes</string>
     <string name="adjust_traffic_content_desc">Ajustar tráfico restante</string>

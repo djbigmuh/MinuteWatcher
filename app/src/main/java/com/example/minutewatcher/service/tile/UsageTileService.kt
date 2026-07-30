@@ -11,7 +11,9 @@ import androidx.core.service.quicksettings.TileServiceCompat
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.MainImmediateDispatcher
 import com.example.minutewatcher.core.domain.NavigationProvider
+import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.semantic.SemanticRepository
@@ -27,6 +29,8 @@ import javax.inject.Inject
 class UsageTileService : TileService() {
     @Inject lateinit var semanticRepository: SemanticRepository
 
+    @Inject lateinit var usageStateRepository: UsageStateRepository
+
     @Inject lateinit var navigationProvider: NavigationProvider
 
     @Inject @ApplicationScope
@@ -41,6 +45,17 @@ class UsageTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         updateTile()
+        
+        if (semanticRepository.snapshot.value.timestamp == 0L) {
+            applicationScope.launch {
+                try {
+                    usageStateRepository.refresh()
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to force refresh snapshot for tile", e)
+                }
+            }
+        }
+
         job?.cancel()
         job =
             applicationScope.launch(mainImmediateDispatcher) {
@@ -101,9 +116,10 @@ class UsageTileService : TileService() {
                 it.entities[PackageType.MINUTES]?.remaining ?: Long.MAX_VALUE
             } ?: activeSims[0]
 
+        val operatorName = SimUtils.getShortOperatorName(this, activeSim.operator)
         val minutes = activeSim.entities[PackageType.MINUTES]
 
-        tile.label = activeSim.operator
+        tile.label = operatorName
         if (minutes != null) {
             val remaining = minutes.remaining.toInt()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -115,7 +131,7 @@ class UsageTileService : TileService() {
                     )
             } else {
                 // For older versions, put info in label or content description
-                tile.label = getString(R.string.tile_operator_value_format, activeSim.operator, remaining.toString())
+                tile.label = getString(R.string.tile_operator_value_format, operatorName, remaining.toString())
             }
             tile.state = Tile.STATE_ACTIVE
         } else {

@@ -8,7 +8,6 @@
 
     <!-- Main Screen Actions -->
     <string name="reset_label">إعادة ضبط</string>
-    <string name="theme_switch">تبديل السمة</string>
     <string name="theme_system">النظام</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
@@ -34,7 +33,6 @@
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">إعدادات القطعة</string>
-    <string name="widget_display_settings">إعدادات عرض القطعة</string>
     <string name="background_transparency">شفافية الخلفية</string>
     <string name="display_minutes">إظهار الدقائق</string>
     <string name="display_minutes_limit">إظهار حد الدقائق</string>
@@ -63,7 +61,6 @@
     <string name="action_retry">إعادة المحاولة</string>
     <string name="validation_error_invalid_range">يرجى إدخال قيمة بين %1$s و %2$s</string>
     <string name="validation_error_invalid_number">يرجى إدخال رقم صالح</string>
-    <string name="dynamic_preview">معاينة ديناميكية</string>
     <string name="widget_pin_unsupported">لا يدعم المشغل الخاص بك وضع الأدوات التلقائي. يرجى إضافة القطعة يدويا.</string>
     <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
     <string name="onboarding_title">مرحباً بك في MinuteWatcher!</string>
@@ -79,7 +76,6 @@
     <string name="reset_counters">إعادة ضبط العدادات</string>
     <string name="reset_confirmation_title">Reset Counters?</string>
     <string name="reset_confirmation_body">This will clear all tracked usage and adjustments for this SIM card. This action cannot be undone.</string>
-    <string name="click_to_choose">انقر للاختيار:</string>
     <string name="choose_reset_day">اختر يوم الشهر لإعادة الضبط التلقائي:</string>
     <string name="choose_reset_day_dialog_title">اختر يوم إعادة الضبط</string>
     <string name="rollover_label">تراكم الباقي</string>
@@ -134,7 +130,6 @@
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">أيقونة بطاقة SIM</string>
     <string name="widget_settings_content_desc">إعدادات القطعة</string>
-    <string name="choose_color_content_desc">اختر لون الخلفية</string>
     <string name="sim_card_details_content_desc">تفاصيل بطاقة SIM %1$s</string>
     <string name="adjust_minutes_content_desc">تعديل الدقائق المتبقية</string>
     <string name="adjust_traffic_content_desc">تعديل حركة البيانات المتبقية</string>

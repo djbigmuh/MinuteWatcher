@@ -44,7 +44,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.resources.R
@@ -82,7 +81,17 @@ fun SimCardScreen(
     val genericErrorMessage = stringResource(id = R.string.error)
 
     LaunchedEffect(refreshStatus) {
-        handleRefreshStatus(refreshStatus, snackbarHostState, genericErrorMessage, viewModel)
+        val currentStatus = refreshStatus
+        when (currentStatus) {
+            is RefreshState.Error -> {
+                snackbarHostState.showSnackbar(currentStatus.message ?: genericErrorMessage)
+                viewModel.consumeRefreshStatus()
+            }
+            is RefreshState.Success -> {
+                viewModel.consumeRefreshStatus()
+            }
+            else -> Unit
+        }
     }
 
     Scaffold(
@@ -119,22 +128,6 @@ fun SimCardScreen(
         showOnboardingDialog = showOnboardingDialog,
         onOpenUsageAccessSettings = onOpenUsageAccessSettings,
     )
-}
-
-private fun handleRefreshStatus(
-    status: RefreshState,
-    snackbarHostState: SnackbarHostState,
-    errorMsg: String,
-    viewModel: MainViewModel,
-) {
-    if (status is RefreshState.Error) {
-        viewModel.viewModelScope.launch {
-            snackbarHostState.showSnackbar(status.message ?: errorMsg)
-            viewModel.consumeRefreshStatus()
-        }
-    } else if (status is RefreshState.Success) {
-        viewModel.consumeRefreshStatus()
-    }
 }
 
 @Composable
@@ -338,16 +331,16 @@ private fun MainScreenContent(
                         SimCardItem(
                             model = model,
                             onSetLimits = {
-                                viewModel.openLimitDialog(
+                                viewModel.setLimitDialog(
                                     LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb, model.rolloverEnabled),
                                 )
                             },
                             onResetCounters = { showResetConfirmSlot = model.slot },
                             onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
-                            onEditAutoResetDay = { viewModel.openDayDialog(DayDialogData(model.slot, model.autoResetDay)) },
-                            onAdjustMinutes = { viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true)) },
-                            onAdjustTraffic = { viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.trafficRemainingGb, false)) },
-                            onShowTrafficInfo = { viewModel.openTrafficLimitationDialog() },
+                            onEditAutoResetDay = { viewModel.setDayDialog(DayDialogData(model.slot, model.autoResetDay)) },
+                            onAdjustMinutes = { viewModel.setAdjustDialog(AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true)) },
+                            onAdjustTraffic = { viewModel.setAdjustDialog(AdjustDialogData(model.slot, model.trafficRemainingGb, false)) },
+                            onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
                         )
                     }
                 }
@@ -381,14 +374,14 @@ private fun DialogRenderer(
             initialMinutes = data.minutes,
             initialTrafficMb = data.traffic,
             initialRolloverEnabled = data.rolloverEnabled,
-            onDismiss = { viewModel.closeLimitDialog() },
+            onDismiss = { viewModel.setLimitDialog(null) },
             onConfirm = { min, traf, rollover ->
                 viewModel.updateLimits(data.slot, min, traf, rollover)
-                viewModel.closeLimitDialog()
+                viewModel.setLimitDialog(null)
             },
             onReset = {
                 viewModel.updateLimits(data.slot, 0, 0, false)
-                viewModel.closeLimitDialog()
+                viewModel.setLimitDialog(null)
             },
         )
     }
@@ -396,10 +389,10 @@ private fun DialogRenderer(
     showDayDialog?.let { data ->
         DayPickerComposeDialog(
             initialDay = data.day,
-            onDismiss = { viewModel.closeDayDialog() },
+            onDismiss = { viewModel.setDayDialog(null) },
             onDaySelected = { day ->
                 viewModel.updateAutoResetDay(data.slot, day)
-                viewModel.closeDayDialog()
+                viewModel.setDayDialog(null)
             },
         )
     }
@@ -408,14 +401,14 @@ private fun DialogRenderer(
         AdjustmentComposeDialog(
             currentValue = data.currentValue,
             isMinutes = data.isMinutes,
-            onDismiss = { viewModel.closeAdjustDialog() },
+            onDismiss = { viewModel.setAdjustDialog(null) },
             onConfirm = { value ->
                 if (data.isMinutes) {
                     viewModel.adjustRemainingMinutes(data.slot, value.toInt())
                 } else {
                     viewModel.adjustRemainingTraffic(data.slot, value)
                 }
-                viewModel.closeAdjustDialog()
+                viewModel.setAdjustDialog(null)
             },
         )
     }
@@ -424,15 +417,15 @@ private fun DialogRenderer(
         SimpleMessageDialog(
             title = stringResource(id = R.string.traffic_tracking_limitation_title),
             text = stringResource(id = R.string.traffic_tracking_limitation_body),
-            onDismiss = { viewModel.closeTrafficLimitationDialog() },
+            onDismiss = { viewModel.setTrafficLimitationDialog(false) },
         )
     }
 
     if (showUsageAccessDialog) {
         UsageAccessDialog(
-            onDismiss = { viewModel.closeUsageAccessDialog() },
+            onDismiss = { viewModel.setUsageAccessDialog(false) },
             onSettings = {
-                viewModel.closeUsageAccessDialog()
+                viewModel.setUsageAccessDialog(false)
                 onOpenUsageAccessSettings()
             },
         )

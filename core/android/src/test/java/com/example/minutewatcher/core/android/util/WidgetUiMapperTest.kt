@@ -1,4 +1,4 @@
-package com.example.minutewatcher.feature.widget.util
+package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import android.graphics.Color
@@ -19,8 +19,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 class WidgetUiMapperTest {
     private val context: Context = RuntimeEnvironment.getApplication()
 
@@ -70,8 +70,8 @@ class WidgetUiMapperTest {
                 notifyLowTraffic = true,
                 callTrackingEnabled = true,
                 simStates =
-                    listOf(
-                        SimSettingsState(
+                    mapOf(
+                        0 to SimSettingsState(
                             showSim = true,
                             showIcon = true,
                             showName = true,
@@ -102,7 +102,7 @@ class WidgetUiMapperTest {
     @Test
     fun testSnapshotToUiState_EmptySnapshot() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, emptyList())
+        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, emptyMap())
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
 
@@ -153,7 +153,7 @@ class WidgetUiMapperTest {
                 true,
                 true,
                 true,
-                listOf(SimSettingsState(true, true, true, true, false, false, false)),
+                mapOf(0 to SimSettingsState(true, true, true, true, false, false, false)),
             )
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
@@ -183,7 +183,7 @@ class WidgetUiMapperTest {
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 callTrackingEnabled = true,
-                simStates = emptyList(),
+                simStates = emptyMap(),
             )
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
@@ -238,8 +238,8 @@ class WidgetUiMapperTest {
                 notifyLowTraffic = true,
                 callTrackingEnabled = true,
                 simStates =
-                    listOf(
-                        SimSettingsState(
+                    mapOf(
+                        0 to SimSettingsState(
                             showSim = true,
                             showIcon = true,
                             showName = true,
@@ -280,7 +280,7 @@ class WidgetUiMapperTest {
             notifyLowMinutes = true,
             notifyLowTraffic = true,
             callTrackingEnabled = true,
-            simStates = emptyList(),
+            simStates = emptyMap(),
         )
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
@@ -291,5 +291,3 @@ class WidgetUiMapperTest {
         assertFalse("useSystemColors should be false for transparency <= 80", uiStateOpaque.useSystemColors)
     }
 }
-
-

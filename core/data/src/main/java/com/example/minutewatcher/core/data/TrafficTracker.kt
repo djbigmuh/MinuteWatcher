@@ -39,6 +39,11 @@ import javax.inject.Singleton
  *
  * If the user swaps the default data SIM, the tracker detects the change and resets the
  * baseline to avoid mixing traffic from different providers.
+ *
+ * START TIME POLICY:
+ * To improve accuracy and potentially performance, queries to NetworkStatsManager use the
+ * SIM's `lastResetDate` as the start time. This avoids including historical data that
+ * is no longer relevant for the current billing period.
  */
 @Singleton
 class TrafficTracker
@@ -71,10 +76,11 @@ class TrafficTracker
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
                 try {
-                    val currentBytes = getCurrentMobileBytes()
+                    val usage = simUsageRepository.getSimUsage(identity).first()
+                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate)
                     if (currentBytes != -1L) {
                         simUsageRepository.setLastTotalBytes(identity, currentBytes)
-                        AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                        AppLogger.d("Traffic baseline reset for $identity to $currentBytes (startTime: ${usage.lastResetDate})")
                         _status.value = TrackingStatus.Active
                     } else {
                         _status.value = TrackingStatus.Idle
@@ -105,9 +111,10 @@ class TrafficTracker
 
                     val (targetSim, currentDataSubId) = targetInfo
                     val targetIdentity = simIdentityRepository.getIdentity(targetSim)
-                    val currentBytes = getCurrentMobileBytes()
+                    val usage = simUsageRepository.getSimUsage(targetIdentity).first()
+                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate)
                     if (currentBytes == -1L) {
-                        AppLogger.d("Traffic stats unavailable, skipping update")
+                        AppLogger.d("Traffic stats unavailable for $targetIdentity, skipping update")
                         if (!permissionManager.hasUsageStatsPermission()) {
                             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
                         } else {
@@ -158,7 +165,7 @@ class TrafficTracker
             }
         }
 
-        private fun getCurrentMobileBytes(): Long {
+        private fun getCurrentMobileBytes(startTime: Long): Long {
             if (networkStatsManager == null) return -1L
 
             return try {
@@ -166,7 +173,7 @@ class TrafficTracker
                     networkStatsManager.querySummaryForDevice(
                         NetworkCapabilities.TRANSPORT_CELLULAR,
                         null,
-                        0,
+                        startTime,
                         timeProvider.now(),
                     )
                 bucket.rxBytes + bucket.txBytes
@@ -212,7 +219,8 @@ class TrafficTracker
             if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
                 AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")
                 val identity = simIdentityRepository.getIdentity(targetSim)
-                val currentBytes = getCurrentMobileBytes()
+                val usage = simUsageRepository.getSimUsage(identity).first()
+                val currentBytes = getCurrentMobileBytes(usage.lastResetDate)
                 if (currentBytes != -1L) {
                     simUsageRepository.setLastTotalBytes(identity, currentBytes)
                 }

@@ -8,7 +8,6 @@
 
     <!-- Main Screen Actions -->
     <string name="reset_label">重置</string>
-    <string name="theme_switch">切换主题</string>
     <string name="theme_system">系统</string>
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
@@ -34,7 +33,6 @@
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">小部件设置</string>
-    <string name="widget_display_settings">小部件显示设置</string>
     <string name="background_transparency">背景透明度</string>
     <string name="display_minutes">显示通话分钟数</string>
     <string name="display_minutes_limit">显示通话限制</string>
@@ -63,7 +61,6 @@
     <string name="action_retry">重试</string>
     <string name="validation_error_invalid_range">请输入 %1$s 到 %2$s 之间的值</string>
     <string name="validation_error_invalid_number">请输入有效的数字</string>
-    <string name="dynamic_preview">动态预览</string>
     <string name="widget_pin_unsupported">您的启动器不支持自动放置小部件。请手动添加小部件。</string>
     <string name="widget_already_added">小部件已添加到主屏幕</string>
     <string name="onboarding_title">欢迎使用 MinuteWatcher！</string>
@@ -79,7 +76,6 @@
     <string name="reset_counters">重置计数器</string>
     <string name="reset_confirmation_title">重置计数器？</string>
     <string name="reset_confirmation_body">这将清除此 SIM 卡的所有追踪使用情况和调整。此操作无法撤销。</string>
-    <string name="click_to_choose">点击选择:</string>
     <string name="choose_reset_day">选择每月自动重置的日期:</string>
     <string name="choose_reset_day_dialog_title">选择重置日期</string>
     <string name="rollover_label">累积余额</string>
@@ -124,7 +120,6 @@
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIM 卡图标</string>
     <string name="widget_settings_content_desc">小部件设置</string>
-    <string name="choose_color_content_desc">选择背景颜色</string>
     <string name="sim_card_details_content_desc">%1$s SIM 卡详情</string>
     <string name="adjust_minutes_content_desc">调整剩余分钟数</string>
     <string name="adjust_traffic_content_desc">调整剩余流量</string>

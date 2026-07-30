@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.main.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,11 +51,11 @@ import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.android.util.FormatUtils
-import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
+import com.example.minutewatcher.feature.main.ui.theme.usageColor
 
 @Composable
-fun getStatusColor(status: UsageStatus): Color = Color(UsageColors.get(status, isSystemInDarkTheme()))
+fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorScheme.usageColor(status)
 
 @Composable
 fun SimCardItem(
@@ -318,7 +317,6 @@ fun SimCardItem(
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
 @Composable
 fun EditableValueBox(
     value: String,

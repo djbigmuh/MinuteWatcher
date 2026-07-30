@@ -1,5 +1,4 @@
 package com.example.minutewatcher.core.model
-import android.graphics.Color
 
 object Constants {
     const val PREFS_NAME = "app_prefs"
@@ -9,7 +8,7 @@ object Constants {
     }
 
     object UI {
-        const val DEFAULT_BG_COLOR: Int = Color.BLACK
+        const val DEFAULT_BG_COLOR: Int = 0xFF000000.toInt()
     }
 
     object Widget {

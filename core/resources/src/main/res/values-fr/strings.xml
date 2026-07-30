@@ -8,7 +8,6 @@
 
     <!-- Main Screen Actions -->
     <string name="reset_label">Réinitialiser</string>
-    <string name="theme_switch">Changer de thème</string>
     <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
@@ -34,7 +33,6 @@
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Paramètres du widget</string>
-    <string name="widget_display_settings">Paramètres d\'affichage du widget</string>
     <string name="background_transparency">Transparence de l\'arrière-plan</string>
     <string name="display_minutes">Afficher les minutes</string>
     <string name="display_minutes_limit">Afficher la limite de minutes</string>
@@ -63,7 +61,6 @@
     <string name="action_retry">Réessayer</string>
     <string name="validation_error_invalid_range">Veuillez saisir une valeur entre %1$s et %2$s</string>
     <string name="validation_error_invalid_number">Veuillez saisir un nombre valide</string>
-    <string name="dynamic_preview">Aperçu dynamique</string>
     <string name="widget_pin_unsupported">Votre lanceur ne prend pas en charge le placement automatique des widgets. Veuillez ajouter le widget manuellement.</string>
     <string name="widget_already_added">Widget déjà ajouté à l\'écran d\'accueil</string>
     <string name="onboarding_title">Bienvenue sur MinuteWatcher !</string>
@@ -79,7 +76,6 @@
     <string name="reset_counters">Réinitialiser les compteurs</string>
     <string name="reset_confirmation_title">Réinitialiser les compteurs ?</string>
     <string name="reset_confirmation_body">Cela effacera toutes les données d’utilisation suivies et les ajustements pour cette carte SIM. Cette action est irréversible.</string>
-    <string name="click_to_choose">Cliquez pour choisir :</string>
     <string name="choose_reset_day">Choisissez le jour du mois pour la réinitialisation automatique :</string>
     <string name="choose_reset_day_dialog_title">Choisir le jour de réinitialisation</string>
     <string name="rollover_label">Accumuler les restes</string>
@@ -126,7 +122,6 @@
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Icône de carte SIM</string>
     <string name="widget_settings_content_desc">Paramètres du widget</string>
-    <string name="choose_color_content_desc">Choisir la couleur d\'arrière-plan</string>
     <string name="sim_card_details_content_desc">Détails de la carte SIM %1$s</string>
     <string name="adjust_minutes_content_desc">Ajuster les minutes restantes</string>
     <string name="adjust_traffic_content_desc">Ajuster le trafic restant</string>

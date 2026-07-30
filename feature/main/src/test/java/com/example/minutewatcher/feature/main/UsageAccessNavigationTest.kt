@@ -98,6 +98,7 @@ class UsageAccessNavigationTest {
                 onShowUsageAccessDialog = { dialogOpened = true },
                 onOpenAppSettings = {},
                 onRetryAppSearch = {},
+                onRetryShortcuts = {},
                 onRetryTraffic = {},
                 onGrantNotificationPermission = {}
             )
@@ -127,13 +128,13 @@ class UsageAccessNavigationTest {
     @Test
     fun dialogDoesNotOpenRepeatedly() {
         // Test ViewModel state consistency
-        viewModel.openUsageAccessDialog()
+        viewModel.setUsageAccessDialog(true)
         assertTrue(viewModel.showUsageAccessDialog.value)
         
-        viewModel.openUsageAccessDialog() // Call again
+        viewModel.setUsageAccessDialog(true) // Call again
         assertTrue(viewModel.showUsageAccessDialog.value)
         
-        viewModel.closeUsageAccessDialog()
+        viewModel.setUsageAccessDialog(false)
         assertFalse(viewModel.showUsageAccessDialog.value)
     }
 }

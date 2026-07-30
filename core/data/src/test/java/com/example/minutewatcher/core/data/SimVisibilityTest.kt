@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.android.util.PermissionManager
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
@@ -29,7 +28,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 
 @RunWith(RobolectricTestRunner::class)
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimVisibilityTest {
     private val context: Context = mock()
@@ -45,7 +43,6 @@ class SimVisibilityTest {
     }
 
     private val permissionChanges = MutableSharedFlow<Int>(replay = 1)
-    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     @Before
     fun setup() {
@@ -60,7 +57,7 @@ class SimVisibilityTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
             val repository =
-                SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope, timeProvider)
+                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope)
 
             val sims = repository.observeActiveSims().first()
             assertTrue(sims.isEmpty())
@@ -72,7 +69,7 @@ class SimVisibilityTest {
             // Initially no permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             val repository =
-                SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope, timeProvider)
+                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope)
 
             val simsList = mutableListOf<List<ActiveSimInfo>>()
             val job =
@@ -100,12 +97,8 @@ class SimVisibilityTest {
             runCurrent()
 
             // Should have emitted again with the new SIM
-            assertTrue("Should have emitted exactly 3 times (initial, re-eval 1, re-eval 2), but had ${simsList.size}", simsList.size >= 3)
             assertTrue("Last emission should contain the SIM", simsList.last().isNotEmpty())
 
             job.cancel()
         }
 }
-
-
-

@@ -1,13 +1,11 @@
 package com.example.minutewatcher.core.model
 
-import androidx.appcompat.app.AppCompatDelegate
-
 enum class AppTheme(
     val value: Int,
 ) {
-    FOLLOW_SYSTEM(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM),
-    LIGHT(AppCompatDelegate.MODE_NIGHT_NO),
-    DARK(AppCompatDelegate.MODE_NIGHT_YES),
+    FOLLOW_SYSTEM(-1),
+    LIGHT(1),
+    DARK(2),
     ;
 
     companion object {

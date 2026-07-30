@@ -103,13 +103,13 @@ class IdentityMigrationService
             if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
                 val subId = activeIdentity.subscriptionId
                 if (subId != null) {
+                    val simPrefs = simDataStore.data.first()
                     val iccIdentities =
-                        simDataStore.data
-                            .first()
+                        simPrefs
                             .asMap()
                             .keys
                             .filter { it.name.startsWith("subscription_id_icc_") }
-                            .filter { simDataStore.data.first()[it] == subId }
+                            .filter { simPrefs[it] == subId }
                             .map { it.name.substringAfter("subscription_id_") }
 
                     iccIdentities.forEach { suffixes.add("_$it") }

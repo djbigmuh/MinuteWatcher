@@ -9,7 +9,7 @@ import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
-import com.example.minutewatcher.feature.widget.util.WidgetUiMapper
+import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -105,11 +105,10 @@ class WidgetSettingsViewModel
             update: (SimSettingsState) -> SimSettingsState,
         ) {
             val currentState = _settingsState.value ?: return
-            val currentSims = currentState.simStates.toMutableList()
-            if (slot in currentSims.indices) {
-                currentSims[slot] = update(currentSims[slot])
-                _settingsState.value = currentState.copy(simStates = currentSims)
-            }
+            val currentSims = currentState.simStates.toMutableMap()
+            val simState = currentSims[slot] ?: return
+            currentSims[slot] = update(simState)
+            _settingsState.value = currentState.copy(simStates = currentSims)
         }
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {

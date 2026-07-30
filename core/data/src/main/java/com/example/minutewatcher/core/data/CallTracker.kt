@@ -116,6 +116,13 @@ class CallTracker
 
         /**
          * Called when ACTION_PHONE_STATE_CHANGED receives IDLE.
+         *
+         * If subId is provided (-1), we attempt to attribute the IDLE event to an active session.
+         * Heuristic priority:
+         * 1. Global state check: if TelephonyManager reports IDLE globally, we close all sessions.
+         * 2. Single session check: if only one session is active, attribute to it.
+         * 3. Individual state check: query each active subId's state (API 31+).
+         * 4. Fallback: attribute to default voice subId or the oldest session.
          */
         suspend fun onCallEnded(subId: Int) {
             try {
@@ -128,9 +135,10 @@ class CallTracker
 
                     // Priority 1: Global safety cleanup. If device is IDLE, close everything.
                     @Suppress("DEPRECATION")
-                    val isIdle = telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                    
-                    if (isIdle) {
+                    val globalState = telephonyManager.callState
+                    val isGlobalIdle = globalState == TelephonyManager.CALL_STATE_IDLE
+
+                    if (isGlobalIdle) {
                         AppLogger.d(
                             "Call ended with unknown subId and global state is IDLE. " +
                                 "Closing all sessions: $activeSubIds",
@@ -140,26 +148,49 @@ class CallTracker
                     }
 
                     // Priority 2: Attribution
-                    when {
-                        activeSubIds.size == 1 -> {
-                            val target = activeSubIds.first()
-                            AppLogger.d("Call ended with unknown subId, attributing to single active session: $target")
-                            endCall(target)
-                        }
+                    val target: Int? =
+                        when {
+                            activeSubIds.size == 1 -> {
+                                val single = activeSubIds.first()
+                                AppLogger.d("Call ended with unknown subId, attributing to single active session: $single")
+                                single
+                            }
 
-                        else -> {
-                            val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
-                            val target =
-                                activeSubIds.firstOrNull { it == defaultVoice }
-                                    ?: activeSubIds.minByOrNull { callSessionRepository.getCallStartTime(it).first() }
+                            else -> {
+                                // Try individual check for API 31+
+                                val idleSubs =
+                                    activeSubIds.filter { id ->
+                                        val manager = telephonyManager.createForSubscriptionId(id)
+                                        @Suppress("DEPRECATION")
+                                        manager.callState == TelephonyManager.CALL_STATE_IDLE
+                                    }
 
-                            if (target != null) {
-                                AppLogger.d("Call ended with unknown subId, attributing to session: $target")
-                                endCall(target)
-                            } else {
-                                AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls")
+                                if (idleSubs.size == 1) {
+                                    val identified = idleSubs.first()
+                                    AppLogger.d("Call ended with unknown subId, identified unique IDLE subId via state check: $identified")
+                                    identified
+                                } else {
+                                    if (idleSubs.isNotEmpty()) {
+                                        AppLogger.d("Multiple subIds reported IDLE: $idleSubs. Falling back to heuristic.")
+                                    }
+
+                                    val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
+                                    val fallback =
+                                        activeSubIds.firstOrNull { it == defaultVoice }
+                                            ?: activeSubIds.minByOrNull { callSessionRepository.getCallStartTime(it).first() }
+
+                                    if (fallback != null) {
+                                        AppLogger.d("Call ended with unknown subId, attributed to session via fallback: $fallback (defaultVoice was $defaultVoice)")
+                                    }
+                                    fallback
+                                }
                             }
                         }
+
+                    if (target != null) {
+                        endCall(target)
+                    } else {
+                        AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls: $activeSubIds")
                     }
                     return
                 }
@@ -255,10 +286,8 @@ class CallTracker
                 simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
                 AppLogger.d("Added $durationMinutes min to identity $targetIdentity for subId $subId")
                 dataChangeNotifier.notifyDataChanged()
-                _status.value = TrackingStatus.Active
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed")
             }
         }
 

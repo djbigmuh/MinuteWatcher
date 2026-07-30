@@ -210,15 +210,3 @@ interface SimNotificationFlagsRepository {
         notified: Boolean,
     )
 }
-
-/**
- * Composite interface for SIM-related data management.
- * @deprecated Use specific sub-interfaces instead: [SimIdentityRepository], [SimUsageRepository], [SimLimitsRepository], etc.
- */
-@Deprecated("Use specific sub-interfaces instead")
-interface SimRepository :
-    SimIdentityRepository,
-    SimUsageRepository,
-    SimLimitsRepository,
-    SimWidgetVisibilityRepository,
-    SimNotificationFlagsRepository

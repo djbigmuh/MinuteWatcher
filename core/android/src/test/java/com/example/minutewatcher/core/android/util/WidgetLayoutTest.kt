@@ -1,4 +1,4 @@
-package com.example.minutewatcher.feature.widget.util
+package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -18,8 +18,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 class WidgetLayoutTest {
     private lateinit var context: Context
 
@@ -215,10 +215,8 @@ class WidgetLayoutTest {
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 callTrackingEnabled = true,
-                simStates = listOf(simSettings),
+                simStates = mapOf(0 to simSettings),
             )
         return WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
     }
 }
-
-

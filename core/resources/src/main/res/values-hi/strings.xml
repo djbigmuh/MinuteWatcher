@@ -8,7 +8,6 @@
 
     <!-- Main Screen Actions -->
     <string name="reset_label">रीसेट</string>
-    <string name="theme_switch">थीम बदलें</string>
     <string name="theme_system">सिस्टम</string>
     <string name="theme_light">लाइट</string>
     <string name="theme_dark">डार्क</string>
@@ -34,7 +33,6 @@
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">विजेट सेटिंग्स</string>
-    <string name="widget_display_settings">विजेट प्रदर्शन सेटिंग्स</string>
     <string name="background_transparency">पृष्ठभूमि पारदर्शिता</string>
     <string name="display_minutes">मिनट दिखाएं</string>
     <string name="display_minutes_limit">मिनट सीमा दिखाएं</string>
@@ -63,7 +61,6 @@
     <string name="action_retry">पुन: प्रयास करें</string>
     <string name="validation_error_invalid_range">कृपया %1$s और %2$s के बीच मान दर्ज करें</string>
     <string name="validation_error_invalid_number">कृपया एक मान्य संख्या दर्ज करें</string>
-    <string name="dynamic_preview">डायनेमिक पूर्वावलोकन</string>
     <string name="widget_pin_unsupported">आपका लॉन्चर स्वचालित विजेट प्लेसमेंट का समर्थन नहीं करता है। कृपया विजेट को मैन्युअल रूप से जोड़ें।</string>
     <string name="widget_already_added">विजेट पहले से ही होम स्क्रीन पर जोड़ा गया है</string>
     <string name="onboarding_title">MinuteWatcher में आपका स्वागत है!</string>
@@ -79,7 +76,6 @@
     <string name="reset_counters">काउंटर रीसेट करें</string>
     <string name="reset_confirmation_title">काउंटر रीसेट करें?</string>
     <string name="reset_confirmation_body">यह इस सिम कार्ड के लिए सभी ट्रैक किए गए उपयोग और समायोजन को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता है।</string>
-    <string name="click_to_choose">चुनने के लिए क्लिक करें:</string>
     <string name="choose_reset_day">स्वचालित रीसेट के लिए महीने का दिन चुनें:</string>
     <string name="choose_reset_day_dialog_title">रीसेट दिन चुनें</string>
     <string name="rollover_label">शेष राशि जमा करें</string>
@@ -126,7 +122,6 @@
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">सिम कार्ड आइकन</string>
     <string name="widget_settings_content_desc">विजेट सेटिंग्स</string>
-    <string name="choose_color_content_desc">पृष्ठभूमि रंग चुनें</string>
     <string name="sim_card_details_content_desc">सिम कार्ड विवरण %1$s</string>
     <string name="adjust_minutes_content_desc">शेष मिनटों को समायोजित करें</string>
     <string name="adjust_traffic_content_desc">शेष ट्रैफ़िक को समायोजित करें</string>

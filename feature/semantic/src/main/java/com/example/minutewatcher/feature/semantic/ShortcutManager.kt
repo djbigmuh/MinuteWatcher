@@ -15,6 +15,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.android.util.SimUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -98,7 +99,7 @@ class ShortcutManager
                 .filter { it.isActive && it.slot in SimConstants.SUPPORTED_SLOT_INDICES }
                 .forEach { sim ->
                 val slot = sim.slot
-                val operator = sim.operator
+                val operator = SimUtils.getShortOperatorName(context, sim.operator)
                 val minutes = sim.entities[PackageType.MINUTES]
                 val traffic = sim.entities[PackageType.DATA]
 

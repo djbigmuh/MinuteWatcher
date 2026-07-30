@@ -53,7 +53,6 @@ import com.example.minutewatcher.feature.settings.ui.components.WidgetPreview
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 
-@Suppress("ktlint:standard:function-naming")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WidgetSettingsScreen(
@@ -263,12 +262,27 @@ fun WidgetSettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // SIM Settings
-            nonNullState.simStates.forEachIndexed { index, sim ->
-                SimSettingsSection(
-                    index = index,
-                    sim = sim,
-                    onUpdate = { update -> viewModel.updateSimSettings(index, update) },
+            SettingLabel(stringResource(id = R.string.sim_cards_title))
+            val activeSims = uiState?.simUiStates ?: emptyList()
+            if (activeSims.isEmpty()) {
+                Text(
+                    text = stringResource(id = R.string.no_sim_found),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 16.dp).align(Alignment.CenterHorizontally),
                 )
+            } else {
+                activeSims.forEach { simUi ->
+                    val simState = nonNullState.simStates[simUi.slot]
+                    if (simState != null) {
+                        SimSettingsSection(
+                            slot = simUi.slot,
+                            operatorName = simUi.operatorName,
+                            sim = simState,
+                            onUpdate = { update -> viewModel.updateSimSettings(simUi.slot, update) },
+                        )
+                    }
+                }
             }
         }
     }
@@ -314,7 +328,8 @@ fun CheckboxSetting(
 
 @Composable
 fun SimSettingsSection(
-    index: Int,
+    slot: Int,
+    operatorName: String,
     sim: SimSettingsState,
     onUpdate: ((SimSettingsState) -> SimSettingsState) -> Unit,
 ) {
@@ -326,7 +341,7 @@ fun SimSettingsSection(
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Text(
-                text = stringResource(id = R.string.sim_card_generic, index + 1),
+                text = "${stringResource(id = R.string.sim_card_generic, slot + 1)} ($operatorName)",
                 style = MaterialTheme.typography.titleSmall,
             )
 

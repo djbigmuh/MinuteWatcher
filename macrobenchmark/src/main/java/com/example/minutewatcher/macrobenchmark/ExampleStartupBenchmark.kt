@@ -7,6 +7,7 @@ import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Until
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +48,6 @@ class ExampleStartupBenchmark {
             pressHome()
             startActivityAndWait()
             // Ensure mock data is displayed before concluding the measurement
-            device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000)
+            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000))
         }
 }

@@ -23,7 +23,7 @@ class WidgetSettingsRepository
             val settings = appSettingsRepository.getAppSettings().first()
 
             val simStates =
-                SimConstants.SUPPORTED_SLOT_INDICES.map { i ->
+                SimConstants.SUPPORTED_SLOT_INDICES.associateWith { i ->
                     val identity = simIdentityRepository.getIdentity(i)
                     simWidgetVisibilityRepository.getSimSettings(identity).first()
                 }
@@ -55,9 +55,9 @@ class WidgetSettingsRepository
             }
 
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
-            for (i in state.simStates.indices) {
-                val identity = simIdentityRepository.getIdentity(i)
-                simSettingsMap[identity] = state.simStates[i]
+            for ((slot, simSettings) in state.simStates) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                simSettingsMap[identity] = simSettings
             }
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
         }

@@ -41,7 +41,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
-import com.example.minutewatcher.feature.widget.util.WidgetUiMapper
+import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors

@@ -60,7 +60,7 @@ class NotificationHelper
                 val pendingIntent =
                     PendingIntent.getActivity(
                         context,
-                        BASE_REQUEST_CODE + simSlot,
+                        BASE_REQUEST_CODE + (simSlot * SLOT_OFFSET) + type,
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )

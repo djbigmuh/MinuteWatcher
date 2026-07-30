@@ -10,12 +10,7 @@
     <color name="surfaceVariant">#49454F</color>
     <color name="onSurfaceVariant">#CAC4D0</color>
     <color name="outline">#938F99</color>
-    
-    <!-- Сохраняем семантические цвета -->
-    <color name="green">#4CAF50</color>
-    <color name="orange">#FF9800</color>
-    <color name="red">#F44336</color>
-    
+
     <!-- Цвета для прозрачности -->
     <color name="surface_container">#211F26</color>
 </resources>

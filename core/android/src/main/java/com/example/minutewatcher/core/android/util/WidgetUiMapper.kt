@@ -1,4 +1,4 @@
-package com.example.minutewatcher.feature.widget.util
+package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import android.graphics.Color
@@ -17,8 +17,6 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.FontScaleProvider
-import com.example.minutewatcher.core.android.util.FormatUtils
-import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
 
@@ -50,7 +48,7 @@ object WidgetUiMapper {
                 .filter { it.isActive }
                 .sortedBy { it.slot }
                 .map { sim ->
-                    val simConfig = state.simStates.getOrNull(sim.slot)
+                    val simConfig = state.simStates[sim.slot]
                     val simUiState = createSimUiState(context, sim, simConfig, luminance, textColor, secondaryTextColor, fontMultiplier)
                     simUiState.copy(layoutSpec = generateLayoutSpec(simUiState, layoutMode))
                 }

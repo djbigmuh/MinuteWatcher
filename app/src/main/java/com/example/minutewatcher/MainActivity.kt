@@ -61,7 +61,13 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.appTheme.collect { theme ->
-                AppCompatDelegate.setDefaultNightMode(theme.value)
+                val mode =
+                    when (theme) {
+                        AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                        AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
+                        AppTheme.FOLLOW_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                    }
+                AppCompatDelegate.setDefaultNightMode(mode)
             }
         }
 

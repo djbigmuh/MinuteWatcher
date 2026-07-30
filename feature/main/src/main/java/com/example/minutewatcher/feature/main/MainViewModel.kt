@@ -14,7 +14,6 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,13 +32,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
-@Suppress("TooManyFunctions")
 @HiltViewModel
 class MainViewModel
     @Inject
@@ -64,37 +63,11 @@ class MainViewModel
         val showTrafficLimitationDialog = savedStateHandle.getStateFlow("traffic_limitation_dialog", false)
         val showUsageAccessDialog = savedStateHandle.getStateFlow("usage_access_dialog", false)
 
-        fun openLimitDialog(data: LimitDialogData) {
-            savedStateHandle["limit_dialog"] = data
-        }
-
-        fun closeLimitDialog() {
-            savedStateHandle["limit_dialog"] = null
-        }
-
-        fun openDayDialog(data: DayDialogData) {
-            savedStateHandle["day_dialog"] = data
-        }
-
-        fun closeDayDialog() {
-            savedStateHandle["day_dialog"] = null
-        }
-
-        fun openAdjustDialog(data: AdjustDialogData) {
-            savedStateHandle["adjust_dialog"] = data
-        }
-
-        fun closeAdjustDialog() {
-            savedStateHandle["adjust_dialog"] = null
-        }
-
-        fun openTrafficLimitationDialog() {
-            savedStateHandle["traffic_limitation_dialog"] = true
-        }
-
-        fun closeTrafficLimitationDialog() {
-            savedStateHandle["traffic_limitation_dialog"] = false
-        }
+        fun setLimitDialog(data: LimitDialogData?) { savedStateHandle["limit_dialog"] = data }
+        fun setDayDialog(data: DayDialogData?) { savedStateHandle["day_dialog"] = data }
+        fun setAdjustDialog(data: AdjustDialogData?) { savedStateHandle["adjust_dialog"] = data }
+        fun setTrafficLimitationDialog(show: Boolean) { savedStateHandle["traffic_limitation_dialog"] = show }
+        fun setUsageAccessDialog(show: Boolean) { savedStateHandle["usage_access_dialog"] = show }
 
         private val isPhonePermissionPermanentlyDeniedFlow = MutableStateFlow(false)
 
@@ -118,14 +91,6 @@ class MainViewModel
             viewModelScope.launch {
                 appSettingsRepository.updateAppSettings { it.copy(phonePermissionRequested = true) }
             }
-        }
-
-        fun openUsageAccessDialog() {
-            savedStateHandle["usage_access_dialog"] = true
-        }
-
-        fun closeUsageAccessDialog() {
-            savedStateHandle["usage_access_dialog"] = false
         }
 
         private val _showOnboardingDialog = MutableStateFlow(false)
@@ -178,34 +143,14 @@ class MainViewModel
                 val (statusMap, phoneGranted, usageGranted) = part1
                 val (notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings) = part2
 
-                val traffic = statusMap["traffic"]
-                val appsearch = statusMap["appsearch"]
-                val shortcuts = statusMap["shortcuts"]
-
-                val phonePermissionState = when {
-                    phoneGranted -> PermissionUiState.GRANTED
-                    phonePermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-                    settings.phonePermissionRequested -> PermissionUiState.DENIED
-                    else -> PermissionUiState.NOT_REQUESTED
-                }
-
-                val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
-                val notificationPermissionState = when {
-                    !showNotifications || notificationsGranted -> PermissionUiState.GRANTED
-                    notificationPermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-                    settings.notificationPermissionRequested -> PermissionUiState.DENIED
-                    else -> PermissionUiState.NOT_REQUESTED
-                }
-
-                TrackingBannerState(
-                    phonePermissionState = phonePermissionState,
-                    showUsageAccessBanner = !usageGranted,
-                    showTrafficErrorBanner =
-                        (traffic is TrackingStatus.Error &&
-                            traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
-                    showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
-                    showShortcutsErrorBanner = shortcuts is TrackingStatus.Error,
-                    notificationPermissionState = notificationPermissionState,
+                TrackingBannerMapper.mapToBannerState(
+                    statusMap = statusMap,
+                    phoneGranted = phoneGranted,
+                    usageGranted = usageGranted,
+                    notificationsGranted = notificationsGranted,
+                    phonePermanentlyDenied = phonePermanentlyDenied,
+                    notificationPermanentlyDenied = notificationPermanentlyDenied,
+                    settings = settings
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -432,6 +377,3 @@ class MainViewModel
             private const val HIGHLIGHT_DELAY = 3L
         }
     }
-
-
-

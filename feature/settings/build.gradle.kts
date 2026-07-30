@@ -35,7 +35,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":feature:widget"))
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
     implementation(project(":core:common"))

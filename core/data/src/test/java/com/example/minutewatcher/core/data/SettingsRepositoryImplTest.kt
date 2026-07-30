@@ -36,7 +36,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testClearAllCallSessions_RemovesExpectedKeys() =
         runTest {
-            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = CallSessionRepositoryImpl(dataStore)
 
             dataStore.edit { prefs ->
                 prefs[SettingsKeys.callStartTimeKey(1)] = 1000L
@@ -64,7 +64,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testGetActiveCallSubIds() =
         runTest {
-            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = CallSessionRepositoryImpl(dataStore)
 
             dataStore.edit { prefs ->
                 prefs[SettingsKeys.callStartTimeKey(1)] = 1000L
@@ -79,7 +79,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_AtomicUpdate() =
         runTest {
-            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
             repository.updateAppSettings { current ->
                 current.copy(
@@ -96,7 +96,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_PreservesOnboardingCompleted() =
         runTest {
-            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
             dataStore.edit { it[SettingsKeys.ONBOARDING_COMPLETED] = true }
 
@@ -112,7 +112,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_SavesOnboardingCompleted() =
         runTest {
-            val repository = SettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
             val initialSettings = repository.getAppSettings().first()
             assertEquals(false, initialSettings.onboardingCompleted)

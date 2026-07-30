@@ -9,6 +9,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.Until
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,7 +38,7 @@ class ScrollBenchmark {
         startActivityAndWait()
         
         // Wait for mock data to be displayed
-        device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000)
+        assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000))
 
         // Find the list and scroll
         val list = device.wait(Until.findObject(By.scrollable(true)), 5000)

@@ -40,11 +40,11 @@ data class SemanticEntity(
     val periodEnd: Long,
     val lastUpdateTime: Long,
     val sourceType: DataSourceType,
-    val metadata: Map<String, Any> = emptyMap(),
 )
 
 /**
  * Описание возможностей приложения.
+ * Зарезервировано для будущей расширяемости и взаимодействия с внешними потребителями данных (например, AI-агентами).
  */
 data class AppCapability(
     val type: String,
@@ -54,6 +54,7 @@ data class AppCapability(
 
 /**
  * Версия семантической схемы.
+ * Используется для обеспечения обратной совместимости при обновлении протоколов обмена данными.
  */
 data class SchemaVersion(
     val major: Int,

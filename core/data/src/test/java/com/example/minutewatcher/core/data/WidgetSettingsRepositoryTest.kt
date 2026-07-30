@@ -91,8 +91,8 @@ class WidgetSettingsRepositoryTest {
                     notifyLowTraffic = true,
                     callTrackingEnabled = false,
                     simStates =
-                        listOf(
-                            SimSettingsState(
+                        mapOf(
+                            0 to SimSettingsState(
                                 showSim = true,
                                 showIcon = false,
                                 showName = true,
@@ -101,7 +101,7 @@ class WidgetSettingsRepositoryTest {
                                 showTraffic = true,
                                 showTrafficLimit = false,
                             ),
-                            SimSettingsState(
+                            1 to SimSettingsState(
                                 showSim = false,
                                 showIcon = true,
                                 showName = true,
