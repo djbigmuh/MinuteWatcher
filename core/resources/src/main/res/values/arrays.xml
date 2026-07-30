@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>All in one line</item>
+        <item>Two lines</item>
+        <item>Three lines</item>
+        <item>Six lines</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Side by side</item>
+        <item>In a column</item>
+    </string-array>
+
+    <string-array name="languages" translatable="false">
+        <item>System default</item>
+        <item>English</item>
+        <item>Русский</item>
+        <item>Deutsch</item>
+        <item>Français</item>
+        <item>العربية</item>
+        <item>Español</item>
+        <item>日本語</item>
+        <item>中文</item>
+        <item>हिन्दी</item>
+    </string-array>
+
+    <string-array name="language_codes" translatable="false">
+        <item>default</item>
+        <item>en</item>
+        <item>ru</item>
+        <item>de</item>
+        <item>fr</item>
+        <item>ar</item>
+        <item>es</item>
+        <item>ja</item>
+        <item>zh</item>
+        <item>hi</item>
+    </string-array>
+
+    <string-array name="language_icons" translatable="false">
+        <item>🌐</item>
+        <item>EN</item>
+        <item>RU</item>
+        <item>DE</item>
+        <item>FR</item>
+        <item>AR</item>
+        <item>ES</item>
+        <item>JA</item>
+        <item>ZH</item>
+        <item>HI</item>
+    </string-array>
+</resources>

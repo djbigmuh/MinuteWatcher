@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
+import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,11 +32,13 @@ class ScrollBenchmark {
             intent.setPackage("com.example.minutewatcher")
             intent.putExtra("sim_count", 2)
             InstrumentationRegistry.getInstrumentation().context.sendBroadcast(intent)
-            Thread.sleep(1000)
         }
     ) {
         startActivityAndWait()
         
+        // Wait for mock data to be displayed
+        device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000)
+
         // Find the list and scroll
         val list = device.findObject(By.scrollable(true))
         list.setGestureMargin(device.displayWidth / 5)

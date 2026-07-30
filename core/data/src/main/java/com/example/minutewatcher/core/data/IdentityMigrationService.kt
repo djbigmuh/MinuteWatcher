@@ -23,20 +23,35 @@ class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
-        suspend fun hasLegacyData(): Boolean {
-            val appHasLegacy = appDataStore.data.first().asMap().keys.any { it.isLegacyKey() }
-            val simHasLegacy = simDataStore.data.first().asMap().keys.any { it.isLegacyKey() }
+        suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean {
+            val appPrefs = appDataStore.data.first()
+            if ((appPrefs[SettingsKeys.DATA_SCHEMA_VERSION] ?: 0) >= SettingsKeys.CURRENT_DATA_SCHEMA_VERSION) {
+                return false
+            }
+
+            val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
+            val simHasLegacy = simDataStore.data.first().asMap().keys.any { it.isLegacyKey(activeIdentities) }
             return appHasLegacy || simHasLegacy
         }
 
-        private fun Preferences.Key<*>.isLegacyKey(): Boolean {
+        private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name
             if (name.startsWith("conflict_")) return false
-            return name.endsWith("_sim_0") ||
-                name.endsWith("_sim_1") ||
-                name.contains("_sub_") ||
-                name.contains("_icc_") ||
-                name.startsWith("subscription_id_icc_")
+
+            // Modern keys belonging to known active identities are not legacy.
+            if (activeIdentities.any { name.endsWith("_$it") }) return false
+
+            // Unambiguous legacy markers.
+            if (name.endsWith("_sim_0") || name.endsWith("_sim_1") || name.startsWith("subscription_id_icc_")) {
+                return true
+            }
+
+            // Dangerous patterns: only treat as legacy if schema is not current.
+            return name.contains("_sub_") || name.contains("_icc_")
+        }
+
+        suspend fun markSchemaCurrent() {
+            appDataStore.edit { it[SettingsKeys.DATA_SCHEMA_VERSION] = SettingsKeys.CURRENT_DATA_SCHEMA_VERSION }
         }
 
         suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {

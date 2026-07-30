@@ -17,9 +17,10 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -148,24 +149,27 @@ class MainViewModel
                     initialValue = emptyMap(),
                 )
 
+
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
-                trackingStatus,
-                permissionRepository.phoneStatePermissionGranted,
-                permissionRepository.usageStatsPermissionGranted,
-                permissionRepository.notificationPermissionGranted,
-                isPhonePermissionPermanentlyDeniedFlow,
-                isNotificationPermissionPermanentlyDeniedFlow,
-                appSettingsRepository.observeAppSettings(),
-            ) { args ->
-                @Suppress("UNCHECKED_CAST")
-                val statusMap = args[0] as Map<String, TrackingStatus>
-                val phoneGranted = args[1] as Boolean
-                val usageGranted = args[2] as Boolean
-                val notificationsGranted = args[3] as Boolean
-                val phonePermanentlyDenied = args[4] as Boolean
-                val notificationPermanentlyDenied = args[5] as Boolean
-                val settings = args[6] as com.example.minutewatcher.core.model.AppSettings
+                combine(
+                    trackingStatus,
+                    permissionRepository.phoneStatePermissionGranted,
+                    permissionRepository.usageStatsPermissionGranted,
+                ) { statusMap, phoneGranted, usageGranted ->
+                    Triple(statusMap, phoneGranted, usageGranted)
+                },
+                combine(
+                    permissionRepository.notificationPermissionGranted,
+                    isPhonePermissionPermanentlyDeniedFlow,
+                    isNotificationPermissionPermanentlyDeniedFlow,
+                    appSettingsRepository.observeAppSettings(),
+                ) { notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings ->
+                    BannerInputsPart2(notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings)
+                },
+            ) { part1, part2 ->
+                val (statusMap, phoneGranted, usageGranted) = part1
+                val (notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings) = part2
 
                 val traffic = statusMap["traffic"]
                 val appsearch = statusMap["appsearch"]
@@ -186,6 +190,13 @@ class MainViewModel
                 started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
                 initialValue = TrackingBannerState(),
             )
+
+        private data class BannerInputsPart2(
+            val notificationsGranted: Boolean,
+            val phonePermanentlyDenied: Boolean,
+            val notificationPermanentlyDenied: Boolean,
+            val settings: com.example.minutewatcher.core.model.AppSettings,
+        )
 
         val uiState: StateFlow<SimCardListState> =
             usageStateRepository
@@ -266,6 +277,8 @@ class MainViewModel
                         usageUseCase.refreshOperatorInfo()
                         usageStateRepository.refresh()
                         _refreshStatus.value = RefreshState.Success
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         com.example.minutewatcher.core.common.util.AppLogger
                             .e("Error refreshing SIM cards", e)
@@ -280,7 +293,13 @@ class MainViewModel
             }
         }
 
-        val appLanguage: Flow<String?> = settingsUseCase.appLanguage
+        val appLanguage: StateFlow<String?> =
+            settingsUseCase.appLanguage
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
+                    initialValue = null,
+                )
 
         fun setLanguage(language: String?) {
             viewModelScope.launch {

@@ -2,31 +2,17 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:WidgetUiMapper.kt$WidgetUiMapper$private fun createSimUiState( context: Context, sim: com.example.minutewatcher.core.model.SimSnapshot, simConfig: com.example.minutewatcher.core.model.SimSettingsState?, luminance: Double, textColor: Int, secondaryTextColor: Int, fontMultiplier: Float, ): SimUiState</ID>
-    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Composable private fun DualSimLayout( context: Context, sim1: SimUiState, sim2: SimUiState, uiState: WidgetUiState, )</ID>
-    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Composable private fun SimItem( context: Context, sim: SimUiState, )</ID>
-    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Composable private fun SingleSimLayout( context: Context, sim: SimUiState, )</ID>
-    <ID>FunctionNaming:MinutesGlanceWidget.kt$@Composable private fun WidgetContent( context: Context, uiState: WidgetUiState, navigationProvider: NavigationProvider, )</ID>
     <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun DualSimLayout( context: Context, sim1: SimUiState, sim2: SimUiState, uiState: WidgetUiState, )</ID>
     <ID>LongMethod:WidgetLayoutTest.kt$WidgetLayoutTest$private fun createWidgetUiState( mode: WidgetLayoutMode, hasMinutes: Boolean = true, hasTraffic: Boolean = true, showMinutesLimit: Boolean = false, showTrafficLimit: Boolean = false, ): WidgetUiState</ID>
-    <ID>LongMethod:WidgetUiMapper.kt$WidgetUiMapper$private fun createSixLinesRows(sim: SimUiState): List&lt;SimLayoutRow&gt;</ID>
     <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic()</ID>
+    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic()</ID>
     <ID>MagicNumber:MinutesGlanceWidget.kt$0.5f</ID>
     <ID>MagicNumber:MinutesGlanceWidget.kt$100f</ID>
     <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$0.5</ID>
     <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$0.5f</ID>
-    <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$1024</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$SimLayoutComponent.Text(sim.minutesText, sim.minutesColor, FONT_SINGLE_VALUE * sim.fontMultiplier, isBold = true)</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$SimLayoutComponent.Text(sim.trafficText, sim.trafficColor, FONT_SINGLE_VALUE * sim.fontMultiplier, isBold = true)</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$components.add(SimLayoutComponent.Icon(sim.operatorIconRes, (SIZE_ICON_SINGLE * sim.fontMultiplier).toInt()))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$components.add(SimLayoutComponent.Text(sim.operatorName, sim.textColor, FONT_SINGLE_NAME * sim.fontMultiplier))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$if (sim.showName) row1.add(SimLayoutComponent.Text(sim.operatorName, sim.textColor, FONT_MULTI_NAME * sim.fontMultiplier))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$row2.add(SimLayoutComponent.Text(sim.minutesLimitText, sim.secondaryTextColor, FONT_LIMIT * sim.fontMultiplier))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$row2.add(SimLayoutComponent.Text(sim.minutesText, sim.minutesColor, FONT_MULTI_VALUE * sim.fontMultiplier, isBold = true))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$row2.add(SimLayoutComponent.Text(sim.trafficText, sim.trafficColor, FONT_MULTI_VALUE * sim.fontMultiplier, isBold = true))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$row3.add(SimLayoutComponent.Text(sim.trafficLimitText, sim.secondaryTextColor, FONT_LIMIT * sim.fontMultiplier))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$row3.add(SimLayoutComponent.Text(sim.trafficText, sim.trafficColor, FONT_MULTI_VALUE * sim.fontMultiplier, isBold = true))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$trafficText = if (trafficEntity != null &amp;&amp; trafficLimitGb &gt; 0) FormatUtils.formatTrafficGb(trafficRemainingGb) else "-"</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$val simUiState = createSimUiState(context, sim, simConfig, luminance, textColor, secondaryTextColor, fontMultiplier)</ID>
+    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$limitFull = "${context.getString(R.string.limit_text)}: ${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}"</ID>
+    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.minutesLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))))</ID>
+    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.trafficLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))))</ID>
+    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$usedFull = "${context.getString(R.string.used_text)}: ${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}"</ID>
   </CurrentIssues>
 </SmellBaseline>

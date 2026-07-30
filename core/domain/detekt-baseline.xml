@@ -2,8 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MaxLineLength:UsageUseCase.kt$UsageUseCase$val opName = OperatorResolver.resolve(context, displayName.ifEmpty { carrierName }, mccMnc, slot)</ID>
-    <ID>NestedBlockDepth:UsageUseCase.kt$UsageUseCase$suspend fun refreshOperatorInfo()</ID>
     <ID>TooManyFunctions:SettingsRepository.kt$AppSettingsRepository</ID>
     <ID>TooManyFunctions:SimRepository.kt$SimUsageRepository</ID>
     <ID>TooManyFunctions:SimRepository.kt$SimWidgetVisibilityRepository</ID>

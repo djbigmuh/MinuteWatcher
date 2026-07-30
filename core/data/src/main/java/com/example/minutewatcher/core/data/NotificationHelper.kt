@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,6 +82,8 @@ class NotificationHelper
                 notificationManager.notify(notificationId, notification)
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to send notification", e)
             }

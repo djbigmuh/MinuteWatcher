@@ -53,7 +53,7 @@ class PermissionManager
                     -1
                 }
             } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in getDefaultVoiceSubscriptionId", e)
+                AppLogger.e("SecurityException in getDefaultDataSubscriptionId", e)
                 -1
             }
 
@@ -67,7 +67,7 @@ class PermissionManager
                     -1
                 }
             } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in getDefaultVoiceSubscriptionId", e)
+                AppLogger.e("SecurityException in getDefaultDataSubscriptionId", e)
                 -1
             }
 

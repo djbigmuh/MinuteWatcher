@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -37,6 +38,7 @@ class InitialSetupWorkerTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val migrationFlagsRepository: MigrationFlagsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val migrationService: IdentityMigrationService = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
@@ -60,12 +62,22 @@ class InitialSetupWorkerTest {
                 simIdentityRepository,
                 migrationFlagsRepository,
                 usageStateRepository,
+                autoResetUseCase,
                 usageUseCase,
                 migrationService,
                 dataChangeNotifier,
                 workScheduler,
             )
     }
+
+    @Test
+    fun `doWork performs auto-reset after migration`() =
+        runTest {
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(autoResetUseCase).performAutoReset(any())
+        }
 
     @Test
     fun `doWork returns success when migration already completed`() =
@@ -86,7 +98,7 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
-            whenever(migrationService.hasLegacyData()).thenReturn(false)
+            whenever(migrationService.hasLegacyData(any())).thenReturn(false)
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
                 mockedContext.`when`<Int> {
@@ -99,6 +111,7 @@ class InitialSetupWorkerTest {
                 verify(migrationFlagsRepository).setMigrationV1Completed(true)
                 verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
                 verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+                verify(migrationService).markSchemaCurrent()
             }
         }
 
@@ -107,7 +120,7 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
-            whenever(migrationService.hasLegacyData()).thenReturn(true)
+            whenever(migrationService.hasLegacyData(any())).thenReturn(true)
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
                 mockedContext.`when`<Int> {
@@ -118,6 +131,7 @@ class InitialSetupWorkerTest {
 
                 assertEquals(ListenableWorker.Result.success(), result)
                 verify(migrationFlagsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
+                verify(migrationService, org.mockito.kotlin.never()).markSchemaCurrent()
             }
         }
 
@@ -126,7 +140,7 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
-            whenever(migrationService.hasLegacyData()).thenReturn(true)
+            whenever(migrationService.hasLegacyData(any())).thenReturn(true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
@@ -138,6 +152,7 @@ class InitialSetupWorkerTest {
 
                 assertEquals(ListenableWorker.Result.success(), result)
                 verify(migrationFlagsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
+                verify(migrationService, org.mockito.kotlin.never()).markSchemaCurrent()
             }
         }
 
@@ -160,6 +175,7 @@ class InitialSetupWorkerTest {
                 verify(migrationService).migrateLegacyData(activeSim.identity)
                 verify(migrationFlagsRepository).setMigrationV1Completed(true)
                 verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+                verify(migrationService).markSchemaCurrent()
             }
         }
 }

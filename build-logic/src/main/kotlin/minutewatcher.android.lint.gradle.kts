@@ -7,4 +7,10 @@ extension?.apply {
     lint.warningsAsErrors = true
     lint.checkReleaseBuilds = true
     lint.error.add("MissingTranslation")
+    lint.error.add("UnusedResources")
+    lint.fatal.add("MissingTranslation")
+    lint.fatal.add("UnusedResources")
+    lint.ignoreTestSources = true
+    lint.checkTestSources = false
+    lint.disable.add("GradleDependency")
 }

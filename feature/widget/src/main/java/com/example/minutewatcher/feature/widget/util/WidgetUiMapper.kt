@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.widget.util
 import android.content.Context
 import android.graphics.Color
 import androidx.core.graphics.ColorUtils
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
@@ -62,6 +63,7 @@ object WidgetUiMapper {
             simUiStates = simUiStates,
             isHorizontal = state.simArrangement == 0,
             showSeparator = simUiStates.size >= 2,
+            useSystemColors = state.transparency > 80,
         )
     }
 
@@ -150,18 +152,18 @@ object WidgetUiMapper {
         config: com.example.minutewatcher.core.model.SimSettingsState?,
         luminance: Double,
     ): PackageUiData {
-        val limitMb = entity?.limit ?: 0L
-        val limitGb = limitMb.toFloat() / (1024 * 1024 * 1024)
-        val remGb = if (limitMb > 0) maxOf(0f, (entity?.remaining ?: 0L).toFloat() / (1024 * 1024 * 1024)) else -1f
-        val usedGb = (entity?.used ?: 0L).toFloat() / (1024 * 1024 * 1024)
-        val hasData = limitGb > 0 || usedGb > 0
+        val limitBytes = entity?.limit ?: 0L
+        val limitGb = limitBytes.toFloat() / Constants.BYTES_PER_GB
+        val remGb = if (limitBytes > 0) maxOf(0f, (entity?.remaining ?: 0L).toFloat() / Constants.BYTES_PER_GB) else -1f
+        val usedGb = (entity?.used ?: 0L).toFloat() / Constants.BYTES_PER_GB
+        val hasData = limitGb > 0f || usedGb > 0f
         val status = ColorProvider.getUsageStatus(remGb, limitGb)
 
         return PackageUiData(
             show = (config?.showTraffic ?: true) && entity != null && hasData,
-            text = if (entity != null && limitGb > 0) FormatUtils.formatTrafficGb(remGb) else "-",
+            text = if (entity != null && limitGb > 0f) FormatUtils.formatTrafficGb(remGb) else "-",
             color = getStatusColorInt(status, luminance),
-            showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0,
+            showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f,
             limitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(limitGb)),
             hasData = hasData,
             usedFull = "${context.getString(R.string.used_text)}: ${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",

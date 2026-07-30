@@ -2,58 +2,30 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
-    <ID>LongParameterList:InitialSetupWorker.kt$InitialSetupWorker$( @Assisted appContext: Context, @Assisted workerParams: WorkerParameters, private val callTracker: CallTracker, private val trafficTracker: TrafficTracker, private val simRepository: SimRepository, private val settingsRepository: SettingsRepository, private val usageStateRepository: UsageStateRepository, private val usageUseCase: UsageUseCase, private val migrationService: IdentityMigrationService, private val updateCoordinator: UpdateCoordinator, private val workScheduler: WorkScheduler, )</ID>
-    <ID>LongParameterList:UsageCheckWorker.kt$UsageCheckWorker$( @Assisted context: Context, @Assisted params: WorkerParameters, private val simRepository: SimRepository, private val settingsRepository: SettingsRepository, private val resetManager: ResetManager, private val trafficTracker: TrafficTracker, private val notificationHelper: NotificationHelper, private val updateCoordinator: UpdateCoordinator, private val usageStateRepository: UsageStateRepository, private val usageUseCase: UsageUseCase, @IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
-    <ID>MagicNumber:CallTracker.kt$CallTracker$1000</ID>
-    <ID>MagicNumber:CallTracker.kt$CallTracker$59</ID>
-    <ID>MagicNumber:CallTracker.kt$CallTracker$60</ID>
-    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$10</ID>
-    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$100</ID>
-    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$1000</ID>
+    <ID>LongParameterList:InitialSetupWorker.kt$InitialSetupWorker$( @Assisted appContext: Context, @Assisted workerParams: WorkerParameters, private val callTracker: CallTracker, private val trafficTracker: TrafficTracker, private val simIdentityRepository: SimIdentityRepository, private val migrationFlagsRepository: MigrationFlagsRepository, private val usageStateRepository: UsageStateRepository, private val autoResetUseCase: AutoResetUseCase, private val usageUseCase: UsageUseCase, private val migrationService: IdentityMigrationService, private val dataChangeNotifier: DataChangeNotifier, private val workScheduler: WorkScheduler, )</ID>
+    <ID>LongParameterList:UsageCheckWorker.kt$UsageCheckWorker$( @Assisted context: Context, @Assisted params: WorkerParameters, private val simIdentityRepository: SimIdentityRepository, private val simUsageRepository: SimUsageRepository, private val simNotificationFlagsRepository: SimNotificationFlagsRepository, private val appSettingsRepository: AppSettingsRepository, private val autoResetUseCase: AutoResetUseCase, private val trafficTracker: TrafficTracker, private val notificationHelper: NotificationHelper, private val dataChangeNotifier: DataChangeNotifier, private val usageStateRepository: UsageStateRepository, private val usageUseCase: UsageUseCase, private val timeProvider: TimeProvider, @IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
     <ID>MagicNumber:SemanticMapper.kt$SemanticMapper$1024</ID>
     <ID>MagicNumber:SemanticMapper.kt$SemanticMapper$1024L</ID>
-    <ID>MagicNumber:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$50</ID>
     <ID>MagicNumber:TrafficTracker.kt$TrafficTracker$0.0001f</ID>
-    <ID>MagicNumber:UsageCheckWorker.kt$UsageCheckWorker$10</ID>
-    <ID>MagicNumber:UsageCheckWorker.kt$UsageCheckWorker$100</ID>
-    <ID>MagicNumber:UsageCheckWorker.kt$UsageCheckWorker$1024</ID>
-    <ID>MagicNumber:WorkScheduler.kt$WorkScheduler$30</ID>
-    <ID>MaxLineLength:CallTracker.kt$CallTracker$AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions: $activeSubIds")</ID>
-    <ID>MaxLineLength:IdentityMigrationService.kt$IdentityMigrationService$private suspend</ID>
-    <ID>MaxLineLength:InitialSetupWorkerTest.kt$InitialSetupWorkerTest$val sim0 = ActiveSimInfo(SimIdentity("id0", 1, 0, IdentitySource.SUBSCRIPTION_ID), 0, 1, "MTS", "MTS", "25001", true, true)</ID>
-    <ID>MaxLineLength:ResetManager.kt$ResetManager$AppLogger.d("Auto reset performed for SIM $slot ($identity), day: ${usage.autoResetDay}")</ID>
-    <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$override fun getCallIdentity(subId: Int): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$override fun getMigrationV1SkippedReason(): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$override fun getWidgetBackgroundColor(): Flow&lt;Int&gt;</ID>
-    <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$override fun isMigrationIdentityStabilityCompleted(): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:SettingsRepositoryImpl.kt$SettingsRepositoryImpl$widgetBackgroundColor = prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR</ID>
-    <ID>MaxLineLength:SimRepositoryImpl.kt$SimRepositoryImpl$override</ID>
-    <ID>MaxLineLength:SimRepositoryImpl.kt$SimRepositoryImpl$override fun getNotifiedLowTraffic(identity: String): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:SimRepositoryImpl.kt$SimRepositoryImpl$override fun getShowMinutesLimit(identity: String): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:SimRepositoryImpl.kt$SimRepositoryImpl$override fun getShowTrafficLimit(identity: String): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:SimRepositoryImplTest.kt$SimRepositoryImplTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)</ID>
-    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository)</ID>
-    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$assertTrue("Should have more than $initialSize emissions, but had ${simsList.size}", simsList.size &gt; initialSize)</ID>
-    <ID>MaxLineLength:TrafficTracker.kt$TrafficTracker$AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")</ID>
-    <ID>MaxLineLength:TrafficTracker.kt$TrafficTracker$private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager</ID>
-    <ID>MaxLineLength:TrafficTrackerTest.kt$TrafficTrackerTest$whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenThrow(SecurityException())</ID>
-    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), listOf(simSnapshot), emptyList())</ID>
-    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay)</ID>
-    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay)</ID>
+    <ID>MaxLineLength:IdentityMigrationService.kt$IdentityMigrationService$AppLogger.w("Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}")</ID>
+    <ID>MaxLineLength:SimRepositoryImplTest.kt$SimRepositoryImplTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope, timeProvider)</ID>
+    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope, timeProvider)</ID>
+    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$assertTrue("Should have more than $initialSize emissions, but had ${simsList.size}. List: $simsList", simsList.size &gt; initialSize)</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$unit = MeasurementUnit.MINUTES</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))</ID>
+    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))</ID>
+    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay, timestamp)</ID>
+    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay, timestamp)</ID>
     <ID>NestedBlockDepth:CallTracker.kt$CallTracker$suspend fun onCallEnded(subId: Int)</ID>
-    <ID>NestedBlockDepth:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
-    <ID>NestedBlockDepth:UsageCheckWorker.kt$UsageCheckWorker$private suspend fun checkMinutesUsage( entity: SemanticEntity, monthProgress: Int, daysRemaining: Int, identity: String, appSettings: com.example.minutewatcher.core.model.AppSettings, )</ID>
-    <ID>NestedBlockDepth:UsageCheckWorker.kt$UsageCheckWorker$private suspend fun checkTrafficUsage( entity: SemanticEntity, monthProgress: Int, daysRemaining: Int, identity: String, appSettings: com.example.minutewatcher.core.model.AppSettings, )</ID>
     <ID>ReturnCount:CallTracker.kt$CallTracker$suspend fun onCallEnded(subId: Int)</ID>
+    <ID>ReturnCount:IdentityMigrationService.kt$IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey(activeIdentities: Set&lt;String&gt;): Boolean</ID>
+    <ID>ReturnCount:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:SimRepositoryImpl.kt$SimRepositoryImpl$override suspend fun getSimIdentity(slot: Int): SimIdentity</ID>
     <ID>ReturnCount:TrafficTracker.kt$TrafficTracker$private suspend fun getTargetSimInfo(): Pair&lt;Int, Int&gt;?</ID>
-    <ID>ReturnCount:TrafficTracker.kt$TrafficTracker$suspend fun updateTrafficUsage()</ID>
-    <ID>TooManyFunctions:DataModule.kt$DataModule</ID>
     <ID>TooManyFunctions:SettingsKeys.kt$SettingsKeys</ID>
-    <ID>TooManyFunctions:SettingsRepositoryImpl.kt$SettingsRepositoryImpl : SettingsRepositoryAppSettingsRepositoryCallSessionRepositoryMigrationFlagsRepository</ID>
-    <ID>TooManyFunctions:SimRepositoryImpl.kt$SimRepositoryImpl : SimRepositorySimIdentityRepositorySimUsageRepositorySimLimitsRepositorySimWidgetVisibilityRepositorySimNotificationFlagsRepositorySimInfoProvider</ID>
-    <ID>TooManyFunctions:SimRepositoryImpl.kt$SimRepositoryImpl$Companion</ID>
-    <ID>UnusedImports:TrafficTracker.kt$import kotlinx.coroutines.flow.stateIn</ID>
-    <ID>UnusedImports:TrafficTrackerTest.kt$import kotlinx.coroutines.test.UnconfinedTestDispatcher</ID>
+    <ID>UnusedImports:SimRepositoryImplTest.kt$import kotlinx.coroutines.test.UnconfinedTestDispatcher</ID>
+    <ID>UnusedImports:TrafficTrackerTest.kt$import org.mockito.kotlin.doReturn</ID>
+    <ID>UnusedImports:UsageUseCaseImpl.kt$import android.telephony.SubscriptionInfo</ID>
   </CurrentIssues>
 </SmellBaseline>

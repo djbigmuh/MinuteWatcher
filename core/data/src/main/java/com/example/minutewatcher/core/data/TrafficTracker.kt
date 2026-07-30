@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -81,6 +82,8 @@ class TrafficTracker
                 } catch (e: SecurityException) {
                     AppLogger.e("Permission error in resetBaseline", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in resetBaseline", e)
                 }
@@ -138,6 +141,8 @@ class TrafficTracker
                 } catch (e: SecurityException) {
                     AppLogger.e("Permission error updating traffic", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error updating traffic", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
@@ -159,6 +164,8 @@ class TrafficTracker
                 bucket.rxBytes + bucket.txBytes
             } catch (e: SecurityException) {
                 throw e
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error querying NetworkStatsManager", e)
                 -1L
@@ -175,6 +182,8 @@ class TrafficTracker
                     targetSim = subInfoList.find { it.subscriptionId == currentDataSubId }?.simSlotIndex ?: -1
                 }
             } catch (e: SecurityException) {
+                throw e
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Error getting default data SIM", e)
@@ -219,6 +228,8 @@ class TrafficTracker
                     if (!SimUtils.isInactiveSim(operator)) {
                         activeSlots.add(slot)
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.w("Error checking active status for slot $slot: ${e.message}")
                 }

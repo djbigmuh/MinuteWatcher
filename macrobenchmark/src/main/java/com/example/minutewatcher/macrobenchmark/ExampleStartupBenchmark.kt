@@ -7,6 +7,8 @@ import androidx.benchmark.macro.StartupTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,11 +43,11 @@ class ExampleStartupBenchmark {
                 intent.setPackage("com.example.minutewatcher")
                 intent.putExtra("sim_count", 2)
                 InstrumentationRegistry.getInstrumentation().context.sendBroadcast(intent)
-                // Small delay to ensure DB write is done
-                Thread.sleep(1000)
             }
         ) {
             pressHome()
             startActivityAndWait()
+            // Ensure mock data is displayed before concluding the measurement
+            device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000)
         }
 }

@@ -8,6 +8,7 @@ data class WidgetUiState(
     val simUiStates: List<SimUiState>,
     val isHorizontal: Boolean = true,
     val showSeparator: Boolean = false,
+    val useSystemColors: Boolean = false,
 )
 
 data class SimUiState(

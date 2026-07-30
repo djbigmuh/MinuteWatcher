@@ -6,6 +6,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.minutewatcher.core.resources.R
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,7 +46,7 @@ class DialogsTest {
             .onNodeWithText(setButtonText, ignoreCase = true)
             .performClick()
 
-        assert(capturedMinutes == 123)
+        assertEquals(123, capturedMinutes)
     }
 
     @Test
@@ -75,6 +76,6 @@ class DialogsTest {
             .performClick()
 
         // 1.5 GB * 1024 = 1536 MB
-        assert(capturedTrafficMb == 1536)
+        assertEquals(1536, capturedTrafficMb)
     }
 }

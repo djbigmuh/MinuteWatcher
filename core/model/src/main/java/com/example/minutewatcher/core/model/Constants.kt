@@ -19,6 +19,7 @@ object Constants {
     }
 
     const val BYTES_PER_MB = 1024L * 1024L
+    const val BYTES_PER_GB = 1024L * 1024L * 1024L
     const val MB_PER_GB = 1024.0f
     const val LOW_REMAINING_THRESHOLD_PERCENT = 0.20f
     const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f

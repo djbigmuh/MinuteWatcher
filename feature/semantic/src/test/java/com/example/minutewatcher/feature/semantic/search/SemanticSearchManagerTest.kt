@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
+import androidx.appsearch.app.AppSearchSchema
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
@@ -29,8 +30,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerTest {
     private val context: Context = mock()
@@ -171,7 +174,57 @@ class SemanticSearchManagerTest {
         assertTrue(lastPut.genericDocuments.isNotEmpty())
     }
 
-    private fun createManager(scope: CoroutineScope) = SemanticSearchManager(
+    @Test
+    fun `putDocuments failure sets error status and does not update hash`() = runTest(testDispatcher) {
+        val manager = createManager(backgroundScope)
+        val snapshot = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))
+        
+        // 1. Setup session to fail on putDocuments
+        manager.indexSnapshot(snapshot) // First call to initialize session
+        val session = fakeWrapper.lastSession!!
+        session.failPutDocuments = true
+
+        // 2. Trigger another indexing (with changes to avoid hash skip)
+        val updatedSnapshot = createSnapshot(
+            listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))),
+            isManual = true
+        )
+        manager.indexSnapshot(updatedSnapshot)
+
+        // 3. Verify error status
+        val status = manager.status.value
+        assertTrue("Expected Error but was $status", status is TrackingStatus.Error)
+        
+        // 4. Fix failure and try again with SAME snapshot
+        session.failPutDocuments = false
+        manager.indexSnapshot(updatedSnapshot)
+
+        // 5. Verify it tried again (meaning hash wasn't updated on failure)
+        assertTrue(manager.status.value is TrackingStatus.Active)
+        assertEquals(updatedSnapshot.simSnapshots[0].entities[PackageType.MINUTES]!!.remaining, 101L)
+    }
+
+    @Test
+    fun `recover after error reinitializes session`() = runTest(testDispatcher) {
+        val manager = createManager(backgroundScope)
+        val flow = MutableStateFlow(createEmptySnapshot())
+        manager.initialize(flow)
+        
+        // Simulate fatal error that closes session
+        fakeWrapper.failNextWithFatalError = true
+        manager.recover() 
+        
+        assertTrue(manager.status.value is TrackingStatus.Error)
+        
+        // Fix and recover
+        fakeWrapper.failNextWithFatalError = false
+        manager.recover()
+        
+        assertTrue(manager.status.value is TrackingStatus.Active)
+        assertEquals(3, fakeWrapper.createdSessions)
+    }
+
+    private fun createManager(scope: CoroutineScope) = object : SemanticSearchManager(
         context = context,
         scope = scope,
         appSearchWrapper = fakeWrapper,
@@ -180,7 +233,24 @@ class SemanticSearchManagerTest {
             override fun elapsedRealtime(): Long = currentTime
         },
         ioDispatcher = testDispatcher
-    )
+    ) {
+        override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
+            // Create PutDocumentsRequest manually with generic documents to avoid converter lookup
+            val builder = PutDocumentsRequest.Builder()
+            documents.forEach { doc ->
+                builder.addGenericDocuments(
+                    androidx.appsearch.app.GenericDocument.Builder<androidx.appsearch.app.GenericDocument.Builder<*>>(
+                        doc.namespace, doc.id, "UsageDocument"
+                    ).build()
+                )
+            }
+            return builder.build()
+        }
+
+        override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest {
+            return RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
+        }
+    }
 
     private fun createEntity(slot: Int, type: PackageType, remaining: Long) = SemanticEntity(
         id = "sim_${slot}_${type.name}",
@@ -224,6 +294,15 @@ class SemanticSearchManagerTest {
             lastSession = session
             return session
         }
+
+        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest {
+            // Return a dummy schema request that doesn't use document classes
+            // to avoid missing converter error in tests
+            return SetSchemaRequest.Builder()
+                .setForceOverride(forceOverride)
+                .addSchemas(AppSearchSchema.Builder("UsageDocument").build())
+                .build()
+        }
     }
 
     private class FakeAppSearchSessionWrapper(
@@ -233,6 +312,7 @@ class SemanticSearchManagerTest {
         var lastSchemaRequest: SetSchemaRequest? = null
         val putRequests = mutableListOf<PutDocumentsRequest>()
         val removeRequests = mutableListOf<RemoveByDocumentIdRequest>()
+        var failPutDocuments = false
 
         override suspend fun setSchema(request: SetSchemaRequest) {
             if (wrapper.failNextWithInvalidSchema && !request.isForceOverride) {
@@ -246,6 +326,9 @@ class SemanticSearchManagerTest {
         }
 
         override suspend fun putDocuments(request: PutDocumentsRequest) {
+            if (failPutDocuments) {
+                throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Simulated failure")
+            }
             putRequests.add(request)
         }
 

@@ -126,7 +126,7 @@ class UsageCheckWorker
             val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).first()
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
-                    sendNotification(entity.operatorName, R.string.notification_minutes_exhausted_body, entity.simSlot, 0)
+                    sendNotificationWithBodyRes(entity.operatorName, R.string.notification_minutes_exhausted_body, entity.simSlot, 0)
                     simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
                 }
             } else {
@@ -151,22 +151,31 @@ class UsageCheckWorker
                 val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
 
                 val body = applicationContext.getString(R.string.notification_minutes_body, level, remText, remPct, daysText)
-                sendNotification(entity.operatorName, body, entity.simSlot, 0, isBodyRes = false)
+                sendNotificationWithBody(entity.operatorName, body, entity.simSlot, 0)
                 simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
             } else if (usagePct <= monthProg && notifiedLow) {
                 simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
             }
         }
 
-        private fun sendNotification(
+        private fun sendNotificationWithBodyRes(
             operator: String,
-            bodyOrResId: Any,
+            bodyResId: Int,
             slot: Int,
             type: Int,
-            isBodyRes: Boolean = true,
         ) {
-            val title = applicationContext.getString(R.string.notification_minutes_title, operator)
-            val body = if (isBodyRes) applicationContext.getString(bodyOrResId as Int) else bodyOrResId as String
+            val body = applicationContext.getString(bodyResId)
+            sendNotificationWithBody(operator, body, slot, type)
+        }
+
+        private fun sendNotificationWithBody(
+            operator: String,
+            body: String,
+            slot: Int,
+            type: Int,
+        ) {
+            val titleRes = if (type == 0) R.string.notification_minutes_title else R.string.notification_traffic_title
+            val title = applicationContext.getString(titleRes, operator)
             notificationHelper.sendUsageNotification(title, body, slot, type)
         }
 
@@ -186,7 +195,7 @@ class UsageCheckWorker
             val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).first()
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
-                    sendNotification(entity.operatorName, R.string.notification_traffic_exhausted_body, entity.simSlot, 1)
+                    sendNotificationWithBodyRes(entity.operatorName, R.string.notification_traffic_exhausted_body, entity.simSlot, 1)
                     simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
                 }
             } else {
@@ -206,11 +215,11 @@ class UsageCheckWorker
         ) {
             val notifiedLow = simNotificationFlagsRepository.getNotifiedLowTraffic(identity).first()
             if (usagePct > monthProg && !notifiedLow) {
-                val level = applicationContext.getString(R.string.usage_level_low)
+                val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
+                val level = applicationContext.getString(levelRes)
                 val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
-                val title = applicationContext.getString(R.string.notification_traffic_title, entity.operatorName)
                 val body = applicationContext.getString(R.string.notification_traffic_body, level, remGb, remPct, daysText)
-                notificationHelper.sendUsageNotification(title, body, entity.simSlot, 1)
+                sendNotificationWithBody(entity.operatorName, body, entity.simSlot, 1)
                 simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
             } else if (usagePct <= monthProg && notifiedLow) {
                 simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)

@@ -15,6 +15,8 @@ interface AppSearchWrapper {
         context: Context,
         databaseName: String,
     ): AppSearchSessionWrapper
+
+    fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest
 }
 
 interface AppSearchSessionWrapper : AutoCloseable {
@@ -38,6 +40,13 @@ class AppSearchWrapperImpl
                     LocalStorage.SearchContext.Builder(context, databaseName).build(),
                 )
             return AppSearchSessionWrapperImpl(future.await())
+        }
+
+        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest {
+            return SetSchemaRequest.Builder()
+                .setForceOverride(forceOverride)
+                .addDocumentClasses(UsageDocument::class.java)
+                .build()
         }
     }
 

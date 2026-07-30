@@ -8,28 +8,30 @@ import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.domain.NavigationProvider
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(FlowPreview::class)
 @Singleton
 class ShortcutManager
     @Inject
@@ -38,7 +40,13 @@ class ShortcutManager
         @ApplicationScope private val scope: CoroutineScope,
         private val navigationProvider: NavigationProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    ) {
+    ) : TrackingStatusProvider {
+        override val key: String = "shortcuts"
+
+        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+        private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
 
         /**
@@ -50,35 +58,45 @@ class ShortcutManager
          * @param snapshotFlow The flow of global snapshots to monitor.
          */
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            lastSnapshotFlow = snapshotFlow
             job?.cancel()
             job =
                 scope.launch {
+                    _status.value = TrackingStatus.Active
                     var isFirst = true
-                    snapshotFlow
-                        .debounce { snapshot ->
-                            if (isFirst || snapshot.isManualUpdate) {
-                                isFirst = false
-                                0.milliseconds
-                            } else {
-                                30.seconds
-                            }
-                        }.collectLatest { snapshot ->
-                            try {
-                                withContext(ioDispatcher) {
-                                    updateShortcuts(snapshot)
-                                }
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to update dynamic shortcuts", e)
-                            }
+                    snapshotFlow.collectLatest { snapshot ->
+                        // Logic: immediate for first or manual update, 30s debounce for others
+                        if (!isFirst && !snapshot.isManualUpdate) {
+                            delay(30.seconds)
                         }
+                        isFirst = false
+
+                        try {
+                            withContext(ioDispatcher) {
+                                updateShortcuts(snapshot)
+                            }
+                            _status.value = TrackingStatus.Active
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to update dynamic shortcuts", e)
+                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                        }
+                    }
                 }
+        }
+
+        override fun recover() {
+            lastSnapshotFlow?.let { initialize(it) }
         }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
             val shortcuts = mutableListOf<ShortcutInfoCompat>()
 
             // limit shortcuts to supported SIMs
-            snapshot.simSnapshots.filter { it.isActive && it.slot in SimConstants.SUPPORTED_SLOT_INDICES }.forEach { sim ->
+            snapshot.simSnapshots
+                .filter { it.isActive && it.slot in SimConstants.SUPPORTED_SLOT_INDICES }
+                .forEach { sim ->
                 val slot = sim.slot
                 val operator = sim.operator
                 val minutes = sim.entities[PackageType.MINUTES]
@@ -95,7 +113,10 @@ class ShortcutManager
                                 .setLongLabel(longLabel)
                                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
                                 .setIntent(
-                                    Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
+                                    Intent().setClassName(
+                                        context.packageName,
+                                        navigationProvider.mainActivityClassName,
+                                    ).apply {
                                         action = Intent.ACTION_VIEW
                                         putExtra("sim_slot", slot)
                                     },
@@ -106,8 +127,15 @@ class ShortcutManager
 
                 traffic?.let {
                     if (it.limit > 0) {
-                        val trafficGb = it.remaining.toFloat() / (1024 * 1024 * 1024)
-                        val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))
+                        val trafficGb =
+                            it.remaining.toFloat() / com.example.minutewatcher.core.model.Constants.BYTES_PER_GB
+                        val label =
+                            String.format(
+                                Locale.getDefault(),
+                                "%.1f%s",
+                                trafficGb,
+                                context.getString(R.string.gb_abbr),
+                            )
                         val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
                         val shortcut =
                             ShortcutInfoCompat
@@ -116,7 +144,10 @@ class ShortcutManager
                                 .setLongLabel(longLabel)
                                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
                                 .setIntent(
-                                    Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
+                                    Intent().setClassName(
+                                        context.packageName,
+                                        navigationProvider.mainActivityClassName,
+                                    ).apply {
                                         action = Intent.ACTION_VIEW
                                         putExtra("sim_slot", slot)
                                     },

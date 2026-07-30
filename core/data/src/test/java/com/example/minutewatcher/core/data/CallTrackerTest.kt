@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -16,20 +17,16 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argThat
-import org.mockito.kotlin.atLeastOnce
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerTest {
@@ -188,7 +185,7 @@ class CallTrackerTest {
             callTracker.onCallStarted(-1)
 
             val status = callTracker.status.first()
-            assert(status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+            assertTrue(status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
         }
 
     @Test
@@ -200,7 +197,7 @@ class CallTrackerTest {
             callTracker.onCallEnded(-1)
 
             val status = callTracker.status.first()
-            assert(status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+            assertTrue(status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
         }
 
     @Test
@@ -239,6 +236,100 @@ class CallTrackerTest {
             callTracker.recover()
             testScope.advanceUntilIdle()
             assertEquals(TrackingStatus.Idle, callTracker.status.first())
+        }
+
+    @Test
+    fun `attribution failure keeps error status`() =
+        runTest {
+            // Arrange: Force attribution failure in processCallDuration
+            val startTime = 1000L
+            val bootTime = 500L
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            // No identity found
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
+
+            timeProvider.advance(10000)
+
+            // Act
+            callTracker.onCallEnded(subId = 1)
+
+            // Assert
+            val status = callTracker.status.first()
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+            assertEquals("Attribution failed", status.message)
+        }
+
+    @Test
+    fun `recover clears error status`() =
+        runTest {
+            // Arrange: Start with an error status
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(500L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
+            timeProvider.advance(10000)
+            
+            callTracker.onCallEnded(subId = 1)
+            assertTrue(callTracker.status.value is TrackingStatus.Error)
+
+            // Now "fix" the problem and recover
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+            
+            // Act
+            callTracker.recover()
+            testScope.advanceUntilIdle()
+
+            // Assert
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `call tracking disabled does not increment minutes`() =
+        runTest {
+            // Arrange
+            whenever(appSettingsRepository.getCallTrackingEnabled()).thenReturn(flowOf(false))
+            // Re-create tracker to pick up new setting state
+            callTracker = CallTracker(
+                simIdentityRepository, simUsageRepository, appSettingsRepository,
+                callSessionRepository, dataChangeNotifier, permissionManager,
+                telephonyManager, testScope, timeProvider
+            )
+            
+            val startTime = 1000L
+            val bootTime = 500L
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            timeProvider.advance(10000)
+
+            // Act
+            callTracker.onCallEnded(subId = 1)
+
+            // Assert
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+        }
+
+    @Test
+    fun `stale boot time does not increment minutes`() =
+        runTest {
+            // Arrange: saved boot time is in the future relative to current (impossible session)
+            val startTime = 1000L
+            val bootTime = 500001L // 1ms after current realtime
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // Act
+            callTracker.onCallEnded(subId = 1)
+
+            // Assert
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
         }
 }
 

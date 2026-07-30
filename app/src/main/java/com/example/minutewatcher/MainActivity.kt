@@ -2,6 +2,7 @@ package com.example.minutewatcher
 
 import android.Manifest
 import android.appwidget.AppWidgetManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.LocusId
@@ -117,8 +118,11 @@ class MainActivity : AppCompatActivity() {
                         onGrantPhonePermission = {
                             phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                         },
-                        onOpenUsageSettings = {
+                        onShowUsageAccessDialog = {
                             viewModel.openUsageAccessDialog()
+                        },
+                        onOpenUsageAccessSettings = {
+                            openUsageAccessSettings()
                         },
                         onOpenAppSettings = {
                             openAppSettings()
@@ -238,6 +242,14 @@ class MainActivity : AppCompatActivity() {
                 data = android.net.Uri.fromParts("package", packageName, null)
             }
         startActivity(intent)
+    }
+
+    private fun openUsageAccessSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        } catch (e: ActivityNotFoundException) {
+            openAppSettings()
+        }
     }
 
     private fun addWidgetToHomeScreen() {

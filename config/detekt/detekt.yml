@@ -32,6 +32,7 @@ naming:
     functionPattern: '[a-z][A-Za-z0-9]*'
     excludeClassPattern: '.*Test$'
     ignoreAnnotated:
+      - 'androidx.compose.runtime.Composable'
       - 'Composable'
   VariableNaming:
     active: true

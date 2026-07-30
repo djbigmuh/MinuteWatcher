@@ -1,6 +1,4 @@
-package com.example.minutewatcher.core.data
-
-import com.example.minutewatcher.core.common.util.TimeProvider
+package com.example.minutewatcher.core.common.util
 
 class FixedTimeProvider(
     private var currentTime: Long = 0L,
@@ -22,5 +20,3 @@ class FixedTimeProvider(
         currentRealtime += millis
     }
 }
-
-

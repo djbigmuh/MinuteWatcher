@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.InitialSetupWorker
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.common.util.AppLogger
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
 class BootReceiver : BroadcastReceiver() {
@@ -35,6 +36,8 @@ class BootReceiver : BroadcastReceiver() {
                 workRequest,
             )
             AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
         }

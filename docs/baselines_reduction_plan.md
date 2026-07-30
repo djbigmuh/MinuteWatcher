@@ -7,9 +7,10 @@ The ultimate goal is to have zero issues in baselines, ensuring that all new cod
 
 ## Strategy
 
-### 1. "No New Issues" Policy
-- All new code must pass Lint and Detekt checks without adding new entries to the baseline.
-- CI/CD should be configured to fail if new issues are introduced.
+### 1. Stricter "No Growth" Policy
+- **Zero Tolerance in CI**: Detekt and Lint checks in CI must use existing baselines. Regeneration of baselines (`detektBaseline`, `lintUpdateBaseline`) is strictly prohibited in CI environments.
+- **Fail on New Issues**: Any issue not present in the current baseline will cause the build to fail.
+- **Merge Blockers**: Pull requests that increase the number of issues in a baseline file should not be merged.
 
 ### 2. Gradual Cleanup
 - When modifying existing code, developers are encouraged to fix any baseline issues in the affected files.

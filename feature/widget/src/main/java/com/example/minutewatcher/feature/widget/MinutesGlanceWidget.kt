@@ -16,6 +16,7 @@ import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
+import androidx.glance.GlanceTheme
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -66,7 +67,9 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val uiState = getUiState(context)
         val navigationProvider = getNavigationProvider(context)
         provideContent {
-            WidgetContent(context, uiState, navigationProvider)
+            GlanceTheme {
+                WidgetContent(context, uiState, navigationProvider)
+            }
         }
     }
 
@@ -121,10 +124,14 @@ private fun WidgetContent(
     val luminance =
         androidx.core.graphics.ColorUtils
             .calculateLuminance(uiState.backgroundColor)
-    val noDataColorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-    val noDataColor =
-        androidx.compose.ui.graphics
-            .Color(noDataColorInt)
+    
+    val noDataColor = if (uiState.useSystemColors) {
+        GlanceTheme.colors.onSurface
+    } else {
+        val colorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+        val composeColor = androidx.compose.ui.graphics.Color(colorInt)
+        ColorProvider(day = composeColor, night = composeColor)
+    }
 
     Box(
         modifier =
@@ -142,7 +149,7 @@ private fun WidgetContent(
                 DualSimLayout(context, simUiStates[0], simUiStates[1], uiState)
             }
             simUiStates.isNotEmpty() -> {
-                SingleSimLayout(context, simUiStates[0])
+                SingleSimLayout(context, simUiStates[0], uiState)
             }
             else -> {
                 Text(
@@ -150,11 +157,7 @@ private fun WidgetContent(
                     style =
                         TextStyle(
                             fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                            color =
-                                ColorProvider(
-                                    day = noDataColor,
-                                    night = noDataColor,
-                                ),
+                            color = noDataColor,
                         ),
                 )
             }
@@ -175,30 +178,27 @@ private fun DualSimLayout(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim1)
+                SimItem(context, sim1, uiState)
             }
             if (uiState.showSeparator) {
+                val separatorColor = if (uiState.useSystemColors) {
+                    GlanceTheme.colors.outline
+                } else {
+                    val color = androidx.compose.ui.graphics
+                        .Color(sim1.secondaryTextColor)
+                        .copy(alpha = 0.5f)
+                    ColorProvider(day = color, night = color)
+                }
                 Spacer(
                     modifier =
                         GlanceModifier
                             .width(1.dp)
                             .fillMaxHeight()
-                            .background(
-                                ColorProvider(
-                                    day =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor)
-                                            .copy(alpha = 0.5f),
-                                    night =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor)
-                                            .copy(alpha = 0.5f),
-                                ),
-                            ),
+                            .background(separatorColor),
                 )
             }
             Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim2)
+                SimItem(context, sim2, uiState)
             }
         }
     } else {
@@ -207,30 +207,27 @@ private fun DualSimLayout(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim1)
+                SimItem(context, sim1, uiState)
             }
             if (uiState.showSeparator) {
+                val separatorColor = if (uiState.useSystemColors) {
+                    GlanceTheme.colors.outline
+                } else {
+                    val color = androidx.compose.ui.graphics
+                        .Color(sim1.secondaryTextColor)
+                        .copy(alpha = 0.5f)
+                    ColorProvider(day = color, night = color)
+                }
                 Spacer(
                     modifier =
                         GlanceModifier
                             .height(1.dp)
                             .fillMaxWidth()
-                            .background(
-                                ColorProvider(
-                                    day =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor)
-                                            .copy(alpha = 0.5f),
-                                    night =
-                                        androidx.compose.ui.graphics
-                                            .Color(sim1.secondaryTextColor)
-                                            .copy(alpha = 0.5f),
-                                ),
-                            ),
+                            .background(separatorColor),
                 )
             }
             Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim2)
+                SimItem(context, sim2, uiState)
             }
         }
     }
@@ -240,9 +237,10 @@ private fun DualSimLayout(
 private fun SingleSimLayout(
     context: Context,
     sim: SimUiState,
+    uiState: WidgetUiState,
 ) {
     Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        SimItem(context, sim)
+        SimItem(context, sim, uiState)
     }
 }
 
@@ -250,6 +248,7 @@ private fun SingleSimLayout(
 private fun SimItem(
     context: Context,
     sim: SimUiState,
+    uiState: WidgetUiState,
 ) {
     val summary =
         context.getString(
@@ -276,21 +275,22 @@ private fun SimItem(
                             )
                         }
                         is SimLayoutComponent.Text -> {
+                            val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
+                                GlanceTheme.colors.onSurface
+                            } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                                GlanceTheme.colors.onSurfaceVariant
+                            } else {
+                                val composeColor = androidx.compose.ui.graphics.Color(component.color)
+                                ColorProvider(day = composeColor, night = composeColor)
+                            }
+
                             Text(
                                 text = component.text,
                                 style =
                                     TextStyle(
                                         fontSize = component.fontSizeSp.sp,
                                         fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
-                                        color =
-                                            ColorProvider(
-                                                day =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(component.color),
-                                                night =
-                                                    androidx.compose.ui.graphics
-                                                        .Color(component.color),
-                                            ),
+                                        color = textColor,
                                     ),
                             )
                         }

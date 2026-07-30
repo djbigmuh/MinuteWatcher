@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic.di
 
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.Binds
 import dagger.Module
@@ -17,6 +18,11 @@ interface SemanticModule {
     @Singleton
     @IntoSet
     fun bindSemanticSearchManagerStatus(impl: SemanticSearchManager): TrackingStatusProvider
+
+    @Binds
+    @Singleton
+    @IntoSet
+    fun bindShortcutManagerStatus(impl: ShortcutManager): TrackingStatusProvider
 
     @Binds
     @Singleton

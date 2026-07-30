@@ -64,12 +64,14 @@ fun SimCardScreen(
     onThemeChange: (AppTheme) -> Unit,
     onLanguageChange: (String?) -> Unit,
     onGrantPhonePermission: () -> Unit = {},
-    onOpenUsageSettings: () -> Unit = {},
+    onShowUsageAccessDialog: () -> Unit = {},
+    onOpenUsageAccessSettings: () -> Unit = {},
     onOpenAppSettings: () -> Unit = {},
     onGrantNotificationPermission: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val highlightedSlot by viewModel.highlightedSlot.collectAsStateWithLifecycle()
     val trackingBannerState by viewModel.trackingBannerState.collectAsStateWithLifecycle()
     val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
@@ -88,6 +90,7 @@ fun SimCardScreen(
         topBar = {
             SimCardTopBar(
                 appTheme = appTheme,
+                appLanguage = appLanguage,
                 onThemeChange = onThemeChange,
                 onLanguageChange = onLanguageChange,
                 onOpenSettings = onOpenSettings,
@@ -104,7 +107,7 @@ fun SimCardScreen(
             trackingBannerState = trackingBannerState,
             highlightedSlot = highlightedSlot,
             onGrantPhonePermission = onGrantPhonePermission,
-            onOpenUsageSettings = onOpenUsageSettings,
+            onShowUsageAccessDialog = onShowUsageAccessDialog,
             onOpenAppSettings = onOpenAppSettings,
             onGrantNotificationPermission = onGrantNotificationPermission,
         )
@@ -114,7 +117,7 @@ fun SimCardScreen(
         viewModel = viewModel,
         showUsageAccessDialog = showUsageAccessDialog,
         showOnboardingDialog = showOnboardingDialog,
-        onOpenUsageSettings = onOpenUsageSettings,
+        onOpenUsageAccessSettings = onOpenUsageAccessSettings,
     )
 }
 
@@ -147,6 +150,7 @@ private fun MainFab(onClick: () -> Unit) {
 @Composable
 private fun SimCardTopBar(
     appTheme: AppTheme,
+    appLanguage: String?,
     onThemeChange: (AppTheme) -> Unit,
     onLanguageChange: (String?) -> Unit,
     onOpenSettings: () -> Unit,
@@ -154,7 +158,7 @@ private fun SimCardTopBar(
     TopAppBar(
         title = { Text(stringResource(id = R.string.app_name)) },
         actions = {
-            LanguageMenu(onLanguageChange)
+            LanguageMenu(appLanguage, onLanguageChange)
             ThemeMenu(appTheme, onThemeChange)
             IconButton(onClick = onOpenSettings) {
                 Icon(Icons.Default.Settings, contentDescription = stringResource(id = R.string.widget_settings_content_desc))
@@ -164,7 +168,10 @@ private fun SimCardTopBar(
 }
 
 @Composable
-private fun LanguageMenu(onLanguageChange: (String?) -> Unit) {
+private fun LanguageMenu(
+    currentLanguage: String?,
+    onLanguageChange: (String?) -> Unit,
+) {
     val languagesNames = stringArrayResource(id = R.array.languages)
     val languageCodes = stringArrayResource(id = R.array.language_codes)
     val languageIcons = stringArrayResource(id = R.array.language_icons)
@@ -178,10 +185,15 @@ private fun LanguageMenu(onLanguageChange: (String?) -> Unit) {
             }
         }
 
+    val currentIcon =
+        remember(currentLanguage, languages) {
+            languages.find { it.code == currentLanguage }?.flag ?: "🌐"
+        }
+
     var showMenu by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { showMenu = true }) {
-            Text(stringResource(id = R.string.language_system_icon))
+            Text(text = currentIcon, fontSize = 18.sp)
         }
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
             languages.forEach { lang ->
@@ -267,7 +279,7 @@ private fun MainScreenContent(
     trackingBannerState: TrackingBannerState,
     highlightedSlot: Int?,
     onGrantPhonePermission: () -> Unit,
-    onOpenUsageSettings: () -> Unit,
+    onShowUsageAccessDialog: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onGrantNotificationPermission: () -> Unit,
 ) {
@@ -314,7 +326,7 @@ private fun MainScreenContent(
                         TrackingBanners(
                             state = trackingBannerState,
                             onGrantPhonePermission = onGrantPhonePermission,
-                            onOpenUsageSettings = onOpenUsageSettings,
+                            onShowUsageAccessDialog = onShowUsageAccessDialog,
                             onOpenAppSettings = onOpenAppSettings,
                             onRetryAppSearch = { viewModel.retryAppSearch() },
                             onRetryTraffic = { viewModel.retryTraffic() },
@@ -355,7 +367,7 @@ private fun DialogRenderer(
     viewModel: MainViewModel,
     showUsageAccessDialog: Boolean,
     showOnboardingDialog: Boolean,
-    onOpenUsageSettings: () -> Unit,
+    onOpenUsageAccessSettings: () -> Unit,
 ) {
     val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
     val showDayDialog by viewModel.showDayDialog.collectAsStateWithLifecycle()
@@ -420,7 +432,7 @@ private fun DialogRenderer(
             onDismiss = { viewModel.closeUsageAccessDialog() },
             onSettings = {
                 viewModel.closeUsageAccessDialog()
-                onOpenUsageSettings()
+                onOpenUsageAccessSettings()
             },
         )
     }
@@ -465,7 +477,7 @@ private fun SimpleMessageDialog(
 }
 
 @Composable
-private fun UsageAccessDialog(
+internal fun UsageAccessDialog(
     onDismiss: () -> Unit,
     onSettings: () -> Unit,
 ) {

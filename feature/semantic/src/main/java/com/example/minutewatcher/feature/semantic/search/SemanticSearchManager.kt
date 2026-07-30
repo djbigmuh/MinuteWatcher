@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
-import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
@@ -12,9 +11,11 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -28,7 +29,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SemanticSearchManager
+open class SemanticSearchManager
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
@@ -56,6 +57,8 @@ class SemanticSearchManager
                 session = null
             } catch (e: AppSearchException) {
                 AppLogger.e("AppSearch error closing session during re-init", e)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Unexpected error closing session during re-init", e)
             }
@@ -74,6 +77,8 @@ class SemanticSearchManager
                                 AppLogger.e("IO error during AppSearch initialization", e)
                                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO Error: ${e.message}")
                                 false
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Exception) {
                                 AppLogger.e("Unexpected error during AppSearch session initialization", e)
                                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
@@ -102,7 +107,7 @@ class SemanticSearchManager
             var currentSession: AppSearchSessionWrapper? = null
             try {
                 currentSession = appSearchWrapper.createSearchSession(context, "minute_watcher_db")
-                currentSession.setSchema(createSchemaRequest(false))
+                currentSession.setSchema(appSearchWrapper.createSchemaRequest(false))
                 session = currentSession
                 _status.value = TrackingStatus.Active
                 return true
@@ -114,13 +119,16 @@ class SemanticSearchManager
                     try {
                         overrideSession =
                             appSearchWrapper.createSearchSession(context, "minute_watcher_db")
-                        overrideSession.setSchema(createSchemaRequest(true))
+                        overrideSession.setSchema(appSearchWrapper.createSchemaRequest(true))
                         session = overrideSession
                         _status.value = TrackingStatus.Active
                         return true
                     } catch (ex: AppSearchException) {
                         overrideSession?.close()
                         AppLogger.e("Failed to force AppSearch schema override", ex)
+                    } catch (ex: CancellationException) {
+                        overrideSession?.close()
+                        throw ex
                     } catch (ex: Exception) {
                         overrideSession?.close()
                         AppLogger.e("Unexpected error forcing AppSearch schema override", ex)
@@ -138,42 +146,14 @@ class SemanticSearchManager
                 AppLogger.e("IO error during AppSearch session creation", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO error: ${e.message}")
                 return false
+            } catch (e: CancellationException) {
+                currentSession?.close()
+                throw e
             } catch (e: Exception) {
                 currentSession?.close()
                 AppLogger.e("Unexpected error during AppSearch session creation", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 return false
-            }
-        }
-
-        private fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest {
-            val builder = SetSchemaRequest.Builder().setForceOverride(forceOverride)
-            try {
-                builder.addDocumentClasses(UsageDocument::class.java)
-            } catch (e: NoClassDefFoundError) {
-                if (isTestEnvironment()) {
-                    AppLogger.w("UsageDocument converter not found in test environment, proceeding with empty schema")
-                } else {
-                    throw e
-                }
-            } catch (e: ClassNotFoundException) {
-                if (isTestEnvironment()) {
-                    AppLogger.w("UsageDocument converter not found in test environment, proceeding with empty schema")
-                } else {
-                    throw e
-                }
-            }
-            return builder.build()
-        }
-
-        private fun isTestEnvironment(): Boolean {
-            return try {
-                Class.forName("org.junit.Test")
-                true
-            } catch (_: ClassNotFoundException) {
-                false
-            } catch (_: Exception) {
-                false
             }
         }
 
@@ -199,30 +179,32 @@ class SemanticSearchManager
             val documents =
                 activeSimSnapshots.flatMap { sim ->
                     sim.entities.values.map { entity ->
+                        val limit = entity.limit
+                        val remaining = entity.remaining
+                        val percent = if (limit > 0) (remaining * 100 / limit) else 0L
+                        val usageStatus = ColorProvider.getUsageStatus(remaining.toFloat(), limit.toFloat())
+
                         UsageDocument(
                             namespace = "usage",
                             id = "sim_${sim.slot}_${entity.packageType.name}",
                             operatorName = sim.operator,
                             packageType = entity.packageType.name,
-                            remainingValue = entity.remaining,
+                            remainingValue = remaining,
                             unit = entity.unit.name,
+                            usedValue = entity.used,
+                            limitValue = limit,
+                            remainingPercent = percent,
+                            periodEnd = entity.periodEnd,
+                            slot = sim.slot.toLong(),
+                            status = usageStatus.name,
                         )
                     }
                 }
 
             try {
                 if (documents.isNotEmpty()) {
-                    try {
-                        session?.putDocuments(PutDocumentsRequest.Builder().addDocuments(documents).build())
-                    } catch (e: AppSearchException) {
-                        AppLogger.w("AppSearch error putting documents: ${e.message}")
-                    } catch (e: java.io.IOException) {
-                        AppLogger.w("IO error putting documents to AppSearch: ${e.message}")
-                    }
+                    session?.putDocuments(createPutRequest(documents))
                 }
-
-                lastIndexTime = currentTime
-                lastSnapshotHash = currentHash
 
                 // Remove stale documents (active IDs that are no longer in the snapshot)
                 val activeDocumentIds = documents.map { it.id }.toSet()
@@ -233,13 +215,11 @@ class SemanticSearchManager
                 val idsToRemove = allPossibleDocumentIds - activeDocumentIds
 
                 if (idsToRemove.isNotEmpty()) {
-                    session?.removeByDocumentId(
-                        RemoveByDocumentIdRequest
-                            .Builder("usage")
-                            .addIds(idsToRemove)
-                            .build(),
-                    )
+                    session?.removeByDocumentId(createRemoveRequest(idsToRemove))
                 }
+
+                lastIndexTime = currentTime
+                lastSnapshotHash = currentHash
                 _status.value = TrackingStatus.Active
             } catch (e: AppSearchException) {
                 AppLogger.e("AppSearch error during indexing", e)
@@ -252,12 +232,28 @@ class SemanticSearchManager
                     session?.close()
                     session = null
                 }
+            } catch (e: java.io.IOException) {
+                AppLogger.e("IO error during AppSearch indexing", e)
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO Error: ${e.message}")
+                session?.close()
+                session = null
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to update AppSearch index", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 session?.close()
                 session = null
             }
+        }
+
+        internal open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
+            return PutDocumentsRequest.Builder().addDocuments(documents).build()
+        }
+
+        internal open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest {
+            return RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
         }
     }
 

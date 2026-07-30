@@ -18,6 +18,7 @@ data class SimCardUiModel(
     val trafficLimitMb: Int,
     val trafficRemainingGb: Float,
     val effectiveTrafficLimitGb: Float,
+    val trafficAdjustmentGb: Float,
     val isTrafficLimitSet: Boolean,
     val autoResetEnabled: Boolean,
     val autoResetDay: Int,

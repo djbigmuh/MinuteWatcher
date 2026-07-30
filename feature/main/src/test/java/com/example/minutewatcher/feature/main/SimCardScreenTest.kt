@@ -9,8 +9,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class SimCardScreenTest {
     @get:Rule
     val composeTestRule = androidx.compose.ui.test.junit4.v2.createComposeRule()

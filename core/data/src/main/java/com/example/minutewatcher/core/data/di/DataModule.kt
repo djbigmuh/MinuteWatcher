@@ -19,6 +19,7 @@ import com.example.minutewatcher.core.data.SimRepositoryImpl
 import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
+import com.example.minutewatcher.core.data.UsageUseCaseImpl
 import com.example.minutewatcher.core.data.WidgetSettingsRepository
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.DefaultDispatcher
@@ -40,6 +41,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
 import dagger.Binds
@@ -137,6 +139,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindAutoResetUseCase(impl: ResetManager): AutoResetUseCase
+
+    @Binds
+    @Singleton
+    abstract fun bindUsageUseCase(impl: UsageUseCaseImpl): UsageUseCase
 
     @Binds
     @Singleton

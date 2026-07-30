@@ -1,6 +1,8 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -10,6 +12,8 @@ class BenchmarkUseCaseImpl @Inject constructor(
     private val simIdentityRepository: SimIdentityRepository,
     private val simUsageRepository: SimUsageRepository,
     private val simLimitsRepository: SimLimitsRepository,
+    private val appSettingsRepository: AppSettingsRepository,
+    private val migrationFlagsRepository: MigrationFlagsRepository,
 ) : BenchmarkUseCase {
 
     override suspend fun populateMockData(simCount: Int) {
@@ -38,5 +42,17 @@ class BenchmarkUseCaseImpl @Inject constructor(
                 manualAdjustment = 10 * (i + 1)
             )
         }
+
+        // Prevent onboarding dialog during benchmarks
+        appSettingsRepository.updateAppSettings {
+            it.copy(
+                onboardingCompleted = true,
+                notificationPermissionRequested = true
+            )
+        }
+
+        // Prevent background migrations during benchmarks
+        migrationFlagsRepository.setMigrationV1Completed(true)
+        migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
     }
 }

@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -29,6 +30,7 @@ class InitialSetupWorker
         private val simIdentityRepository: SimIdentityRepository,
         private val migrationFlagsRepository: MigrationFlagsRepository,
         private val usageStateRepository: UsageStateRepository,
+        private val autoResetUseCase: AutoResetUseCase,
         private val usageUseCase: UsageUseCase,
         private val migrationService: IdentityMigrationService,
         private val dataChangeNotifier: DataChangeNotifier,
@@ -45,13 +47,17 @@ class InitialSetupWorker
 
                 checkAndPerformMigrations()
 
+                // Perform auto-reset immediately after boot/migration
+                val snapshotAfterMigration = usageStateRepository.refresh()
+                autoResetUseCase.performAutoReset(snapshotAfterMigration)
+
                 // Reset traffic baseline after reboot for active SIMs
                 val activeSimsForTraffic = simIdentityRepository.observeActiveSims().first()
                 activeSimsForTraffic.forEach { info ->
                     trafficTracker.resetBaseline(info.identity.stableId)
                 }
 
-                // Refresh state and return updated snapshot
+                // Final refresh to capture results of auto-reset
                 usageStateRepository.refresh()
 
                 // Refresh widgets and snapshot
@@ -107,13 +113,16 @@ class InitialSetupWorker
                     AppLogger.d("Migration V1 skipped: no legacy data found")
                 }
                 migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                migrationService.markSchemaCurrent()
             }
         }
 
         private suspend fun handleMigrationWithPermission(v1Completed: Boolean) {
             val activeSims = simIdentityRepository.observeActiveSims().first()
+            val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
+
             if (activeSims.isEmpty()) {
-                if (migrationService.hasLegacyData()) {
+                if (migrationService.hasLegacyData(activeIdentities)) {
                     AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
                 } else {
                     if (!v1Completed) {
@@ -122,6 +131,7 @@ class InitialSetupWorker
                         AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
                     }
                     migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                    migrationService.markSchemaCurrent()
                 }
             } else {
                 activeSims.forEach { info ->
@@ -129,6 +139,7 @@ class InitialSetupWorker
                 }
                 migrationFlagsRepository.setMigrationV1Completed(true)
                 migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                migrationService.markSchemaCurrent()
                 AppLogger.d("Identity migrations completed in InitialSetupWorker")
             }
         }

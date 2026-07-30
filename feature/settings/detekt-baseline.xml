@@ -2,17 +2,11 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>FunctionNaming:WidgetPreviewCompose.kt$@Composable fun WidgetPreview( uiState: WidgetUiState, modifier: Modifier = Modifier, )</ID>
-    <ID>FunctionNaming:WidgetSettingsScreen.kt$@Composable fun CheckboxSetting( label: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -&gt; Unit, )</ID>
-    <ID>FunctionNaming:WidgetSettingsScreen.kt$@Composable fun SettingLabel(text: String)</ID>
-    <ID>FunctionNaming:WidgetSettingsScreen.kt$@Composable fun SimSettingsSection( index: Int, sim: SimSettingsState, onUpdate: ((SimSettingsState) -&gt; SimSettingsState) -&gt; Unit, )</ID>
-    <ID>FunctionNaming:WidgetSettingsScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun WidgetSettingsScreen( viewModel: WidgetSettingsViewModel, onSave: () -&gt; Unit, onBack: () -&gt; Unit, )</ID>
     <ID>LongMethod:WidgetPreviewCompose.kt$@Composable fun WidgetPreview( uiState: WidgetUiState, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WidgetSettingsScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun WidgetSettingsScreen( viewModel: WidgetSettingsViewModel, onSave: () -&gt; Unit, onBack: () -&gt; Unit, )</ID>
     <ID>MagicNumber:WidgetPreviewCompose.kt$0.5f</ID>
     <ID>MagicNumber:WidgetPreviewCompose.kt$100f</ID>
     <ID>MagicNumber:WidgetSettingsViewModel.kt$WidgetSettingsViewModel$5000</ID>
-    <ID>MaxLineLength:WidgetSettingsScreen.kt$color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)</ID>
     <ID>TooManyFunctions:WidgetSettingsViewModel.kt$WidgetSettingsViewModel : ViewModel</ID>
   </CurrentIssues>
 </SmellBaseline>

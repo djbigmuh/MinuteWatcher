@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before

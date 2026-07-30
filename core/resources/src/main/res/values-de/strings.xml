@@ -1,0 +1,137 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">SIM-Karten</string>
+    <string name="no_sim_found">Keine SIM-Karten gefunden</string>
+    <string name="check_permissions_sim">Berechtigungen und SIM-Präsenz prüfen</string>
+    <string name="no_data">Keine Daten</string>
+    <string name="error">Fehler</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Zurücksetzen</string>
+    <string name="theme_switch">Design ändern</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="limit_button">Limit</string>
+    <string name="add_widget_button">Widget hinzufügen</string>
+
+    <!-- Settings: General -->
+    <string name="settings_saved_toast">Einstellungen gespeichert</string>
+    <string name="language_system">System</string>
+    <string name="language_en">Englisch</string>
+    <string name="language_ru">Russisch</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_fr">Französisch</string>
+    <string name="language_ar">Arabisch</string>
+    <string name="language_es">Spanisch</string>
+    <string name="language_ja">Japanisch</string>
+    <string name="language_zh">Chinesisch</string>
+    <string name="language_hi">Hindi</string>
+    <string name="call_tracking_title">Anrufverfolgung</string>
+    <string name="usage_access_dialog_title">Datenverbrauchsverfolgung</string>
+    <string name="usage_access_dialog_description">Um Ihren mobilen Datenverbrauch zu verfolgen, benötigt MinuteWatcher die Berechtigung „Nutzungszugriff“.</string>
+    <string name="phone_permission_permanent_denial">Telefonberechtigung dauerhaft verweigert.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Widget-Einstellungen</string>
+    <string name="widget_display_settings">Widget-Anzeigeeinstellungen</string>
+    <string name="background_transparency">Hintergrundtransparenz</string>
+    <string name="display_minutes">Minuten anzeigen</string>
+    <string name="display_minutes_limit">Minutenlimit anzeigen</string>
+    <string name="display_traffic">Datenvolumen anzeigen</string>
+    <string name="display_traffic_limit">Datenlimit anzeigen</string>
+    <string name="display_name">Name anzeigen</string>
+    <string name="display_icon">Symbol anzeigen</string>
+    <string name="show_sim_checkbox">Diese SIM-Karte anzeigen</string>
+    <string name="preview">Vorschau</string>
+    <string name="layout_mode_title">Layout-Modus</string>
+    <string name="sim_arrangement_prompt">SIM-Anordnung wählen</string>
+    <string name="color_background">Hintergrundfarbe:</string>
+    <string name="custom_color">Benutzerdefiniert&#8230;</string>
+    <string name="font_size">Schriftgröße</string>
+    <string name="traffic_tracking_limitation_title">Einschränkung der Verkehrsverfolgung</string>
+    <string name="traffic_tracking_limitation_body">Android stellt den mobilen Datenverbrauch als Gesamtwert für das gesamte Gerät bereit. \n\nMinuteWatcher ordnet den gesamten mobilen Datenverkehr der SIM-Karte zu, die derzeit in Ihren Systemeinstellungen als „Standard-Daten-SIM“ ausgewählt ist.</string>
+    <string name="tracking_banner_phone_permission">Telefonberechtigung erforderlich.</string>
+    <string name="tracking_banner_usage_access">Nutzungszugriff erforderlich.</string>
+    <string name="tracking_banner_traffic_error">Fehler bei Verkehrsdaten.</string>
+    <string name="tracking_banner_appsearch_error">AppSearch-Indizierung fehlgeschlagen.</string>
+    <string name="tracking_banner_notification_permission">Benachrichtigungsberechtigung wird empfohlen, um Nutzungswarnungen zu erhalten.</string>
+    <string name="notification_permission_permanent_denial">Benachrichtigungen sind deaktiviert. Bitte aktivieren Sie diese in den App-Einstellungen, um Warnungen zu erhalten.</string>
+    <string name="action_grant">Erteilen</string>
+    <string name="action_settings">Einstellungen</string>
+    <string name="action_app_settings">App-Einstellungen</string>
+    <string name="action_retry">Wiederholen</string>
+    <string name="validation_error_invalid_range">Bitte geben Sie einen Wert zwischen %1$s und %2$s ein</string>
+    <string name="validation_error_invalid_number">Bitte geben Sie eine gültige Zahl ein</string>
+    <string name="dynamic_preview">Dynamische Vorschau</string>
+    <string name="widget_pin_unsupported">Ihr Launcher unterstützt keine automatische Widget-Platzierung. Bitte fügen Sie das Widget manuell hinzu.</string>
+    <string name="widget_already_added">Widget bereits zum Startbildschirm hinzugefügt</string>
+    <string name="onboarding_title">Willkommen bei MinuteWatcher!</string>
+    <string name="onboarding_message">MinuteWatcher kann Ihre Tarifdetails nicht automatisch von Ihrem Mobilfunkanbieter abrufen.\n\nUm mit der Nachverfolgung zu beginnen, legen Sie bitte manuell Ihre Minuten-/Datengrenzen und den monatlichen Rücksetzungstag für jede SIM-Karte fest. Die App übernimmt ab diesem Zeitpunkt die gesamte Überwachung.</string>
+    <string name="onboarding_button">Verstanden</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">Abbrechen</string>
+    <string name="save_button">Speichern</string>
+    <string name="set_button">Festlegen</string>
+    <string name="action_ok">OK</string>
+    <string name="reset_limits_button">Limits zurücksetzen</string>
+    <string name="reset_counters">Zähler zurücksetzen</string>
+    <string name="reset_confirmation_title">Zähler zurücksetzen?</string>
+    <string name="reset_confirmation_body">Dadurch werden alle erfassten Verbrauchsdaten und Anpassungen für diese SIM-Karte gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="click_to_choose">Zum Auswählen klicken:</string>
+    <string name="choose_reset_day">Wählen Sie den Tag des Monats für das automatische Zurücksetzen:</string>
+    <string name="choose_reset_day_dialog_title">Reset-Tag wählen</string>
+    <string name="rollover_label">Reste anhäufen</string>
+    <string name="set_minutes_limit">Monatliches Minutenlimit festlegen:</string>
+    <string name="minutes_limit_hint">Minutenlimit</string>
+    <string name="set_traffic_limit">Monatliches Datenlimit festlegen (GB):</string>
+    <string name="traffic_limit_gb_hint_dialog">Datenlimit in GB</string>
+    <string name="limits_for_operator">Limits für %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="notify_low_minutes_title">Benachrichtigen bei niedrigem Minutenstand</string>
+    <string name="notify_low_traffic_title">Benachrichtigen bei niedrigem Datenvolumen</string>
+    <string name="notification_channel_name">Verbrauchskontrolle</string>
+    <string name="notification_channel_desc">Verfolgung von Minuten und Datenvolumen</string>
+    <string name="notification_minutes_title">Minutenverbrauch %1$s</string>
+    <string name="notification_minutes_body">%1$s Minutenverbrauch! Verbleibend %2$s (%3$d). Monat endet in %4$s.</string>
+    <string name="notification_traffic_title">Datenverbrauch %1$s</string>
+    <string name="notification_traffic_body">%1$s Datenverbrauch! Verbleibend %2$.1f GB (%3$d). Monat endet in %4$s.</string>
+    <string name="notification_minutes_exhausted_body">Minutenpaket für den Zeitraum ist aufgebraucht.</string>
+    <string name="notification_traffic_exhausted_body">Datenpaket für den Zeitraum ist aufgebraucht.</string>
+    <string name="usage_level_low">NIEDRIG</string>
+    <string name="usage_level_critical">KRITISCH</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">Verbleibend: </string>
+    <string name="used_text">Verbraucht</string>
+    <string name="limit_text">Limit</string>
+    <string name="minutes_abbr"> Min.</string>
+    <string name="traffic_label">Daten</string>
+    <string name="traffic_remaining_text">Verbleibendes Datenvolumen: </string>
+    <string name="gb_abbr"> GB</string>
+    <string name="auto_reset_day_suffix">Tag des Monats</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d Minute</item>
+        <item quantity="other">%1$d Minuten</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">SIM-Karten-Symbol</string>
+    <string name="widget_settings_content_desc">Widget-Einstellungen</string>
+    <string name="choose_color_content_desc">Hintergrundfarbe wählen</string>
+    <string name="sim_card_details_content_desc">Details zur SIM-Karte %1$s</string>
+    <string name="adjust_minutes_content_desc">Verbleibende Minuten anpassen</string>
+    <string name="adjust_traffic_content_desc">Verbleibenden Traffic anpassen</string>
+    <string name="traffic_info_content_desc">Weitere Informationen zur Datennachverfolgung</string>
+    <string name="set_limits_content_desc">Limits für %1$s festlegen</string>
+    <string name="change_auto_reset_day_content_desc">Auto-Reset-Tag ändern</string>
+    <string name="toggle_auto_reset_content_desc">Auto-Reset aktivieren oder deaktivieren</string>
+</resources>

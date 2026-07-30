@@ -20,8 +20,10 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class IdentityMigrationServiceTest {
     @get:Rule
@@ -89,7 +91,7 @@ class IdentityMigrationServiceTest {
                     source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
                 ),
             )
-            assertFalse(service.hasLegacyData())
+            assertFalse(service.hasLegacyData(setOf("some_id")))
         }
 
     @Test
@@ -149,6 +151,39 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
+    fun testHasLegacyData_IgnoresActiveIdentities() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+
+            // Keys that contain _sub_ or _icc_ but belong to active identities should not be legacy
+            simDataStore.edit { it[intPreferencesKey("minutes_used_sub_123")] = 10 }
+            appDataStore.edit { it[intPreferencesKey("traffic_used_icc_abc")] = 100 }
+
+            // If we don't know active identities, they might still look like legacy (for safety if schema is old)
+            assertTrue(service.hasLegacyData())
+
+            // If they are known active, they are not legacy
+            assertFalse(service.hasLegacyData(setOf("sub_123", "icc_abc")))
+        }
+
+    @Test
+    fun testHasLegacyData_SchemaVersionCheck() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+
+            // Populate with legacy-looking data
+            appDataStore.edit { it[intPreferencesKey("key_sub_123")] = 1 }
+
+            assertTrue(service.hasLegacyData())
+
+            // Mark schema as current
+            service.markSchemaCurrent()
+
+            // Now hasLegacyData should return false immediately regardless of keys
+            assertFalse(service.hasLegacyData())
+        }
+
+    @Test
     fun testMigration_CleansUpMappingMarkers() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
@@ -178,9 +213,9 @@ class IdentityMigrationServiceTest {
             // Marker removed
             assertFalse(prefs.asMap().keys.any { it.name.startsWith("subscription_id_icc_") })
 
-            // Modern data is still present, so hasLegacyData() will return true in this implementation
-            // because it can't distinguish between legacy and modern without active SIMs.
-            // But if we use a non-matching ID for modern data, we can verify it's not flagged.
+            // With active identity, should return false
+            assertFalse(service.hasLegacyData(setOf("sub_$subId")))
+
             simDataStore.edit { it.clear() }
             simDataStore.edit { it[intPreferencesKey("app_theme")] = 1 }
             assertFalse(service.hasLegacyData())
@@ -220,6 +255,51 @@ class IdentityMigrationServiceTest {
             assertNull(prefs[legacyKey])
             // 6. hasLegacyData() should return false (it ignores conflicts)
             assertFalse(service.hasLegacyData())
+        }
+
+    @Test
+    fun `modern sub keys are not treated as legacy when schema is current`() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            service.markSchemaCurrent()
+
+            simDataStore.edit { it[intPreferencesKey("minutes_used_sub_1")] = 10 }
+
+            assertFalse(service.hasLegacyData())
+        }
+
+    @Test
+    fun `modern icc keys are not treated as legacy when schema is current`() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            service.markSchemaCurrent()
+
+            appDataStore.edit { it[intPreferencesKey("traffic_limit_icc_abc")] = 1000 }
+
+            assertFalse(service.hasLegacyData())
+        }
+
+    @Test
+    fun `legacy sim_0 keys are detected when schema is old`() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            // schema version is 0 by default in tests
+
+            appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
+
+            assertTrue(service.hasLegacyData())
+        }
+
+    @Test
+    fun `active identity keys are excluded from legacy detection`() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            // Even if schema is old, active identities should be safe
+
+            val activeIdentity = "sub_5"
+            simDataStore.edit { it[intPreferencesKey("minutes_used_$activeIdentity")] = 20 }
+
+            assertFalse(service.hasLegacyData(activeIdentities = setOf(activeIdentity)))
         }
 }
 

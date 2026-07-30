@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>单行</item>
+        <item>双行</item>
+        <item>三行</item>
+        <item>六行</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>横向</item>
+        <item>纵向</item>
+    </string-array>
+</resources>

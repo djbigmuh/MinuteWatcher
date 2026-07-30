@@ -302,7 +302,12 @@ fun CheckboxSetting(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            color =
+                if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
         )
     }
 }

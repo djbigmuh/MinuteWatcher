@@ -2,23 +2,19 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>InstanceOfCheckForException:SemanticSearchManager.kt$SemanticSearchManager$e is AppSearchException</ID>
-    <ID>LongMethod:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
+    <ID>CyclomaticComplexMethod:SemanticSearchManager.kt$SemanticSearchManager$internal suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
+    <ID>EmptyFunctionBlock:SemanticSearchManagerTest.kt$SemanticSearchManagerTest.FakeAppSearchSessionWrapper${}</ID>
+    <ID>LongMethod:SemanticSearchManager.kt$SemanticSearchManager$internal suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
+    <ID>LongMethod:ShortcutManager.kt$ShortcutManager$private fun updateShortcuts(snapshot: GlobalSnapshot)</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$1000L</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$5</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$60</ID>
-    <ID>MagicNumber:ShortcutManager.kt$ShortcutManager$1024</ID>
-    <ID>MagicNumber:ShortcutManager.kt$ShortcutManager$5</ID>
-    <ID>MaxLineLength:SemanticModule.kt$SemanticModule$fun</ID>
-    <ID>MaxLineLength:ShortcutManager.kt$ShortcutManager$Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName)</ID>
-    <ID>MaxLineLength:ShortcutManager.kt$ShortcutManager$snapshot.simSnapshots.filter { it.isActive &amp;&amp; it.slot in SimConstants.SUPPORTED_SLOT_INDICES }</ID>
-    <ID>MaxLineLength:ShortcutManager.kt$ShortcutManager$val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))</ID>
-    <ID>MaxLineLength:ShortcutManagerTest.kt$ShortcutManagerTest$shortcutManager = ShortcutManager(context, testScope, navigationProvider, kotlinx.coroutines.test.UnconfinedTestDispatcher(testScope.testScheduler))</ID>
+    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))), isManual = true)</ID>
+    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s1 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))), isManual = true)</ID>
+    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s2 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))), isManual = false)</ID>
+    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val snapshot = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))</ID>
+    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val snapshot = createSnapshot(listOf(SimSnapshot(1, "B", true, mapOf(PackageType.MINUTES to createEntity(1, PackageType.MINUTES, 50)))))</ID>
+    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$internal suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
     <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(): Boolean</ID>
-    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
-    <ID>SwallowedException:SemanticSearchManager.kt$SemanticSearchManager$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:SemanticSearchManager.kt$SemanticSearchManager$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:SemanticSearchManager.kt$SemanticSearchManager$t: Throwable</ID>
-    <ID>UnusedImports:SemanticSearchManager.kt$import kotlin.time.Duration.Companion.milliseconds</ID>
   </CurrentIssues>
 </SmellBaseline>

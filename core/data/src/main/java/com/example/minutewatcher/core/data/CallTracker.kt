@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.os.Build
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
@@ -12,6 +11,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,7 +44,7 @@ class CallTracker
 
         override fun recover() {
             scope.launch {
-                refreshStatus()
+                refreshStatus(force = true)
             }
         }
 
@@ -105,6 +105,8 @@ class CallTracker
             } catch (e: SecurityException) {
                 AppLogger.e("Permission error in onCallStarted", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error in onCallStarted", e)
             }
@@ -124,14 +126,13 @@ class CallTracker
 
                     // Priority 1: Global safety cleanup. If device is IDLE, close everything.
                     @Suppress("DEPRECATION")
-                    val isIdle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                    } else {
-                        telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                    }
+                    val isIdle = telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
                     
                     if (isIdle) {
-                        AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions: $activeSubIds")
+                        AppLogger.d(
+                            "Call ended with unknown subId and global state is IDLE. " +
+                                "Closing all sessions: $activeSubIds",
+                        )
                         activeSubIds.forEach { endCall(it) }
                         return
                     }
@@ -165,6 +166,8 @@ class CallTracker
             } catch (e: SecurityException) {
                 AppLogger.e("Permission error in onCallEnded", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error in onCallEnded", e)
             }
@@ -201,7 +204,9 @@ class CallTracker
             refreshStatus()
         }
 
-        private suspend fun refreshStatus() {
+        private suspend fun refreshStatus(force: Boolean = false) {
+            if (!force && _status.value is TrackingStatus.Error) return
+
             val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
             _status.value =
                 if (hasActiveCalls) {

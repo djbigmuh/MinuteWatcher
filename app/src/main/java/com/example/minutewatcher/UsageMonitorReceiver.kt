@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.CallEventWorker
 import com.example.minutewatcher.core.common.util.AppLogger
+import kotlinx.coroutines.CancellationException
 
 class UsageMonitorReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -55,6 +56,8 @@ class UsageMonitorReceiver : BroadcastReceiver() {
                     workRequest,
                 )
                 AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
             }

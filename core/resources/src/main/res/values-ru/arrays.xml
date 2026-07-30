@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Однострочный</item>
+        <item>Двухстрочный</item>
+        <item>Трёхстрочный</item>
+        <item>Шестистрочный</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Горизонтально</item>
+        <item>Вертикально</item>
+    </string-array>
+</resources>

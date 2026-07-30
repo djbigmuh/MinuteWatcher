@@ -49,6 +49,12 @@ The app follows modern Android development best practices:
 - **Data Storage**: DataStore (for usage data and UI settings).
 - **Static Analysis**: Detekt and Ktlint enforced.
 
+### Non-Stable Dependencies
+The project uses a few non-stable (Beta/Alpha) versions of critical libraries to access essential fixes and modern features:
+- **Baseline Profile (Beta)**: Used to resolve critical performance profiling issues on newer Android versions.
+- **Robolectric (Beta)**: Used to ensure compatibility with the latest Jetpack Compose features in unit tests.
+
+
 ## Contributing
 
 We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our testing policy, architectural guidelines, and code quality standards.

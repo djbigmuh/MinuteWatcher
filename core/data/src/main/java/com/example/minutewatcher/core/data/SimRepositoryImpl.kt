@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -417,34 +418,7 @@ class SimRepositoryImpl
 
         override suspend fun resetSimUsage(identity: String) {
             dataStore.edit { prefs ->
-                val rollover = prefs[rolloverEnabledKey(identity)] ?: false
-                if (rollover) {
-                    val minutesLimit = prefs[monthlyLimitKey(identity)] ?: 0
-                    val minutesUsed = prefs[minutesUsedKey(identity)] ?: 0
-                    val manualAdj = prefs[manualAdjustmentKey(identity)] ?: 0
-                    val remainingMinutes = maxOf(0, (minutesLimit + manualAdj) - minutesUsed)
-
-                    val trafficLimitMb = prefs[trafficLimitKey(identity)] ?: 0
-                    val trafficUsedMb = prefs[trafficUsedKey(identity)] ?: 0f
-                    val trafficAdjGb = prefs[trafficAdjustmentKey(identity)] ?: 0f
-                    val trafficLimitGb = trafficLimitMb.toFloat() / Constants.MB_PER_GB
-                    val remainingTrafficGb = maxOf(0f, (trafficLimitGb + trafficAdjGb) - (trafficUsedMb / Constants.MB_PER_GB))
-
-                    prefs[manualAdjustmentKey(identity)] = remainingMinutes
-                    prefs[trafficAdjustmentKey(identity)] = remainingTrafficGb
-                } else {
-                    prefs[manualAdjustmentKey(identity)] = 0
-                    prefs[trafficAdjustmentKey(identity)] = 0f
-                }
-
-                prefs[minutesUsedKey(identity)] = 0
-                prefs[trafficUsedKey(identity)] = 0f
-                prefs[lastResetDateKey(identity)] = timeProvider.now()
-
-                prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
-                prefs[SettingsKeys.notifiedLowTrafficKey(identity)] = false
-                prefs[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-                prefs[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+                prefs.applyResetWithRollover(identity, timeProvider.now())
             }
         }
 
@@ -459,39 +433,45 @@ class SimRepositoryImpl
                 val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
 
                 if (lastResetDate < periodStart) {
-                    val rollover = prefs[rolloverEnabledKey(identity)] ?: false
-                    if (rollover) {
-                        val minutesLimit = prefs[monthlyLimitKey(identity)] ?: 0
-                        val minutesUsed = prefs[minutesUsedKey(identity)] ?: 0
-                        val manualAdj = prefs[manualAdjustmentKey(identity)] ?: 0
-                        val remainingMinutes = maxOf(0, (minutesLimit + manualAdj) - minutesUsed)
-
-                        val trafficLimitMb = prefs[trafficLimitKey(identity)] ?: 0
-                        val trafficUsedMb = prefs[trafficUsedKey(identity)] ?: 0f
-                        val trafficAdjGb = prefs[trafficAdjustmentKey(identity)] ?: 0f
-                        val trafficLimitGb = trafficLimitMb.toFloat() / Constants.MB_PER_GB
-                        val remainingTrafficGb = maxOf(0f, (trafficLimitGb + trafficAdjGb) - (trafficUsedMb / Constants.MB_PER_GB))
-
-                        prefs[manualAdjustmentKey(identity)] = remainingMinutes
-                        prefs[trafficAdjustmentKey(identity)] = remainingTrafficGb
-                    } else {
-                        prefs[manualAdjustmentKey(identity)] = 0
-                        prefs[trafficAdjustmentKey(identity)] = 0f
-                    }
-
-                    prefs[minutesUsedKey(identity)] = 0
-                    prefs[trafficUsedKey(identity)] = 0f
-                    prefs[lastResetDateKey(identity)] = nowMillis
-
-                    prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
-                    prefs[SettingsKeys.notifiedLowTrafficKey(identity)] = false
-                    prefs[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-                    prefs[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
-
+                    prefs.applyResetWithRollover(identity, nowMillis)
                     didReset = true
                 }
             }
             return didReset
+        }
+
+        private fun MutablePreferences.applyResetWithRollover(
+            identity: String,
+            nowMillis: Long,
+        ) {
+            val rollover = this[rolloverEnabledKey(identity)] ?: false
+            if (rollover) {
+                val minutesLimit = this[monthlyLimitKey(identity)] ?: 0
+                val minutesUsed = this[minutesUsedKey(identity)] ?: 0
+                val manualAdj = this[manualAdjustmentKey(identity)] ?: 0
+                val remainingMinutes = maxOf(0, (minutesLimit + manualAdj) - minutesUsed)
+
+                val trafficLimitMb = this[trafficLimitKey(identity)] ?: 0
+                val trafficUsedMb = this[trafficUsedKey(identity)] ?: 0f
+                val trafficAdjGb = this[trafficAdjustmentKey(identity)] ?: 0f
+                val trafficLimitGb = trafficLimitMb.toFloat() / Constants.MB_PER_GB
+                val remainingTrafficGb = maxOf(0f, (trafficLimitGb + trafficAdjGb) - (trafficUsedMb / Constants.MB_PER_GB))
+
+                this[manualAdjustmentKey(identity)] = remainingMinutes
+                this[trafficAdjustmentKey(identity)] = remainingTrafficGb
+            } else {
+                this[manualAdjustmentKey(identity)] = 0
+                this[trafficAdjustmentKey(identity)] = 0f
+            }
+
+            this[minutesUsedKey(identity)] = 0
+            this[trafficUsedKey(identity)] = 0f
+            this[lastResetDateKey(identity)] = nowMillis
+
+            this[SettingsKeys.notifiedLowMinutesKey(identity)] = false
+            this[SettingsKeys.notifiedLowTrafficKey(identity)] = false
+            this[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+            this[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
         override fun getShowSim(identity: String): Flow<Boolean> = get(SettingsKeys.showSimKey(identity), true)

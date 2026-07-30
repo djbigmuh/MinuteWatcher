@@ -19,4 +19,16 @@ data class UsageDocument(
     val remainingValue: Long,
     @Document.StringProperty
     val unit: String,
+    @Document.LongProperty
+    val usedValue: Long,
+    @Document.LongProperty
+    val limitValue: Long,
+    @Document.LongProperty
+    val remainingPercent: Long,
+    @Document.LongProperty
+    val periodEnd: Long,
+    @Document.LongProperty
+    val slot: Long,
+    @Document.StringProperty
+    val status: String,
 )

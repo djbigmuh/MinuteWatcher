@@ -1,0 +1,142 @@
+package com.example.minutewatcher.feature.main
+
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.domain.*
+import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.resources.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.setMain
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.*
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
+
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
+class UsageAccessNavigationTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simUsageRepository: SimUsageRepository = mock()
+    private val simLimitsRepository: SimLimitsRepository = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
+    private val usageStateRepository: UsageStateRepository = mock()
+    private val autoResetUseCase: AutoResetUseCase = mock()
+    private val usageUseCase: UsageUseCase = mock()
+    private val settingsUseCase: SettingsUseCase = mock()
+    private val dataChangeNotifier: DataChangeNotifier = mock()
+    private val permissionRepository: PermissionRepository = mock()
+    private val savedStateHandle = SavedStateHandle()
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    private val phonePermissionFlow = MutableStateFlow(true)
+    private val usageStatsPermissionFlow = MutableStateFlow(false)
+    private val notificationPermissionFlow = MutableStateFlow(true)
+
+    private lateinit var viewModel: MainViewModel
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+
+        whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
+        whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
+        whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
+
+        whenever(usageStateRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
+        whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
+        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
+        whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(com.example.minutewatcher.core.model.AppTheme.FOLLOW_SYSTEM))
+        whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
+
+        viewModel = MainViewModel(
+            simIdentityRepository,
+            simUsageRepository,
+            simLimitsRepository,
+            appSettingsRepository,
+            usageStateRepository,
+            autoResetUseCase,
+            usageUseCase,
+            settingsUseCase,
+            permissionRepository,
+            dataChangeNotifier,
+            savedStateHandle,
+            testDispatcher,
+        )
+    }
+
+    private fun createMockSimCard() = com.example.minutewatcher.core.model.SimCardUiModel(
+        slot = 0, identity = "sim1", operatorName = "MTS", iconRes = 0,
+        minutesUsed = 0, minutesLimit = 0, manualAdjustment = 0, minutesRemaining = 0,
+        effectiveMinutesLimit = 0, isMinutesLimitSet = false,
+        trafficUsedMb = 0f, trafficLimitMb = 0, trafficRemainingGb = 0f,
+        effectiveTrafficLimitGb = 0f, trafficAdjustmentGb = 0f, isTrafficLimitSet = false,
+        autoResetEnabled = false, autoResetDay = 1, rolloverEnabled = false
+    )
+
+    @Test
+    fun bannerOpensRationaleDialog() {
+        var dialogOpened = false
+        composeTestRule.setContent {
+            com.example.minutewatcher.feature.main.ui.components.TrackingBanners(
+                state = TrackingBannerState(showUsageAccessBanner = true),
+                onGrantPhonePermission = {},
+                onShowUsageAccessDialog = { dialogOpened = true },
+                onOpenAppSettings = {},
+                onRetryAppSearch = {},
+                onRetryTraffic = {},
+                onGrantNotificationPermission = {}
+            )
+        }
+
+        val actionText = "Settings"
+        composeTestRule.onNodeWithText(actionText).performClick()
+        assertTrue(dialogOpened)
+    }
+
+    @Test
+    fun dialogSettingsButtonCallsCallback() {
+        // Force run
+        var settingsOpened = false
+        composeTestRule.setContent {
+            UsageAccessDialog(
+                onDismiss = {},
+                onSettings = { settingsOpened = true }
+            )
+        }
+
+        val actionText = "Settings"
+        composeTestRule.onNodeWithText(actionText).performClick()
+        assertTrue(settingsOpened)
+    }
+
+    @Test
+    fun dialogDoesNotOpenRepeatedly() {
+        // Test ViewModel state consistency
+        viewModel.openUsageAccessDialog()
+        assertTrue(viewModel.showUsageAccessDialog.value)
+        
+        viewModel.openUsageAccessDialog() // Call again
+        assertTrue(viewModel.showUsageAccessDialog.value)
+        
+        viewModel.closeUsageAccessDialog()
+        assertFalse(viewModel.showUsageAccessDialog.value)
+    }
+}

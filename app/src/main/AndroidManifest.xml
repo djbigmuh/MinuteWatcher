@@ -40,7 +40,7 @@
 
         <receiver
             android:name=".benchmark.BenchmarkReceiver"
-            android:enabled="true"
+            android:enabled="${benchmarkReceiverEnabled}"
             android:exported="true"
             android:permission="android.permission.DUMP"
             tools:ignore="ExportedReceiver">

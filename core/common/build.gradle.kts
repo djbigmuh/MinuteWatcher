@@ -1,4 +1,4 @@
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 36, compileSdk 37 are project requirements.
+// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.kotlinKsp)
@@ -19,6 +19,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testFixtures {
+        enable = true
     }
 
     buildFeatures {

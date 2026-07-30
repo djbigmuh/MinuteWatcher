@@ -6,9 +6,8 @@
     <ID>MagicNumber:BootReceiver.kt$BootReceiver$30</ID>
     <ID>MagicNumber:MainActivity.kt$MainActivity$1000</ID>
     <ID>MagicNumber:MainActivity.kt$MainActivity$20_000L</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$(resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK)</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)</ID>
-    <ID>UnusedPrivateProperty:UsageMonitorReceiverTest.kt$UsageMonitorReceiverTest$_unused</ID>
-    <ID>UnusedPrivateProperty:UsageMonitorReceiverTest.kt$UsageMonitorReceiverTest$j</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)</ID>
+    <ID>SwallowedException:MainActivity.kt$MainActivity$e: ActivityNotFoundException</ID>
+    <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivity</ID>
   </CurrentIssues>
 </SmellBaseline>

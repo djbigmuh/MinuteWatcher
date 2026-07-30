@@ -228,7 +228,7 @@ fun SimCardItem(
                             Text(
                                 text = "${stringResource(
                                     id = R.string.limit_text,
-                                )}: ${FormatUtils.formatTrafficMb(context, model.trafficLimitMb)}",
+                                )}: ${FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb)}${stringResource(id = R.string.gb_abbr)}",
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -254,6 +254,19 @@ fun SimCardItem(
                             color = getStatusColor(trafficStatus),
                             onClick = onAdjustTraffic,
                             contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
+                        )
+                    }
+
+                    if (model.trafficAdjustmentGb != 0f) {
+                        Text(
+                            text = "${stringResource(
+                                id = R.string.adjustment_mark,
+                            )}: ${if (model.trafficAdjustmentGb > 0) "+" else ""}${FormatUtils.formatTrafficGb(model.trafficAdjustmentGb)}${stringResource(
+                                id = R.string.gb_abbr,
+                            )}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp),
                         )
                     }
                 }

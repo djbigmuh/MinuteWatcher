@@ -2,8 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:OperatorResolver.kt$OperatorResolver$operatorName.isNotEmpty() &amp;&amp; operatorName != "null" &amp;&amp; !operatorName.contains("SIM", ignoreCase = true) &amp;&amp; !SimUtils.isInactiveSim(operatorName)</ID>
-    <ID>CyclomaticComplexMethod:SimUtils.kt$SimUtils$fun getShortOperatorName( context: Context, operatorName: String, ): String</ID>
     <ID>MagicNumber:BillingPeriodCalculator.kt$BillingPeriodCalculator$100</ID>
     <ID>MagicNumber:FontScaleProvider.kt$FontScaleProvider$0.8f</ID>
     <ID>MagicNumber:FontScaleProvider.kt$FontScaleProvider$0.9f</ID>
@@ -11,17 +9,6 @@
     <ID>MagicNumber:FontScaleProvider.kt$FontScaleProvider$1.2f</ID>
     <ID>MagicNumber:FontScaleProvider.kt$FontScaleProvider$3</ID>
     <ID>MagicNumber:FontScaleProvider.kt$FontScaleProvider$4</ID>
-    <ID>MagicNumber:OperatorResolver.kt$OperatorResolver$3</ID>
-    <ID>MagicNumber:OperatorResolver.kt$OperatorResolver$5</ID>
-    <ID>MagicNumber:SimUtils.kt$SimUtils$12</ID>
-    <ID>MagicNumber:SimUtils.kt$SimUtils$15</ID>
     <ID>MagicNumber:WidgetLayoutMode.kt$WidgetLayoutMode.SIX_LINES$3</ID>
-    <ID>MaxLineLength:OperatorResolverTest.kt$OperatorResolverTest$assertEquals(context.getString(com.example.minutewatcher.core.model.R.string.operator_with_mcc, "MCC:999 MNC:99"), result)</ID>
-    <ID>MaxLineLength:PermissionManager.kt$PermissionManager$private val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager</ID>
-    <ID>MaxLineLength:SimUtils.kt$SimUtils$fun isInactiveSim(operatorName: String?): Boolean</ID>
-    <ID>MaxLineLength:SimUtils.kt$SimUtils$name.contains("tele2") || name.contains("t2") -&gt; getStringSafe(localizedContext, R.string.operator_tele2, "Tele2")</ID>
-    <ID>NestedBlockDepth:SimUtils.kt$SimUtils$fun getShortOperatorName( context: Context, operatorName: String, ): String</ID>
-    <ID>ReturnCount:OperatorResolver.kt$OperatorResolver$@SuppressLint("DiscouragedApi") fun resolve( context: Context, operatorName: String, networkOperator: String, simSlot: Int, ): String</ID>
-    <ID>SwallowedException:PermissionManager.kt$PermissionManager$e: SecurityException</ID>
   </CurrentIssues>
 </SmellBaseline>

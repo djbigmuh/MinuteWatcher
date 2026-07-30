@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.semantic.SemanticRepository
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -47,6 +48,8 @@ class UsageTileService : TileService() {
                     .collect {
                         try {
                             updateTile()
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             AppLogger.e("Failed to update quick settings tile", e)
                         }

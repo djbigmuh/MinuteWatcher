@@ -22,7 +22,7 @@ import com.example.minutewatcher.feature.main.TrackingBannerState
 fun TrackingBanners(
     state: TrackingBannerState,
     onGrantPhonePermission: () -> Unit,
-    onOpenUsageSettings: () -> Unit,
+    onShowUsageAccessDialog: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onRetryAppSearch: () -> Unit,
     onRetryTraffic: () -> Unit,
@@ -63,7 +63,7 @@ fun TrackingBanners(
             TrackingBanner(
                 text = stringResource(id = R.string.tracking_banner_usage_access),
                 actionText = stringResource(id = R.string.action_settings),
-                onAction = onOpenUsageSettings,
+                onAction = onShowUsageAccessDialog,
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
             )

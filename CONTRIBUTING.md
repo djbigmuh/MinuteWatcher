@@ -51,3 +51,8 @@ We enforce strict static analysis. Your code must pass:
 - **Dependency Inversion:** Feature modules must never depend directly on `:core:data`. Use interfaces defined in `:core:domain`.
 - **Modularity:** Keep `:core:model` free of Android dependencies to ensure high-speed testing.
 - **DI:** Use Hilt for dependency injection and provide specific qualifiers (`@IoDispatcher`, etc.) instead of hardcoded dispatchers.
+
+## Non-Stable Dependencies
+As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:
+- **Baseline Profile (Beta)** and **Robolectric (Beta)** are explicitly permitted until stable versions with equivalent fixes are available.
+- Before introducing a new non-stable dependency, please discuss it in an issue and document the reason in `libs.versions.toml`.

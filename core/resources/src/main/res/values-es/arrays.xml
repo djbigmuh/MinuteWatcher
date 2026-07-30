@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Una línea</item>
+        <item>Dos líneas</item>
+        <item>Tres líneas</item>
+        <item>Seis líneas</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Horizontal</item>
+        <item>Vertical</item>
+    </string-array>
+</resources>

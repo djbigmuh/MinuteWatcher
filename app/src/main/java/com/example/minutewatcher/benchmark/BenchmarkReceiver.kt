@@ -25,11 +25,22 @@ class BenchmarkReceiver : BroadcastReceiver() {
     lateinit var applicationScope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == "com.example.minutewatcher.benchmark.POPULATE_DATA") {
-            val simCount = intent.getIntExtra("sim_count", 1)
+        if (intent.action == ACTION_POPULATE_DATA) {
+            val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
+            val pendingResult = goAsync()
+
             applicationScope.launch {
-                benchmarkUseCase.populateMockData(simCount)
+                try {
+                    benchmarkUseCase.populateMockData(simCount)
+                } finally {
+                    pendingResult.finish()
+                }
             }
         }
+    }
+
+    companion object {
+        const val ACTION_POPULATE_DATA = "com.example.minutewatcher.benchmark.POPULATE_DATA"
+        const val EXTRA_SIM_COUNT = "sim_count"
     }
 }

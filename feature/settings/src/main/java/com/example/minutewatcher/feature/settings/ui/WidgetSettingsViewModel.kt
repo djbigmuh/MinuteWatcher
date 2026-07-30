@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.feature.widget.util.WidgetUiMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -57,6 +58,8 @@ class WidgetSettingsViewModel
             viewModelScope.launch {
                 try {
                     _settingsState.value = loader.load()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     com.example.minutewatcher.core.common.util.AppLogger
                         .e("Failed to load widget settings", e)
@@ -121,6 +124,8 @@ class WidgetSettingsViewModel
                     loader.save(currentState)
                     dataChangeNotifier.notifyDataChanged()
                     onComplete(true)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     com.example.minutewatcher.core.common.util.AppLogger
                         .e("Failed to save widget settings", e)
