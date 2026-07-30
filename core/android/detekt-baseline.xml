@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:OperatorResolver.kt$OperatorResolver$operatorName.isNotEmpty() &amp;&amp; operatorName != "null" &amp;&amp; !operatorName.contains("SIM", ignoreCase = true) &amp;&amp; !SimUtils.isInactiveSim(operatorName)</ID>
+    <ID>CyclomaticComplexMethod:SimUtils.kt$SimUtils$fun getShortOperatorName( context: Context, operatorName: String, ): String</ID>
+    <ID>MagicNumber:OperatorResolver.kt$OperatorResolver$3</ID>
+    <ID>MagicNumber:OperatorResolver.kt$OperatorResolver$5</ID>
+    <ID>MagicNumber:SimUtils.kt$SimUtils$12</ID>
+    <ID>MagicNumber:SimUtils.kt$SimUtils$15</ID>
+    <ID>NestedBlockDepth:SimUtils.kt$SimUtils$fun getShortOperatorName( context: Context, operatorName: String, ): String</ID>
+    <ID>ReturnCount:OperatorResolver.kt$OperatorResolver$@SuppressLint("DiscouragedApi") fun resolve( context: Context, operatorName: String, networkOperator: String, simSlot: Int, ): String</ID>
+  </CurrentIssues>
+</SmellBaseline>
