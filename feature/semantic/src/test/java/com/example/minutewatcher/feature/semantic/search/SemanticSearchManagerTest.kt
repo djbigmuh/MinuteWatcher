@@ -34,6 +34,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -136,7 +137,7 @@ class SemanticSearchManagerTest {
 
         // 3. Advance time to pass the 5-minute interval
         advanceTime(240_000) // 4 more minutes passed, total 5
-        advanceTimeBy(300_000) // Advance virtual clock of dispatcher
+        advanceTimeBy(300_000.milliseconds) // Advance virtual clock of dispatcher
         runCurrent()
 
         // Should BE indexed now

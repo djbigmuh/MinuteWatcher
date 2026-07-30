@@ -8,11 +8,11 @@ import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
@@ -35,8 +35,8 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerTest {
     private val context: Context = mock()
@@ -71,6 +71,7 @@ class TrafficTrackerTest {
         }
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("test_id")))
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
+        whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("test_id")))
 
         tracker =
             TrafficTracker(
@@ -106,7 +107,7 @@ class TrafficTrackerTest {
 
             verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(1)
-            assertEquals(TrackingStatus.Active, tracker.status.first())
+            assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
     @Test
@@ -148,7 +149,7 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            assertEquals(TrackingStatus.Idle, tracker.status.first())
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
         }
 
     @Test
@@ -163,7 +164,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // 4. Assert
-            val status = tracker.status.first()
+            val status = tracker.status.value
             assertTrue(status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
         }
@@ -227,7 +228,7 @@ class TrafficTrackerTest {
             tracker.resetBaseline("test_id")
 
             verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
-            assertEquals(TrackingStatus.Active, tracker.status.first())
+            assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
     @Test
@@ -243,7 +244,7 @@ class TrafficTrackerTest {
 
             // 50 bytes is < 0.0001 MB, should not increment usage but status is Active
             verify(simUsageRepository, never()).incrementTrafficUsed(any(), any())
-            assertEquals(TrackingStatus.Active, tracker.status.first())
+            assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
     @Test
@@ -274,7 +275,7 @@ class TrafficTrackerTest {
             testScope.advanceUntilIdle()
 
             // Assert
-            assertEquals(TrackingStatus.Active, tracker.status.first())
+            assertEquals(TrackingStatus.Active, tracker.status.value)
             verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
         }
 
@@ -321,7 +322,25 @@ class TrafficTrackerTest {
             // Baseline should be reset for identity at 1200L
             verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1200L))
         }
+
+    @Suppress("SameParameterValue")
+    private fun createSimUsage(
+        id: String,
+        lastResetDate: Long = 0L,
+    ) = SimUsage(
+        identity = id,
+        slotIndex = 0,
+        subscriptionId = 1,
+        operator = "Test Operator",
+        minutesUsed = 0,
+        minutesLimit = 0,
+        trafficUsed = 0f,
+        trafficLimitMb = 0,
+        manualAdjustment = 0,
+        trafficAdjustment = 0f,
+        autoReset = true,
+        autoResetDay = 1,
+        lastResetDate = lastResetDate,
+        rolloverEnabled = false
+    )
 }
-
-
-

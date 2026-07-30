@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
                             phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                         },
                         onShowUsageAccessDialog = {
-                            viewModel.openUsageAccessDialog()
+                            viewModel.setUsageAccessDialog(true)
                         },
                         onOpenUsageAccessSettings = {
                             openUsageAccessSettings()
@@ -195,7 +195,7 @@ class MainActivity : AppCompatActivity() {
             viewModel.setPhonePermissionPermanentlyDenied(false)
             // Move to next step: Usage Access
             if (!permissionManager.hasUsageStatsPermission()) {
-                viewModel.openUsageAccessDialog()
+                viewModel.setUsageAccessDialog(true)
             } else {
                 checkNotifications(autoRequest = true)
             }
@@ -215,7 +215,7 @@ class MainActivity : AppCompatActivity() {
                 workScheduler.schedulePeriodicUsageCheck()
 
                 if (!permissionManager.hasUsageStatsPermission()) {
-                    viewModel.openUsageAccessDialog()
+                    viewModel.setUsageAccessDialog(true)
                 } else {
                     checkNotifications(autoRequest = true)
                 }

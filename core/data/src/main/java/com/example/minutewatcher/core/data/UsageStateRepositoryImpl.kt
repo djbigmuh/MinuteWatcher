@@ -45,8 +45,8 @@ class UsageStateRepositoryImpl
         @param:ApplicationContext private val context: Context,
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
-        private val capabilities: SemanticCapabilities,
-        private val version: SemanticVersion,
+        private val semanticCapabilities: SemanticCapabilities,
+        private val semanticVersion: SemanticVersion,
         private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
         private val dataRefreshNotifier: DataRefreshNotifier,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
@@ -146,10 +146,10 @@ class UsageStateRepositoryImpl
                 }
 
             return GlobalSnapshot(
-                version = version.getVersion(),
+                version = semanticVersion.getVersion(),
                 timestamp = timestamp,
                 simSnapshots = simSnapshots,
-                capabilities = capabilities.getCapabilities(),
+                capabilities = semanticCapabilities.getCapabilities(),
                 isManualUpdate = event.isManual,
             )
         }
@@ -165,10 +165,10 @@ class UsageStateRepositoryImpl
 
         private fun createEmptySnapshot() =
             GlobalSnapshot(
-                version = version.getVersion(),
+                version = semanticVersion.getVersion(),
                 timestamp = 0L,
                 simSnapshots = emptyList(),
-                capabilities = capabilities.getCapabilities(),
+                capabilities = semanticCapabilities.getCapabilities(),
             )
     }
 

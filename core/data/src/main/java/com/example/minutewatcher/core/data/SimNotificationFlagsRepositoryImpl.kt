@@ -15,6 +15,7 @@ class SimNotificationFlagsRepositoryImpl @Inject constructor(
     @SimDataStore private val dataStore: DataStore<Preferences>,
 ) : SimNotificationFlagsRepository {
 
+    @Suppress("SameParameterValue")
     private fun <T> get(
         key: Preferences.Key<T>,
         defaultValue: T,

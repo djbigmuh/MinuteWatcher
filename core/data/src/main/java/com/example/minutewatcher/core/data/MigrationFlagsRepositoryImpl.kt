@@ -16,6 +16,7 @@ class MigrationFlagsRepositoryImpl @Inject constructor(
     @AppDataStore private val dataStore: DataStore<Preferences>,
 ) : MigrationFlagsRepository {
 
+    @Suppress("SameParameterValue")
     private fun <T> get(
         key: Preferences.Key<T>,
         defaultValue: T,

@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 open class SemanticSearchManager
@@ -169,7 +170,7 @@ open class SemanticSearchManager
                 val currentTime = timeProvider.now()
                 val timeSinceLast = currentTime - lastIndexTime
                 if (timeSinceLast < minIndexInterval) {
-                    delay(minIndexInterval - timeSinceLast)
+                    delay((minIndexInterval - timeSinceLast).milliseconds)
                 }
             }
 

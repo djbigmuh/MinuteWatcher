@@ -185,6 +185,7 @@ class SimIdentityRepositoryImpl @Inject constructor(
             .debounce(300.milliseconds)
             .distinctUntilChanged()
 
+    @Suppress("SameParameterValue")
     private fun <T> get(
         key: Preferences.Key<T>,
         defaultValue: T,

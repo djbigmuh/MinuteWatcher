@@ -53,6 +53,7 @@
     <string name="tracking_banner_usage_access">Se requiere acceso de uso.</string>
     <string name="tracking_banner_traffic_error">Error en los datos de tráfico.</string>
     <string name="tracking_banner_appsearch_error">Falló la indexación de AppSearch.</string>
+    <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
     <string name="tracking_banner_notification_permission">Se recomienda el permiso de notificación para recibir alertas de uso.</string>
     <string name="notification_permission_permanent_denial">Las notificaciones están desactivadas. Por favor, actívelas en los Ajustes de la aplicación para recibir alertas.</string>
     <string name="action_grant">Otorgar</string>
@@ -60,7 +61,6 @@
     <string name="action_app_settings">Ajustes de la aplicación</string>
     <string name="action_retry">Reintentar</string>
     <string name="validation_error_invalid_range">Por favor, introduzca un valor entre %1$s y %2$s</string>
-    <string name="validation_error_invalid_number">Por favor, introduzca un número válido</string>
     <string name="widget_pin_unsupported">Tu lanzador no admite la colocación automática de widgets. Por favor, añade el widget manualmente.</string>
     <string name="widget_already_added">Widget ya añadido a la pantalla de inicio</string>
     <string name="onboarding_title">¡Bienvenido a MinuteWatcher!</string>

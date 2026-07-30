@@ -53,6 +53,7 @@
     <string name="tracking_banner_usage_access">需要使用情况访问权限。</string>
     <string name="tracking_banner_traffic_error">流量数据更新出错。</string>
     <string name="tracking_banner_appsearch_error">AppSearch 索引失败。</string>
+    <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
     <string name="tracking_banner_notification_permission">建议开启通知权限以接收使用提醒。</string>
     <string name="notification_permission_permanent_denial">通知已禁用。请在应用设置中开启以接收提醒。</string>
     <string name="action_grant">授予</string>
@@ -60,7 +61,6 @@
     <string name="action_app_settings">应用设置</string>
     <string name="action_retry">重试</string>
     <string name="validation_error_invalid_range">请输入 %1$s 到 %2$s 之间的值</string>
-    <string name="validation_error_invalid_number">请输入有效的数字</string>
     <string name="widget_pin_unsupported">您的启动器不支持自动放置小部件。请手动添加小部件。</string>
     <string name="widget_already_added">小部件已添加到主屏幕</string>
     <string name="onboarding_title">欢迎使用 MinuteWatcher！</string>

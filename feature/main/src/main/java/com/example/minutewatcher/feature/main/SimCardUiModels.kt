@@ -10,6 +10,7 @@ data class LimitDialogData(
     val rolloverEnabled: Boolean = false,
 ) : Serializable {
     companion object {
+        @Suppress("unused")
         private const val serialVersionUID = 1L
     }
 }
@@ -19,6 +20,7 @@ data class DayDialogData(
     val day: Int,
 ) : Serializable {
     companion object {
+        @Suppress("unused")
         private const val serialVersionUID = 1L
     }
 }
@@ -29,6 +31,7 @@ data class AdjustDialogData(
     val isMinutes: Boolean,
 ) : Serializable {
     companion object {
+        @Suppress("unused")
         private const val serialVersionUID = 1L
     }
 }
