@@ -66,7 +66,9 @@ class ShortcutManager
                     _status.value = TrackingStatus.Active
                     var isFirst = true
                     snapshotFlow.collectLatest { snapshot ->
-                        // Logic: immediate for first or manual update, 30s debounce for others
+                        // Logic: immediate for first or manual update, 30s debounce for others.
+                        // We use delay inside collectLatest to avoid flooding the system with shortcut updates
+                        // when multiple snapshot changes happen rapidly (e.g. during a call).
                         if (!isFirst && !snapshot.isManualUpdate) {
                             delay(30.seconds)
                         }
@@ -89,6 +91,10 @@ class ShortcutManager
 
         override fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
+        }
+
+        fun setError(message: String?) {
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {

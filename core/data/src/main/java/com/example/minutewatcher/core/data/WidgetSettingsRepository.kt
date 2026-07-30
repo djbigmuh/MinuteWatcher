@@ -4,7 +4,6 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.flow.first
@@ -22,11 +21,12 @@ class WidgetSettingsRepository
         override suspend fun load(): WidgetSettingsState {
             val settings = appSettingsRepository.getAppSettings().first()
 
+            val activeSims = simIdentityRepository.observeActiveSims().first()
             val simStates =
-                SimConstants.SUPPORTED_SLOT_INDICES.associateWith { i ->
-                    val identity = simIdentityRepository.getIdentity(i)
-                    simWidgetVisibilityRepository.getSimSettings(identity).first()
+                activeSims.associate { info ->
+                    info.slotIndex to simWidgetVisibilityRepository.getSimSettings(info.identity.stableId).first()
                 }
+
             return WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,
                 simArrangement = settings.widgetSimArrangement,

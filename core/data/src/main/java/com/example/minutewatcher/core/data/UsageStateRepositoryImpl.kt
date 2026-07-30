@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.time.Duration.Companion.milliseconds
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -160,7 +162,7 @@ class UsageStateRepositoryImpl
             coroutineScope {
                 val nextSnapshot = async { snapshotFlow.drop(1).first() }
                 dataRefreshNotifier.notifyRefresh()
-                nextSnapshot.await()
+                withTimeoutOrNull(5000.milliseconds) { nextSnapshot.await() } ?: snapshotFlow.value
             }
 
         private fun createEmptySnapshot() =

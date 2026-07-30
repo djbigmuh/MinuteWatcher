@@ -42,6 +42,7 @@ import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
+import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -263,49 +264,49 @@ private fun SimItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        sim.layoutSpec.rows.forEach { row ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                row.components.forEach { component ->
-                    when (component) {
-                        is SimLayoutComponent.Icon -> {
-                            Image(
-                                provider = ImageProvider(component.iconRes),
-                                contentDescription = null,
-                                modifier = GlanceModifier.size(component.sizeDp.dp),
-                            )
-                        }
-                        is SimLayoutComponent.Text -> {
-                            val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
-                                GlanceTheme.colors.onSurface
-                            } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                                GlanceTheme.colors.onSurfaceVariant
-                            } else {
-                                val composeColor = androidx.compose.ui.graphics.Color(component.color)
-                                ColorProvider(day = composeColor, night = composeColor)
-                            }
+        SimLayoutRenderer.Render(
+            spec = sim.layoutSpec,
+            rowContainer = { content ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    content()
+                }
+            },
+            iconRenderer = { component ->
+                Image(
+                    provider = ImageProvider(component.iconRes),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(component.sizeDp.dp),
+                )
+            },
+            textRenderer = { component ->
+                val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
+                    GlanceTheme.colors.onSurface
+                } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                    GlanceTheme.colors.onSurfaceVariant
+                } else {
+                    val composeColor = androidx.compose.ui.graphics.Color(component.color)
+                    ColorProvider(day = composeColor, night = composeColor)
+                }
 
-                            Text(
-                                text = component.text,
-                                style =
-                                    TextStyle(
-                                        fontSize = component.fontSizeSp.sp,
-                                        fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
-                                        color = textColor,
-                                    ),
-                            )
-                        }
-                        is SimLayoutComponent.Spacer -> {
-                            if (component.widthDp > 0) {
-                                Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
-                            }
-                            if (component.heightDp > 0) {
-                                Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
-                            }
-                        }
-                    }
+                Text(
+                    text = component.text,
+                    style =
+                        TextStyle(
+                            fontSize = component.fontSizeSp.sp,
+                            fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
+                            color = textColor,
+                        ),
+                )
+            },
+            spacerRenderer = { component ->
+                if (component.widthDp > 0) {
+                    Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
+                }
+                if (component.heightDp > 0) {
+                    Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
                 }
             }
-        }
+        )
     }
 }
 

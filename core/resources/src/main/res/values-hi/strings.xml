@@ -61,6 +61,7 @@
     <string name="action_app_settings">ऐप सेटिंग्स</string>
     <string name="action_retry">पुन: प्रयास करें</string>
     <string name="validation_error_invalid_range">कृपया %1$s और %2$s के बीच मान दर्ज करें</string>
+    <string name="validation_error_invalid_number">कृपया एक मान्य संख्या दर्ज करें</string>
     <string name="widget_pin_unsupported">आपका लॉन्चर स्वचालित विजेट प्लेसमेंट का समर्थन नहीं करता है। कृपया विजेट को मैन्युअल रूप से जोड़ें।</string>
     <string name="widget_already_added">विजेट पहले से ही होम स्क्रीन पर जोड़ा गया है</string>
     <string name="onboarding_title">MinuteWatcher में आपका स्वागत है!</string>

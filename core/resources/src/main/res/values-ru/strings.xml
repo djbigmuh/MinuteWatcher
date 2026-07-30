@@ -61,6 +61,7 @@
     <string name="action_app_settings">Настройки приложения</string>
     <string name="action_retry">Повторить</string>
     <string name="validation_error_invalid_range">Пожалуйста, введите значение от %1$s до %2$s</string>
+    <string name="validation_error_invalid_number">Пожалуйста, введите корректное число</string>
     <string name="widget_pin_unsupported">Ваш лаунчер не поддерживает автоматическое размещение виджетов. Пожалуйста, добавьте виджет вручную.</string>
     <string name="widget_already_added">Виджет уже добавлен на рабочий стол</string>
     <string name="onboarding_title">Добро пожаловать в MinuteWatcher!</string>

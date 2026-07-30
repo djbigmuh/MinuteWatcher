@@ -36,6 +36,7 @@ import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
@@ -236,25 +237,36 @@ class MainViewModel
             refreshSimCards()
         }
 
-        suspend fun refreshSimCardsNow() {
-            refreshSimCardsInternal()
+        fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
+            viewModelScope.launch {
+                refreshSimCardsInternal()
+                onComplete()
+            }
         }
 
         private suspend fun refreshSimCardsInternal() =
             withContext(ioDispatcher) {
-                simCheckMutex.withLock {
-                    _refreshStatus.value = RefreshState.Loading
-                    try {
-                        usageUseCase.refreshOperatorInfo()
-                        usageStateRepository.refresh()
-                        _refreshStatus.value = RefreshState.Success
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        com.example.minutewatcher.core.common.util.AppLogger
-                            .e("Error refreshing SIM cards", e)
-                        _refreshStatus.value = RefreshState.Error(e.message)
-                    }
+                val acquired =
+                    withTimeoutOrNull(10.seconds) {
+                        simCheckMutex.withLock {
+                            _refreshStatus.value = RefreshState.Loading
+                            try {
+                                usageUseCase.refreshOperatorInfo()
+                                usageStateRepository.refresh()
+                                _refreshStatus.value = RefreshState.Success
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                com.example.minutewatcher.core.common.util.AppLogger
+                                    .e("Error refreshing SIM cards", e)
+                                _refreshStatus.value = RefreshState.Error(e.message)
+                            }
+                            true
+                        }
+                    } ?: false
+
+                if (!acquired) {
+                    _refreshStatus.value = RefreshState.Error("Refresh timed out")
                 }
             }
 

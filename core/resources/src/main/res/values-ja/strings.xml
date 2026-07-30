@@ -61,6 +61,7 @@
     <string name="action_app_settings">アプリ設定</string>
     <string name="action_retry">再試行</string>
     <string name="validation_error_invalid_range">%1$s から %2$s の間の値を入力してください</string>
+    <string name="validation_error_invalid_number">有効な数字を入力してください</string>
     <string name="widget_pin_unsupported">お使いのランチャーはウィジェットの自動配置をサポートしていません。ウィジェットを手動で追加してください。</string>
     <string name="widget_already_added">ウィジェットは既にホーム画面に追加されています</string>
     <string name="onboarding_title">MinuteWatcherへようこそ！</string>

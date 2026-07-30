@@ -212,6 +212,9 @@ class CallTracker
             val startTime = callSessionRepository.getCallStartTime(subId).first()
             val savedBootTime = callSessionRepository.getBootTime(subId).first()
             val savedIdentity = callSessionRepository.getCallIdentity(subId).first()
+            // Note: elapsedRealtime includes time spent in deep sleep. 
+            // This is a platform limitation; if the device sleeps during a call,
+            // the duration might be slightly over-reported.
             val currentBootTime = timeProvider.elapsedRealtime()
 
             if (startTime > 0) {
@@ -288,6 +291,11 @@ class CallTracker
                 dataChangeNotifier.notifyDataChanged()
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Attribution failed",
+                    )
             }
         }
 

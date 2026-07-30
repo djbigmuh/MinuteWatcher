@@ -35,6 +35,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,6 +90,35 @@ fun WidgetSettingsScreen(
         return
     }
     val nonNullState = state!!
+    var showColorPicker by remember { mutableStateOf(false) }
+
+    if (showColorPicker) {
+        val context = LocalContext.current
+        DisposableEffect(Unit) {
+            val dialog =
+                ColorPickerDialog
+                    .Builder(context)
+                    .setTitle(R.string.color_background)
+                    .setPositiveButton(
+                        R.string.save_button,
+                        ColorEnvelopeListener { envelope, _ ->
+                            viewModel.updateBackgroundColor(envelope.color)
+                            showColorPicker = false
+                        },
+                    ).setNegativeButton(R.string.cancel_button) { dialogInterface, _ ->
+                        dialogInterface.dismiss()
+                        showColorPicker = false
+                    }.attachAlphaSlideBar(false)
+                    .attachBrightnessSlideBar(true)
+                    .setOnDismissListener {
+                        showColorPicker = false
+                    }.show()
+
+            onDispose {
+                dialog.dismiss()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -211,25 +241,13 @@ fun WidgetSettingsScreen(
 
             // Background Color
             SettingLabel(stringResource(id = R.string.color_background))
-            val context = LocalContext.current
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .clickable {
-                            ColorPickerDialog
-                                .Builder(context)
-                                .setTitle(R.string.color_background)
-                                .setPositiveButton(
-                                    R.string.save_button,
-                                    ColorEnvelopeListener { envelope, _ ->
-                                        viewModel.updateBackgroundColor(envelope.color)
-                                    },
-                                ).setNegativeButton(R.string.cancel_button, null)
-                                .attachAlphaSlideBar(false)
-                                .attachBrightnessSlideBar(true)
-                                .show()
+                            showColorPicker = true
                         }.padding(vertical = 8.dp),
             ) {
                 Box(

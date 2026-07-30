@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SemanticEntity
@@ -181,7 +182,7 @@ class UsageCheckWorker
 
             val usagePercentage = (entity.used * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
-            val remainingGb = entity.remaining.toFloat() / BYTES_IN_GB
+            val remainingGb = entity.remaining.toFloat() / Constants.BYTES_PER_GB
 
             val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).first()
             if (entity.remaining <= 0) {
@@ -220,7 +221,6 @@ class UsageCheckWorker
         companion object {
             private const val HUNDRED = 100
             private const val CRITICAL_THRESHOLD = 10
-            private const val BYTES_IN_GB = 1024.0f * 1024.0f * 1024.0f
         }
     }
 

@@ -63,6 +63,7 @@
     <string name="action_app_settings">App Settings</string>
     <string name="action_retry">Retry</string>
     <string name="validation_error_invalid_range">Please enter a value between %1$s and %2$s</string>
+    <string name="validation_error_invalid_number">Please enter a valid number</string>
     <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">Widget already added to the home screen</string>
     <string name="onboarding_title">Welcome to MinuteWatcher!</string>

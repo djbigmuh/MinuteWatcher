@@ -11,7 +11,7 @@ import java.util.Locale
 object FormatUtils {
     fun formatTrafficGb(gb: Float): String = "%.1f".format(Locale.getDefault(), gb)
 
-    fun formatTrafficMb(
+    fun formatMbAsGb(
         context: Context,
         mb: Float,
     ): String = "${formatTrafficGb(mb / Constants.MB_PER_GB)}${context.getString(R.string.gb_abbr)}"

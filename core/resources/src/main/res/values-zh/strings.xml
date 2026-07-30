@@ -61,6 +61,7 @@
     <string name="action_app_settings">应用设置</string>
     <string name="action_retry">重试</string>
     <string name="validation_error_invalid_range">请输入 %1$s 到 %2$s 之间的值</string>
+    <string name="validation_error_invalid_number">请输入有效的数字</string>
     <string name="widget_pin_unsupported">您的启动器不支持自动放置小部件。请手动添加小部件。</string>
     <string name="widget_already_added">小部件已添加到主屏幕</string>
     <string name="onboarding_title">欢迎使用 MinuteWatcher！</string>

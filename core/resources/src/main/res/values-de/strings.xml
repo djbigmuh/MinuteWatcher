@@ -61,6 +61,7 @@
     <string name="action_app_settings">App-Einstellungen</string>
     <string name="action_retry">Wiederholen</string>
     <string name="validation_error_invalid_range">Bitte geben Sie einen Wert zwischen %1$s und %2$s ein</string>
+    <string name="validation_error_invalid_number">Bitte geben Sie eine gültige Zahl ein</string>
     <string name="widget_pin_unsupported">Ihr Launcher unterstützt keine automatische Widget-Platzierung. Bitte fügen Sie das Widget manuell hinzu.</string>
     <string name="widget_already_added">Widget bereits zum Startbildschirm hinzugefügt</string>
     <string name="onboarding_title">Willkommen bei MinuteWatcher!</string>

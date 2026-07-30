@@ -35,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +51,6 @@ import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDial
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
 import com.example.minutewatcher.feature.main.ui.components.SimLimitComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -278,7 +276,6 @@ private fun MainScreenContent(
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
     var showResetConfirmSlot by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(highlightedSlot, uiState) {
@@ -291,9 +288,8 @@ private fun MainScreenContent(
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = {
-            scope.launch {
-                isRefreshing = true
-                viewModel.refreshSimCardsNow()
+            isRefreshing = true
+            viewModel.refreshSimCardsNow {
                 isRefreshing = false
             }
         },

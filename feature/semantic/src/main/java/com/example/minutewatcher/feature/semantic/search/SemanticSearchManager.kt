@@ -105,6 +105,10 @@ open class SemanticSearchManager
             lastSnapshotFlow?.let { initialize(it) }
         }
 
+        fun setError(message: String?) {
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+        }
+
         private suspend fun ensureSession(): Boolean {
             var currentSession: AppSearchSessionWrapper? = null
             try {
@@ -231,13 +235,9 @@ open class SemanticSearchManager
                 AppLogger.e("AppSearch error during indexing", e)
                 _status.value =
                     TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                if (e.resultCode != AppSearchResult.RESULT_INTERNAL_ERROR &&
-                    e.resultCode != AppSearchResult.RESULT_IO_ERROR
-                ) {
-                    // Fatal error, close and reset session to trigger re-init next time
-                    session?.close()
-                    session = null
-                }
+                // Fatal error, close and reset session to trigger re-init next time
+                session?.close()
+                session = null
             } catch (e: java.io.IOException) {
                 AppLogger.e("IO error during AppSearch indexing", e)
                 _status.value =

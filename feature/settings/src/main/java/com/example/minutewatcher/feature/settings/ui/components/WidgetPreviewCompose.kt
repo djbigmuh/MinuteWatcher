@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.resources.R
+import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
@@ -142,44 +143,44 @@ private fun SimItemPreview(
             },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        sim.layoutSpec.rows.forEach { row ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                row.components.forEach { component ->
-                    when (component) {
-                        is SimLayoutComponent.Icon -> {
-                            Image(
-                                painter = painterResource(id = component.iconRes),
-                                contentDescription = null,
-                                modifier = Modifier.size(component.sizeDp.dp),
-                            )
-                        }
-                        is SimLayoutComponent.Text -> {
-                            val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
-                                androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-                            } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                                androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                Color(component.color)
-                            }
-                            Text(
-                                text = component.text,
-                                color = textColor,
-                                fontSize = component.fontSizeSp.sp,
-                                fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
-                            )
-                        }
-                        is SimLayoutComponent.Spacer -> {
-                            if (component.widthDp > 0) {
-                                Spacer(modifier = Modifier.width(component.widthDp.dp))
-                            }
-                            if (component.heightDp > 0) {
-                                Spacer(modifier = Modifier.height(component.heightDp.dp))
-                            }
-                        }
-                    }
+        SimLayoutRenderer.Render(
+            spec = sim.layoutSpec,
+            rowContainer = { content ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    content()
+                }
+            },
+            iconRenderer = { component ->
+                Image(
+                    painter = painterResource(id = component.iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(component.sizeDp.dp),
+                )
+            },
+            textRenderer = { component ->
+                val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
+                    androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                    androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    Color(component.color)
+                }
+                Text(
+                    text = component.text,
+                    color = textColor,
+                    fontSize = component.fontSizeSp.sp,
+                    fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
+                )
+            },
+            spacerRenderer = { component ->
+                if (component.widthDp > 0) {
+                    Spacer(modifier = Modifier.width(component.widthDp.dp))
+                }
+                if (component.heightDp > 0) {
+                    Spacer(modifier = Modifier.height(component.heightDp.dp))
                 }
             }
-        }
+        )
     }
 }
 

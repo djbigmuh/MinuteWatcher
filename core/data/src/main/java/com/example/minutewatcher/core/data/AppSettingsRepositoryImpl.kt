@@ -29,7 +29,7 @@ class AppSettingsRepositoryImpl @Inject constructor(
             .map { prefs -> prefs.toAppSettings() }
             .stateIn(
                 scope,
-                SharingStarted.Eagerly,
+                SharingStarted.WhileSubscribed(5_000),
                 AppSettings(
                     theme = AppTheme.FOLLOW_SYSTEM,
                     language = null,

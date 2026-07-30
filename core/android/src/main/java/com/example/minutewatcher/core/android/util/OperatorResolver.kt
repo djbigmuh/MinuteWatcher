@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.android.util
 import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
-import kotlinx.coroutines.CancellationException
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -78,8 +77,6 @@ object OperatorResolver {
             } catch (e: JSONException) {
                 AppLogger.e("Malformed MCC/MNC database JSON", e)
                 emptyMap()
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.e("Unexpected error loading MCC/MNC database", e)
                 emptyMap()

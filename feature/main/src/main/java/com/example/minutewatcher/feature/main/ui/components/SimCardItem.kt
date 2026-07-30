@@ -220,7 +220,7 @@ fun SimCardItem(
                         Text(
                             text = "${stringResource(
                                 id = R.string.used_text,
-                            )}: ${FormatUtils.formatTrafficMb(context, model.trafficUsedMb)}",
+                            )}: ${FormatUtils.formatMbAsGb(context, model.trafficUsedMb)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         if (model.isTrafficLimitSet) {

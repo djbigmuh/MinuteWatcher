@@ -168,18 +168,18 @@ class TrafficTracker
         private fun getCurrentMobileBytes(startTime: Long): Long {
             if (networkStatsManager == null) return -1L
 
+            val safeStart = if (startTime > 0) startTime else timeProvider.now() - DEFAULT_QUERY_RANGE_MS
+
             return try {
                 val bucket =
                     networkStatsManager.querySummaryForDevice(
                         NetworkCapabilities.TRANSPORT_CELLULAR,
                         null,
-                        startTime,
+                        safeStart,
                         timeProvider.now(),
                     )
                 bucket.rxBytes + bucket.txBytes
             } catch (e: SecurityException) {
-                throw e
-            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Error querying NetworkStatsManager", e)
@@ -252,5 +252,9 @@ class TrafficTracker
             }
 
             return if (activeSlots.size == 1) activeSlots.first() else null
+        }
+
+        companion object {
+            private const val DEFAULT_QUERY_RANGE_MS = 30L * 24 * 3600 * 1000 // 30 days
         }
     }

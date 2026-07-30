@@ -61,6 +61,7 @@
     <string name="action_app_settings">إعدادات التطبيق</string>
     <string name="action_retry">إعادة المحاولة</string>
     <string name="validation_error_invalid_range">يرجى إدخال قيمة بين %1$s و %2$s</string>
+    <string name="validation_error_invalid_number">يرجى إدخال رقم صالح</string>
     <string name="widget_pin_unsupported">لا يدعم المشغل الخاص بك وضع الأدوات التلقائي. يرجى إضافة القطعة يدويا.</string>
     <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
     <string name="onboarding_title">مرحباً بك في MinuteWatcher!</string>

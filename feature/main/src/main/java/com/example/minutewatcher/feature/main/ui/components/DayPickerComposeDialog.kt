@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.resources.R
 import kotlin.math.abs
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DayPickerComposeDialog(
     initialDay: Int,

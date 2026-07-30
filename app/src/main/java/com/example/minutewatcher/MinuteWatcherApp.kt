@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
@@ -34,9 +35,15 @@ class MinuteWatcherApp :
 
         // Defer semantic layer initialization to improve cold start performance
         applicationScope.launch {
-            delay(5.seconds) // 5 seconds grace period for UI and primary setup
-            searchManager.initialize(usageStateRepository.observeSnapshot())
-            shortcutManager.initialize(usageStateRepository.observeSnapshot())
+            try {
+                delay(5.seconds) // 5 seconds grace period for UI and primary setup
+                searchManager.initialize(usageStateRepository.observeSnapshot())
+                shortcutManager.initialize(usageStateRepository.observeSnapshot())
+            } catch (e: Exception) {
+                AppLogger.e("Failed to initialize semantic layer", e)
+                searchManager.setError(e.message)
+                shortcutManager.setError(e.message)
+            }
         }
 
         if (BuildConfig.DEBUG) {
