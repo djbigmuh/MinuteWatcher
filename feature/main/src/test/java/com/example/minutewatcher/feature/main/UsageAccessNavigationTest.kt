@@ -5,7 +5,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.domain.*
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,8 +19,6 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-
-import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)

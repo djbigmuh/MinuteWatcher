@@ -16,11 +16,6 @@ object FormatUtils {
         mb: Float,
     ): String = "${formatTrafficGb(mb / Constants.MB_PER_GB)}${context.getString(R.string.gb_abbr)}"
 
-    fun formatTrafficMb(
-        context: Context,
-        mb: Int,
-    ): String = formatTrafficMb(context, mb.toFloat())
-
     fun formatTrafficDisplay(
         context: Context,
         remainingGb: Float,

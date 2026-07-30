@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -27,8 +28,6 @@ import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -59,7 +58,7 @@ class TrafficTrackerTest {
 
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
-        runTest {
+        runBlocking {
             whenever(simIdentityRepository.getIdentity(any())).thenReturn("test_id")
         }
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("test_id")))

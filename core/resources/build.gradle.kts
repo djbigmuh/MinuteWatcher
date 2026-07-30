@@ -11,3 +11,9 @@ android {
         minSdk = 26
     }
 }
+
+dependencies {
+    implementation(libs.androidxCoreKtx)
+    implementation(libs.androidxAppcompat)
+    implementation(libs.googleMaterial)
+}

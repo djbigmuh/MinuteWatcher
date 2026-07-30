@@ -247,7 +247,7 @@ class MainActivity : AppCompatActivity() {
     private fun openUsageAccessSettings() {
         try {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             openAppSettings()
         }
     }

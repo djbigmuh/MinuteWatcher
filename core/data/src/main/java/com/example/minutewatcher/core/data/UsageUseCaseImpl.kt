@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
-import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.android.util.OperatorResolver
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.data.util.SimIdentityUtils

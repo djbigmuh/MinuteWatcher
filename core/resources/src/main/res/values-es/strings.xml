@@ -116,12 +116,10 @@
 
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d minuto</item>
-        <item quantity="many">%1$d minutos</item>
         <item quantity="other">%1$d minutos</item>
     </plurals>
     <plurals name="days_plurals">
         <item quantity="one">%1$d día</item>
-        <item quantity="many">%1$d días</item>
         <item quantity="other">%1$d días</item>
     </plurals>
 

@@ -22,6 +22,7 @@ android {
     }
 
     testFixtures {
+        @Suppress("UnstableApiUsage")
         enable = true
     }
 
