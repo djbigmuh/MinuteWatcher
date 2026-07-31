@@ -155,6 +155,3 @@ dependencies {
     debugImplementation(libs.androidxUiTooling)
     debugImplementation(libs.androidxUiTestManifest)
 }
-
-
-

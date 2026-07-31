@@ -7,10 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+
 @RunWith(RobolectricTestRunner::class)
-
 class LanguageResourcesTest {
-
     @Test
     fun languageArrays_haveSameSize() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -24,7 +23,3 @@ class LanguageResourcesTest {
         assertEquals("languages and language_icons must have same size", names.size, icons.size)
     }
 }
-
-
-
-

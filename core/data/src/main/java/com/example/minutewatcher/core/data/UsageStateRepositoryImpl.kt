@@ -1,6 +1,9 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import com.example.minutewatcher.core.android.util.SimCardMapper
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
@@ -16,15 +19,11 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
-import com.example.minutewatcher.core.android.util.SimCardMapper
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,9 +35,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -70,7 +70,8 @@ class UsageStateRepositoryImpl
         }
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
-            simIdentityRepository.observeIdentities()
+            simIdentityRepository
+                .observeIdentities()
                 .flatMapLatest { identities ->
                     if (identities.isEmpty()) {
                         flowOf(emptyList())
@@ -164,10 +165,12 @@ class UsageStateRepositoryImpl
                 val nextSnapshot = async { snapshotFlow.drop(1).first() }
                 dataRefreshNotifier.notifyRefresh()
                 withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() }?.let {
-                    com.example.minutewatcher.core.domain.RefreshResult.Success(it)
+                    com.example.minutewatcher.core.domain.RefreshResult
+                        .Success(it)
                 } ?: run {
                     AppLogger.w("UsageStateRepository: Refresh timed out after 2s, returning current snapshot")
-                    com.example.minutewatcher.core.domain.RefreshResult.Timeout(snapshotFlow.value)
+                    com.example.minutewatcher.core.domain.RefreshResult
+                        .Timeout(snapshotFlow.value)
                 }
             }
 
@@ -179,5 +182,3 @@ class UsageStateRepositoryImpl
                 capabilities = semanticCapabilities.getCapabilities(),
             )
     }
-
-

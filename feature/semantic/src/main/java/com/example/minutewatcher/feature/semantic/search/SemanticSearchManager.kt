@@ -7,14 +7,14 @@ import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.SnapshotUtils
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -142,10 +142,11 @@ open class SemanticSearchManager
                 } else {
                     AppLogger.e("AppSearch error during session creation: ${e.message}", e)
                 }
-                _status.value = TrackingStatus.Error(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Failed to init AppSearch: ${e.message}",
-                )
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Failed to init AppSearch: ${e.message}",
+                    )
                 return false
             } catch (e: java.io.IOException) {
                 currentSession?.close()
@@ -175,7 +176,7 @@ open class SemanticSearchManager
                 val timeSinceLast = currentTime - lastIndexTime
                 if (timeSinceLast < minIndexInterval) {
                     delay((minIndexInterval - timeSinceLast).milliseconds)
-                    
+
                     // After delay, re-check hash in case snapshot data changed during wait
                     // but we are still processing the same (now stale) snapshot instance.
                     // Conflate ensures we will get the latest one in the next loop iteration,
@@ -226,9 +227,10 @@ open class SemanticSearchManager
                 // Remove stale documents (active IDs that are no longer in the snapshot)
                 val activeDocumentIds = documents.map { it.id }.toSet()
                 val allPossibleDocumentIds =
-                    SimConstants.SUPPORTED_SLOT_INDICES.flatMap { slot ->
-                        listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
-                    }.toSet()
+                    SimConstants.SUPPORTED_SLOT_INDICES
+                        .flatMap { slot ->
+                            listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
+                        }.toSet()
                 val idsToRemove = allPossibleDocumentIds - activeDocumentIds
 
                 if (idsToRemove.isNotEmpty()) {
@@ -261,13 +263,9 @@ open class SemanticSearchManager
             }
         }
 
-        internal open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
-            return PutDocumentsRequest.Builder().addDocuments(documents).build()
-        }
+        internal open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
+            PutDocumentsRequest.Builder().addDocuments(documents).build()
 
-        internal open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest {
-            return RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
-        }
+        internal open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
+            RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
     }
-
-

@@ -5,9 +5,9 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -46,14 +46,20 @@ class SimRepositoryImplTest {
         subscriptionManager = mock()
         permissionStateNotifier = mock()
         permissionManager = mock()
-        appSettingsRepository = mock {
-            on { observeAppSettings() } doReturn kotlinx.coroutines.flow.MutableStateFlow(com.example.minutewatcher.core.model.AppSettings())
-        }
+        appSettingsRepository =
+            mock {
+                on { observeAppSettings() } doReturn
+                    kotlinx.coroutines.flow.MutableStateFlow(
+                        com.example.minutewatcher.core.model
+                            .AppSettings(),
+                    )
+            }
 
-        seedRepository = mock {
-            on { getSeed() } doReturn flowOf("test_seed")
-            on { getOrCreateSeed(any()) } doReturn "test_seed"
-        }
+        seedRepository =
+            mock {
+                on { getSeed() } doReturn flowOf("test_seed")
+                on { getOrCreateSeed(any()) } doReturn "test_seed"
+            }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
 
         dataStore =
@@ -84,9 +90,17 @@ class SimRepositoryImplTest {
     @Test
     fun testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage() =
         runTest {
-            val identityRepo = SimIdentityRepositoryImpl(
-                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope
-            )
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                )
             val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
 
             // Mock a SIM in Slot 1 (index 1)
@@ -111,9 +125,17 @@ class SimRepositoryImplTest {
     @Test
     fun testGetIdentity_DoesNotTriggerEditWhenUnchanged() =
         runTest {
-            val identityRepo = SimIdentityRepositoryImpl(
-                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope
-            )
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                )
 
             val mockInfo = mock<android.telephony.SubscriptionInfo>()
             whenever(mockInfo.simSlotIndex).thenReturn(0)
@@ -125,10 +147,10 @@ class SimRepositoryImplTest {
 
             // First call - should write
             val id1 = identityRepo.getIdentity(0)
-            
+
             // Second call - should use cache and NOT write
             val id2 = identityRepo.getIdentity(0)
-            
+
             assertEquals(id1, id2)
         }
 
@@ -200,9 +222,17 @@ class SimRepositoryImplTest {
     @Test
     fun testGetSimIdentity_DoesNotSaveFallback_WhenPermissionsMissing() =
         runTest {
-            val identityRepo = SimIdentityRepositoryImpl(
-                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope
-            )
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                )
 
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())

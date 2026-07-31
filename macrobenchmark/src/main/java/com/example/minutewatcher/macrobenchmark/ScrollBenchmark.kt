@@ -20,31 +20,32 @@ class ScrollBenchmark {
     val benchmarkRule = MacrobenchmarkRule()
 
     @Test
-    fun scrollSimList() = benchmarkRule.measureRepeated(
-        packageName = "com.example.minutewatcher",
-        metrics = listOf(FrameTimingMetric()),
-        compilationMode = CompilationMode.Full(),
-        startupMode = StartupMode.WARM,
-        iterations = 5,
-        setupBlock = {
-            grantBenchmarkPermissions()
-            populateBenchmarkData(3)
-        }
-    ) {
-        startActivityAndWait()
-        
-        // Wait for mock data to be displayed
-        assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000))
+    fun scrollSimList() =
+        benchmarkRule.measureRepeated(
+            packageName = "com.example.minutewatcher",
+            metrics = listOf(FrameTimingMetric()),
+            compilationMode = CompilationMode.Full(),
+            startupMode = StartupMode.WARM,
+            iterations = 5,
+            setupBlock = {
+                grantBenchmarkPermissions()
+                populateBenchmarkData(3)
+            },
+        ) {
+            startActivityAndWait()
 
-        // Find the list and scroll
-        val list = device.wait(Until.findObject(By.scrollable(true)), 5000)
-        assertNotNull("Scrollable list not found. Ensure more than 3-4 items are displayed.", list)
-        
-        list.setGestureMargin(device.displayWidth / 5)
-        
-        list.fling(Direction.DOWN)
-        device.waitForIdle()
-        list.fling(Direction.UP)
-        device.waitForIdle()
-    }
+            // Wait for mock data to be displayed
+            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000))
+
+            // Find the list and scroll
+            val list = device.wait(Until.findObject(By.scrollable(true)), 5000)
+            assertNotNull("Scrollable list not found. Ensure more than 3-4 items are displayed.", list)
+
+            list.setGestureMargin(device.displayWidth / 5)
+
+            list.fling(Direction.DOWN)
+            device.waitForIdle()
+            list.fling(Direction.UP)
+            device.waitForIdle()
+        }
 }

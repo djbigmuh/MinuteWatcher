@@ -13,28 +13,30 @@ object SnapshotUtils {
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
         var result = snapshot.version.hashCode()
         result = 31 * result + snapshot.capabilities.hashCode()
-        
-        val content = snapshot.simSnapshots
-            .filter { it.isActive }
-            .map { sim ->
-                sim.slot to sim.entities.values.map { e ->
-                    // Explicitly list fields to exclude lastUpdateTime
-                    listOf(
-                        e.id,
-                        e.simSlot,
-                        e.operatorName,
-                        e.packageType,
-                        e.limit,
-                        e.used,
-                        e.remaining,
-                        e.unit,
-                        e.periodStart,
-                        e.periodEnd,
-                        e.sourceType
-                    )
+
+        val content =
+            snapshot.simSnapshots
+                .filter { it.isActive }
+                .map { sim ->
+                    sim.slot to
+                        sim.entities.values.map { e ->
+                            // Explicitly list fields to exclude lastUpdateTime
+                            listOf(
+                                e.id,
+                                e.simSlot,
+                                e.operatorName,
+                                e.packageType,
+                                e.limit,
+                                e.used,
+                                e.remaining,
+                                e.unit,
+                                e.periodStart,
+                                e.periodEnd,
+                                e.sourceType,
+                            )
+                        }
                 }
-            }
-        
+
         result = 31 * result + content.hashCode()
         return result
     }

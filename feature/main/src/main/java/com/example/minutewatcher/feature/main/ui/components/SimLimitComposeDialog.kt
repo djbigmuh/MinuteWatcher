@@ -49,11 +49,12 @@ fun SimLimitComposeDialog(
     var trafficError by remember { mutableStateOf<String?>(null) }
 
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
-    val minutesRangeMsg = stringResource(
-        id = R.string.validation_error_invalid_range,
-        "0",
-        Constants.MAX_MINUTES_LIMIT.toString(),
-    )
+    val minutesRangeMsg =
+        stringResource(
+            id = R.string.validation_error_invalid_range,
+            "0",
+            Constants.MAX_MINUTES_LIMIT.toString(),
+        )
     val trafficRangeMsg =
         stringResource(
             id = R.string.validation_error_invalid_range,
@@ -166,4 +167,3 @@ fun SimLimitComposeDialog(
         dismissButton = null,
     )
 }
-

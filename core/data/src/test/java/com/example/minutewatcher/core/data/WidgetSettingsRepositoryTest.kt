@@ -23,10 +23,11 @@ class WidgetSettingsRepositoryTest {
     private val settingsRepository: AppSettingsRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
+    private val dataChangeNotifier: com.example.minutewatcher.core.domain.DataChangeNotifier = mock()
 
     @Before
     fun setup() {
-        repository = WidgetSettingsRepository(settingsRepository, simIdentityRepository, simWidgetVisibilityRepository)
+        repository = WidgetSettingsRepository(settingsRepository, simIdentityRepository, simWidgetVisibilityRepository, dataChangeNotifier)
     }
 
     @Test
@@ -47,7 +48,30 @@ class WidgetSettingsRepositoryTest {
                     migrationV1Completed = true,
                 )
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
-            whenever(simIdentityRepository.getIdentity(any())).thenReturn("test_sim")
+
+            val identity0 =
+                com.example.minutewatcher.core.model.SimIdentity(
+                    "id0",
+                    100,
+                    0,
+                    com.example.minutewatcher.core.model.IdentitySource.ICCID,
+                )
+            val sim0 =
+                com.example.minutewatcher.core.model
+                    .ActiveSimInfo(identity0, 0, 100, "SIM 1", "MTS", "25001", true, true)
+
+            val identity1 =
+                com.example.minutewatcher.core.model.SimIdentity(
+                    "id1",
+                    101,
+                    1,
+                    com.example.minutewatcher.core.model.IdentitySource.ICCID,
+                )
+            val sim1 =
+                com.example.minutewatcher.core.model
+                    .ActiveSimInfo(identity1, 1, 101, "SIM 2", "MTS", "25001", false, false)
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
 
             val simSettings =
                 SimSettingsState(
@@ -92,24 +116,26 @@ class WidgetSettingsRepositoryTest {
                     callTrackingEnabled = false,
                     simStates =
                         mapOf(
-                            0 to SimSettingsState(
-                                showSim = true,
-                                showIcon = false,
-                                showName = true,
-                                showMinutes = true,
-                                showMinutesLimit = false,
-                                showTraffic = true,
-                                showTrafficLimit = false,
-                            ),
-                            1 to SimSettingsState(
-                                showSim = false,
-                                showIcon = true,
-                                showName = true,
-                                showMinutes = true,
-                                showMinutesLimit = false,
-                                showTraffic = true,
-                                showTrafficLimit = false,
-                            ),
+                            0 to
+                                SimSettingsState(
+                                    showSim = true,
+                                    showIcon = false,
+                                    showName = true,
+                                    showMinutes = true,
+                                    showMinutesLimit = false,
+                                    showTraffic = true,
+                                    showTrafficLimit = false,
+                                ),
+                            1 to
+                                SimSettingsState(
+                                    showSim = false,
+                                    showIcon = true,
+                                    showName = true,
+                                    showMinutes = true,
+                                    showMinutesLimit = false,
+                                    showTraffic = true,
+                                    showTrafficLimit = false,
+                                ),
                         ),
                 )
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")

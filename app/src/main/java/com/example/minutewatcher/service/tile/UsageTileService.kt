@@ -8,14 +8,14 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.core.service.quicksettings.PendingIntentActivityWrapper
 import androidx.core.service.quicksettings.TileServiceCompat
+import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.MainImmediateDispatcher
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.PackageType
-import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.resources.R
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.semantic.SemanticRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
@@ -45,7 +45,7 @@ class UsageTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         updateTile()
-        
+
         if (semanticRepository.snapshot.value.timestamp == 0L) {
             applicationScope.launch {
                 try {
@@ -149,5 +149,3 @@ class UsageTileService : TileService() {
         job?.cancel()
     }
 }
-
-

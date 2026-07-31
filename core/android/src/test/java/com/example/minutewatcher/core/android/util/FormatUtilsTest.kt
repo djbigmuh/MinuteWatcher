@@ -25,5 +25,3 @@ class FormatUtilsTest {
         assertEquals("1.5 GB / 5.0 GB", FormatUtils.formatTrafficDisplayLogic(1.5f, 5.0f, true, " GB"))
     }
 }
-
-

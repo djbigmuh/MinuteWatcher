@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.model.util.FontScaleProvider
 
 object WidgetUiMapper {
-
     fun mapFromSnapshot(
         context: Context,
         snapshot: GlobalSnapshot,
@@ -26,9 +25,16 @@ object WidgetUiMapper {
                 .sortedBy { it.slot }
                 .map { sim ->
                     val simConfig = state.simStates[sim.slot]
-                    val simUiState = WidgetSimUiFactory.createSimUiState(
-                        context, sim, simConfig, luminance, textColor, secondaryTextColor, fontMultiplier
-                    )
+                    val simUiState =
+                        WidgetSimUiFactory.createSimUiState(
+                            context,
+                            sim,
+                            simConfig,
+                            luminance,
+                            textColor,
+                            secondaryTextColor,
+                            fontMultiplier,
+                        )
                     simUiState.copy(layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, layoutMode))
                 }
 

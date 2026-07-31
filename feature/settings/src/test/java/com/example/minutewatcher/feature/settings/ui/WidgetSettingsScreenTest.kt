@@ -22,24 +22,28 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class WidgetSettingsScreenTest {
     @get:Rule
-    val composeTestRule = androidx.compose.ui.test.junit4.v2.createComposeRule()
+    val composeTestRule =
+        androidx.compose.ui.test.junit4.v2
+            .createComposeRule()
 
     private val viewModel: WidgetSettingsViewModel = mock()
     private val context: Context = ApplicationProvider.getApplicationContext()
 
-    private val testSettings = WidgetSettingsState(
-        layoutMode = 0,
-        simArrangement = 0,
-        transparency = 50,
-        fontSize = 2,
-        backgroundColor = 0xFF000000.toInt(),
-        notifyLowMinutes = true,
-        notifyLowTraffic = true,
-        callTrackingEnabled = true,
-        simStates = mapOf(
-            0 to SimSettingsState(true, true, true, true, true, true, true)
+    private val testSettings =
+        WidgetSettingsState(
+            layoutMode = 0,
+            simArrangement = 0,
+            transparency = 50,
+            fontSize = 2,
+            backgroundColor = 0xFF000000.toInt(),
+            notifyLowMinutes = true,
+            notifyLowTraffic = true,
+            callTrackingEnabled = true,
+            simStates =
+                mapOf(
+                    0 to SimSettingsState(true, true, true, true, true, true, true),
+                ),
         )
-    )
 
     @Test
     fun loadingState_isDisplayed() {
@@ -51,7 +55,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {}
+                onSave = {},
             )
         }
 
@@ -69,7 +73,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {}
+                onSave = {},
             )
         }
 
@@ -87,7 +91,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {}
+                onSave = {},
             )
         }
 
@@ -106,7 +110,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = { saved = true }
+                onSave = { saved = true },
             )
         }
 

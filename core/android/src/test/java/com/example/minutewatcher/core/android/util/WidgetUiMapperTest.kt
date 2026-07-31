@@ -71,15 +71,16 @@ class WidgetUiMapperTest {
                 callTrackingEnabled = true,
                 simStates =
                     mapOf(
-                        0 to SimSettingsState(
-                            showSim = true,
-                            showIcon = true,
-                            showName = true,
-                            showMinutes = true,
-                            showMinutesLimit = true,
-                            showTraffic = false,
-                            showTrafficLimit = false,
-                        ),
+                        0 to
+                            SimSettingsState(
+                                showSim = true,
+                                showIcon = true,
+                                showName = true,
+                                showMinutes = true,
+                                showMinutesLimit = true,
+                                showTraffic = false,
+                                showTrafficLimit = false,
+                            ),
                     ),
             )
 
@@ -239,15 +240,16 @@ class WidgetUiMapperTest {
                 callTrackingEnabled = true,
                 simStates =
                     mapOf(
-                        0 to SimSettingsState(
-                            showSim = true,
-                            showIcon = true,
-                            showName = true,
-                            showMinutes = true,
-                            showMinutesLimit = true,
-                            showTraffic = true, // Enabled in settings but data is empty
-                            showTrafficLimit = true,
-                        ),
+                        0 to
+                            SimSettingsState(
+                                showSim = true,
+                                showIcon = true,
+                                showName = true,
+                                showMinutes = true,
+                                showMinutesLimit = true,
+                                showTraffic = true, // Enabled in settings but data is empty
+                                showTrafficLimit = true,
+                            ),
                     ),
             )
 
@@ -271,17 +273,18 @@ class WidgetUiMapperTest {
     @Test
     fun testTransparencyMapping() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())
-        val settings = WidgetSettingsState(
-            layoutMode = 1,
-            simArrangement = 0,
-            fontSize = 2,
-            transparency = 81,
-            backgroundColor = Color.BLACK,
-            notifyLowMinutes = true,
-            notifyLowTraffic = true,
-            callTrackingEnabled = true,
-            simStates = emptyMap(),
-        )
+        val settings =
+            WidgetSettingsState(
+                layoutMode = 1,
+                simArrangement = 0,
+                fontSize = 2,
+                transparency = 81,
+                backgroundColor = Color.BLACK,
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                callTrackingEnabled = true,
+                simStates = emptyMap(),
+            )
 
         val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
         assertTrue("useSystemColors should be true for transparency > 80", uiState.useSystemColors)

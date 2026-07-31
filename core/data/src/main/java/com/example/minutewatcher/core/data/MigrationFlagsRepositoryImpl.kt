@@ -12,32 +12,33 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MigrationFlagsRepositoryImpl @Inject constructor(
-    @AppDataStore private val dataStore: DataStore<Preferences>,
-) : MigrationFlagsRepository {
+class MigrationFlagsRepositoryImpl
+    @Inject
+    constructor(
+        @AppDataStore private val dataStore: DataStore<Preferences>,
+    ) : MigrationFlagsRepository {
+        @Suppress("SameParameterValue")
+        private fun <T> get(
+            key: Preferences.Key<T>,
+            defaultValue: T,
+        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-    @Suppress("SameParameterValue")
-    private fun <T> get(
-        key: Preferences.Key<T>,
-        defaultValue: T,
-    ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
+        override fun isMigrationV1Completed(): Flow<Boolean> = get(SettingsKeys.MIGRATION_V1_COMPLETED, false)
 
-    override fun isMigrationV1Completed(): Flow<Boolean> = get(SettingsKeys.MIGRATION_V1_COMPLETED, false)
+        override suspend fun setMigrationV1Completed(completed: Boolean) {
+            dataStore.edit { it[SettingsKeys.MIGRATION_V1_COMPLETED] = completed }
+        }
 
-    override suspend fun setMigrationV1Completed(completed: Boolean) {
-        dataStore.edit { it[SettingsKeys.MIGRATION_V1_COMPLETED] = completed }
+        override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> =
+            get(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
+
+        override suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean) {
+            dataStore.edit { it[SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }
+        }
+
+        override fun getMigrationV1SkippedReason(): Flow<String?> = dataStore.data.map { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] }
+
+        override suspend fun setMigrationV1Skipped(reason: MigrationSkipReason) {
+            dataStore.edit { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] = reason.name }
+        }
     }
-
-    override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> =
-        get(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
-
-    override suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean) {
-        dataStore.edit { it[SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }
-    }
-
-    override fun getMigrationV1SkippedReason(): Flow<String?> = dataStore.data.map { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] }
-
-    override suspend fun setMigrationV1Skipped(reason: MigrationSkipReason) {
-        dataStore.edit { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] = reason.name }
-    }
-}

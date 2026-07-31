@@ -21,6 +21,6 @@ object AppLogger {
         message: String,
         throwable: Throwable? = null,
     ) {
-        Log.e(TAG, message, throwable)
+        if (BuildConfig.DEBUG) Log.e(TAG, message, throwable)
     }
 }

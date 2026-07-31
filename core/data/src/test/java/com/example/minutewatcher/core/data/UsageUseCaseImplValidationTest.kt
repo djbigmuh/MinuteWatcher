@@ -25,14 +25,15 @@ class UsageUseCaseImplValidationTest {
 
     @Before
     fun setup() {
-        usageUseCase = UsageUseCaseImpl(
-            context,
-            simIdentityRepository,
-            simUsageRepository,
-            simLimitsRepository,
-            trafficTracker,
-            permissionManager
-        )
+        usageUseCase =
+            UsageUseCaseImpl(
+                context,
+                simIdentityRepository,
+                simUsageRepository,
+                simLimitsRepository,
+                trafficTracker,
+                permissionManager,
+            )
     }
 
     @Test

@@ -46,12 +46,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.minutewatcher.core.android.util.FormatUtils
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
-import com.example.minutewatcher.core.android.util.FormatUtils
 import com.example.minutewatcher.core.model.util.UsageStatus
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.ui.theme.usageColor
 
 @Composable
@@ -260,7 +260,9 @@ fun SimCardItem(
                         Text(
                             text = "${stringResource(
                                 id = R.string.adjustment_mark,
-                            )}: ${if (model.trafficAdjustmentGb > 0) "+" else ""}${FormatUtils.formatTrafficGb(model.trafficAdjustmentGb)}${stringResource(
+                            )}: ${if (model.trafficAdjustmentGb > 0) "+" else ""}${FormatUtils.formatTrafficGb(
+                                model.trafficAdjustmentGb,
+                            )}${stringResource(
                                 id = R.string.gb_abbr,
                             )}",
                             style = MaterialTheme.typography.labelMedium,
@@ -354,5 +356,3 @@ fun EditableValueBox(
         )
     }
 }
-
-

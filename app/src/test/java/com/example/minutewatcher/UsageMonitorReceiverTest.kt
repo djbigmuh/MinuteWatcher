@@ -81,5 +81,3 @@ class UsageMonitorReceiverTest {
             assertTrue("Work CALL_EVENT_UNKNOWN should be enqueued", workInfos.isNotEmpty())
         }
 }
-
-

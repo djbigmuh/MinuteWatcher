@@ -1,10 +1,20 @@
 package com.example.minutewatcher.feature.main
 
-import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
-import com.example.minutewatcher.core.domain.*
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.PermissionRepository
+import com.example.minutewatcher.core.domain.SettingsUseCase
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +27,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.*
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -25,12 +36,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class UsageAccessNavigationTest {
-
     @get:Rule
     val composeTestRule = createComposeRule()
 
     private val simIdentityRepository: SimIdentityRepository = mock()
-    private val simUsageRepository: SimUsageRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -62,33 +71,47 @@ class UsageAccessNavigationTest {
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
-        whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(com.example.minutewatcher.core.model.AppTheme.FOLLOW_SYSTEM))
+        whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
 
-        viewModel = MainViewModel(
-            simIdentityRepository,
-            simUsageRepository,
-            simLimitsRepository,
-            appSettingsRepository,
-            usageStateRepository,
-            autoResetUseCase,
-            usageUseCase,
-            settingsUseCase,
-            permissionRepository,
-            dataChangeNotifier,
-            savedStateHandle,
-            testDispatcher,
-        )
+        viewModel =
+            MainViewModel(
+                simIdentityRepository,
+                simLimitsRepository,
+                appSettingsRepository,
+                usageStateRepository,
+                autoResetUseCase,
+                usageUseCase,
+                settingsUseCase,
+                permissionRepository,
+                dataChangeNotifier,
+                savedStateHandle,
+                testDispatcher,
+            )
     }
 
-    private fun createMockSimCard() = com.example.minutewatcher.core.model.SimCardUiModel(
-        slot = 0, identity = "sim1", operatorName = "MTS", iconRes = 0,
-        minutesUsed = 0, minutesLimit = 0, manualAdjustment = 0, minutesRemaining = 0,
-        effectiveMinutesLimit = 0, isMinutesLimitSet = false,
-        trafficUsedMb = 0f, trafficLimitMb = 0, trafficRemainingGb = 0f,
-        effectiveTrafficLimitGb = 0f, trafficAdjustmentGb = 0f, isTrafficLimitSet = false,
-        autoResetEnabled = false, autoResetDay = 1, rolloverEnabled = false
-    )
+    private fun createMockSimCard() =
+        com.example.minutewatcher.core.model.SimCardUiModel(
+            slot = 0,
+            identity = "sim1",
+            operatorName = "MTS",
+            iconRes = 0,
+            minutesUsed = 0,
+            minutesLimit = 0,
+            manualAdjustment = 0,
+            minutesRemaining = 0,
+            effectiveMinutesLimit = 0,
+            isMinutesLimitSet = false,
+            trafficUsedMb = 0f,
+            trafficLimitMb = 0,
+            trafficRemainingGb = 0f,
+            effectiveTrafficLimitGb = 0f,
+            trafficAdjustmentGb = 0f,
+            isTrafficLimitSet = false,
+            autoResetEnabled = false,
+            autoResetDay = 1,
+            rolloverEnabled = false,
+        )
 
     @Test
     fun bannerOpensRationaleDialog() {
@@ -100,9 +123,10 @@ class UsageAccessNavigationTest {
                 onShowUsageAccessDialog = { dialogOpened = true },
                 onOpenAppSettings = {},
                 onRetryAppSearch = {},
+                onRetryCalls = {},
                 onRetryShortcuts = {},
                 onRetryTraffic = {},
-                onGrantNotificationPermission = {}
+                onGrantNotificationPermission = {},
             )
         }
 
@@ -118,7 +142,7 @@ class UsageAccessNavigationTest {
         composeTestRule.setContent {
             UsageAccessDialog(
                 onDismiss = {},
-                onSettings = { settingsOpened = true }
+                onSettings = { settingsOpened = true },
             )
         }
 
@@ -132,10 +156,10 @@ class UsageAccessNavigationTest {
         // Test ViewModel state consistency
         viewModel.setUsageAccessDialog(true)
         assertTrue(viewModel.showUsageAccessDialog.value)
-        
+
         viewModel.setUsageAccessDialog(true) // Call again
         assertTrue(viewModel.showUsageAccessDialog.value)
-        
+
         viewModel.setUsageAccessDialog(false)
         assertFalse(viewModel.showUsageAccessDialog.value)
     }

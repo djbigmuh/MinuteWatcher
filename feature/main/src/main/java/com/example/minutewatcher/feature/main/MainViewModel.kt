@@ -51,18 +51,20 @@ class MainViewModel
         @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val dialogStateHolder = MainDialogStateHolder(savedStateHandle)
-        private val bannerStateHolder = TrackingBannerStateHolder(
-            usageStateRepository = usageStateRepository,
-            permissionRepository = permissionRepository,
-            appSettingsRepository = appSettingsRepository,
-            scope = viewModelScope,
-            stateFlowTimeout = STATE_FLOW_TIMEOUT
-        )
-        private val refreshStateHolder = SimRefreshStateHolder(
-            usageUseCase = usageUseCase,
-            usageStateRepository = usageStateRepository,
-            ioDispatcher = ioDispatcher
-        )
+        private val bannerStateHolder =
+            TrackingBannerStateHolder(
+                usageStateRepository = usageStateRepository,
+                permissionRepository = permissionRepository,
+                appSettingsRepository = appSettingsRepository,
+                scope = viewModelScope,
+                stateFlowTimeout = STATE_FLOW_TIMEOUT,
+            )
+        private val refreshStateHolder =
+            SimRefreshStateHolder(
+                usageUseCase = usageUseCase,
+                usageStateRepository = usageStateRepository,
+                ioDispatcher = ioDispatcher,
+            )
 
         // Dialog States
         val showLimitDialog = dialogStateHolder.showLimitDialog
@@ -72,13 +74,19 @@ class MainViewModel
         val showUsageAccessDialog = dialogStateHolder.showUsageAccessDialog
 
         fun setLimitDialog(data: LimitDialogData?) = dialogStateHolder.setLimitDialog(data)
+
         fun setDayDialog(data: DayDialogData?) = dialogStateHolder.setDayDialog(data)
+
         fun setAdjustDialog(data: AdjustDialogData?) = dialogStateHolder.setAdjustDialog(data)
+
         fun setTrafficLimitationDialog(show: Boolean) = dialogStateHolder.setTrafficLimitationDialog(show)
+
         fun setUsageAccessDialog(show: Boolean) = dialogStateHolder.setUsageAccessDialog(show)
 
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) = bannerStateHolder.setPhonePermissionPermanentlyDenied(denied)
-        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) = bannerStateHolder.setNotificationPermissionPermanentlyDenied(denied)
+
+        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) =
+            bannerStateHolder.setNotificationPermissionPermanentlyDenied(denied)
 
         fun setNotificationPermissionRequested() {
             viewModelScope.launch {
@@ -100,7 +108,9 @@ class MainViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.Eagerly,
-                    initialValue = com.example.minutewatcher.core.model.AppSettings(),
+                    initialValue =
+                        com.example.minutewatcher.core.model
+                            .AppSettings(),
                 )
 
         fun completeOnboarding() {
@@ -127,6 +137,7 @@ class MainViewModel
                 )
 
         val refreshStatus: StateFlow<RefreshState> = refreshStateHolder.refreshStatus
+
         fun consumeRefreshStatus() = refreshStateHolder.consumeRefreshStatus()
 
         val appTheme: StateFlow<AppTheme> =

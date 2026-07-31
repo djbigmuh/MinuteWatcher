@@ -89,5 +89,3 @@ object FormatUtils {
 
     fun formatMinutes(min: Int): String = min.toString()
 }
-
-

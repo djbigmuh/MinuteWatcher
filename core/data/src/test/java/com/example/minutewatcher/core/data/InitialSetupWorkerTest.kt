@@ -25,11 +25,12 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 class InitialSetupWorkerTest {
     private val context: Context = mock()
     private val params: WorkerParameters = mock()
@@ -53,14 +54,20 @@ class InitialSetupWorkerTest {
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-        val emptySnapshot = com.example.minutewatcher.core.model.GlobalSnapshot(
-            version = com.example.minutewatcher.core.model.SchemaVersion(1, 0, 0),
-            timestamp = 0L,
-            simSnapshots = emptyList(),
-            capabilities = emptyList(),
-        )
+        val emptySnapshot =
+            com.example.minutewatcher.core.model.GlobalSnapshot(
+                version =
+                    com.example.minutewatcher.core.model
+                        .SchemaVersion(1, 0, 0),
+                timestamp = 0L,
+                simSnapshots = emptyList(),
+                capabilities = emptyList(),
+            )
         runTest {
-            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(emptySnapshot))
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult
+                    .Success(emptySnapshot),
+            )
         }
 
         worker =
@@ -99,7 +106,7 @@ class InitialSetupWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(usageStateRepository).refresh()
+            verify(usageStateRepository, times(2)).refresh()
             verify(dataChangeNotifier).notifyDataChanged(updateWidget = true, force = true)
         }
 
@@ -111,9 +118,10 @@ class InitialSetupWorkerTest {
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext.`when`<Int> {
-                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                }.thenReturn(PackageManager.PERMISSION_DENIED)
+                mockedContext
+                    .`when`<Int> {
+                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                    }.thenReturn(PackageManager.PERMISSION_DENIED)
 
                 val result = worker.doWork()
 
@@ -133,9 +141,10 @@ class InitialSetupWorkerTest {
             whenever(migrationService.hasLegacyData(any())).thenReturn(true)
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext.`when`<Int> {
-                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                }.thenReturn(PackageManager.PERMISSION_DENIED)
+                mockedContext
+                    .`when`<Int> {
+                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                    }.thenReturn(PackageManager.PERMISSION_DENIED)
 
                 val result = worker.doWork()
 
@@ -154,9 +163,10 @@ class InitialSetupWorkerTest {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext.`when`<Int> {
-                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+                mockedContext
+                    .`when`<Int> {
+                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                    }.thenReturn(PackageManager.PERMISSION_GRANTED)
 
                 val result = worker.doWork()
 
@@ -175,9 +185,10 @@ class InitialSetupWorkerTest {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
 
             mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext.`when`<Int> {
-                    ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+                mockedContext
+                    .`when`<Int> {
+                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
+                    }.thenReturn(PackageManager.PERMISSION_GRANTED)
 
                 val result = worker.doWork()
 
@@ -189,5 +200,3 @@ class InitialSetupWorkerTest {
             }
         }
 }
-
-

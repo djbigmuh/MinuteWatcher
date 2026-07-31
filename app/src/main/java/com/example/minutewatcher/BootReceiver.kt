@@ -7,9 +7,9 @@ import androidx.work.BackoffPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.InitialSetupWorker
 import com.example.minutewatcher.core.data.WorkScheduler
-import com.example.minutewatcher.core.common.util.AppLogger
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
@@ -43,4 +43,3 @@ class BootReceiver : BroadcastReceiver() {
         }
     }
 }
-

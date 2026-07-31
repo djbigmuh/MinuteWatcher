@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
@@ -19,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -32,12 +32,11 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
-    private val simUsageRepository: SimUsageRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -58,6 +57,10 @@ class MainViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
+        phonePermissionFlow.value = false
+        usageStatsPermissionFlow.value = false
+        notificationPermissionFlow.value = false
+
         whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
@@ -75,6 +78,21 @@ class MainViewModelTest {
     fun tearDown() {
         Dispatchers.resetMain()
     }
+
+    private fun createViewModel() =
+        MainViewModel(
+            simIdentityRepository,
+            simLimitsRepository,
+            appSettingsRepository,
+            usageStateRepository,
+            autoResetUseCase,
+            usageUseCase,
+            settingsUseCase,
+            permissionRepository,
+            dataChangeNotifier,
+            savedStateHandle,
+            testDispatcher,
+        )
 
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =
@@ -143,7 +161,7 @@ class MainViewModelTest {
             val settingsFlow = MutableStateFlow(AppSettings(phonePermissionRequested = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             phonePermissionFlow.value = false
-            
+
             val viewModel = createViewModel()
             var bannerState = viewModel.trackingBannerState.first()
             assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
@@ -170,32 +188,43 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState shows usage access banner when permission missing`() =
         runTest {
-            val trackingFlow = MutableStateFlow(mapOf(
-                "traffic" to com.example.minutewatcher.core.model.TrackingStatus.Error(
-                    com.example.minutewatcher.core.model.TrackingStatus.ErrorType.PERMISSION_MISSING
-                )
-            ))
-            whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
-            
+            usageStatsPermissionFlow.value = false
+
             val viewModel = createViewModel()
 
-            val bannerState = viewModel.trackingBannerState.first()
-            assertTrue(bannerState.showUsageAccessBanner)
+            // Collect to trigger WhileSubscribed
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+
+            val bannerState = viewModel.trackingBannerState.value
+            assertTrue("Banner should be visible when permission missing", bannerState.showUsageAccessBanner)
         }
 
     @Test
     fun `trackingBannerState shows traffic error banner when other tracking error occurs`() =
         runTest {
-            val trackingFlow = MutableStateFlow(mapOf(
-                "traffic" to com.example.minutewatcher.core.model.TrackingStatus.Error(
-                    com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN, "Some error"
+            val trackingFlow =
+                MutableStateFlow(
+                    mapOf(
+                        "traffic" to
+                            com.example.minutewatcher.core.model.TrackingStatus.Error(
+                                com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN,
+                                "Some error",
+                            ),
+                    ),
                 )
-            ))
             whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
-            
+            usageStatsPermissionFlow.value = true
+
             val viewModel = createViewModel()
 
-            val bannerState = viewModel.trackingBannerState.first()
+            // Collect to trigger WhileSubscribed
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+
+            val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.showTrafficErrorBanner)
             assertFalse(bannerState.showUsageAccessBanner)
         }
@@ -203,16 +232,27 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState shows shortcuts error banner when shortcuts error occurs`() =
         runTest {
-            val trackingFlow = MutableStateFlow(mapOf(
-                "shortcuts" to com.example.minutewatcher.core.model.TrackingStatus.Error(
-                    com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN, "Some error"
+            val trackingFlow =
+                MutableStateFlow(
+                    mapOf(
+                        "shortcuts" to
+                            com.example.minutewatcher.core.model.TrackingStatus.Error(
+                                com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN,
+                                "Some error",
+                            ),
+                    ),
                 )
-            ))
             whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
-            
+            usageStatsPermissionFlow.value = true
+
             val viewModel = createViewModel()
 
-            val bannerState = viewModel.trackingBannerState.first()
+            // Collect to trigger WhileSubscribed
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+
+            val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.showShortcutsErrorBanner)
         }
 
@@ -224,22 +264,8 @@ class MainViewModelTest {
 
             viewModel.setTheme(theme)
 
-            org.mockito.kotlin.verify(settingsUseCase).setTheme(theme)
+            org.mockito.kotlin
+                .verify(settingsUseCase)
+                .setTheme(theme)
         }
-
-    private fun createViewModel() =
-        MainViewModel(
-            simIdentityRepository,
-            simUsageRepository,
-            simLimitsRepository,
-            appSettingsRepository,
-            usageStateRepository,
-            autoResetUseCase,
-            usageUseCase,
-            settingsUseCase,
-            permissionRepository,
-            dataChangeNotifier,
-            savedStateHandle,
-            testDispatcher,
-        )
 }

@@ -62,6 +62,3 @@ dependencies {
     debugImplementation(libs.androidxUiTestManifest)
     testImplementation(libs.mockingKotlin)
 }
-
-
-

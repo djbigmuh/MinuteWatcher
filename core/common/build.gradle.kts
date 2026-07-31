@@ -37,6 +37,3 @@ dependencies {
     implementation(libs.kotlinxCoroutinesCore)
     implementation(libs.javaxInject)
 }
-
-
-

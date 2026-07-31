@@ -302,5 +302,3 @@ class IdentityMigrationServiceTest {
             assertFalse(service.hasLegacyData(activeIdentities = setOf(activeIdentity)))
         }
 }
-
-

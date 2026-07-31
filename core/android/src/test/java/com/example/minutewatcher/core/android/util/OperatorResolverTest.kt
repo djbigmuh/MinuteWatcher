@@ -49,5 +49,3 @@ class OperatorResolverTest {
         assertEquals(context.getString(R.string.operator_generic, 2), result)
     }
 }
-
-

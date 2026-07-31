@@ -53,5 +53,16 @@ subprojects {
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Default SDK for Robolectric
         jvmArgs("-Drobolectric.sdk=37")
+        // Robolectric + JDK 17/21 compatibility
+        jvmArgs(
+            "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+            "--add-opens=java.base/java.io=ALL-UNNAMED",
+            "--add-opens=java.base/java.net=ALL-UNNAMED",
+            "--add-opens=java.base/java.util=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED",
+            "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
+        )
     }
 }

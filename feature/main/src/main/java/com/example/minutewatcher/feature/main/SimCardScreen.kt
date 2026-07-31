@@ -329,13 +329,23 @@ private fun MainScreenContent(
                             model = model,
                             onSetLimits = {
                                 viewModel.setLimitDialog(
-                                    LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb, model.rolloverEnabled),
+                                    LimitDialogData(
+                                        model.slot,
+                                        model.operatorName,
+                                        model.minutesLimit,
+                                        model.trafficLimitMb,
+                                        model.rolloverEnabled,
+                                    ),
                                 )
                             },
                             onResetCounters = { showResetConfirmSlot = model.slot },
                             onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
                             onEditAutoResetDay = { viewModel.setDayDialog(DayDialogData(model.slot, model.autoResetDay)) },
-                            onAdjustMinutes = { viewModel.setAdjustDialog(AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true)) },
+                            onAdjustMinutes = {
+                                viewModel.setAdjustDialog(
+                                    AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true),
+                                )
+                            },
                             onAdjustTraffic = { viewModel.setAdjustDialog(AdjustDialogData(model.slot, model.trafficRemainingGb, false)) },
                             onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
                         )

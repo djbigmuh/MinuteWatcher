@@ -63,7 +63,10 @@ object SemanticMapper {
         )
     }
 
-    private fun calculatePeriod(resetDay: Int, nowMillis: Long): Pair<Long, Long> {
+    private fun calculatePeriod(
+        resetDay: Int,
+        nowMillis: Long,
+    ): Pair<Long, Long> {
         val info = BillingPeriodCalculator.calculate(resetDay, nowMillis)
         return info.startDate to info.endDate
     }

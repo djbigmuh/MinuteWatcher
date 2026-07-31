@@ -12,7 +12,6 @@ import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.resources.R
 
 object WidgetSimUiFactory {
-
     fun createSimUiState(
         context: Context,
         sim: SimSnapshot,
@@ -112,8 +111,12 @@ object WidgetSimUiFactory {
             showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f,
             limitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(limitGb)),
             hasData = hasData,
-            usedFull = "${context.getString(R.string.used_text)}: ${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",
-            limitFull = "${context.getString(R.string.limit_text)}: ${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}",
+            usedFull = "${context.getString(
+                R.string.used_text,
+            )}: ${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",
+            limitFull = "${context.getString(
+                R.string.limit_text,
+            )}: ${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}",
         )
     }
 }

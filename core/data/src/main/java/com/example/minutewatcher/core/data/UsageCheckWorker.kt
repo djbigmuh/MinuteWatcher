@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.android.util.FormatUtils
 import com.example.minutewatcher.core.common.di.IoDispatcher
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -15,12 +18,9 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
-import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SemanticEntity
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.util.DateUtils
-import com.example.minutewatcher.core.android.util.FormatUtils
-import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.resources.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -223,6 +223,3 @@ class UsageCheckWorker
             private const val CRITICAL_THRESHOLD = 10
         }
     }
-
-
-

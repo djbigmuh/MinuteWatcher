@@ -39,7 +39,7 @@ class ExampleStartupBenchmark {
             setupBlock = {
                 grantBenchmarkPermissions()
                 populateBenchmarkData(2)
-            }
+            },
         ) {
             pressHome()
             startActivityAndWait()

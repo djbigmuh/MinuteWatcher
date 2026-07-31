@@ -8,7 +8,10 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class SettingsUseCaseTest {
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -21,52 +24,56 @@ class SettingsUseCaseTest {
     }
 
     @Test
-    fun `appTheme flow maps correct value from repository`() = runTest {
-        val expectedTheme = AppTheme.DARK
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(theme = expectedTheme)))
-        settingsUseCase = SettingsUseCase(appSettingsRepository)
+    fun `appTheme flow maps correct value from repository`() =
+        runTest {
+            val expectedTheme = AppTheme.DARK
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(theme = expectedTheme)))
+            settingsUseCase = SettingsUseCase(appSettingsRepository)
 
-        val actualTheme = settingsUseCase.appTheme.first()
+            val actualTheme = settingsUseCase.appTheme.first()
 
-        assertEquals(expectedTheme, actualTheme)
-    }
-
-    @Test
-    fun `appLanguage flow maps correct value from repository`() = runTest {
-        val expectedLanguage = "ru"
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(language = expectedLanguage)))
-        settingsUseCase = SettingsUseCase(appSettingsRepository)
-
-        val actualLanguage = settingsUseCase.appLanguage.first()
-
-        assertEquals(expectedLanguage, actualLanguage)
-    }
+            assertEquals(expectedTheme, actualTheme)
+        }
 
     @Test
-    fun `setTheme calls updateAppSettings with correct transformation`() = runTest {
-        val newTheme = AppTheme.LIGHT
-        val initialSettings = AppSettings(theme = AppTheme.DARK)
-        
-        settingsUseCase.setTheme(newTheme)
+    fun `appLanguage flow maps correct value from repository`() =
+        runTest {
+            val expectedLanguage = "ru"
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(language = expectedLanguage)))
+            settingsUseCase = SettingsUseCase(appSettingsRepository)
 
-        val captor = argumentCaptor<(AppSettings) -> AppSettings>()
-        verify(appSettingsRepository).updateAppSettings(captor.capture())
-        
-        val updatedSettings = captor.firstValue(initialSettings)
-        assertEquals(newTheme, updatedSettings.theme)
-    }
+            val actualLanguage = settingsUseCase.appLanguage.first()
+
+            assertEquals(expectedLanguage, actualLanguage)
+        }
 
     @Test
-    fun `setLanguage calls updateAppSettings with correct transformation`() = runTest {
-        val newLanguage = "en"
-        val initialSettings = AppSettings(language = "ru")
+    fun `setTheme calls updateAppSettings with correct transformation`() =
+        runTest {
+            val newTheme = AppTheme.LIGHT
+            val initialSettings = AppSettings(theme = AppTheme.DARK)
 
-        settingsUseCase.setLanguage(newLanguage)
+            settingsUseCase.setTheme(newTheme)
 
-        val captor = argumentCaptor<(AppSettings) -> AppSettings>()
-        verify(appSettingsRepository).updateAppSettings(captor.capture())
+            val captor = argumentCaptor<(AppSettings) -> AppSettings>()
+            verify(appSettingsRepository).updateAppSettings(captor.capture())
 
-        val updatedSettings = captor.firstValue(initialSettings)
-        assertEquals(newLanguage, updatedSettings.language)
-    }
+            val updatedSettings = captor.firstValue(initialSettings)
+            assertEquals(newTheme, updatedSettings.theme)
+        }
+
+    @Test
+    fun `setLanguage calls updateAppSettings with correct transformation`() =
+        runTest {
+            val newLanguage = "en"
+            val initialSettings = AppSettings(language = "ru")
+
+            settingsUseCase.setLanguage(newLanguage)
+
+            val captor = argumentCaptor<(AppSettings) -> AppSettings>()
+            verify(appSettingsRepository).updateAppSettings(captor.capture())
+
+            val updatedSettings = captor.firstValue(initialSettings)
+            assertEquals(newLanguage, updatedSettings.language)
+        }
 }

@@ -12,17 +12,19 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
-        val minutesModel = MinutesModel.calculate(
-            used = usage.minutesUsed,
-            limit = usage.minutesLimit,
-            manualAdjustment = usage.manualAdjustment
-        )
+        val minutesModel =
+            MinutesModel.calculate(
+                used = usage.minutesUsed,
+                limit = usage.minutesLimit,
+                manualAdjustment = usage.manualAdjustment,
+            )
 
-        val trafficModel = TrafficModel.calculate(
-            usedMb = usage.trafficUsed,
-            limitMb = usage.trafficLimitMb,
-            manualAdjustmentGb = usage.trafficAdjustment
-        )
+        val trafficModel =
+            TrafficModel.calculate(
+                usedMb = usage.trafficUsed,
+                limitMb = usage.trafficLimitMb,
+                manualAdjustmentGb = usage.trafficAdjustment,
+            )
 
         return SimCardUiModel(
             slot = slot,
@@ -47,4 +49,3 @@ object SimCardMapper {
         )
     }
 }
-

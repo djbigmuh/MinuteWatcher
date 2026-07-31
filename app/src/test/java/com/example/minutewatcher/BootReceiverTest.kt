@@ -72,5 +72,3 @@ class BootReceiverTest {
             assertTrue("Work INITIAL_SETUP should be enqueued", workInfos.isNotEmpty())
         }
 }
-
-

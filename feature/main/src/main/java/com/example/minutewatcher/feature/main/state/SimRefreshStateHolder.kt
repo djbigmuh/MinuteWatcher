@@ -1,10 +1,10 @@
 package com.example.minutewatcher.feature.main.state
 
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.RefreshState
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.domain.RefreshResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,11 +38,12 @@ class SimRefreshStateHolder(
                 try {
                     usageUseCase.refreshOperatorInfo()
                     val result = usageStateRepository.refresh()
-                    _refreshStatus.value = if (result is RefreshResult.Success) {
-                        RefreshState.Success
-                    } else {
-                        RefreshState.Error("Refresh timed out")
-                    }
+                    _refreshStatus.value =
+                        if (result is RefreshResult.Success) {
+                            RefreshState.Success
+                        } else {
+                            RefreshState.Error("Refresh timed out")
+                        }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

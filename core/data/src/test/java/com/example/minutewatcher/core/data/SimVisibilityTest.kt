@@ -5,10 +5,10 @@ import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
-import com.example.minutewatcher.core.android.util.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
@@ -21,11 +21,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -34,16 +34,27 @@ class SimVisibilityTest {
     private val subscriptionManager: SubscriptionManager = mock()
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
-    private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock {
-        on { observeAppSettings() } doReturn kotlinx.coroutines.flow.MutableStateFlow(com.example.minutewatcher.core.model.AppSettings())
-    }
-    private val dataStore: DataStore<Preferences> = mock {
-        on { data } doReturn flowOf(androidx.datastore.preferences.core.emptyPreferences())
-    }
-    private val seedRepository: SimIdentitySeedRepository = mock {
-        on { getSeed() } doReturn flowOf("test_seed")
-        on { getOrCreateSeed(any()) } doReturn "test_seed"
-    }
+    private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository =
+        mock {
+            on { observeAppSettings() } doReturn
+                kotlinx.coroutines.flow.MutableStateFlow(
+                    com.example.minutewatcher.core.model
+                        .AppSettings(),
+                )
+        }
+    private val dataStore: DataStore<Preferences> =
+        mock {
+            on { data } doReturn
+                flowOf(
+                    androidx.datastore.preferences.core
+                        .emptyPreferences(),
+                )
+        }
+    private val seedRepository: SimIdentitySeedRepository =
+        mock {
+            on { getSeed() } doReturn flowOf("test_seed")
+            on { getOrCreateSeed(any()) } doReturn "test_seed"
+        }
 
     private val permissionChanges = MutableSharedFlow<Int>(replay = 1)
 
@@ -60,7 +71,16 @@ class SimVisibilityTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
             val repository =
-                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope)
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                )
 
             val sims = repository.observeActiveSims().first()
             assertTrue(sims.isEmpty())
@@ -72,7 +92,16 @@ class SimVisibilityTest {
             // Initially no permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             val repository =
-                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope)
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                )
 
             val simsList = mutableListOf<List<ActiveSimInfo>>()
             val job =
@@ -87,7 +116,7 @@ class SimVisibilityTest {
             // Trigger first re-evaluation
             permissionChanges.emit(0)
             runCurrent()
-            
+
             // Now grant permission AND PROVIDE A SIM to change the result
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             val mockInfo = mock<SubscriptionInfo>()

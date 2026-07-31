@@ -27,11 +27,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
-import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
+import com.example.minutewatcher.core.resources.R
 
 @Composable
 fun WidgetPreview(
@@ -44,12 +43,13 @@ fun WidgetPreview(
     val luminance =
         androidx.core.graphics.ColorUtils
             .calculateLuminance(uiState.backgroundColor)
-    
-    val noDataColor = if (uiState.useSystemColors) {
-        androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-    } else {
-        if (luminance > 0.5f) Color.Black else Color.White
-    }
+
+    val noDataColor =
+        if (uiState.useSystemColors) {
+            androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+        } else {
+            if (luminance > 0.5f) Color.Black else Color.White
+        }
 
     Box(
         modifier =
@@ -88,11 +88,12 @@ private fun MultiSimPreviewLayout(
                     SimItemPreview(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor = if (uiState.useSystemColors) {
-                        androidx.compose.material3.MaterialTheme.colorScheme.outline
-                    } else {
-                        Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
-                    }
+                    val separatorColor =
+                        if (uiState.useSystemColors) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.outline
+                        } else {
+                            Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
+                        }
                     Spacer(
                         modifier =
                             Modifier
@@ -113,11 +114,12 @@ private fun MultiSimPreviewLayout(
                     SimItemPreview(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor = if (uiState.useSystemColors) {
-                        androidx.compose.material3.MaterialTheme.colorScheme.outline
-                    } else {
-                        Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
-                    }
+                    val separatorColor =
+                        if (uiState.useSystemColors) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.outline
+                        } else {
+                            Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
+                        }
                     Spacer(
                         modifier =
                             Modifier
@@ -160,13 +162,14 @@ private fun SimItemPreview(
                 )
             },
             textRenderer = { component ->
-                val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
-                    androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-                } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                    androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    Color(component.color)
-                }
+                val textColor =
+                    if (uiState.useSystemColors && component.color == sim.textColor) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        Color(component.color)
+                    }
                 Text(
                     text = component.text,
                     color = textColor,
@@ -181,9 +184,7 @@ private fun SimItemPreview(
                 if (component.heightDp > 0) {
                     Spacer(modifier = Modifier.height(component.heightDp.dp))
                 }
-            }
+            },
         )
     }
 }
-
-

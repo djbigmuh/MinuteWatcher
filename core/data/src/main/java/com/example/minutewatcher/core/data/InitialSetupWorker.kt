@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
@@ -14,7 +15,6 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.MigrationSkipReason
-import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -91,10 +91,11 @@ class InitialSetupWorker
 
             if (migrationV1Completed && migrationStabilityCompleted) return
 
-            val hasPermission = ContextCompat.checkSelfPermission(
-                applicationContext,
-                Manifest.permission.READ_PHONE_STATE,
-            ) == PackageManager.PERMISSION_GRANTED
+            val hasPermission =
+                ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.READ_PHONE_STATE,
+                ) == PackageManager.PERMISSION_GRANTED
 
             if (!hasPermission) {
                 handleMigrationWithoutPermission(migrationV1Completed)
@@ -144,4 +145,3 @@ class InitialSetupWorker
             }
         }
     }
-

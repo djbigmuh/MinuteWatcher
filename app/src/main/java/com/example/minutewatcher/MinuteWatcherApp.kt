@@ -79,4 +79,3 @@ class MinuteWatcherApp :
                 .setWorkerFactory(workerFactory)
                 .build()
 }
-

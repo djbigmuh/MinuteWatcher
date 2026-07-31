@@ -10,6 +10,10 @@ android {
     defaultConfig {
         minSdk = 26
     }
+
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {

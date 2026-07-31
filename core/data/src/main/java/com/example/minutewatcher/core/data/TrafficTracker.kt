@@ -3,19 +3,19 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.NetworkCapabilities
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.android.util.SimUtils
+import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.android.util.PermissionManager
-import com.example.minutewatcher.core.android.util.SimUtils
-import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -162,11 +162,10 @@ class TrafficTracker
                                 callSessionRepository.setLastDataSubId(currentDataSubId)
                                 inMemoryLastDataSubId = currentDataSubId
                             }
-                            _status.value = TrackingStatus.Active
                         }
-                    } else {
-                        _status.value = TrackingStatus.Active
                     }
+                    _status.value = TrackingStatus.Active
+                } catch (e: SecurityException) {
                 } catch (e: SecurityException) {
                     AppLogger.e("Permission error updating traffic", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
@@ -179,15 +178,19 @@ class TrafficTracker
             }
         }
 
-        private fun getCurrentMobileBytes(startTime: Long, autoResetDay: Int): Long {
+        private fun getCurrentMobileBytes(
+            startTime: Long,
+            autoResetDay: Int,
+        ): Long {
             if (networkStatsManager == null) return -1L
 
             val now = timeProvider.now()
-            val safeStart = if (startTime > 0) {
-                startTime
-            } else {
-                BillingPeriodCalculator.calculate(autoResetDay, now).startDate
-            }
+            val safeStart =
+                if (startTime > 0) {
+                    startTime
+                } else {
+                    BillingPeriodCalculator.calculate(autoResetDay, now).startDate
+                }
 
             return try {
                 val bucket =

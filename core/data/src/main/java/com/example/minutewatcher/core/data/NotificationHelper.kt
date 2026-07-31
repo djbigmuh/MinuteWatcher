@@ -8,10 +8,10 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
-import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
@@ -95,4 +95,3 @@ class NotificationHelper
             private const val SLOT_OFFSET = 10
         }
     }
-

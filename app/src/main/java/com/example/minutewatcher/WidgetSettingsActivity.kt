@@ -64,4 +64,3 @@ class WidgetSettingsActivity : AppCompatActivity() {
         return true
     }
 }
-

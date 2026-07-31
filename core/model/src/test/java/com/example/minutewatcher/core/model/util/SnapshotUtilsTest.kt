@@ -12,7 +12,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class SnapshotUtilsTest {
-
     @Test
     fun `hash changes when remaining changes`() {
         val s1 = createSnapshot(remaining = 100, limit = 1000, used = 900)
@@ -67,28 +66,29 @@ class SnapshotUtilsTest {
         used: Long = 0,
         periodEnd: Long = 0,
         lastUpdateTime: Long = 0,
-        timestamp: Long = 0
+        timestamp: Long = 0,
     ): GlobalSnapshot {
-        val entity = SemanticEntity(
-            id = "test",
-            simSlot = 0,
-            operatorName = "ABC",
-            packageType = PackageType.MINUTES,
-            limit = limit,
-            used = used,
-            remaining = remaining,
-            unit = MeasurementUnit.MINUTES,
-            periodStart = 0,
-            periodEnd = periodEnd,
-            lastUpdateTime = lastUpdateTime,
-            sourceType = DataSourceType.SYSTEM,
-        )
+        val entity =
+            SemanticEntity(
+                id = "test",
+                simSlot = 0,
+                operatorName = "ABC",
+                packageType = PackageType.MINUTES,
+                limit = limit,
+                used = used,
+                remaining = remaining,
+                unit = MeasurementUnit.MINUTES,
+                periodStart = 0,
+                periodEnd = periodEnd,
+                lastUpdateTime = lastUpdateTime,
+                sourceType = DataSourceType.SYSTEM,
+            )
         val sim = SimSnapshot(0, "ABC", true, mapOf(PackageType.MINUTES to entity))
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
             timestamp = timestamp,
             simSnapshots = listOf(sim),
-            capabilities = emptyList()
+            capabilities = emptyList(),
         )
     }
 }

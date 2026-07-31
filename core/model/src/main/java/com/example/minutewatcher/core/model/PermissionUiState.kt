@@ -4,5 +4,5 @@ enum class PermissionUiState {
     NOT_REQUESTED,
     DENIED,
     PERMANENTLY_DENIED,
-    GRANTED
+    GRANTED,
 }

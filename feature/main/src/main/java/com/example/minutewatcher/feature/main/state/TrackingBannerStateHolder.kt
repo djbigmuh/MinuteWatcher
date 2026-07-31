@@ -73,7 +73,7 @@ class TrackingBannerStateHolder(
                 notificationsGranted = notificationsGranted,
                 phonePermanentlyDenied = phonePermanentlyDenied,
                 notificationPermanentlyDenied = notificationPermanentlyDenied,
-                settings = settings
+                settings = settings,
             )
         }.stateIn(
             scope = scope,

@@ -15,22 +15,23 @@ class SimCardMapperTest {
     @Test
     fun `map correctly handles traffic adjustment`() {
         // Arrange
-        val usage = SimUsage(
-            identity = "test_id",
-            slotIndex = 0,
-            subscriptionId = 1,
-            operator = "TestOp",
-            minutesUsed = 50,
-            minutesLimit = 100,
-            manualAdjustment = 10,
-            trafficUsed = 512f, // 0.5 GB
-            trafficLimitMb = 1024, // 1 GB
-            trafficAdjustment = 0.5f, // +0.5 GB
-            autoReset = false,
-            autoResetDay = 1,
-            lastResetDate = 0L,
-            rolloverEnabled = false
-        )
+        val usage =
+            SimUsage(
+                identity = "test_id",
+                slotIndex = 0,
+                subscriptionId = 1,
+                operator = "TestOp",
+                minutesUsed = 50,
+                minutesLimit = 100,
+                manualAdjustment = 10,
+                trafficUsed = 512f, // 0.5 GB
+                trafficLimitMb = 1024, // 1 GB
+                trafficAdjustment = 0.5f, // +0.5 GB
+                autoReset = false,
+                autoResetDay = 1,
+                lastResetDate = 0L,
+                rolloverEnabled = false,
+            )
 
         // Act
         val model = SimCardMapper.map(context, 0, usage)
@@ -45,22 +46,23 @@ class SimCardMapperTest {
     @Test
     fun `map clamps negative effective limit to zero`() {
         // Arrange
-        val usage = SimUsage(
-            identity = "test_id",
-            slotIndex = 0,
-            subscriptionId = 1,
-            operator = "TestOp",
-            minutesUsed = 0,
-            minutesLimit = 100,
-            manualAdjustment = -200, // Result: -100, should be clamped to 0
-            trafficUsed = 0f,
-            trafficLimitMb = 1024,
-            trafficAdjustment = -2f, // Result: -1GB, should be clamped to 0
-            autoReset = false,
-            autoResetDay = 1,
-            lastResetDate = 0L,
-            rolloverEnabled = false
-        )
+        val usage =
+            SimUsage(
+                identity = "test_id",
+                slotIndex = 0,
+                subscriptionId = 1,
+                operator = "TestOp",
+                minutesUsed = 0,
+                minutesLimit = 100,
+                manualAdjustment = -200, // Result: -100, should be clamped to 0
+                trafficUsed = 0f,
+                trafficLimitMb = 1024,
+                trafficAdjustment = -2f, // Result: -1GB, should be clamped to 0
+                autoReset = false,
+                autoResetDay = 1,
+                lastResetDate = 0L,
+                rolloverEnabled = false,
+            )
 
         // Act
         val model = SimCardMapper.map(context, 0, usage)

@@ -1,12 +1,12 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -20,8 +20,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 class ResetManagerTest {
     private val trafficTracker: TrafficTracker = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
@@ -74,8 +74,20 @@ class ResetManagerTest {
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
-                        identity, 0, 1, "MTS", 100, 200, 1.0f, 1024, 0, 0f,
-                        true, 1, 0L, false
+                        identity,
+                        0,
+                        1,
+                        "MTS",
+                        100,
+                        200,
+                        1.0f,
+                        1024,
+                        0,
+                        0f,
+                        true,
+                        1,
+                        0L,
+                        false,
                     ),
                 ),
             )
@@ -107,8 +119,20 @@ class ResetManagerTest {
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
-                        identity, 0, 1, "MTS", 100, 200, 1.0f, 1024, 0, 0f,
-                        true, 1, 0L, false
+                        identity,
+                        0,
+                        1,
+                        "MTS",
+                        100,
+                        200,
+                        1.0f,
+                        1024,
+                        0,
+                        0f,
+                        true,
+                        1,
+                        0L,
+                        false,
                     ),
                 ),
             )
@@ -142,8 +166,20 @@ class ResetManagerTest {
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
-                        identity, 0, 1, "MTS", 100, 200, 1.0f, 1024, 0, 0f,
-                        true, 1, 0L, false
+                        identity,
+                        0,
+                        1,
+                        "MTS",
+                        100,
+                        200,
+                        1.0f,
+                        1024,
+                        0,
+                        0f,
+                        true,
+                        1,
+                        0L,
+                        false,
                     ),
                 ),
             )
@@ -158,5 +194,3 @@ class ResetManagerTest {
             verify(simUsageRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }
-
-

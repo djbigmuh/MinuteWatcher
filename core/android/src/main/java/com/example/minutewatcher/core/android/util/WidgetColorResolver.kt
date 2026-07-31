@@ -11,7 +11,10 @@ object WidgetColorResolver {
         return textColor to secondaryTextColor
     }
 
-    fun getStatusColor(status: UsageStatus, backgroundLuminance: Double): Int {
+    fun getStatusColor(
+        status: UsageStatus,
+        backgroundLuminance: Double,
+    ): Int {
         val isDark = backgroundLuminance < 0.5
         return UsageColors.get(status, isDark)
     }

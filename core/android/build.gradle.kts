@@ -47,6 +47,3 @@ dependencies {
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxJunit)
 }
-
-
-

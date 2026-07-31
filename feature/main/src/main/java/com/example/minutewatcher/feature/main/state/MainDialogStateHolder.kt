@@ -17,11 +17,25 @@ class MainDialogStateHolder(
     val showTrafficLimitationDialog = savedStateHandle.getStateFlow("traffic_limitation_dialog", false)
     val showUsageAccessDialog = savedStateHandle.getStateFlow("usage_access_dialog", false)
 
-    fun setLimitDialog(data: LimitDialogData?) { savedStateHandle["limit_dialog"] = data }
-    fun setDayDialog(data: DayDialogData?) { savedStateHandle["day_dialog"] = data }
-    fun setAdjustDialog(data: AdjustDialogData?) { savedStateHandle["adjust_dialog"] = data }
-    fun setTrafficLimitationDialog(show: Boolean) { savedStateHandle["traffic_limitation_dialog"] = show }
-    fun setUsageAccessDialog(show: Boolean) { savedStateHandle["usage_access_dialog"] = show }
+    fun setLimitDialog(data: LimitDialogData?) {
+        savedStateHandle["limit_dialog"] = data
+    }
+
+    fun setDayDialog(data: DayDialogData?) {
+        savedStateHandle["day_dialog"] = data
+    }
+
+    fun setAdjustDialog(data: AdjustDialogData?) {
+        savedStateHandle["adjust_dialog"] = data
+    }
+
+    fun setTrafficLimitationDialog(show: Boolean) {
+        savedStateHandle["traffic_limitation_dialog"] = show
+    }
+
+    fun setUsageAccessDialog(show: Boolean) {
+        savedStateHandle["usage_access_dialog"] = show
+    }
 
     private val _showOnboardingDialog = MutableStateFlow(false)
     val showOnboardingDialog: StateFlow<Boolean> = _showOnboardingDialog.asStateFlow()

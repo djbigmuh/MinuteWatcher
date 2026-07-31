@@ -31,16 +31,16 @@ class UpdateCoordinator
         private val usageStateRepository: Lazy<UsageStateRepository>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-
         init {
             scope.launch {
-                usageStateRepository.get().observeSnapshot()
+                usageStateRepository
+                    .get()
+                    .observeSnapshot()
                     .filter { it.timestamp > 0L }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
-                    }
-                    .collect {
+                    }.collect {
                         widgetUpdater.updateAll()
                     }
             }
@@ -59,4 +59,3 @@ class UpdateCoordinator
             }
         }
     }
-

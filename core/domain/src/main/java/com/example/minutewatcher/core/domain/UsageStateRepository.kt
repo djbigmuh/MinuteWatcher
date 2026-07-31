@@ -41,6 +41,11 @@ interface UsageStateRepository {
 sealed interface RefreshResult {
     val snapshot: GlobalSnapshot
 
-    data class Success(override val snapshot: GlobalSnapshot) : RefreshResult
-    data class Timeout(override val snapshot: GlobalSnapshot) : RefreshResult
+    data class Success(
+        override val snapshot: GlobalSnapshot,
+    ) : RefreshResult
+
+    data class Timeout(
+        override val snapshot: GlobalSnapshot,
+    ) : RefreshResult
 }

@@ -31,6 +31,3 @@ dependencies {
     implementation(libs.androidxUiautomator)
     implementation(libs.androidxJunit)
 }
-
-
-

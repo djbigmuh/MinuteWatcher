@@ -25,19 +25,19 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.first
-import com.example.minutewatcher.core.data.WorkScheduler
+import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.resources.R
-import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -181,7 +181,11 @@ class MainActivity : AppCompatActivity() {
         ) { granted ->
             if (!granted) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)
+                    val permanentlyDenied =
+                        !ActivityCompat.shouldShowRequestPermissionRationale(
+                            this,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        )
                     viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
                 }
             }
@@ -220,7 +224,11 @@ class MainActivity : AppCompatActivity() {
                     checkNotifications(autoRequest = true)
                 }
             } else if (settings.phonePermissionRequested) {
-                val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.READ_PHONE_STATE)
+                val permanentlyDenied =
+                    !ActivityCompat.shouldShowRequestPermissionRationale(
+                        this@MainActivity,
+                        Manifest.permission.READ_PHONE_STATE,
+                    )
                 viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
             }
         }
@@ -234,7 +242,11 @@ class MainActivity : AppCompatActivity() {
                     requestNotificationPermission()
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     // Determine if it was permanently denied based on rationale
-                    val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS)
+                    val permanentlyDenied =
+                        !ActivityCompat.shouldShowRequestPermissionRationale(
+                            this@MainActivity,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        )
                     viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
                 }
             }
@@ -299,5 +311,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-
-

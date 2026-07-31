@@ -2,6 +2,9 @@ package com.example.minutewatcher.core.data
 
 import android.os.Build
 import android.telephony.TelephonyManager
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -9,9 +12,6 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.android.util.PermissionManager
-import com.example.minutewatcher.core.common.util.TimeProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,8 +47,7 @@ class CallTracker
             }
         }
 
-        private suspend fun isCallTrackingEnabled(): Boolean =
-            appSettingsRepository.getAppSettings().first().callTrackingEnabled
+        private suspend fun isCallTrackingEnabled(): Boolean = appSettingsRepository.getAppSettings().first().callTrackingEnabled
 
         /**
          * Called on device boot to clean up any stale state.
@@ -183,7 +182,9 @@ class CallTracker
                                             ?: activeSubIds.minByOrNull { callSessionRepository.getCallStartTime(it).first() }
 
                                     if (fallback != null) {
-                                        AppLogger.d("Call ended with unknown subId, attributed to session via fallback: $fallback (defaultVoice was $defaultVoice)")
+                                        AppLogger.d(
+                                            "Call ended with unknown subId, attributed to session via fallback: $fallback (defaultVoice was $defaultVoice)",
+                                        )
                                     }
                                     fallback
                                 }
@@ -216,7 +217,7 @@ class CallTracker
             val savedBootTime = callSessionRepository.getBootTime(subId).first()
             val savedUptime = callSessionRepository.getUptime(subId).first()
             val savedIdentity = callSessionRepository.getCallIdentity(subId).first()
-            
+
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 

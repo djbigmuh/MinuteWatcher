@@ -27,7 +27,7 @@ The App requests the following permissions to function:
 *   **Boot Completed (`RECEIVE_BOOT_COMPLETED`):** Used to ensure tracking resumes automatically after you restart your device.
 
 ## 4. Data Backup
-If you have enabled "Android Auto Backup" in your device settings, your local App data may be backed up to your personal Google Drive account by the Android system. This data is encrypted by Google and is not accessible to us.
+If you have enabled "Android Auto Backup" in your device settings, your local App data (including SIM identifiers, usage statistics, and configuration) may be backed up to your personal Google Drive account by the Android system. This data is encrypted by Google and is not accessible to us.
 
 ## 5. Changes to This Policy
 We may update our Privacy Policy from time to time. Any changes will be reflected in the updated text within the App's repository.

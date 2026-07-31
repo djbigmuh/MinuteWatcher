@@ -3,15 +3,14 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
-import android.net.NetworkCapabilities
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.android.util.PermissionManager
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -28,7 +27,7 @@ import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -45,7 +44,7 @@ class TrafficTrackerTest {
     private val simUsageRepository: SimUsageRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
-    private val timeProvider = FixedTimeProvider(currentTime = 1000L)
+    private val timeProvider = FixedTimeProvider(currentTime = 1700000000000L)
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
@@ -54,24 +53,33 @@ class TrafficTrackerTest {
     @Before
     fun setup() {
         whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
-        
+
+        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+        whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+
         // Match default data subId with an active subscription
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
         val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
         whenever(mockSubInfo.subscriptionId).thenReturn(1)
         whenever(mockSubInfo.simSlotIndex).thenReturn(0)
-        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+        val mockSubInfo2 = mock<android.telephony.SubscriptionInfo>()
+        whenever(mockSubInfo2.subscriptionId).thenReturn(2)
+        whenever(mockSubInfo2.simSlotIndex).thenReturn(1)
+
+        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo, mockSubInfo2))
 
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
         runBlocking {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
-            whenever(simIdentityRepository.getIdentity(any())).thenReturn("test_id")
         }
-        whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("test_id")))
+        whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
-        whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("test_id")))
+        whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("sim_0")))
+        whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
+        whenever(simUsageRepository.getSimUsage("sim_1")).thenReturn(flowOf(createSimUsage("sim_1")))
 
         tracker =
             TrafficTracker(
@@ -94,8 +102,8 @@ class TrafficTrackerTest {
 
             whenever(
                 networkStatsManager.querySummaryForDevice(
-                    eq(NetworkCapabilities.TRANSPORT_CELLULAR),
-                    isNull(),
+                    anyInt(),
+                    anyOrNull(),
                     anyLong(),
                     anyLong(),
                 ),
@@ -105,7 +113,7 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(1)
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
@@ -120,7 +128,7 @@ class TrafficTrackerTest {
             whenever(
                 networkStatsManager.querySummaryForDevice(
                     anyInt(),
-                    isNull(),
+                    anyOrNull(),
                     anyLong(),
                     anyLong(),
                 ),
@@ -131,8 +139,8 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             val deltaMb = 500f / Constants.BYTES_PER_MB
-            verify(simUsageRepository).incrementTrafficUsed(eq("test_id"), eq(deltaMb))
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
     @Test
@@ -140,10 +148,10 @@ class TrafficTrackerTest {
         runTest {
             whenever(
                 networkStatsManager.querySummaryForDevice(
-                    anyInt(),
-                    isNull(),
-                    anyLong(),
-                    anyLong(),
+                    any(),
+                    anyOrNull(),
+                    any(),
+                    any(),
                 ),
             ).thenThrow(RuntimeException("Stats unavailable"))
 
@@ -159,7 +167,7 @@ class TrafficTrackerTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             // 2. This makes getTargetSimInfo return null
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
-            
+
             // 3. Act
             tracker.updateTrafficUsage()
 
@@ -183,14 +191,17 @@ class TrafficTrackerTest {
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
             whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(flowOf("")) // empty/inactive
 
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
+
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), any(), anyLong(), anyLong())).thenReturn(bucket)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
 
-            verify(simUsageRepository).getLastTotalBytes(eq("sim_0"))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
     @Test
@@ -199,22 +210,25 @@ class TrafficTrackerTest {
             // First run: SubId 1
             val bucket1 = mock<NetworkStats.Bucket>()
             whenever(bucket1.rxBytes).thenReturn(1000L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket1)
+            whenever(bucket1.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
             verify(callSessionRepository).setLastDataSubId(1)
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1000L))
 
             // SIM swap: SubId 2
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
             val bucket2 = mock<NetworkStats.Bucket>()
             whenever(bucket2.rxBytes).thenReturn(1500L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket2)
+            whenever(bucket2.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket2)
 
             tracker.updateTrafficUsage()
 
             // Should reset baseline for the new SIM identity
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_1"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(2)
         }
 
@@ -223,11 +237,12 @@ class TrafficTrackerTest {
         runTest {
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
 
-            tracker.resetBaseline("test_id")
+            tracker.resetBaseline("sim_0")
 
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
@@ -235,9 +250,17 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage respects small deltas`() =
         runTest {
             val bucket = mock<NetworkStats.Bucket>()
-            whenever(bucket.rxBytes).thenReturn(1000L + 50L) // only 50 bytes delta
+            whenever(bucket.rxBytes).thenReturn(1050L)
+            whenever(bucket.txBytes).thenReturn(0L)
 
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket)
+            whenever(
+                networkStatsManager.querySummaryForDevice(
+                    eq(0), // NetworkCapabilities.TRANSPORT_CELLULAR
+                    isNull(),
+                    anyLong(),
+                    anyLong(),
+                ),
+            ).thenReturn(bucket)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
@@ -253,12 +276,13 @@ class TrafficTrackerTest {
             // lastTotalBytes = 1000, current = 500 (reboot)
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(500L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
 
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(500L))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(500L))
         }
 
     @Test
@@ -267,7 +291,8 @@ class TrafficTrackerTest {
             // Setup valid bucket for updateTrafficUsage inside recover()
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             // Act
@@ -276,7 +301,7 @@ class TrafficTrackerTest {
 
             // Assert
             assertEquals(TrackingStatus.Active, tracker.status.value)
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1500L))
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
     @Test
@@ -286,7 +311,8 @@ class TrafficTrackerTest {
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
             val bucket1 = mock<NetworkStats.Bucket>()
             whenever(bucket1.rxBytes).thenReturn(1000L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket1)
+            whenever(bucket1.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
@@ -296,7 +322,8 @@ class TrafficTrackerTest {
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
             val bucket2 = mock<NetworkStats.Bucket>()
             whenever(bucket2.rxBytes).thenReturn(1100L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket2)
+            whenever(bucket2.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket2)
             whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
@@ -308,19 +335,48 @@ class TrafficTrackerTest {
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
             val mockSubInfo2 = mock<android.telephony.SubscriptionInfo>()
             whenever(mockSubInfo2.subscriptionId).thenReturn(2)
-            whenever(mockSubInfo2.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo2.simSlotIndex).thenReturn(1) // Slot 1
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo2))
 
             val bucket3 = mock<NetworkStats.Bucket>()
             whenever(bucket3.rxBytes).thenReturn(1200L)
-            whenever(networkStatsManager.querySummaryForDevice(anyInt(), isNull(), anyLong(), anyLong())).thenReturn(bucket3)
+            whenever(bucket3.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket3)
 
             tracker.updateTrafficUsage()
 
             // Should detect swap (1 -> 2) and call setLastDataSubId(2)
             verify(callSessionRepository).setLastDataSubId(2)
-            // Baseline should be reset for identity at 1200L
-            verify(simUsageRepository).setLastTotalBytes(eq("test_id"), eq(1200L))
+            // Baseline should be reset for identity sim_1 at 1200L
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_1"), eq(1200L))
+        }
+
+    @Test
+    fun `after SIM swap status is Active and delta is skipped`() =
+        runTest {
+            // 1. Initial run with SubId 1
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+            val bucket1 = mock<NetworkStats.Bucket>()
+            whenever(bucket1.rxBytes).thenReturn(1000L)
+            whenever(bucket1.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
+            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(500L))
+
+            tracker.updateTrafficUsage()
+            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), any()) // Incremented for first sub
+
+            // 2. SIM swap to SubId 2
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            val bucket2 = mock<NetworkStats.Bucket>()
+            whenever(bucket2.rxBytes).thenReturn(2000L) // Large delta from 1000L
+            whenever(bucket2.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket2)
+
+            tracker.updateTrafficUsage()
+
+            // Should NOT increment usage because delta belongs to previous SIM
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+            verify(simUsageRepository).setLastTotalBytes(eq("sim_1"), eq(2000L)) // Baseline reset
         }
 
     @Suppress("SameParameterValue")
@@ -341,6 +397,6 @@ class TrafficTrackerTest {
         autoReset = true,
         autoResetDay = 1,
         lastResetDate = lastResetDate,
-        rolloverEnabled = false
+        rolloverEnabled = false,
     )
 }

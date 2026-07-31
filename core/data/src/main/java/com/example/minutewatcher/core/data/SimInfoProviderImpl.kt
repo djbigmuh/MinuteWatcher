@@ -8,8 +8,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SimInfoProviderImpl @Inject constructor(
-    private val simIdentityRepository: SimIdentityRepository,
-) : SimInfoProvider {
-    override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = simIdentityRepository.observeActiveSims()
-}
+class SimInfoProviderImpl
+    @Inject
+    constructor(
+        private val simIdentityRepository: SimIdentityRepository,
+    ) : SimInfoProvider {
+        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = simIdentityRepository.observeActiveSims()
+    }

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -17,6 +18,7 @@ class WidgetSettingsRepository
         private val appSettingsRepository: AppSettingsRepository,
         private val simIdentityRepository: SimIdentityRepository,
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
+        private val dataChangeNotifier: DataChangeNotifier,
     ) : WidgetSettingsLoader {
         override suspend fun load(): WidgetSettingsState {
             val settings = appSettingsRepository.getAppSettings().first()
@@ -60,5 +62,6 @@ class WidgetSettingsRepository
                 simSettingsMap[identity] = simSettings
             }
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
+            dataChangeNotifier.notifyDataChanged(updateWidget = true)
         }
     }

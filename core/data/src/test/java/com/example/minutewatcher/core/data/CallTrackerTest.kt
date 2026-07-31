@@ -1,6 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.TelephonyManager
+import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -8,8 +10,6 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.android.util.PermissionManager
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -22,7 +22,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -59,6 +67,8 @@ class CallTrackerTest {
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("id_1")
             whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+            whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             callTracker =
                 CallTracker(
@@ -234,14 +244,14 @@ class CallTrackerTest {
         runTest {
             // Arrange
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
-            
+
             // Act
             callTracker.recover()
             testScope.advanceUntilIdle()
 
             // Assert
             assertEquals(TrackingStatus.Active, callTracker.status.first())
-            
+
             // And now verify it goes back to Idle if repository is empty
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
             callTracker.recover()
@@ -287,13 +297,13 @@ class CallTrackerTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
             timeProvider.advance(10000)
-            
+
             callTracker.onCallEnded(subId = 1)
             assertTrue(callTracker.status.value is TrackingStatus.Error)
 
             // Now "fix" the problem and recover
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
-            
+
             // Act
             callTracker.recover()
             testScope.advanceUntilIdle()
@@ -308,12 +318,19 @@ class CallTrackerTest {
             // Arrange
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
             // Re-create tracker to pick up new setting state
-            callTracker = CallTracker(
-                simIdentityRepository, simUsageRepository, appSettingsRepository,
-                callSessionRepository, dataChangeNotifier, permissionManager,
-                telephonyManager, testScope, timeProvider
-            )
-            
+            callTracker =
+                CallTracker(
+                    simIdentityRepository,
+                    simUsageRepository,
+                    appSettingsRepository,
+                    callSessionRepository,
+                    dataChangeNotifier,
+                    permissionManager,
+                    telephonyManager,
+                    testScope,
+                    timeProvider,
+                )
+
             val startTime = 1000L
             val bootTime = 500L
             val uptime = 500L
@@ -371,6 +388,3 @@ class CallTrackerTest {
             verify(simUsageRepository).incrementMinutesUsed(eq("id_0"), eq(1))
         }
 }
-
-
-

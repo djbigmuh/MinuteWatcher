@@ -3,10 +3,12 @@ package com.example.minutewatcher.core.common.util
 class FixedTimeProvider(
     private var currentTime: Long = 0L,
     private var currentRealtime: Long = 0L,
-    private var currentUptime: Long = 0L
+    private var currentUptime: Long = 0L,
 ) : TimeProvider {
     override fun now(): Long = currentTime
+
     override fun elapsedRealtime(): Long = currentRealtime
+
     override fun uptimeMillis(): Long = currentUptime
 
     fun setTime(time: Long) {

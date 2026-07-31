@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
@@ -16,7 +17,6 @@ import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
-import androidx.glance.GlanceTheme
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -34,15 +34,14 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
+import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
-import com.example.minutewatcher.core.android.util.WidgetUiMapper
-import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -125,14 +124,17 @@ private fun WidgetContent(
     val luminance =
         androidx.core.graphics.ColorUtils
             .calculateLuminance(uiState.backgroundColor)
-    
-    val noDataColor = if (uiState.useSystemColors) {
-        GlanceTheme.colors.onSurface
-    } else {
-        val colorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-        val composeColor = androidx.compose.ui.graphics.Color(colorInt)
-        ColorProvider(day = composeColor, night = composeColor)
-    }
+
+    val noDataColor =
+        if (uiState.useSystemColors) {
+            GlanceTheme.colors.onSurface
+        } else {
+            val colorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+            val composeColor =
+                androidx.compose.ui.graphics
+                    .Color(colorInt)
+            ColorProvider(day = composeColor, night = composeColor)
+        }
 
     Box(
         modifier =
@@ -176,14 +178,16 @@ private fun MultiSimLayout(
                     SimItem(context, sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor = if (uiState.useSystemColors) {
-                        GlanceTheme.colors.outline
-                    } else {
-                        val color = androidx.compose.ui.graphics
-                            .Color(sims[0].secondaryTextColor)
-                            .copy(alpha = 0.5f)
-                        ColorProvider(day = color, night = color)
-                    }
+                    val separatorColor =
+                        if (uiState.useSystemColors) {
+                            GlanceTheme.colors.outline
+                        } else {
+                            val color =
+                                androidx.compose.ui.graphics
+                                    .Color(sims[0].secondaryTextColor)
+                                    .copy(alpha = 0.5f)
+                            ColorProvider(day = color, night = color)
+                        }
                     Spacer(
                         modifier =
                             GlanceModifier
@@ -204,14 +208,16 @@ private fun MultiSimLayout(
                     SimItem(context, sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor = if (uiState.useSystemColors) {
-                        GlanceTheme.colors.outline
-                    } else {
-                        val color = androidx.compose.ui.graphics
-                            .Color(sims[0].secondaryTextColor)
-                            .copy(alpha = 0.5f)
-                        ColorProvider(day = color, night = color)
-                    }
+                    val separatorColor =
+                        if (uiState.useSystemColors) {
+                            GlanceTheme.colors.outline
+                        } else {
+                            val color =
+                                androidx.compose.ui.graphics
+                                    .Color(sims[0].secondaryTextColor)
+                                    .copy(alpha = 0.5f)
+                            ColorProvider(day = color, night = color)
+                        }
                     Spacer(
                         modifier =
                             GlanceModifier
@@ -259,14 +265,17 @@ private fun SimItem(
                 )
             },
             textRenderer = { component ->
-                val textColor = if (uiState.useSystemColors && component.color == sim.textColor) {
-                    GlanceTheme.colors.onSurface
-                } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                    GlanceTheme.colors.onSurfaceVariant
-                } else {
-                    val composeColor = androidx.compose.ui.graphics.Color(component.color)
-                    ColorProvider(day = composeColor, night = composeColor)
-                }
+                val textColor =
+                    if (uiState.useSystemColors && component.color == sim.textColor) {
+                        GlanceTheme.colors.onSurface
+                    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                        GlanceTheme.colors.onSurfaceVariant
+                    } else {
+                        val composeColor =
+                            androidx.compose.ui.graphics
+                                .Color(component.color)
+                        ColorProvider(day = composeColor, night = composeColor)
+                    }
 
                 Text(
                     text = component.text,
@@ -285,8 +294,7 @@ private fun SimItem(
                 if (component.heightDp > 0) {
                     Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
                 }
-            }
+            },
         )
     }
 }
-

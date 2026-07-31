@@ -11,40 +11,45 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SimLimitsRepositoryImpl @Inject constructor(
-    @SimDataStore private val dataStore: DataStore<Preferences>,
-) : SimLimitsRepository {
+class SimLimitsRepositoryImpl
+    @Inject
+    constructor(
+        @SimDataStore private val dataStore: DataStore<Preferences>,
+    ) : SimLimitsRepository {
+        private fun <T> get(
+            key: Preferences.Key<T>,
+            defaultValue: T,
+        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-    private fun <T> get(
-        key: Preferences.Key<T>,
-        defaultValue: T,
-    ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
+        override fun getMonthlyLimit(identity: String): Flow<Int> = get(SimSettingsKeys.monthlyLimitKey(identity), 0)
 
-    override fun getMonthlyLimit(identity: String): Flow<Int> = get(SimSettingsKeys.monthlyLimitKey(identity), 0)
+        override fun getTrafficLimit(identity: String): Flow<Int> = get(SimSettingsKeys.trafficLimitKey(identity), 0)
 
-    override fun getTrafficLimit(identity: String): Flow<Int> = get(SimSettingsKeys.trafficLimitKey(identity), 0)
+        override suspend fun updateSimLimits(
+            identity: String,
+            minutesLimit: Int,
+            trafficLimitMb: Int,
+            rolloverEnabled: Boolean,
+        ) {
+            dataStore.edit {
+                it[SimSettingsKeys.monthlyLimitKey(identity)] = minutesLimit
+                it[SimSettingsKeys.trafficLimitKey(identity)] = trafficLimitMb
+                it[SimSettingsKeys.rolloverEnabledKey(identity)] = rolloverEnabled
+            }
+        }
 
-    override suspend fun updateSimLimits(
-        identity: String,
-        minutesLimit: Int,
-        trafficLimitMb: Int,
-        rolloverEnabled: Boolean
-    ) {
-        dataStore.edit {
-            it[SimSettingsKeys.monthlyLimitKey(identity)] = minutesLimit
-            it[SimSettingsKeys.trafficLimitKey(identity)] = trafficLimitMb
-            it[SimSettingsKeys.rolloverEnabledKey(identity)] = rolloverEnabled
+        override fun getAutoReset(identity: String): Flow<Boolean> = get(SimSettingsKeys.autoResetKey(identity), false)
+
+        override fun getAutoResetDay(identity: String): Flow<Int> = get(SimSettingsKeys.autoResetDayKey(identity), 1)
+
+        override suspend fun setAutoReset(
+            identity: String,
+            day: Int,
+            enabled: Boolean,
+        ) {
+            dataStore.edit {
+                it[SimSettingsKeys.autoResetDayKey(identity)] = day
+                it[SimSettingsKeys.autoResetKey(identity)] = enabled
+            }
         }
     }
-
-    override fun getAutoReset(identity: String): Flow<Boolean> = get(SimSettingsKeys.autoResetKey(identity), false)
-
-    override fun getAutoResetDay(identity: String): Flow<Int> = get(SimSettingsKeys.autoResetDayKey(identity), 1)
-
-    override suspend fun setAutoReset(identity: String, day: Int, enabled: Boolean) {
-        dataStore.edit {
-            it[SimSettingsKeys.autoResetDayKey(identity)] = day
-            it[SimSettingsKeys.autoResetKey(identity)] = enabled
-        }
-    }
-}

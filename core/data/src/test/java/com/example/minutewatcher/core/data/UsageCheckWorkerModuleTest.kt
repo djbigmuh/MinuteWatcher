@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -17,7 +18,6 @@ import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -31,19 +31,28 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
-@RunWith(RobolectricTestRunner::class)
 
+@RunWith(RobolectricTestRunner::class)
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
     @Mock lateinit var simIdentityRepository: SimIdentityRepository
+
     @Mock lateinit var simUsageRepository: SimUsageRepository
+
     @Mock lateinit var simNotificationFlagsRepository: SimNotificationFlagsRepository
+
     @Mock lateinit var appSettingsRepository: AppSettingsRepository
+
     @Mock lateinit var autoResetUseCase: AutoResetUseCase
+
     @Mock lateinit var trafficTracker: TrafficTracker
+
     @Mock lateinit var notificationHelper: NotificationHelper
+
     @Mock lateinit var dataChangeNotifier: DataChangeNotifier
+
     @Mock lateinit var usageStateRepository: UsageStateRepository
+
     @Mock lateinit var usageUseCase: UsageUseCase
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
@@ -63,7 +72,11 @@ class UsageCheckWorkerModuleTest {
                 capabilities = emptyList(),
             )
         runTest {
-            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(emptySnapshot))
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult
+                    .Success(emptySnapshot),
+            )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(kotlinx.coroutines.flow.MutableStateFlow(emptySnapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         }
     }
@@ -107,5 +120,3 @@ class UsageCheckWorkerModuleTest {
             verify(usageStateRepository, times(2)).refresh()
         }
 }
-
-

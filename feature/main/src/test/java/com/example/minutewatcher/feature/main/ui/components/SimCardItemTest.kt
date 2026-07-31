@@ -1,14 +1,14 @@
 package com.example.minutewatcher.feature.main.ui.components
 
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import com.example.minutewatcher.core.model.SimCardUiModel
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-
 import com.example.minutewatcher.core.resources.R as coreR
 
 @RunWith(RobolectricTestRunner::class)
@@ -19,12 +19,13 @@ class SimCardItemTest {
 
     @Test
     fun `traffic limit text uses effective limit with adjustment`() {
-        val model = createMockSimCard(
-            trafficLimitMb = 1024, // 1 GB
-            trafficAdjustmentGb = 0.5f,
-            effectiveTrafficLimitGb = 1.5f,
-            isTrafficLimitSet = true
-        )
+        val model =
+            createMockSimCard(
+                trafficLimitMb = 1024, // 1 GB
+                trafficAdjustmentGb = 0.5f,
+                effectiveTrafficLimitGb = 1.5f,
+                isTrafficLimitSet = true,
+            )
 
         composeTestRule.setContent {
             SimCardItem(model = model)
@@ -36,10 +37,11 @@ class SimCardItemTest {
 
     @Test
     fun `traffic adjustment mark is visible when adjustment is non zero`() {
-        val model = createMockSimCard(
-            trafficAdjustmentGb = 0.5f,
-            isTrafficLimitSet = true
-        )
+        val model =
+            createMockSimCard(
+                trafficAdjustmentGb = 0.5f,
+                isTrafficLimitSet = true,
+            )
 
         composeTestRule.setContent {
             SimCardItem(model = model)
@@ -53,7 +55,7 @@ class SimCardItemTest {
         trafficLimitMb: Int = 0,
         trafficAdjustmentGb: Float = 0f,
         effectiveTrafficLimitGb: Float = 0f,
-        isTrafficLimitSet: Boolean = false
+        isTrafficLimitSet: Boolean = false,
     ) = SimCardUiModel(
         slot = 0,
         identity = "sim1",
@@ -73,6 +75,6 @@ class SimCardItemTest {
         isTrafficLimitSet = isTrafficLimitSet,
         autoResetEnabled = false,
         autoResetDay = 1,
-        rolloverEnabled = false
+        rolloverEnabled = false,
     )
 }

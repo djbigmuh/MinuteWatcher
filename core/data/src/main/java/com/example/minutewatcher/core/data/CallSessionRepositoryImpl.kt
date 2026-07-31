@@ -12,71 +12,86 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CallSessionRepositoryImpl @Inject constructor(
-    @AppDataStore private val dataStore: DataStore<Preferences>,
-) : CallSessionRepository {
+class CallSessionRepositoryImpl
+    @Inject
+    constructor(
+        @AppDataStore private val dataStore: DataStore<Preferences>,
+    ) : CallSessionRepository {
+        private fun <T> get(
+            key: Preferences.Key<T>,
+            defaultValue: T,
+        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-    private fun <T> get(
-        key: Preferences.Key<T>,
-        defaultValue: T,
-    ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
+        override fun getLastDataSubId(): Flow<Int> = get(SettingsKeys.LAST_DATA_SUB_ID, -1)
 
-    override fun getLastDataSubId(): Flow<Int> = get(SettingsKeys.LAST_DATA_SUB_ID, -1)
-
-    override suspend fun setLastDataSubId(subId: Int) {
-        dataStore.edit { it[SettingsKeys.LAST_DATA_SUB_ID] = subId }
-    }
-
-    override fun getCallStartTime(subId: Int): Flow<Long> = get(SettingsKeys.callStartTimeKey(subId), 0L)
-
-    override suspend fun setCallStartTime(subId: Int, time: Long) {
-        dataStore.edit { it[SettingsKeys.callStartTimeKey(subId)] = time }
-    }
-
-    override fun getBootTime(subId: Int): Flow<Long> = get(SettingsKeys.bootTimeKey(subId), 0L)
-
-    override suspend fun setBootTime(subId: Int, time: Long) {
-        dataStore.edit { it[SettingsKeys.bootTimeKey(subId)] = time }
-    }
-
-    override fun getUptime(subId: Int): Flow<Long> = get(SettingsKeys.uptimeKey(subId), 0L)
-
-    override suspend fun setUptime(subId: Int, time: Long) {
-        dataStore.edit { it[SettingsKeys.uptimeKey(subId)] = time }
-    }
-
-    override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[SettingsKeys.callIdentityKey(subId)] }
-
-    override suspend fun setCallIdentity(subId: Int, identity: String?) {
-        dataStore.edit {
-            if (identity == null) {
-                it.remove(SettingsKeys.callIdentityKey(subId))
-            } else {
-                it[SettingsKeys.callIdentityKey(subId)] = identity
-            }
+        override suspend fun setLastDataSubId(subId: Int) {
+            dataStore.edit { it[SettingsKeys.LAST_DATA_SUB_ID] = subId }
         }
-    }
 
-    override suspend fun clearAllCallSessions() {
-        dataStore.edit { prefs ->
-            prefs.asMap().keys
-                .filter { key ->
-                    key.name.startsWith("call_start_time_") ||
-                        key.name.startsWith("boot_time_") ||
-                        key.name.startsWith("uptime_") ||
-                        key.name.startsWith("call_identity_")
-                }.forEach { key ->
-                    prefs.remove(key)
+        override fun getCallStartTime(subId: Int): Flow<Long> = get(SettingsKeys.callStartTimeKey(subId), 0L)
+
+        override suspend fun setCallStartTime(
+            subId: Int,
+            time: Long,
+        ) {
+            dataStore.edit { it[SettingsKeys.callStartTimeKey(subId)] = time }
+        }
+
+        override fun getBootTime(subId: Int): Flow<Long> = get(SettingsKeys.bootTimeKey(subId), 0L)
+
+        override suspend fun setBootTime(
+            subId: Int,
+            time: Long,
+        ) {
+            dataStore.edit { it[SettingsKeys.bootTimeKey(subId)] = time }
+        }
+
+        override fun getUptime(subId: Int): Flow<Long> = get(SettingsKeys.uptimeKey(subId), 0L)
+
+        override suspend fun setUptime(
+            subId: Int,
+            time: Long,
+        ) {
+            dataStore.edit { it[SettingsKeys.uptimeKey(subId)] = time }
+        }
+
+        override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[SettingsKeys.callIdentityKey(subId)] }
+
+        override suspend fun setCallIdentity(
+            subId: Int,
+            identity: String?,
+        ) {
+            dataStore.edit {
+                if (identity == null) {
+                    it.remove(SettingsKeys.callIdentityKey(subId))
+                } else {
+                    it[SettingsKeys.callIdentityKey(subId)] = identity
                 }
-        }
-    }
-
-    override suspend fun getActiveCallSubIds(): List<Int> =
-        dataStore.data.first().asMap().entries.mapNotNull { (key, value) ->
-            if (key.name.startsWith("call_start_time_") && (value as? Long ?: 0L) > 0L) {
-                key.name.substringAfterLast('_').toIntOrNull()
-            } else {
-                null
             }
         }
-}
+
+        override suspend fun clearAllCallSessions() {
+            dataStore.edit { prefs ->
+                prefs
+                    .asMap()
+                    .keys
+                    .filter { key ->
+                        key.name.startsWith("call_start_time_") ||
+                            key.name.startsWith("boot_time_") ||
+                            key.name.startsWith("uptime_") ||
+                            key.name.startsWith("call_identity_")
+                    }.forEach { key ->
+                        prefs.remove(key)
+                    }
+            }
+        }
+
+        override suspend fun getActiveCallSubIds(): List<Int> =
+            dataStore.data.first().asMap().entries.mapNotNull { (key, value) ->
+                if (key.name.startsWith("call_start_time_") && (value as? Long ?: 0L) > 0L) {
+                    key.name.substringAfterLast('_').toIntOrNull()
+                } else {
+                    null
+                }
+            }
+    }

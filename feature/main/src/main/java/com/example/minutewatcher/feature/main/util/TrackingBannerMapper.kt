@@ -20,30 +20,36 @@ object TrackingBannerMapper {
         val shortcuts = statusMap["shortcuts"]
         val calls = statusMap["calls"]
 
-        val phonePermissionState = when {
-            phoneGranted -> PermissionUiState.GRANTED
-            phonePermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-            settings.phonePermissionRequested -> PermissionUiState.DENIED
-            else -> PermissionUiState.NOT_REQUESTED
-        }
+        val phonePermissionState =
+            when {
+                phoneGranted -> PermissionUiState.GRANTED
+                phonePermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
+                settings.phonePermissionRequested -> PermissionUiState.DENIED
+                else -> PermissionUiState.NOT_REQUESTED
+            }
 
         val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
-        val notificationPermissionState = when {
-            !showNotifications || notificationsGranted -> PermissionUiState.GRANTED
-            notificationPermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-            settings.notificationPermissionRequested -> PermissionUiState.DENIED
-            else -> PermissionUiState.NOT_REQUESTED
-        }
+        val notificationPermissionState =
+            when {
+                !showNotifications || notificationsGranted -> PermissionUiState.GRANTED
+                notificationPermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
+                settings.notificationPermissionRequested -> PermissionUiState.DENIED
+                else -> PermissionUiState.NOT_REQUESTED
+            }
 
         return TrackingBannerState(
             phonePermissionState = phonePermissionState,
             showUsageAccessBanner = !usageGranted,
             showTrafficErrorBanner =
-                (traffic is TrackingStatus.Error &&
-                    traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
+                (
+                    traffic is TrackingStatus.Error &&
+                        traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                ),
             showCallsErrorBanner =
-                (calls is TrackingStatus.Error &&
-                    calls.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
+                (
+                    calls is TrackingStatus.Error &&
+                        calls.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                ),
             showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
             showShortcutsErrorBanner = shortcuts is TrackingStatus.Error,
             notificationPermissionState = notificationPermissionState,

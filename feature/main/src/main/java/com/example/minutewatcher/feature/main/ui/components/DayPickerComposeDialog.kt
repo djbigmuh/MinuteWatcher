@@ -141,4 +141,3 @@ fun DayPickerComposeDialog(
 }
 
 private const val MAX_DAYS = 31
-

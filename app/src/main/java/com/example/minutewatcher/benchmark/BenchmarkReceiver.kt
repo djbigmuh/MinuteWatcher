@@ -14,11 +14,13 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class BenchmarkReceiver : BroadcastReceiver() {
-
     @Inject
     lateinit var benchmarkUseCase: BenchmarkUseCase
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (intent.action == ACTION_POPULATE_DATA) {
             val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
 

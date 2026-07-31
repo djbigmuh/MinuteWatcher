@@ -42,12 +42,12 @@ class AppSearchWrapperImpl
             return AppSearchSessionWrapperImpl(future.await())
         }
 
-        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest {
-            return SetSchemaRequest.Builder()
+        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest =
+            SetSchemaRequest
+                .Builder()
                 .setForceOverride(forceOverride)
                 .addDocumentClasses(UsageDocument::class.java)
                 .build()
-        }
     }
 
 private class AppSearchSessionWrapperImpl(

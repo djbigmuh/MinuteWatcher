@@ -3,8 +3,8 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.common.di.ApplicationScope
-import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.domain.WidgetUpdater
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -33,5 +33,3 @@ class WidgetUpdaterImpl
             }
         }
     }
-
-

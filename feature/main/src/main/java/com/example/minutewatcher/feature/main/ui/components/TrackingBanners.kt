@@ -15,9 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.TrackingBannerState
-import com.example.minutewatcher.core.model.PermissionUiState
 
 @Composable
 fun TrackingBanners(

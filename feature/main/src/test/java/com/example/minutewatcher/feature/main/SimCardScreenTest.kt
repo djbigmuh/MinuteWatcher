@@ -15,7 +15,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class SimCardScreenTest {
     @get:Rule
-    val composeTestRule = androidx.compose.ui.test.junit4.v2.createComposeRule()
+    val composeTestRule =
+        androidx.compose.ui.test.junit4.v2
+            .createComposeRule()
 
     @Test
     fun emptyState_isDisplayed() {

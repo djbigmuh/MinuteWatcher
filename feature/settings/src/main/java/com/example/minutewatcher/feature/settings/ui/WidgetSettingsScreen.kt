@@ -48,8 +48,8 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.core.model.SimSettingsState
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.settings.ui.components.WidgetPreview
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
@@ -410,4 +410,3 @@ fun SimSettingsSection(
         }
     }
 }
-
