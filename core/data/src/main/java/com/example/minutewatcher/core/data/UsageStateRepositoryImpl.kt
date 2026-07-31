@@ -46,7 +46,7 @@ class UsageStateRepositoryImpl
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val simIdentityRepository: SimIdentityRepository,
+        simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val semanticCapabilities: SemanticCapabilities,
         private val semanticVersion: SemanticVersion,

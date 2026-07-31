@@ -17,10 +17,6 @@ class FixedTimeProvider(
         currentRealtime = realtime
     }
 
-    fun setUptime(uptime: Long) {
-        currentUptime = uptime
-    }
-
     fun advance(millis: Long) {
         currentTime += millis
         currentRealtime += millis
