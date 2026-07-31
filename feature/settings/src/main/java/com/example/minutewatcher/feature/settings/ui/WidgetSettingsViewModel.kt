@@ -121,7 +121,7 @@ class WidgetSettingsViewModel
             viewModelScope.launch {
                 try {
                     loader.save(currentState)
-                    dataChangeNotifier.notifyDataChanged()
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
                     onComplete(true)
                 } catch (e: CancellationException) {
                     throw e

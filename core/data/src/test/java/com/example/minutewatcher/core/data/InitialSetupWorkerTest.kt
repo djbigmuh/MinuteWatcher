@@ -53,6 +53,16 @@ class InitialSetupWorkerTest {
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
+        val emptySnapshot = com.example.minutewatcher.core.model.GlobalSnapshot(
+            version = com.example.minutewatcher.core.model.SchemaVersion(1, 0, 0),
+            timestamp = 0L,
+            simSnapshots = emptyList(),
+            capabilities = emptyList(),
+        )
+        runTest {
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(emptySnapshot))
+        }
+
         worker =
             InitialSetupWorker(
                 context,

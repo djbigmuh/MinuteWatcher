@@ -43,6 +43,7 @@ class AppSettingsRepositoryImpl @Inject constructor(
                     widgetBackgroundColor = Constants.UI.DEFAULT_BG_COLOR,
                     migrationV1Completed = false,
                     onboardingCompleted = false,
+                    benchmarkSimCount = 0,
                 ),
             )
 
@@ -75,6 +76,7 @@ class AppSettingsRepositoryImpl @Inject constructor(
             prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
             prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
             prefs[SettingsKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
+            prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
         }
     }
 
@@ -94,5 +96,6 @@ class AppSettingsRepositoryImpl @Inject constructor(
             onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: false,
             notificationPermissionRequested = this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: false,
             phonePermissionRequested = this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: false,
+            benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: 0,
         )
 }

@@ -68,61 +68,63 @@ fun WidgetPreview(
                 fontSize = 14.sp,
             )
         } else {
-            if (uiState.isHorizontal && simUiStates.size >= 2) {
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[0], uiState)
-                    }
-                    if (uiState.showSeparator) {
-                        val separatorColor = if (uiState.useSystemColors) {
-                            androidx.compose.material3.MaterialTheme.colorScheme.outline
-                        } else {
-                            Color(simUiStates[0].secondaryTextColor).copy(alpha = 0.5f)
-                        }
-                        Spacer(
-                            modifier =
-                                Modifier
-                                    .width(1.dp)
-                                    .fillMaxHeight()
-                                    .background(separatorColor),
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[1], uiState)
-                    }
+            MultiSimPreviewLayout(simUiStates, uiState)
+        }
+    }
+}
+
+@Composable
+private fun MultiSimPreviewLayout(
+    sims: List<SimUiState>,
+    uiState: WidgetUiState,
+) {
+    if (uiState.isHorizontal) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            sims.forEachIndexed { index, sim ->
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    SimItemPreview(sim, uiState)
                 }
-            } else if (!uiState.isHorizontal && simUiStates.size >= 2) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[0], uiState)
+                if (uiState.showSeparator && index < sims.size - 1) {
+                    val separatorColor = if (uiState.useSystemColors) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.outline
+                    } else {
+                        Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
                     }
-                    if (uiState.showSeparator) {
-                        val separatorColor = if (uiState.useSystemColors) {
-                            androidx.compose.material3.MaterialTheme.colorScheme.outline
-                        } else {
-                            Color(simUiStates[0].secondaryTextColor).copy(alpha = 0.5f)
-                        }
-                        Spacer(
-                            modifier =
-                                Modifier
-                                    .height(1.dp)
-                                    .fillMaxWidth()
-                                    .background(separatorColor),
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        SimItemPreview(simUiStates[1], uiState)
-                    }
+                    Spacer(
+                        modifier =
+                            Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(separatorColor),
+                    )
                 }
-            } else {
-                Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                    SimItemPreview(simUiStates[0], uiState)
+            }
+        }
+    } else {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            sims.forEachIndexed { index, sim ->
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    SimItemPreview(sim, uiState)
+                }
+                if (uiState.showSeparator && index < sims.size - 1) {
+                    val separatorColor = if (uiState.useSystemColors) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.outline
+                    } else {
+                        Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
+                    }
+                    Spacer(
+                        modifier =
+                            Modifier
+                                .height(1.dp)
+                                .fillMaxWidth()
+                                .background(separatorColor),
+                    )
                 }
             }
         }

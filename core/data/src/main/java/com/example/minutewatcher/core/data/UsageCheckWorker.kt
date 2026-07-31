@@ -73,7 +73,7 @@ class UsageCheckWorker
             autoResetUseCase.performAutoReset(usageStateRepository.observeSnapshot().value)
             trafficTracker.updateTrafficUsage()
 
-            val finalSnapshot = usageStateRepository.refresh()
+            val finalSnapshot = usageStateRepository.refresh().snapshot
             dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
             val appSettings = appSettingsRepository.getAppSettings().first()

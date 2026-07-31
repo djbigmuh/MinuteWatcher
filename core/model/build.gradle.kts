@@ -1,48 +1,20 @@
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
+// core:model is a pure Kotlin JVM module containing data classes and business logic.
 plugins {
-    id("minutewatcher.android-library")
-    alias(libs.plugins.kotlinKsp)
+    `java-library`
+    kotlin("jvm")
 }
 
-kotlin {
-    jvmToolchain(21)
-}
-
-android {
-    namespace = "com.example.minutewatcher.core.model"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        buildConfig = true
-    }
-
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-        }
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
 dependencies {
-    implementation(libs.androidxAppcompat)
     implementation(libs.kotlinxCoroutinesCore)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockingCore)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.kotlinxCoroutinesTesting)
-    testImplementation(libs.robolectric)
 }
-
-
-

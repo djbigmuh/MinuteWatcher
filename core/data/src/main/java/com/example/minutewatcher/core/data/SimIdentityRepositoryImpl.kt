@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -26,8 +27,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -46,11 +49,24 @@ class SimIdentityRepositoryImpl @Inject constructor(
     permissionStateNotifier: PermissionStateNotifier,
     @SimDataStore private val dataStore: DataStore<Preferences>,
     private val seedRepository: SimIdentitySeedRepository,
+    private val appSettingsRepository: AppSettingsRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) : SimIdentityRepository {
 
-    private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+    private val seedFlow: Flow<String> =
         seedRepository.getSeed()
+            .map { seed ->
+                if (seed.isEmpty()) {
+                    seedRepository.getOrCreateSeed { java.util.UUID.randomUUID().toString() }
+                } else {
+                    seed
+                }
+            }
+            .filter { it.isNotEmpty() }
+            .distinctUntilChanged()
+
+    private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
+        seedFlow
             .flatMapLatest { seed ->
                 callbackFlow {
                     val listener =
@@ -91,6 +107,11 @@ class SimIdentityRepositoryImpl @Inject constructor(
                         }
                     }
 
+                    // Initial fetch
+                    if (permissionManager.hasPhoneStatePermission()) {
+                        trySend(getActiveSimsInternal(seed))
+                    }
+
                     awaitClose {
                         if (isListenerRegistered) {
                             subscriptionManager.removeOnSubscriptionsChangedListener(listener)
@@ -98,17 +119,54 @@ class SimIdentityRepositoryImpl @Inject constructor(
                     }
                 }
             }
-            .distinctUntilChanged()
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = emptyList(),
+
+    private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+        combine(
+            physicalActiveSims,
+            appSettingsRepository.observeAppSettings(),
+            seedFlow
+        ) { physical, settings, seed ->
+            if (settings.benchmarkSimCount > 0) {
+                generateMockActiveSims(settings.benchmarkSimCount, seed)
+            } else {
+                physical
+            }
+        }
+        .stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList(),
+        )
+
+    private fun generateMockActiveSims(count: Int, seed: String): List<ActiveSimInfo> {
+        val safeCount = count.coerceIn(0, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
+        return (0 until safeCount).map { i ->
+            val identity = SimIdentity(
+                stableId = "sim_$i",
+                subscriptionId = i + 1000,
+                slotIndex = i,
+                source = IdentitySource.SLOT_FALLBACK,
             )
 
-    private suspend fun getSeed(): String =
-        seedRepository.getOrCreateSeed {
-            java.util.UUID.randomUUID().toString()
+            // Note: saveSimIdentityInfo is suspend and can't be easily called here.
+            // However, the identities "sim_$i" with slotIndex=i are predictable.
+            // We should ensure they are saved when used.
+            scope.launch { saveSimIdentityInfo(identity) }
+
+            ActiveSimInfo(
+                identity = identity,
+                slotIndex = i,
+                subscriptionId = identity.subscriptionId ?: (i + 1000),
+                displayName = "SIM ${i + 1}",
+                carrierName = "Mock Carrier ${i + 1}",
+                mccMnc = "001001",
+                isDefaultData = i == 0,
+                isDefaultVoice = i == 0,
+            )
         }
+    }
+
+    private suspend fun getSeed(): String = seedFlow.first()
 
     override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
@@ -138,9 +196,7 @@ class SimIdentityRepositoryImpl @Inject constructor(
             subscriptionId = null,
             slotIndex = slot,
             source = IdentitySource.SLOT_FALLBACK,
-        ).also { fallback ->
-            saveSimIdentityInfo(fallback)
-        }
+        )
     }
 
     private suspend fun saveSimIdentityInfo(identity: SimIdentity) {

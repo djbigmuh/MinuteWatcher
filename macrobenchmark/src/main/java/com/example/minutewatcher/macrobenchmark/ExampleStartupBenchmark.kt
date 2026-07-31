@@ -37,12 +37,8 @@ class ExampleStartupBenchmark {
             iterations = 5,
             startupMode = StartupMode.COLD,
             setupBlock = {
-                // Populate data before benchmark
-                device.executeShellCommand(
-                    "am broadcast -a com.example.minutewatcher.benchmark.POPULATE_DATA " +
-                        "-n com.example.minutewatcher/com.example.minutewatcher.benchmark.BenchmarkReceiver " +
-                        "--ei sim_count 2"
-                )
+                grantBenchmarkPermissions()
+                populateBenchmarkData(2)
             }
         ) {
             pressHome()

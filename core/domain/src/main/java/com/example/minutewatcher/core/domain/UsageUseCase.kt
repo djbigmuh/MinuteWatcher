@@ -12,4 +12,6 @@ interface UsageUseCase {
         slot: Int,
         remainingGb: Float,
     )
+
+    suspend fun resetCounters(slot: Int)
 }

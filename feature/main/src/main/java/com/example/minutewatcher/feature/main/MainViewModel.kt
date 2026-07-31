@@ -10,33 +10,27 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.feature.main.state.MainDialogStateHolder
+import com.example.minutewatcher.feature.main.state.SimRefreshStateHolder
+import com.example.minutewatcher.feature.main.state.TrackingBannerStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
-
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
@@ -45,7 +39,6 @@ class MainViewModel
     @Inject
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
-        private val simUsageRepository: SimUsageRepository,
         private val simLimitsRepository: SimLimitsRepository,
         private val appSettingsRepository: AppSettingsRepository,
         private val usageStateRepository: UsageStateRepository,
@@ -54,33 +47,38 @@ class MainViewModel
         private val settingsUseCase: SettingsUseCase,
         permissionRepository: PermissionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
-        private val savedStateHandle: SavedStateHandle,
+        savedStateHandle: SavedStateHandle,
         @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
+        private val dialogStateHolder = MainDialogStateHolder(savedStateHandle)
+        private val bannerStateHolder = TrackingBannerStateHolder(
+            usageStateRepository = usageStateRepository,
+            permissionRepository = permissionRepository,
+            appSettingsRepository = appSettingsRepository,
+            scope = viewModelScope,
+            stateFlowTimeout = STATE_FLOW_TIMEOUT
+        )
+        private val refreshStateHolder = SimRefreshStateHolder(
+            usageUseCase = usageUseCase,
+            usageStateRepository = usageStateRepository,
+            ioDispatcher = ioDispatcher
+        )
+
         // Dialog States
-        val showLimitDialog = savedStateHandle.getStateFlow<LimitDialogData?>("limit_dialog", null)
-        val showDayDialog = savedStateHandle.getStateFlow<DayDialogData?>("day_dialog", null)
-        val showAdjustDialog = savedStateHandle.getStateFlow<AdjustDialogData?>("adjust_dialog", null)
-        val showTrafficLimitationDialog = savedStateHandle.getStateFlow("traffic_limitation_dialog", false)
-        val showUsageAccessDialog = savedStateHandle.getStateFlow("usage_access_dialog", false)
+        val showLimitDialog = dialogStateHolder.showLimitDialog
+        val showDayDialog = dialogStateHolder.showDayDialog
+        val showAdjustDialog = dialogStateHolder.showAdjustDialog
+        val showTrafficLimitationDialog = dialogStateHolder.showTrafficLimitationDialog
+        val showUsageAccessDialog = dialogStateHolder.showUsageAccessDialog
 
-        fun setLimitDialog(data: LimitDialogData?) { savedStateHandle["limit_dialog"] = data }
-        fun setDayDialog(data: DayDialogData?) { savedStateHandle["day_dialog"] = data }
-        fun setAdjustDialog(data: AdjustDialogData?) { savedStateHandle["adjust_dialog"] = data }
-        fun setTrafficLimitationDialog(show: Boolean) { savedStateHandle["traffic_limitation_dialog"] = show }
-        fun setUsageAccessDialog(show: Boolean) { savedStateHandle["usage_access_dialog"] = show }
+        fun setLimitDialog(data: LimitDialogData?) = dialogStateHolder.setLimitDialog(data)
+        fun setDayDialog(data: DayDialogData?) = dialogStateHolder.setDayDialog(data)
+        fun setAdjustDialog(data: AdjustDialogData?) = dialogStateHolder.setAdjustDialog(data)
+        fun setTrafficLimitationDialog(show: Boolean) = dialogStateHolder.setTrafficLimitationDialog(show)
+        fun setUsageAccessDialog(show: Boolean) = dialogStateHolder.setUsageAccessDialog(show)
 
-        private val isPhonePermissionPermanentlyDeniedFlow = MutableStateFlow(false)
-
-        fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
-            isPhonePermissionPermanentlyDeniedFlow.value = denied
-        }
-
-        private val isNotificationPermissionPermanentlyDeniedFlow = MutableStateFlow(false)
-
-        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
-            isNotificationPermissionPermanentlyDeniedFlow.value = denied
-        }
+        fun setPhonePermissionPermanentlyDenied(denied: Boolean) = bannerStateHolder.setPhonePermissionPermanentlyDenied(denied)
+        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) = bannerStateHolder.setNotificationPermissionPermanentlyDenied(denied)
 
         fun setNotificationPermissionRequested() {
             viewModelScope.launch {
@@ -94,8 +92,7 @@ class MainViewModel
             }
         }
 
-        private val _showOnboardingDialog = MutableStateFlow(false)
-        val showOnboardingDialog: StateFlow<Boolean> = _showOnboardingDialog.asStateFlow()
+        val showOnboardingDialog: StateFlow<Boolean> = dialogStateHolder.showOnboardingDialog
 
         val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> =
             appSettingsRepository
@@ -107,64 +104,14 @@ class MainViewModel
                 )
 
         fun completeOnboarding() {
-            _showOnboardingDialog.value = false
+            dialogStateHolder.setShowOnboardingDialog(false)
             viewModelScope.launch {
                 appSettingsRepository.updateAppSettings { it.copy(onboardingCompleted = true) }
             }
         }
 
-        val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
-            usageStateRepository
-                .observeTrackingStatus()
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
-                    initialValue = emptyMap(),
-                )
-
-
-        val trackingBannerState: StateFlow<TrackingBannerState> =
-            combine(
-                combine(
-                    trackingStatus,
-                    permissionRepository.phoneStatePermissionGranted,
-                    permissionRepository.usageStatsPermissionGranted,
-                ) { statusMap, phoneGranted, usageGranted ->
-                    Triple(statusMap, phoneGranted, usageGranted)
-                },
-                combine(
-                    permissionRepository.notificationPermissionGranted,
-                    isPhonePermissionPermanentlyDeniedFlow,
-                    isNotificationPermissionPermanentlyDeniedFlow,
-                    appSettingsRepository.observeAppSettings(),
-                ) { notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings ->
-                    BannerInputsPart2(notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings)
-                },
-            ) { part1, part2 ->
-                val (statusMap, phoneGranted, usageGranted) = part1
-                val (notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings) = part2
-
-                TrackingBannerMapper.mapToBannerState(
-                    statusMap = statusMap,
-                    phoneGranted = phoneGranted,
-                    usageGranted = usageGranted,
-                    notificationsGranted = notificationsGranted,
-                    phonePermanentlyDenied = phonePermanentlyDenied,
-                    notificationPermanentlyDenied = notificationPermanentlyDenied,
-                    settings = settings
-                )
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
-                initialValue = TrackingBannerState(),
-            )
-
-        private data class BannerInputsPart2(
-            val notificationsGranted: Boolean,
-            val phonePermanentlyDenied: Boolean,
-            val notificationPermanentlyDenied: Boolean,
-            val settings: com.example.minutewatcher.core.model.AppSettings,
-        )
+        val trackingStatus: StateFlow<Map<String, TrackingStatus>> = bannerStateHolder.trackingStatus
+        val trackingBannerState: StateFlow<TrackingBannerState> = bannerStateHolder.trackingBannerState
 
         val uiState: StateFlow<SimCardListState> =
             usageStateRepository
@@ -179,14 +126,8 @@ class MainViewModel
                     initialValue = SimCardListState.Loading,
                 )
 
-        private val _refreshStatus = MutableStateFlow<RefreshState>(RefreshState.Idle)
-        val refreshStatus: StateFlow<RefreshState> = _refreshStatus.asStateFlow()
-
-        fun consumeRefreshStatus() {
-            _refreshStatus.value = RefreshState.Idle
-        }
-
-        private val simCheckMutex = Mutex()
+        val refreshStatus: StateFlow<RefreshState> = refreshStateHolder.refreshStatus
+        fun consumeRefreshStatus() = refreshStateHolder.consumeRefreshStatus()
 
         val appTheme: StateFlow<AppTheme> =
             settingsUseCase.appTheme
@@ -204,7 +145,7 @@ class MainViewModel
             viewModelScope.launch(ioDispatcher) {
                 val settings = appSettingsRepository.getAppSettings().first()
                 if (!settings.onboardingCompleted) {
-                    _showOnboardingDialog.value = true
+                    dialogStateHolder.setShowOnboardingDialog(true)
                 }
                 val snapshot = usageStateRepository.observeSnapshot().value
                 autoResetUseCase.performAutoReset(snapshot)
@@ -220,12 +161,16 @@ class MainViewModel
 
         fun refreshSimCards() {
             viewModelScope.launch {
-                refreshSimCardsInternal()
+                refreshStateHolder.refreshSimCardsInternal()
             }
         }
 
         fun retryAppSearch() {
             usageStateRepository.recoverTracking("appsearch")
+        }
+
+        fun retryCalls() {
+            usageStateRepository.recoverTracking("calls")
         }
 
         fun retryShortcuts() {
@@ -239,36 +184,15 @@ class MainViewModel
 
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
-                refreshSimCardsInternal()
+                refreshStateHolder.refreshSimCardsInternal()
                 onComplete()
             }
         }
 
-        private suspend fun refreshSimCardsInternal() =
-            withContext(ioDispatcher) {
-                val acquired =
-                    withTimeoutOrNull(2.seconds) {
-                        simCheckMutex.withLock {
-                            _refreshStatus.value = RefreshState.Loading
-                            try {
-                                usageUseCase.refreshOperatorInfo()
-                                usageStateRepository.refresh()
-                                _refreshStatus.value = RefreshState.Success
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                com.example.minutewatcher.core.common.util.AppLogger
-                                    .e("Error refreshing SIM cards", e)
-                                _refreshStatus.value = RefreshState.Error(e.message)
-                            }
-                            true
-                        }
-                    } ?: false
-
-                if (!acquired) {
-                    _refreshStatus.value = RefreshState.Error("Refresh timed out")
-                }
-            }
+        private suspend fun refreshAndNotify(force: Boolean = true) {
+            refreshStateHolder.refreshSimCardsInternal()
+            dataChangeNotifier.notifyDataChanged(updateWidget = true, force = force)
+        }
 
         fun notifyDataChanged(force: Boolean = false) {
             viewModelScope.launch {
@@ -299,17 +223,14 @@ class MainViewModel
             viewModelScope.launch(ioDispatcher) {
                 val identity = simIdentityRepository.getIdentity(slot)
                 simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
-                refreshSimCards()
-                notifyDataChanged(force = true)
+                refreshAndNotify()
             }
         }
 
         fun resetUsage(slot: Int) {
             viewModelScope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simUsageRepository.resetSimUsage(identity)
-                refreshSimCards()
-                notifyDataChanged(force = true)
+                usageUseCase.resetCounters(slot)
+                refreshAndNotify()
             }
         }
 
@@ -327,7 +248,7 @@ class MainViewModel
                         simLimitsRepository.getAutoResetDay(identity).first()
                     }
                 simLimitsRepository.setAutoReset(identity, currentDay, enabled)
-                refreshSimCards()
+                refreshAndNotify()
             }
         }
 
@@ -345,7 +266,7 @@ class MainViewModel
                         simLimitsRepository.getAutoReset(identity).first()
                     }
                 simLimitsRepository.setAutoReset(identity, day, enabled)
-                refreshSimCards()
+                refreshAndNotify()
             }
         }
 
@@ -355,8 +276,7 @@ class MainViewModel
         ) {
             viewModelScope.launch(ioDispatcher) {
                 usageUseCase.adjustMinutes(slot, remainingMinutes)
-                refreshSimCards()
-                notifyDataChanged(force = true)
+                refreshAndNotify()
             }
         }
 
@@ -366,8 +286,7 @@ class MainViewModel
         ) {
             viewModelScope.launch(ioDispatcher) {
                 usageUseCase.adjustTraffic(slot, remainingGb)
-                refreshSimCards()
-                notifyDataChanged(force = true)
+                refreshAndNotify()
             }
         }
 

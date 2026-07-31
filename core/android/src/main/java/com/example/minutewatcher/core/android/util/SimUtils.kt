@@ -6,14 +6,13 @@ import java.util.Locale
 
 object SimUtils {
     fun getOperatorIconResource(operatorName: String): Int {
-        val cleanName = operatorName.lowercase(Locale.ROOT)
         return when {
-            cleanName.contains("mts") -> R.drawable.ic_mts
-            cleanName.contains("beeline") -> R.drawable.ic_beeline
-            cleanName.contains("megafon") -> R.drawable.ic_megafon
-            cleanName.contains("tele2") || cleanName.contains("t2") -> R.drawable.ic_tele2
-            cleanName.contains("mgts") -> R.drawable.ic_mgts
-            cleanName.contains("yota") -> R.drawable.ic_yota
+            operatorName.hasToken("mts") -> R.drawable.ic_mts
+            operatorName.hasToken("beeline") -> R.drawable.ic_beeline
+            operatorName.hasToken("megafon") -> R.drawable.ic_megafon
+            operatorName.hasToken("tele2") || operatorName.hasToken("t2") -> R.drawable.ic_tele2
+            operatorName.hasToken("mgts") -> R.drawable.ic_mgts
+            operatorName.hasToken("yota") -> R.drawable.ic_yota
             else -> R.drawable.ic_unknown
         }
     }
@@ -22,34 +21,30 @@ object SimUtils {
         context: Context,
         operatorName: String,
     ): String {
-        val name = operatorName.lowercase(Locale.ROOT)
         val localizedContext = getLocalizedContext(context)
 
         return try {
             when {
-                name.contains("mts") -> getStringSafe(localizedContext, R.string.operator_mts, "MTS")
-                name.contains("beeline") -> getStringSafe(localizedContext, R.string.operator_beeline, "Beeline")
-                name.contains("megafon") -> getStringSafe(localizedContext, R.string.operator_megafon, "MegaFon")
-                name.contains("tele2") || name.contains("t2") -> getStringSafe(localizedContext, R.string.operator_tele2, "Tele2")
-                name.contains("mgts") -> getStringSafe(localizedContext, R.string.operator_mgts, "MGTS")
-                name.contains("yota") -> getStringSafe(localizedContext, R.string.operator_yota, "Yota")
-                name.contains("vodafone") -> getStringSafe(localizedContext, R.string.operator_vodafone, "Vodafone")
-                name.contains(
-                    "t-mobile",
-                ) ||
-                    name.contains("telekom") -> getStringSafe(localizedContext, R.string.operator_t_mobile, "T-Mobile")
-                name.contains("orange") -> getStringSafe(localizedContext, R.string.operator_orange, "Orange")
-                name.contains("o2") -> "O2"
-                name.contains("at&t") -> getStringSafe(localizedContext, R.string.operator_att, "AT&T")
-                name.contains("verizon") -> getStringSafe(localizedContext, R.string.operator_verizon, "Verizon")
-                name.contains("tim") -> getStringSafe(localizedContext, R.string.operator_tim, "TIM")
-                name.contains("sfr") -> getStringSafe(localizedContext, R.string.operator_sfr, "SFR")
-                name.contains("bouygues") -> getStringSafe(localizedContext, R.string.operator_bouygues, "Bouygues")
-                name.contains("windtre") -> getStringSafe(localizedContext, R.string.operator_windtre, "WindTre")
-                name.contains("movistar") -> "Movistar"
-                name.contains("claro") -> "Claro"
-                name.contains("airtel") -> "Airtel"
-                name.contains("jio") -> "Jio"
+                operatorName.hasToken("mts") -> getStringSafe(localizedContext, R.string.operator_mts, "MTS")
+                operatorName.hasToken("beeline") -> getStringSafe(localizedContext, R.string.operator_beeline, "Beeline")
+                operatorName.hasToken("megafon") -> getStringSafe(localizedContext, R.string.operator_megafon, "MegaFon")
+                operatorName.hasToken("tele2") || operatorName.hasToken("t2") -> getStringSafe(localizedContext, R.string.operator_tele2, "Tele2")
+                operatorName.hasToken("mgts") -> getStringSafe(localizedContext, R.string.operator_mgts, "MGTS")
+                operatorName.hasToken("yota") -> getStringSafe(localizedContext, R.string.operator_yota, "Yota")
+                operatorName.hasToken("vodafone") -> getStringSafe(localizedContext, R.string.operator_vodafone, "Vodafone")
+                operatorName.hasToken("t-mobile") || operatorName.hasToken("telekom") -> getStringSafe(localizedContext, R.string.operator_t_mobile, "T-Mobile")
+                operatorName.hasToken("orange") -> getStringSafe(localizedContext, R.string.operator_orange, "Orange")
+                operatorName.hasToken("o2") -> "O2"
+                operatorName.hasToken("at&t") -> getStringSafe(localizedContext, R.string.operator_att, "AT&T")
+                operatorName.hasToken("verizon") -> getStringSafe(localizedContext, R.string.operator_verizon, "Verizon")
+                operatorName.hasToken("tim") -> getStringSafe(localizedContext, R.string.operator_tim, "TIM")
+                operatorName.hasToken("sfr") -> getStringSafe(localizedContext, R.string.operator_sfr, "SFR")
+                operatorName.hasToken("bouygues") -> getStringSafe(localizedContext, R.string.operator_bouygues, "Bouygues")
+                operatorName.hasToken("windtre") -> getStringSafe(localizedContext, R.string.operator_windtre, "WindTre")
+                operatorName.hasToken("movistar") -> "Movistar"
+                operatorName.hasToken("claro") -> "Claro"
+                operatorName.hasToken("airtel") -> "Airtel"
+                operatorName.hasToken("jio") -> "Jio"
                 else ->
                     if (operatorName.isNotEmpty()) {
                         if (operatorName.length > 15) operatorName.take(12) + "..." else operatorName
@@ -94,5 +89,12 @@ object SimUtils {
     }
 
     fun isInactiveSim(operatorName: String?): Boolean = operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
+
+    private fun String.hasToken(token: String): Boolean {
+        val tokens = lowercase(Locale.ROOT)
+            .split(Regex("[^a-z0-9&-]+"))
+            .filter { it.isNotEmpty() }
+        return tokens.contains(token.lowercase(Locale.ROOT))
+    }
 }
 

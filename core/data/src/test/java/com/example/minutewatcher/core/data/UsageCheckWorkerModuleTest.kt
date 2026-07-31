@@ -63,7 +63,7 @@ class UsageCheckWorkerModuleTest {
                 capabilities = emptyList(),
             )
         runTest {
-            whenever(usageStateRepository.refresh()).thenReturn(emptySnapshot)
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(emptySnapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         }
     }

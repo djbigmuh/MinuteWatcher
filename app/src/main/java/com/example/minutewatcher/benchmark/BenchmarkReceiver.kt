@@ -3,11 +3,9 @@ package com.example.minutewatcher.benchmark
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -20,21 +18,12 @@ class BenchmarkReceiver : BroadcastReceiver() {
     @Inject
     lateinit var benchmarkUseCase: BenchmarkUseCase
 
-    @Inject
-    @ApplicationScope
-    lateinit var applicationScope: CoroutineScope
-
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ACTION_POPULATE_DATA) {
             val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
-            val pendingResult = goAsync()
 
-            applicationScope.launch {
-                try {
-                    benchmarkUseCase.populateMockData(simCount)
-                } finally {
-                    pendingResult.finish()
-                }
+            runBlocking {
+                benchmarkUseCase.populateMockData(simCount)
             }
         }
     }

@@ -159,13 +159,15 @@ class UsageStateRepositoryImpl
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
-        override suspend fun refresh(): GlobalSnapshot =
+        override suspend fun refresh(): com.example.minutewatcher.core.domain.RefreshResult =
             coroutineScope {
                 val nextSnapshot = async { snapshotFlow.drop(1).first() }
                 dataRefreshNotifier.notifyRefresh()
-                withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() } ?: run {
+                withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() }?.let {
+                    com.example.minutewatcher.core.domain.RefreshResult.Success(it)
+                } ?: run {
                     AppLogger.w("UsageStateRepository: Refresh timed out after 2s, returning current snapshot")
-                    snapshotFlow.value
+                    com.example.minutewatcher.core.domain.RefreshResult.Timeout(snapshotFlow.value)
                 }
             }
 

@@ -16,6 +16,7 @@ class SettingsUseCaseTest {
 
     @Before
     fun setUp() {
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         settingsUseCase = SettingsUseCase(appSettingsRepository)
     }
 
@@ -23,6 +24,7 @@ class SettingsUseCaseTest {
     fun `appTheme flow maps correct value from repository`() = runTest {
         val expectedTheme = AppTheme.DARK
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(theme = expectedTheme)))
+        settingsUseCase = SettingsUseCase(appSettingsRepository)
 
         val actualTheme = settingsUseCase.appTheme.first()
 
@@ -33,6 +35,7 @@ class SettingsUseCaseTest {
     fun `appLanguage flow maps correct value from repository`() = runTest {
         val expectedLanguage = "ru"
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(language = expectedLanguage)))
+        settingsUseCase = SettingsUseCase(appSettingsRepository)
 
         val actualLanguage = settingsUseCase.appLanguage.first()
 

@@ -82,6 +82,8 @@ interface SimUsageRepository {
 
     suspend fun resetSimUsage(identity: String)
 
+    suspend fun resetSimUsageManual(identity: String)
+
     suspend fun resetSimUsageIfDue(
         identity: String,
         autoResetDay: Int,

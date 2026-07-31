@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.model.SimConstants
 import javax.inject.Inject
 
 class BenchmarkUseCaseImpl @Inject constructor(
@@ -17,7 +18,7 @@ class BenchmarkUseCaseImpl @Inject constructor(
 ) : BenchmarkUseCase {
 
     override suspend fun populateMockData(simCount: Int) {
-        val safeCount = simCount.coerceIn(1, 10)
+        val safeCount = simCount.coerceIn(1, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
         
         for (i in 0 until safeCount) {
             val identity = simIdentityRepository.getIdentity(i)
@@ -43,11 +44,15 @@ class BenchmarkUseCaseImpl @Inject constructor(
             )
         }
 
-        // Prevent onboarding dialog during benchmarks
+        // Prevent onboarding and permission dialogs during benchmarks
+        // Force English locale to ensure stable UI tests
         appSettingsRepository.updateAppSettings {
             it.copy(
                 onboardingCompleted = true,
-                notificationPermissionRequested = true
+                notificationPermissionRequested = true,
+                phonePermissionRequested = true,
+                language = "en",
+                benchmarkSimCount = safeCount
             )
         }
 

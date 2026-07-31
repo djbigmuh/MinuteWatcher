@@ -96,7 +96,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         if (snapshot.timestamp == 0L) {
             // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
             snapshot = withTimeoutOrNull(2000.milliseconds) {
-                usageRepository.refresh()
+                usageRepository.refresh().snapshot
             } ?: snapshot
         }
 
@@ -145,32 +145,25 @@ private fun WidgetContent(
     ) {
         val simUiStates = uiState.simUiStates.filter { it.showSim }
 
-        when {
-            simUiStates.size >= 2 -> {
-                DualSimLayout(context, simUiStates[0], simUiStates[1], uiState)
-            }
-            simUiStates.isNotEmpty() -> {
-                SingleSimLayout(context, simUiStates[0], uiState)
-            }
-            else -> {
-                Text(
-                    text = context.getString(com.example.minutewatcher.core.resources.R.string.no_data),
-                    style =
-                        TextStyle(
-                            fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                            color = noDataColor,
-                        ),
-                )
-            }
+        if (simUiStates.isEmpty()) {
+            Text(
+                text = context.getString(com.example.minutewatcher.core.resources.R.string.no_data),
+                style =
+                    TextStyle(
+                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                        color = noDataColor,
+                    ),
+            )
+        } else {
+            MultiSimLayout(context, simUiStates, uiState)
         }
     }
 }
 
 @Composable
-private fun DualSimLayout(
+private fun MultiSimLayout(
     context: Context,
-    sim1: SimUiState,
-    sim2: SimUiState,
+    sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
     if (uiState.isHorizontal) {
@@ -178,28 +171,27 @@ private fun DualSimLayout(
             modifier = GlanceModifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim1, uiState)
-            }
-            if (uiState.showSeparator) {
-                val separatorColor = if (uiState.useSystemColors) {
-                    GlanceTheme.colors.outline
-                } else {
-                    val color = androidx.compose.ui.graphics
-                        .Color(sim1.secondaryTextColor)
-                        .copy(alpha = 0.5f)
-                    ColorProvider(day = color, night = color)
+            sims.forEachIndexed { index, sim ->
+                Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
+                    SimItem(context, sim, uiState)
                 }
-                Spacer(
-                    modifier =
-                        GlanceModifier
-                            .width(1.dp)
-                            .fillMaxHeight()
-                            .background(separatorColor),
-                )
-            }
-            Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim2, uiState)
+                if (uiState.showSeparator && index < sims.size - 1) {
+                    val separatorColor = if (uiState.useSystemColors) {
+                        GlanceTheme.colors.outline
+                    } else {
+                        val color = androidx.compose.ui.graphics
+                            .Color(sims[0].secondaryTextColor)
+                            .copy(alpha = 0.5f)
+                        ColorProvider(day = color, night = color)
+                    }
+                    Spacer(
+                        modifier =
+                            GlanceModifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(separatorColor),
+                    )
+                }
             }
         }
     } else {
@@ -207,41 +199,29 @@ private fun DualSimLayout(
             modifier = GlanceModifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim1, uiState)
-            }
-            if (uiState.showSeparator) {
-                val separatorColor = if (uiState.useSystemColors) {
-                    GlanceTheme.colors.outline
-                } else {
-                    val color = androidx.compose.ui.graphics
-                        .Color(sim1.secondaryTextColor)
-                        .copy(alpha = 0.5f)
-                    ColorProvider(day = color, night = color)
+            sims.forEachIndexed { index, sim ->
+                Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
+                    SimItem(context, sim, uiState)
                 }
-                Spacer(
-                    modifier =
-                        GlanceModifier
-                            .height(1.dp)
-                            .fillMaxWidth()
-                            .background(separatorColor),
-                )
-            }
-            Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                SimItem(context, sim2, uiState)
+                if (uiState.showSeparator && index < sims.size - 1) {
+                    val separatorColor = if (uiState.useSystemColors) {
+                        GlanceTheme.colors.outline
+                    } else {
+                        val color = androidx.compose.ui.graphics
+                            .Color(sims[0].secondaryTextColor)
+                            .copy(alpha = 0.5f)
+                        ColorProvider(day = color, night = color)
+                    }
+                    Spacer(
+                        modifier =
+                            GlanceModifier
+                                .height(1.dp)
+                                .fillMaxWidth()
+                                .background(separatorColor),
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun SingleSimLayout(
-    context: Context,
-    sim: SimUiState,
-    uiState: WidgetUiState,
-) {
-    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        SimItem(context, sim, uiState)
     }
 }
 

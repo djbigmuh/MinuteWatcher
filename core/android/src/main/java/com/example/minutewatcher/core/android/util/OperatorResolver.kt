@@ -17,6 +17,8 @@ object OperatorResolver {
     @Volatile
     private var db: Map<String, String>? = null
 
+    private val genericSimRegex = Regex("^sim\\s*\\d*$", RegexOption.IGNORE_CASE)
+
     private val operatorResourceMap = mapOf(
         "operator_mts" to R.string.operator_mts,
         "operator_megafon" to R.string.operator_megafon,
@@ -93,7 +95,7 @@ object OperatorResolver {
         // If name is already a valid specific name, keep it
         if (operatorName.isNotEmpty() &&
             operatorName != "null" &&
-            !operatorName.contains("SIM", ignoreCase = true) &&
+            !genericSimRegex.matches(operatorName.trim()) &&
             !SimUtils.isInactiveSim(operatorName)
         ) {
             return operatorName

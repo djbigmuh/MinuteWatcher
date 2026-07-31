@@ -27,12 +27,8 @@ class ScrollBenchmark {
         startupMode = StartupMode.WARM,
         iterations = 5,
         setupBlock = {
-            // Populate data with 10 SIMs to ensure scrollable list
-            device.executeShellCommand(
-                "am broadcast -a com.example.minutewatcher.benchmark.POPULATE_DATA " +
-                    "-n com.example.minutewatcher/com.example.minutewatcher.benchmark.BenchmarkReceiver " +
-                    "--ei sim_count 10"
-            )
+            grantBenchmarkPermissions()
+            populateBenchmarkData(3)
         }
     ) {
         startActivityAndWait()

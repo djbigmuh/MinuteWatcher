@@ -128,7 +128,7 @@ class UsageCheckWorkerTest {
                     capabilities = emptyList(),
                 )
 
-            whenever(usageStateRepository.refresh()).thenReturn(snapshot)
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
@@ -179,7 +179,7 @@ class UsageCheckWorkerTest {
                     capabilities = emptyList(),
                 )
 
-            whenever(usageStateRepository.refresh()).thenReturn(snapshot)
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))
@@ -218,7 +218,7 @@ class UsageCheckWorkerTest {
                 capabilities = emptyList()
             )
 
-            whenever(usageStateRepository.refresh()).thenReturn(snapshot)
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
@@ -259,7 +259,7 @@ class UsageCheckWorkerTest {
                 capabilities = emptyList()
             )
 
-            whenever(usageStateRepository.refresh()).thenReturn(snapshot)
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 950f, trafficLimit = 1000)))
@@ -285,7 +285,7 @@ class UsageCheckWorkerTest {
             Shadows.shadowOf(application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
 
             // 2. Setup mocks to return empty/idle state (which is what happens without permission)
-            whenever(usageStateRepository.refresh()).thenReturn(createEmptySnapshot())
+            whenever(usageStateRepository.refresh()).thenReturn(com.example.minutewatcher.core.domain.RefreshResult.Success(createEmptySnapshot()))
 
             // 3. Act
             val result = worker.doWork()

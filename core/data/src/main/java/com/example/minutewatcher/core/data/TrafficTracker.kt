@@ -74,6 +74,12 @@ class TrafficTracker
 
         private var inMemoryLastDataSubId: Int = -1
 
+        private data class TargetInfo(
+            val slot: Int,
+            val dataSubId: Int,
+            val skipDelta: Boolean,
+        )
+
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
                 try {
@@ -100,8 +106,8 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
-                    val targetInfo = getTargetSimInfo()
-                    if (targetInfo == null) {
+                    val target = getTargetSimInfo()
+                    if (target == null) {
                         if (!permissionManager.hasPhoneStatePermission()) {
                             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
                         } else {
@@ -110,7 +116,14 @@ class TrafficTracker
                         return@withLock
                     }
 
-                    val (targetSim, currentDataSubId) = targetInfo
+                    if (target.skipDelta) {
+                        _status.value = TrackingStatus.Active
+                        return@withLock
+                    }
+
+                    val targetSim = target.slot
+                    val currentDataSubId = target.dataSubId
+
                     val targetIdentity = simIdentityRepository.getIdentity(targetSim)
                     val usage = simUsageRepository.getSimUsage(targetIdentity).first()
                     val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
@@ -193,7 +206,7 @@ class TrafficTracker
             }
         }
 
-        private suspend fun getTargetSimInfo(): Pair<Int, Int>? {
+        private suspend fun getTargetSimInfo(): TargetInfo? {
             var targetSim = -1
             var currentDataSubId = -1
             try {
@@ -230,10 +243,10 @@ class TrafficTracker
                 }
                 callSessionRepository.setLastDataSubId(currentDataSubId)
                 inMemoryLastDataSubId = currentDataSubId
-                return null // Skip delta for the swap event
+                return TargetInfo(targetSim, currentDataSubId, skipDelta = true)
             }
 
-            return targetSim to currentDataSubId
+            return TargetInfo(targetSim, currentDataSubId, skipDelta = false)
         }
 
         private suspend fun findSingleActiveSimSlot(): Int? {

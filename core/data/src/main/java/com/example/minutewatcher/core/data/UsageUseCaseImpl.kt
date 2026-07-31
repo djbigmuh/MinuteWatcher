@@ -24,6 +24,7 @@ class UsageUseCaseImpl
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val simLimitsRepository: SimLimitsRepository,
+        private val trafficTracker: TrafficTracker,
         private val permissionManager: PermissionManager,
     ) : UsageUseCase {
         override suspend fun refreshOperatorInfo() {
@@ -78,5 +79,11 @@ class UsageUseCaseImpl
             val usedGb = usedMb / Constants.MB_PER_GB
             val adj = safeRemainingGb - (limitGb - usedGb)
             simUsageRepository.setTrafficAdjustment(identity, adj)
+        }
+
+        override suspend fun resetCounters(slot: Int) {
+            val identity = simIdentityRepository.getIdentity(slot)
+            simUsageRepository.resetSimUsageManual(identity)
+            trafficTracker.resetBaseline(identity)
         }
     }

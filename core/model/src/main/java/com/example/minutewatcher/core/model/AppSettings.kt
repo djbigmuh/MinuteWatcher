@@ -15,4 +15,5 @@ data class AppSettings(
     val onboardingCompleted: Boolean = false,
     val notificationPermissionRequested: Boolean = false,
     val phonePermissionRequested: Boolean = false,
+    val benchmarkSimCount: Int = 0,
 )

@@ -35,13 +35,21 @@ class MinuteWatcherApp :
 
         // Defer semantic layer initialization to improve cold start performance
         applicationScope.launch {
+            delay(5.seconds) // 5 seconds grace period for UI and primary setup
+
+            val snapshotFlow = usageStateRepository.observeSnapshot()
+
             try {
-                delay(5.seconds) // 5 seconds grace period for UI and primary setup
-                searchManager.initialize(usageStateRepository.observeSnapshot())
-                shortcutManager.initialize(usageStateRepository.observeSnapshot())
+                searchManager.initialize(snapshotFlow)
             } catch (e: Exception) {
-                AppLogger.e("Failed to initialize semantic layer", e)
+                AppLogger.e("Failed to initialize AppSearch", e)
                 searchManager.setError(e.message)
+            }
+
+            try {
+                shortcutManager.initialize(snapshotFlow)
+            } catch (e: Exception) {
+                AppLogger.e("Failed to initialize shortcuts", e)
                 shortcutManager.setError(e.message)
             }
         }

@@ -18,6 +18,7 @@ object TrackingBannerMapper {
         val traffic = statusMap["traffic"]
         val appsearch = statusMap["appsearch"]
         val shortcuts = statusMap["shortcuts"]
+        val calls = statusMap["calls"]
 
         val phonePermissionState = when {
             phoneGranted -> PermissionUiState.GRANTED
@@ -40,6 +41,9 @@ object TrackingBannerMapper {
             showTrafficErrorBanner =
                 (traffic is TrackingStatus.Error &&
                     traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
+            showCallsErrorBanner =
+                (calls is TrackingStatus.Error &&
+                    calls.type != TrackingStatus.ErrorType.PERMISSION_MISSING),
             showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
             showShortcutsErrorBanner = shortcuts is TrackingStatus.Error,
             notificationPermissionState = notificationPermissionState,

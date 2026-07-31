@@ -36,6 +36,7 @@ class SimRepositoryImplTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var seedRepository: SimIdentitySeedRepository
     private lateinit var permissionStateNotifier: PermissionStateNotifier
+    private lateinit var appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository
     private lateinit var permissionManager: com.example.minutewatcher.core.android.util.PermissionManager
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
@@ -45,6 +46,9 @@ class SimRepositoryImplTest {
         subscriptionManager = mock()
         permissionStateNotifier = mock()
         permissionManager = mock()
+        appSettingsRepository = mock {
+            on { observeAppSettings() } doReturn kotlinx.coroutines.flow.MutableStateFlow(com.example.minutewatcher.core.model.AppSettings())
+        }
 
         seedRepository = mock {
             on { getSeed() } doReturn flowOf("test_seed")
@@ -81,7 +85,7 @@ class SimRepositoryImplTest {
     fun testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage() =
         runTest {
             val identityRepo = SimIdentityRepositoryImpl(
-                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope
+                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope
             )
             val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
 
@@ -108,7 +112,7 @@ class SimRepositoryImplTest {
     fun testGetIdentity_DoesNotTriggerEditWhenUnchanged() =
         runTest {
             val identityRepo = SimIdentityRepositoryImpl(
-                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope
+                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope
             )
 
             val mockInfo = mock<android.telephony.SubscriptionInfo>()
@@ -168,5 +172,48 @@ class SimRepositoryImplTest {
             assertEquals(0f, usage.trafficUsed)
             assertEquals(0.5f, usage.trafficAdjustment)
             assertEquals(1.5f, (usage.trafficLimitMb / 1024f) + usage.trafficAdjustment, 0.001f)
+        }
+
+    @Test
+    fun testManualReset_ClearsEverythingEvenWithRollover() =
+        runTest {
+            val limitsRepo = SimLimitsRepositoryImpl(dataStore)
+            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val identity = "test_sim"
+
+            // 1. Setup limit, usage and rollover
+            limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
+            usageRepo.setMinutesUsed(identity, 80)
+            usageRepo.setTrafficUsed(identity, 512f)
+
+            // 2. Perform MANUAL reset
+            usageRepo.resetSimUsageManual(identity)
+
+            // 3. Verify EVERYTHING is cleared
+            val usage = usageRepo.getSimUsage(identity).first()
+            assertEquals(0, usage.minutesUsed)
+            assertEquals(0f, usage.trafficUsed)
+            assertEquals(0, usage.manualAdjustment)
+            assertEquals(0f, usage.trafficAdjustment)
+        }
+
+    @Test
+    fun testGetSimIdentity_DoesNotSaveFallback_WhenPermissionsMissing() =
+        runTest {
+            val identityRepo = SimIdentityRepositoryImpl(
+                context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope
+            )
+
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+            val identity = identityRepo.getSimIdentity(0)
+
+            assertEquals("sim_0", identity.stableId)
+            assertEquals(com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK, identity.source)
+
+            // Verify nothing was saved to DataStore
+            val prefs = dataStore.data.first()
+            assertEquals(0, prefs.asMap().size)
         }
 }

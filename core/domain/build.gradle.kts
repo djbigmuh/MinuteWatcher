@@ -31,8 +31,6 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))
-    implementation(libs.androidxDatastorePreferences)
-    implementation(libs.kotlinxCoroutinesGuava) // For Flow if needed, but core ktx is enough
 
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)

@@ -21,6 +21,7 @@ class UsageUseCaseImplTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
+    private val trafficTracker: TrafficTracker = mock()
     private val permissionManager: PermissionManager = mock()
     private lateinit var usageUseCase: UsageUseCaseImpl
 
@@ -31,6 +32,7 @@ class UsageUseCaseImplTest {
             simIdentityRepository,
             simUsageRepository,
             simLimitsRepository,
+            trafficTracker,
             permissionManager
         )
     }

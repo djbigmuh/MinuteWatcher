@@ -92,6 +92,21 @@ class SimUsageRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun resetSimUsageManual(identity: String) {
+        dataStore.edit { prefs ->
+            prefs[SimSettingsKeys.minutesUsedKey(identity)] = 0
+            prefs[SimSettingsKeys.trafficUsedKey(identity)] = 0f
+            prefs[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
+            prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
+            prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
+
+            prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
+            prefs[SettingsKeys.notifiedLowTrafficKey(identity)] = false
+            prefs[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+            prefs[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+        }
+    }
+
     override suspend fun resetSimUsageIfDue(identity: String, autoResetDay: Int, nowMillis: Long): Boolean {
         var didReset = false
         dataStore.edit { prefs ->

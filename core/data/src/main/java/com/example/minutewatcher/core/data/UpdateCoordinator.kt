@@ -10,11 +10,9 @@ import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.Lazy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,21 +31,16 @@ class UpdateCoordinator
         private val usageStateRepository: Lazy<UsageStateRepository>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val updateFlow =
-            MutableSharedFlow<Unit>(
-                extraBufferCapacity = 1,
-                onBufferOverflow = BufferOverflow.DROP_OLDEST,
-            )
 
         init {
             scope.launch {
-                updateFlow
+                usageStateRepository.get().observeSnapshot()
+                    .filter { it.timestamp > 0L }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                    .map { usageStateRepository.get().observeSnapshot().value }
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
                     }
-                    .collect { _ ->
+                    .collect {
                         widgetUpdater.updateAll()
                     }
             }
@@ -61,12 +54,8 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             dataRefreshNotifier.notifyRefresh(isManual = force)
-            if (updateWidget) {
-                if (force) {
-                    widgetUpdater.updateAll()
-                } else {
-                    updateFlow.emit(Unit)
-                }
+            if (updateWidget && force) {
+                widgetUpdater.updateAll()
             }
         }
     }

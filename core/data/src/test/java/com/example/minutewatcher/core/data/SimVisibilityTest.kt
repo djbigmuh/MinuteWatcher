@@ -34,6 +34,9 @@ class SimVisibilityTest {
     private val subscriptionManager: SubscriptionManager = mock()
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
+    private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock {
+        on { observeAppSettings() } doReturn kotlinx.coroutines.flow.MutableStateFlow(com.example.minutewatcher.core.model.AppSettings())
+    }
     private val dataStore: DataStore<Preferences> = mock {
         on { data } doReturn flowOf(androidx.datastore.preferences.core.emptyPreferences())
     }
@@ -57,7 +60,7 @@ class SimVisibilityTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
             val repository =
-                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope)
+                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope)
 
             val sims = repository.observeActiveSims().first()
             assertTrue(sims.isEmpty())
@@ -69,7 +72,7 @@ class SimVisibilityTest {
             // Initially no permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             val repository =
-                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope)
+                SimIdentityRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, appSettingsRepository, backgroundScope)
 
             val simsList = mutableListOf<List<ActiveSimInfo>>()
             val job =

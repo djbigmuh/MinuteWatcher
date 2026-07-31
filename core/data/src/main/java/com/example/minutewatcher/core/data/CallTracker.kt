@@ -15,12 +15,9 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,7 +28,7 @@ class CallTracker
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
-        appSettingsRepository: AppSettingsRepository,
+        private val appSettingsRepository: AppSettingsRepository,
         private val callSessionRepository: CallSessionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
@@ -50,11 +47,8 @@ class CallTracker
             }
         }
 
-        private val callTrackingEnabled =
-            appSettingsRepository
-                .getAppSettings()
-                .map { it.callTrackingEnabled }
-                .stateIn(scope, SharingStarted.Eagerly, false)
+        private suspend fun isCallTrackingEnabled(): Boolean =
+            appSettingsRepository.getAppSettings().first().callTrackingEnabled
 
         /**
          * Called on device boot to clean up any stale state.
@@ -70,7 +64,7 @@ class CallTracker
          */
         suspend fun onCallStarted(subId: Int) {
             try {
-                if (!callTrackingEnabled.value) return
+                if (!isCallTrackingEnabled()) return
 
                 val effectiveSubId =
                     if (subId == -1) {
@@ -230,7 +224,7 @@ class CallTracker
                 // Clear session state first
                 clearSession(subId)
 
-                if (!callTrackingEnabled.value) {
+                if (!isCallTrackingEnabled()) {
                     AppLogger.d("Call tracking disabled, skipping minutes increment for subId $subId")
                     return
                 }

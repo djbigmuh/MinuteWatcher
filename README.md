@@ -4,7 +4,7 @@ MinuteWatcher is an Android application designed to track your mobile carrier's 
 
 ## Key Features
 
-- **Multi-SIM Support**: Monitor up to 2 SIM cards simultaneously with independent limits and reset periods.
+- **Multi-SIM Support**: Monitor up to 3 SIM cards simultaneously with independent limits and reset periods.
 - **Customizable Widgets**: Multiple layout modes (including high-detail "Six Lines") with adjustable transparency, colors, and font sizes.
 - **Smart Tracking**: Automatically tracks voice calls and mobile data usage using system APIs.
 - **Manual Adjustments**: Easily correct usage values if they drift from your carrier's actual data.
