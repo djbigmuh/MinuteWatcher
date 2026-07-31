@@ -49,12 +49,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.model.SimSettingsState
+import com.example.minutewatcher.core.model.WidgetSettingsState
+import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.settings.ui.components.WidgetPreview
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WidgetSettingsScreen(
     viewModel: WidgetSettingsViewModel,
@@ -64,60 +65,68 @@ fun WidgetSettingsScreen(
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val loadError by viewModel.loadError.collectAsStateWithLifecycle()
-    val scrollState = rememberScrollState()
 
     if (loadError) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(id = R.string.error),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.retryLoad() }) {
-                    Text(text = stringResource(id = R.string.action_retry))
-                }
-            }
-        }
+        ErrorState(onRetry = { viewModel.retryLoad() })
         return
     }
 
-    if (state == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+    val nonNullState = state
+    if (nonNullState == null) {
+        LoadingState()
         return
     }
-    val nonNullState = state!!
+
+    WidgetSettingsContent(
+        state = nonNullState,
+        uiState = uiState,
+        viewModel = viewModel,
+        onSave = onSave,
+        onBack = onBack,
+    )
+}
+
+@Composable
+private fun LoadingState() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ErrorState(onRetry: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(id = R.string.error),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry) {
+                Text(text = stringResource(id = R.string.action_retry))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WidgetSettingsContent(
+    state: WidgetSettingsState,
+    uiState: WidgetUiState?,
+    viewModel: WidgetSettingsViewModel,
+    onSave: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val scrollState = rememberScrollState()
     var showColorPicker by remember { mutableStateOf(false) }
 
     if (showColorPicker) {
-        val context = LocalContext.current
-        DisposableEffect(Unit) {
-            val dialog =
-                ColorPickerDialog
-                    .Builder(context)
-                    .setTitle(R.string.color_background)
-                    .setPositiveButton(
-                        R.string.save_button,
-                        ColorEnvelopeListener { envelope, _ ->
-                            viewModel.updateBackgroundColor(envelope.color)
-                            showColorPicker = false
-                        },
-                    ).setNegativeButton(R.string.cancel_button) { dialogInterface, _ ->
-                        dialogInterface.dismiss()
-                        showColorPicker = false
-                    }.attachAlphaSlideBar(false)
-                    .attachBrightnessSlideBar(true)
-                    .setOnDismissListener {
-                        showColorPicker = false
-                    }.show()
-
-            onDispose {
-                dialog.dismiss()
-            }
-        }
+        ColorPickerWrapper(
+            onColorSelected = { viewModel.updateBackgroundColor(it) },
+            onDismiss = { showColorPicker = false },
+        )
     }
 
     Scaffold(
@@ -132,44 +141,10 @@ fun WidgetSettingsScreen(
             )
         },
         bottomBar = {
-            Column(
-                modifier =
-                    Modifier
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .navigationBarsPadding()
-                        .padding(16.dp),
-            ) {
-                Text(
-                    text = stringResource(id = R.string.preview),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    uiState?.let {
-                        WidgetPreview(
-                            uiState = it,
-                            modifier = Modifier.padding(8.dp),
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = onSave,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(id = R.string.save_button))
-                }
-            }
+            BottomPreviewBar(
+                uiState = uiState,
+                onSave = onSave,
+            )
         },
     ) { paddingValues ->
         Column(
@@ -179,128 +154,250 @@ fun WidgetSettingsScreen(
                     .verticalScroll(scrollState)
                     .padding(16.dp),
         ) {
-            // Layout Mode
-            SettingLabel(stringResource(id = R.string.layout_mode_title))
-            val layoutModes = stringArrayResource(id = R.array.layout_modes)
-            var layoutExpanded by remember { mutableStateOf(value = false) }
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = { layoutExpanded = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(text = layoutModes.getOrNull(nonNullState.layoutMode) ?: "")
-                }
-                DropdownMenu(expanded = layoutExpanded, onDismissRequest = { layoutExpanded = false }) {
-                    layoutModes.forEachIndexed { index, name ->
-                        DropdownMenuItem(
-                            text = { Text(text = name) },
-                            onClick = {
-                                viewModel.updateLayoutMode(index)
-                                layoutExpanded = false
-                            },
-                        )
-                    }
-                }
-            }
-
-            // SIM Arrangement
-            SettingLabel(stringResource(id = R.string.sim_arrangement_prompt))
-            val arrangements = stringArrayResource(id = R.array.sim_arrangements)
-            OutlinedButton(
-                onClick = {
-                    val next = if (nonNullState.simArrangement == 0) 1 else 0
-                    viewModel.updateSimArrangement(next)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = arrangements.getOrNull(nonNullState.simArrangement) ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Transparency
-            SettingLabel(stringResource(id = R.string.background_transparency))
-            Slider(
-                value = nonNullState.transparency.toFloat(),
-                onValueChange = { viewModel.updateTransparency(it.toInt()) },
-                valueRange = 0f..100f,
-                steps = 99,
+            GeneralSettingsSection(
+                state = state,
+                onUpdateLayoutMode = viewModel::updateLayoutMode,
+                onUpdateSimArrangement = viewModel::updateSimArrangement,
+                onUpdateTransparency = viewModel::updateTransparency,
+                onUpdateFontSize = viewModel::updateFontSize,
+                onShowColorPicker = { showColorPicker = true },
             )
 
-            // Font Size
-            SettingLabel(stringResource(id = R.string.font_size))
-            Slider(
-                value = nonNullState.fontSize.toFloat(),
-                onValueChange = { viewModel.updateFontSize(it.toInt()) },
-                valueRange = 0f..4f,
-                steps = 3,
+            Spacer(modifier = Modifier.height(16.dp))
+
+            NotificationSettingsSection(
+                state = state,
+                onUpdateNotifyMinutes = viewModel::updateNotifyMinutes,
+                onUpdateNotifyTraffic = viewModel::updateNotifyTraffic,
+                onUpdateCallTracking = viewModel::updateCallTracking,
             )
 
-            // Background Color
-            SettingLabel(stringResource(id = R.string.color_background))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            showColorPicker = true
-                        }.padding(vertical = 8.dp),
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(40.dp)
-                            .background(Color(nonNullState.backgroundColor), RoundedCornerShape(4.dp)),
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SimCardsSettingsSection(
+                state = state,
+                uiState = uiState,
+                onUpdateSimSettings = viewModel::updateSimSettings,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ColorPickerWrapper(
+    onColorSelected: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val dialog =
+            ColorPickerDialog
+                .Builder(context)
+                .setTitle(R.string.color_background)
+                .setPositiveButton(
+                    R.string.save_button,
+                    ColorEnvelopeListener { envelope, _ ->
+                        onColorSelected(envelope.color)
+                        onDismiss()
+                    },
+                ).setNegativeButton(R.string.cancel_button) { dialogInterface, _ ->
+                    dialogInterface.dismiss()
+                    onDismiss()
+                }.attachAlphaSlideBar(false)
+                .attachBrightnessSlideBar(true)
+                .setOnDismissListener {
+                    onDismiss()
+                }.show()
+
+        onDispose {
+            dialog.dismiss()
+        }
+    }
+}
+
+@Composable
+private fun BottomPreviewBar(
+    uiState: WidgetUiState?,
+    onSave: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .navigationBarsPadding()
+                .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(id = R.string.preview),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .background(MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center,
+        ) {
+            uiState?.let {
+                WidgetPreview(
+                    uiState = it,
+                    modifier = Modifier.padding(8.dp),
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(stringResource(id = R.string.custom_color))
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            // Notifications
-            SettingLabel(stringResource(id = R.string.notifications_title))
-            CheckboxSetting(
-                label = stringResource(id = R.string.notify_low_minutes_title),
-                checked = nonNullState.notifyLowMinutes,
-            ) { viewModel.updateNotifyMinutes(enabled = it) }
-            CheckboxSetting(
-                label = stringResource(id = R.string.notify_low_traffic_title),
-                checked = nonNullState.notifyLowTraffic,
-            ) { viewModel.updateNotifyTraffic(enabled = it) }
-            CheckboxSetting(
-                label = stringResource(id = R.string.call_tracking_title),
-                checked = nonNullState.callTrackingEnabled,
-            ) { viewModel.updateCallTracking(enabled = it) }
+        Button(
+            onClick = onSave,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(id = R.string.save_button))
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // SIM Settings
-            SettingLabel(stringResource(id = R.string.sim_cards_title))
-            val activeSims = uiState?.simUiStates ?: emptyList()
-            if (activeSims.isEmpty()) {
-                Text(
-                    text = stringResource(id = R.string.no_sim_found),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp).align(Alignment.CenterHorizontally),
+@Composable
+private fun GeneralSettingsSection(
+    state: WidgetSettingsState,
+    onUpdateLayoutMode: (Int) -> Unit,
+    onUpdateSimArrangement: (Int) -> Unit,
+    onUpdateTransparency: (Int) -> Unit,
+    onUpdateFontSize: (Int) -> Unit,
+    onShowColorPicker: () -> Unit,
+) {
+    // Layout Mode
+    SettingLabel(stringResource(id = R.string.layout_mode_title))
+    val layoutModes = stringArrayResource(id = R.array.layout_modes)
+    var layoutExpanded by remember { mutableStateOf(value = false) }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { layoutExpanded = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = layoutModes.getOrNull(state.layoutMode) ?: "")
+        }
+        DropdownMenu(expanded = layoutExpanded, onDismissRequest = { layoutExpanded = false }) {
+            layoutModes.forEachIndexed { index, name ->
+                DropdownMenuItem(
+                    text = { Text(text = name) },
+                    onClick = {
+                        onUpdateLayoutMode(index)
+                        layoutExpanded = false
+                    },
                 )
-            } else {
-                activeSims.forEach { simUi ->
-                    val simState = nonNullState.simStates[simUi.slot]
-                    if (simState != null) {
-                        SimSettingsSection(
-                            slot = simUi.slot,
-                            operatorName = simUi.operatorName,
-                            sim = simState,
-                            onUpdate = { update -> viewModel.updateSimSettings(simUi.slot, update) },
-                        )
-                    }
-                }
+            }
+        }
+    }
+
+    // SIM Arrangement
+    SettingLabel(stringResource(id = R.string.sim_arrangement_prompt))
+    val arrangements = stringArrayResource(id = R.array.sim_arrangements)
+    OutlinedButton(
+        onClick = {
+            val next = if (state.simArrangement == 0) 1 else 0
+            onUpdateSimArrangement(next)
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = arrangements.getOrNull(state.simArrangement) ?: "",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Transparency
+    SettingLabel(stringResource(id = R.string.background_transparency))
+    Slider(
+        value = state.transparency.toFloat(),
+        onValueChange = { onUpdateTransparency(it.toInt()) },
+        valueRange = 0f..100f,
+        steps = 99,
+    )
+
+    // Font Size
+    SettingLabel(stringResource(id = R.string.font_size))
+    Slider(
+        value = state.fontSize.toFloat(),
+        onValueChange = { onUpdateFontSize(it.toInt()) },
+        valueRange = 0f..4f,
+        steps = 3,
+    )
+
+    // Background Color
+    SettingLabel(stringResource(id = R.string.color_background))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onShowColorPicker()
+                }.padding(vertical = 8.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .background(Color(state.backgroundColor), RoundedCornerShape(4.dp)),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(stringResource(id = R.string.custom_color))
+    }
+}
+
+@Composable
+private fun NotificationSettingsSection(
+    state: WidgetSettingsState,
+    onUpdateNotifyMinutes: (Boolean) -> Unit,
+    onUpdateNotifyTraffic: (Boolean) -> Unit,
+    onUpdateCallTracking: (Boolean) -> Unit,
+) {
+    SettingLabel(stringResource(id = R.string.notifications_title))
+    CheckboxSetting(
+        label = stringResource(id = R.string.notify_low_minutes_title),
+        checked = state.notifyLowMinutes,
+    ) { onUpdateNotifyMinutes(it) }
+    CheckboxSetting(
+        label = stringResource(id = R.string.notify_low_traffic_title),
+        checked = state.notifyLowTraffic,
+    ) { onUpdateNotifyTraffic(it) }
+    CheckboxSetting(
+        label = stringResource(id = R.string.call_tracking_title),
+        checked = state.callTrackingEnabled,
+    ) { onUpdateCallTracking(it) }
+}
+
+@Composable
+private fun SimCardsSettingsSection(
+    state: WidgetSettingsState,
+    uiState: WidgetUiState?,
+    onUpdateSimSettings: (Int, (SimSettingsState) -> SimSettingsState) -> Unit,
+) {
+    SettingLabel(stringResource(id = R.string.sim_cards_title))
+    val activeSims = uiState?.simUiStates ?: emptyList()
+    if (activeSims.isEmpty()) {
+        Text(
+            text = stringResource(id = R.string.no_sim_found),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 16.dp),
+        )
+    } else {
+        activeSims.forEach { simUi ->
+            val simState = state.simStates[simUi.slot]
+            if (simState != null) {
+                SimSettingsSection(
+                    slot = simUi.slot,
+                    operatorName = simUi.operatorName,
+                    sim = simState,
+                    onUpdate = { update -> onUpdateSimSettings(simUi.slot, update) },
+                )
             }
         }
     }

@@ -3,10 +3,11 @@ package com.example.minutewatcher.benchmark
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.example.minutewatcher.core.domain.BenchmarkUseCase
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.minutewatcher.core.data.BenchmarkPopulateWorker
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.runBlocking
-import javax.inject.Inject
 
 /**
  * Receiver to populate mock data for benchmarking.
@@ -14,8 +15,6 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class BenchmarkReceiver : BroadcastReceiver() {
-    @Inject
-    lateinit var benchmarkUseCase: BenchmarkUseCase
 
     override fun onReceive(
         context: Context,
@@ -24,14 +23,21 @@ class BenchmarkReceiver : BroadcastReceiver() {
         if (intent.action == ACTION_POPULATE_DATA) {
             val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
 
-            runBlocking {
-                benchmarkUseCase.populateMockData(simCount)
-            }
+            val workRequest = OneTimeWorkRequestBuilder<BenchmarkPopulateWorker>()
+                .setInputData(BenchmarkPopulateWorker.createInputData(simCount))
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                workRequest,
+            )
         }
     }
 
     companion object {
         const val ACTION_POPULATE_DATA = "com.example.minutewatcher.benchmark.POPULATE_DATA"
         const val EXTRA_SIM_COUNT = "sim_count"
+        private const val WORK_NAME = "benchmark_populate_data"
     }
 }

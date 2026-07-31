@@ -22,7 +22,7 @@ class ExampleStartupBenchmark {
         benchmarkRule.measureRepeated(
             packageName = "com.example.minutewatcher",
             metrics = listOf(StartupTimingMetric()),
-            iterations = 5,
+            iterations = ITERATIONS,
             startupMode = StartupMode.COLD,
         ) {
             pressHome()
@@ -34,7 +34,7 @@ class ExampleStartupBenchmark {
         benchmarkRule.measureRepeated(
             packageName = "com.example.minutewatcher",
             metrics = listOf(StartupTimingMetric(), FrameTimingMetric()),
-            iterations = 5,
+            iterations = ITERATIONS,
             startupMode = StartupMode.COLD,
             setupBlock = {
                 grantBenchmarkPermissions()
@@ -44,6 +44,11 @@ class ExampleStartupBenchmark {
             pressHome()
             startActivityAndWait()
             // Ensure mock data is displayed before concluding the measurement
-            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000))
+            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), WAIT_TIMEOUT))
         }
+
+    companion object {
+        private const val ITERATIONS = 5
+        private const val WAIT_TIMEOUT = 5000L
+    }
 }

@@ -29,7 +29,7 @@ class PermissionManager
                 Manifest.permission.READ_PHONE_STATE,
             ) == PackageManager.PERMISSION_GRANTED
 
-        // Permission is checked manually using hasPhoneStatePermission() before access.
+        // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
         @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> =
             try {
@@ -43,7 +43,7 @@ class PermissionManager
                 emptyList()
             }
 
-        // Permission is checked manually using hasPhoneStatePermission() before access.
+        // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
         @SuppressLint("MissingPermission")
         fun getDefaultVoiceSubscriptionId(): Int =
             try {
@@ -57,7 +57,7 @@ class PermissionManager
                 -1
             }
 
-        // Permission is checked manually using hasPhoneStatePermission() before access.
+        // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
         @SuppressLint("MissingPermission")
         fun getDefaultDataSubscriptionId(): Int =
             try {
@@ -85,6 +85,7 @@ class PermissionManager
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
             val mode =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // unsafeCheckOpNoThrow is preferred on Q+ for better security/accuracy in some contexts.
                     @Suppress("DEPRECATION")
                     appOps.unsafeCheckOpNoThrow(
                         AppOpsManager.OPSTR_GET_USAGE_STATS,
@@ -92,6 +93,7 @@ class PermissionManager
                         context.packageName,
                     )
                 } else {
+                    // Fallback to checkOpNoThrow for older versions.
                     @Suppress("DEPRECATION")
                     appOps.checkOpNoThrow(
                         AppOpsManager.OPSTR_GET_USAGE_STATS,

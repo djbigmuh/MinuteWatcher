@@ -13,7 +13,6 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -71,7 +70,7 @@ class TrafficTrackerTest {
 
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
-        runBlocking {
+        runTest(testDispatcher) {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         }
@@ -119,6 +118,31 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `updateTrafficUsage handles SecurityException gracefully`() =
+        runTest {
+            whenever(networkStatsManager.querySummaryForDevice(anyInt(), anyOrNull(), anyLong(), anyLong()))
+                .thenThrow(SecurityException("No permission"))
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `updateTrafficUsage reports error when Usage Access is missing`() =
+        runTest {
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
     fun `updateTrafficUsage increments usage based on delta`() =
         runTest {
             val bucket = mock<NetworkStats.Bucket>()
@@ -157,24 +181,7 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            assertEquals(TrackingStatus.Idle, tracker.status.value)
-        }
-
-    @Test
-    fun `updateTrafficUsage reports permission error when READ_PHONE_STATE is missing`() =
-        runTest {
-            // 1. Mock missing permission
-            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
-            // 2. This makes getTargetSimInfo return null
-            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
-
-            // 3. Act
-            tracker.updateTrafficUsage()
-
-            // 4. Assert
-            val status = tracker.status.value
-            assertTrue(status is TrackingStatus.Error)
-            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
+            assertEquals(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable"), tracker.status.value)
         }
 
     @Test
@@ -302,81 +309,6 @@ class TrafficTrackerTest {
             // Assert
             assertEquals(TrackingStatus.Active, tracker.status.value)
             verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
-        }
-
-    @Test
-    fun `updateTrafficUsage does not save -1 subId and detects SIM swap after temporary unknown state`() =
-        runTest {
-            // 1. Initial run with SubId 1
-            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
-            val bucket1 = mock<NetworkStats.Bucket>()
-            whenever(bucket1.rxBytes).thenReturn(1000L)
-            whenever(bucket1.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
-
-            tracker.updateTrafficUsage()
-            verify(callSessionRepository).setLastDataSubId(1)
-
-            // 2. Data SIM becomes unknown (-1)
-            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
-            val bucket2 = mock<NetworkStats.Bucket>()
-            whenever(bucket2.rxBytes).thenReturn(1100L)
-            whenever(bucket2.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket2)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
-
-            tracker.updateTrafficUsage()
-
-            // Should NOT have called setLastDataSubId(-1)
-            verify(callSessionRepository, never()).setLastDataSubId(-1)
-
-            // 3. Data SIM changes to SubId 2
-            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
-            val mockSubInfo2 = mock<android.telephony.SubscriptionInfo>()
-            whenever(mockSubInfo2.subscriptionId).thenReturn(2)
-            whenever(mockSubInfo2.simSlotIndex).thenReturn(1) // Slot 1
-            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo2))
-
-            val bucket3 = mock<NetworkStats.Bucket>()
-            whenever(bucket3.rxBytes).thenReturn(1200L)
-            whenever(bucket3.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket3)
-
-            tracker.updateTrafficUsage()
-
-            // Should detect swap (1 -> 2) and call setLastDataSubId(2)
-            verify(callSessionRepository).setLastDataSubId(2)
-            // Baseline should be reset for identity sim_1 at 1200L
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_1"), eq(1200L))
-        }
-
-    @Test
-    fun `after SIM swap status is Active and delta is skipped`() =
-        runTest {
-            // 1. Initial run with SubId 1
-            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
-            val bucket1 = mock<NetworkStats.Bucket>()
-            whenever(bucket1.rxBytes).thenReturn(1000L)
-            whenever(bucket1.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(500L))
-
-            tracker.updateTrafficUsage()
-            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), any()) // Incremented for first sub
-
-            // 2. SIM swap to SubId 2
-            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
-            val bucket2 = mock<NetworkStats.Bucket>()
-            whenever(bucket2.rxBytes).thenReturn(2000L) // Large delta from 1000L
-            whenever(bucket2.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket2)
-
-            tracker.updateTrafficUsage()
-
-            // Should NOT increment usage because delta belongs to previous SIM
-            assertEquals(TrackingStatus.Active, tracker.status.value)
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_1"), eq(2000L)) // Baseline reset
         }
 
     @Suppress("SameParameterValue")

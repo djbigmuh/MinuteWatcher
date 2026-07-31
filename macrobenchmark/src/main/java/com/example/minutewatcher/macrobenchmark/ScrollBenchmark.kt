@@ -26,7 +26,7 @@ class ScrollBenchmark {
             metrics = listOf(FrameTimingMetric()),
             compilationMode = CompilationMode.Full(),
             startupMode = StartupMode.WARM,
-            iterations = 5,
+            iterations = ITERATIONS,
             setupBlock = {
                 grantBenchmarkPermissions()
                 populateBenchmarkData(3)
@@ -35,10 +35,10 @@ class ScrollBenchmark {
             startActivityAndWait()
 
             // Wait for mock data to be displayed
-            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), 5000))
+            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), WAIT_TIMEOUT))
 
             // Find the list and scroll
-            val list = device.wait(Until.findObject(By.scrollable(true)), 5000)
+            val list = device.wait(Until.findObject(By.scrollable(true)), WAIT_TIMEOUT)
             assertNotNull("Scrollable list not found. Ensure more than 3-4 items are displayed.", list)
 
             list.setGestureMargin(device.displayWidth / 5)
@@ -48,4 +48,9 @@ class ScrollBenchmark {
             list.fling(Direction.UP)
             device.waitForIdle()
         }
+
+    companion object {
+        private const val ITERATIONS = 5
+        private const val WAIT_TIMEOUT = 5000L
+    }
 }

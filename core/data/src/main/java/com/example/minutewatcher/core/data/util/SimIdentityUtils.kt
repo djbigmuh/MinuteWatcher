@@ -12,14 +12,14 @@ object SimIdentityUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 info.mccString ?: ""
             } else {
-                @Suppress("DEPRECATION")
+                @Suppress("DEPRECATION") // Legacy mcc/mnc access for API < 29.
                 info.mcc.toString()
             }
         val mnc =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 info.mncString ?: ""
             } else {
-                @Suppress("DEPRECATION")
+                @Suppress("DEPRECATION") // Legacy mcc/mnc access for API < 29.
                 info.mnc.toString()
             }
         return if (mcc.isNotEmpty() && mnc.isNotEmpty()) "$mcc$mnc" else ""

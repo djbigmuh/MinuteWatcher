@@ -8,6 +8,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
@@ -17,7 +18,6 @@ import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.flow.first
 
 @HiltWorker
 class InitialSetupWorker
@@ -52,7 +52,7 @@ class InitialSetupWorker
                 autoResetUseCase.performAutoReset(snapshotAfterMigration)
 
                 // Reset traffic baseline after reboot for active SIMs
-                val activeSimsForTraffic = simIdentityRepository.observeActiveSims().first()
+                val activeSimsForTraffic = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
                 activeSimsForTraffic.forEach { info ->
                     trafficTracker.resetBaseline(info.identity.stableId)
                 }
@@ -86,8 +86,8 @@ class InitialSetupWorker
         }
 
         private suspend fun checkAndPerformMigrations() {
-            val migrationV1Completed = migrationFlagsRepository.isMigrationV1Completed().first()
-            val migrationStabilityCompleted = migrationFlagsRepository.isMigrationIdentityStabilityCompleted().first()
+            val migrationV1Completed = migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout() ?: true
+            val migrationStabilityCompleted = migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout() ?: true
 
             if (migrationV1Completed && migrationStabilityCompleted) return
 
@@ -119,7 +119,7 @@ class InitialSetupWorker
         }
 
         private suspend fun handleMigrationWithPermission(v1Completed: Boolean) {
-            val activeSims = simIdentityRepository.observeActiveSims().first()
+            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
             val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
 
             if (activeSims.isEmpty()) {

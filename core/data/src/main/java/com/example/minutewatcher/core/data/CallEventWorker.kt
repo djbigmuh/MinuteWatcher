@@ -5,6 +5,7 @@ import android.telephony.TelephonyManager
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -17,14 +18,22 @@ class CallEventWorker
         private val callTracker: CallTracker,
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result {
-            val state = inputData.getString("state")
-            val subId = inputData.getInt("subId", -1)
+            try {
+                val state = inputData.getString("state")
+                val subId = inputData.getInt("subId", -1)
 
-            when (state) {
-                TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId)
-                TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId)
+                when (state) {
+                    TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId)
+                    TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId)
+                }
+
+                return Result.success()
+            } catch (e: SecurityException) {
+                AppLogger.e("CallEventWorker: Permission error", e)
+                return Result.failure()
+            } catch (e: Exception) {
+                AppLogger.e("CallEventWorker failed", e)
+                return Result.retry()
             }
-
-            return Result.success()
         }
     }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
@@ -33,100 +34,24 @@ import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.resources.R
 import kotlin.math.abs
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DayPickerComposeDialog(
     initialDay: Int,
     onDismiss: () -> Unit,
     onDaySelected: (Int) -> Unit,
 ) {
-    val days = (1..MAX_DAYS).toList()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (initialDay - 1).coerceIn(0, MAX_DAYS - 1))
-    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-
-    val selectedDay by remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportSize.height / 2
-            val centeredItem =
-                layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                    abs((item.offset + item.size / 2) - viewportCenter)
-                }
-            (centeredItem?.index ?: 0) + 1
-        }
-    }
+    val selectedDay by rememberSelectedDay(listState)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.choose_reset_day_dialog_title)) },
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    stringResource(id = R.string.choose_reset_day),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    textAlign = TextAlign.Center,
-                )
-
-                Box(
-                    modifier =
-                        Modifier
-                            .height(200.dp)
-                            .width(100.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // Central highlight / Selector
-                    Surface(
-                        modifier =
-                            Modifier
-                                .height(50.dp)
-                                .fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        shape = MaterialTheme.shapes.medium,
-                    ) {}
-
-                    LazyColumn(
-                        state = listState,
-                        flingBehavior = snapFlingBehavior,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 75.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        itemsIndexed(days) { _, day ->
-                            val isSelected by remember {
-                                derivedStateOf { selectedDay == day }
-                            }
-
-                            Text(
-                                text = day.toString(),
-                                fontSize = if (isSelected) 32.sp else 22.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color =
-                                    if (isSelected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface.copy(
-                                            alpha = 0.5f,
-                                        )
-                                    },
-                                modifier =
-                                    Modifier
-                                        .padding(vertical = 8.dp)
-                                        .fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                softWrap = false,
-                            )
-                        }
-                    }
-                }
-            }
+            DayPickerContent(listState = listState, selectedDay = selectedDay)
         },
         confirmButton = {
             Button(
-                onClick = {
-                    onDaySelected(selectedDay.coerceIn(1, MAX_DAYS))
-                },
+                onClick = { onDaySelected(selectedDay.coerceIn(1, MAX_DAYS)) },
                 modifier = Modifier.padding(horizontal = 8.dp),
             ) {
                 Text(stringResource(id = R.string.set_button))
@@ -137,6 +62,79 @@ fun DayPickerComposeDialog(
                 Text(stringResource(id = R.string.cancel_button))
             }
         },
+    )
+}
+
+@Composable
+private fun rememberSelectedDay(listState: LazyListState) = remember {
+    derivedStateOf {
+        val layoutInfo = listState.layoutInfo
+        val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportSize.height / 2
+        val centeredItem = layoutInfo.visibleItemsInfo.minByOrNull { item ->
+            abs((item.offset + item.size / 2) - viewportCenter)
+        }
+        (centeredItem?.index ?: 0) + 1
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DayPickerContent(listState: LazyListState, selectedDay: Int) {
+    val days = (1..MAX_DAYS).toList()
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(id = R.string.choose_reset_day),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 16.dp),
+            textAlign = TextAlign.Center,
+        )
+
+        Box(
+            modifier = Modifier.height(200.dp).width(100.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            SelectorHighlight()
+            LazyColumn(
+                state = listState,
+                flingBehavior = snapFlingBehavior,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 75.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                itemsIndexed(days) { _, day ->
+                    DayItem(day = day, isSelected = selectedDay == day)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectorHighlight() {
+    Surface(
+        modifier = Modifier.height(50.dp).fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+        shape = MaterialTheme.shapes.medium,
+    ) {}
+}
+
+@Composable
+private fun DayItem(day: Int, isSelected: Boolean) {
+    Text(
+        text = day.toString(),
+        fontSize = if (isSelected) 32.sp else 22.sp,
+        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        },
+        modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        softWrap = false,
     )
 }
 

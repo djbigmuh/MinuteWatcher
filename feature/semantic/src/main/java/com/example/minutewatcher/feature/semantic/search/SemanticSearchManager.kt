@@ -5,101 +5,54 @@ import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.exceptions.AppSearchException
-import com.example.minutewatcher.core.common.di.ApplicationScope
-import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Manages AppSearch indexing for usage data.
+ * Ensures that data is searchable via global system search.
+ */
 @Singleton
 open class SemanticSearchManager
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
-        @ApplicationScope private val scope: CoroutineScope,
+        @ApplicationContext private val context: Context,
+        private val scope: CoroutineScope,
         private val appSearchWrapper: AppSearchWrapper,
         private val timeProvider: TimeProvider,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
+        private val sessionMutex = Mutex()
         private var session: AppSearchSessionWrapper? = null
-        private var lastSnapshotHash: Int = 0
+        private var lastSnapshotHash: Int = -1
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
+        private var lastIndexTime = 0L
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
-
-        fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            lastSnapshotFlow = snapshotFlow
-            job?.cancel()
-            try {
-                session?.close()
-                session = null
-            } catch (e: AppSearchException) {
-                AppLogger.e("AppSearch error closing session during re-init", e)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Unexpected error closing session during re-init", e)
-            }
-            job =
-                scope.launch {
-                    _status.value = TrackingStatus.Active
-                    val success =
-                        withContext(ioDispatcher) {
-                            try {
-                                ensureSession()
-                            } catch (e: AppSearchException) {
-                                AppLogger.e("AppSearch session initialization failed", e)
-                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                                false
-                            } catch (e: java.io.IOException) {
-                                AppLogger.e("IO error during AppSearch initialization", e)
-                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO Error: ${e.message}")
-                                false
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Unexpected error during AppSearch session initialization", e)
-                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                                false
-                            }
-                        }
-
-                    if (success) {
-                        snapshotFlow
-                            .collect { snapshot ->
-                                if (snapshot.timestamp > 0) {
-                                    withContext(ioDispatcher) {
-                                        indexSnapshot(snapshot)
-                                    }
-                                }
-                            }
-                    }
-                }
-        }
 
         override fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
@@ -109,163 +62,114 @@ open class SemanticSearchManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
-        private suspend fun ensureSession(): Boolean {
-            var currentSession: AppSearchSessionWrapper? = null
-            try {
-                currentSession = appSearchWrapper.createSearchSession(context, "minute_watcher_db")
-                currentSession.setSchema(appSearchWrapper.createSchemaRequest(false))
-                session = currentSession
-                _status.value = TrackingStatus.Active
-                return true
-            } catch (e: AppSearchException) {
-                currentSession?.close()
-                if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
-                    AppLogger.w("AppSearch schema mismatch, forcing override")
-                    var overrideSession: AppSearchSessionWrapper? = null
-                    try {
-                        overrideSession =
-                            appSearchWrapper.createSearchSession(context, "minute_watcher_db")
-                        overrideSession.setSchema(appSearchWrapper.createSchemaRequest(true))
-                        session = overrideSession
-                        _status.value = TrackingStatus.Active
-                        return true
-                    } catch (ex: AppSearchException) {
-                        overrideSession?.close()
-                        AppLogger.e("Failed to force AppSearch schema override", ex)
-                    } catch (ex: CancellationException) {
-                        overrideSession?.close()
-                        throw ex
-                    } catch (ex: Exception) {
-                        overrideSession?.close()
-                        AppLogger.e("Unexpected error forcing AppSearch schema override", ex)
+        fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            lastSnapshotFlow = snapshotFlow
+            job?.cancel()
+            job =
+                scope.launch {
+                    snapshotFlow.collect { snapshot ->
+                        indexSnapshot(snapshot)
                     }
-                } else {
-                    AppLogger.e("AppSearch error during session creation: ${e.message}", e)
                 }
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Failed to init AppSearch: ${e.message}",
-                    )
-                return false
-            } catch (e: java.io.IOException) {
-                currentSession?.close()
-                AppLogger.e("IO error during AppSearch session creation", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO error: ${e.message}")
-                return false
-            } catch (e: CancellationException) {
-                currentSession?.close()
-                throw e
+        }
+
+        private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
+            if (session != null && !forceOverride) return true
+
+            return try {
+                val newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
+                val request = appSearchWrapper.createSchemaRequest(forceOverride)
+                newSession.setSchema(request)
+                session = newSession
+                _status.value = TrackingStatus.Active
+                true
+            } catch (e: AppSearchException) {
+                if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !forceOverride) {
+                    AppLogger.w("AppSearch schema mismatch, retrying with force override")
+                    return ensureSession(forceOverride = true)
+                }
+                AppLogger.e("Fatal AppSearch error", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                false
             } catch (e: Exception) {
-                currentSession?.close()
-                AppLogger.e("Unexpected error during AppSearch session creation", e)
+                AppLogger.e("Failed to initialize AppSearch session", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                return false
+                false
             }
         }
 
-        private var lastIndexTime = 0L
-        private val minIndexInterval = 5 * 60 * 1000L // 5 minutes
-
-        internal suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
+        suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
             val currentHash = SnapshotUtils.calculateContentHash(snapshot)
             if (currentHash == lastSnapshotHash) return
 
-            if (!snapshot.isManualUpdate) {
-                val currentTime = timeProvider.now()
-                val timeSinceLast = currentTime - lastIndexTime
-                if (timeSinceLast < minIndexInterval) {
-                    delay((minIndexInterval - timeSinceLast).milliseconds)
+            val now = timeProvider.now()
+            // Allow manual updates to skip throttle
+            if (!snapshot.isManualUpdate && (now - lastIndexTime < INDEX_THROTTLE_MS)) return
 
-                    // After delay, re-check hash in case snapshot data changed during wait
-                    // but we are still processing the same (now stale) snapshot instance.
-                    // Conflate ensures we will get the latest one in the next loop iteration,
-                    // but we can skip this one if it's no longer the "current" meaningful state.
-                    val updatedSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
-                    if (updatedSnapshotHash == lastSnapshotHash) return
-                }
-            }
+            sessionMutex.withLock {
+                if (!ensureSession()) return@withLock
 
-            if (session == null) {
-                if (!ensureSession()) return
-            }
+                withContext(ioDispatcher) {
+                    try {
+                        withTimeout(INDEX_TIMEOUT_MS.milliseconds) {
+                            val documents = convertSnapshotToDocuments(snapshot)
+                            if (documents.isEmpty()) {
+                                lastSnapshotHash = currentHash
+                                return@withTimeout
+                            }
 
-            val activeSimSnapshots =
-                snapshot.simSnapshots
-                    .filter { it.isActive && it.slot in SimConstants.SUPPORTED_SLOT_INDICES }
-
-            val documents =
-                activeSimSnapshots.flatMap { sim ->
-                    sim.entities.values.map { entity ->
-                        val limit = entity.limit
-                        val remaining = entity.remaining
-                        val percent = if (limit > 0) (remaining * 100 / limit) else 0L
-                        val usageStatus = ColorProvider.getUsageStatus(remaining.toFloat(), limit.toFloat())
-
-                        UsageDocument(
-                            namespace = "usage",
-                            id = "sim_${sim.slot}_${entity.packageType.name}",
-                            operatorName = sim.operator,
-                            packageType = entity.packageType.name,
-                            remainingValue = remaining,
-                            unit = entity.unit.name,
-                            usedValue = entity.used,
-                            limitValue = limit,
-                            remainingPercent = percent,
-                            periodEnd = entity.periodEnd,
-                            slot = sim.slot.toLong(),
-                            status = usageStatus.name,
-                        )
+                            performIndexUpdate(documents, snapshot)
+                            lastSnapshotHash = currentHash
+                            lastIndexTime = now
+                            _status.value = TrackingStatus.Active
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.e("AppSearch indexing error", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }
                 }
-
-            try {
-                if (documents.isNotEmpty()) {
-                    session?.putDocuments(createPutRequest(documents))
-                }
-
-                // Remove stale documents (active IDs that are no longer in the snapshot)
-                val activeDocumentIds = documents.map { it.id }.toSet()
-                val allPossibleDocumentIds =
-                    SimConstants.SUPPORTED_SLOT_INDICES
-                        .flatMap { slot ->
-                            listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
-                        }.toSet()
-                val idsToRemove = allPossibleDocumentIds - activeDocumentIds
-
-                if (idsToRemove.isNotEmpty()) {
-                    session?.removeByDocumentId(createRemoveRequest(idsToRemove))
-                }
-
-                lastIndexTime = timeProvider.now()
-                lastSnapshotHash = currentHash
-                _status.value = TrackingStatus.Active
-            } catch (e: AppSearchException) {
-                AppLogger.e("AppSearch error during indexing", e)
-                _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                // Fatal error, close and reset session to trigger re-init next time
-                session?.close()
-                session = null
-            } catch (e: java.io.IOException) {
-                AppLogger.e("IO error during AppSearch indexing", e)
-                _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "IO Error: ${e.message}")
-                session?.close()
-                session = null
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to update AppSearch index", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                session?.close()
-                session = null
             }
         }
 
-        internal open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
+        private fun convertSnapshotToDocuments(snapshot: GlobalSnapshot): List<UsageDocument> {
+            val documents = mutableListOf<UsageDocument>()
+            for (sim in snapshot.simSnapshots) {
+                if (!sim.isActive) continue
+                for (entity in sim.entities.values) {
+                    if (entity.sourceType != DataSourceType.SYSTEM) continue
+                    documents.add(UsageDocument.fromSemanticEntity(entity))
+                }
+            }
+            return documents
+        }
+
+        private suspend fun performIndexUpdate(documents: List<UsageDocument>, snapshot: GlobalSnapshot) {
+            val currentIds = documents.map { it.id }.toSet()
+
+            val activeSlots = snapshot.simSnapshots.filter { it.isActive }.map { it.slot }
+            val staleIds = mutableSetOf<String>()
+            activeSlots.forEach { slot ->
+                val possibleIds = listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
+                staleIds.addAll(possibleIds.filter { it !in currentIds })
+            }
+
+            if (staleIds.isNotEmpty()) {
+                session?.removeByDocumentId(createRemoveRequest(staleIds))
+            }
+
+            session?.putDocuments(createPutRequest(documents))
+        }
+
+        protected open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
             PutDocumentsRequest.Builder().addDocuments(documents).build()
 
-        internal open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-            RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
+        protected open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
+            RemoveByDocumentIdRequest.Builder(NAMESPACE).addIds(ids).build()
+
+        companion object {
+            private const val DATABASE_NAME = "usage"
+            private const val NAMESPACE = "usage"
+            private const val INDEX_THROTTLE_MS = 30_000L
+            private const val INDEX_TIMEOUT_MS = 10_000L
+        }
     }

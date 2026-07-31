@@ -52,19 +52,30 @@ object SimUtils {
                 operatorName.hasToken("jio") -> "Jio"
                 else ->
                     if (operatorName.isNotEmpty()) {
-                        if (operatorName.length > 15) operatorName.take(12) + "..." else operatorName
+                        if (operatorName.length > MAX_OPERATOR_NAME_LENGTH) {
+                            operatorName.take(TRUNCATED_OPERATOR_NAME_LENGTH) + "..."
+                        } else {
+                            operatorName
+                        }
                     } else {
                         localizedContext.getString(R.string.no_sim_found)
                     }
             }
         } catch (_: Exception) {
             if (operatorName.isNotEmpty()) {
-                if (operatorName.length > 15) operatorName.take(12) + "..." else operatorName
+                if (operatorName.length > MAX_OPERATOR_NAME_LENGTH) {
+                    operatorName.take(TRUNCATED_OPERATOR_NAME_LENGTH) + "..."
+                } else {
+                    operatorName
+                }
             } else {
                 "SIM"
             }
         }
     }
+
+    private const val MAX_OPERATOR_NAME_LENGTH = 15
+    private const val TRUNCATED_OPERATOR_NAME_LENGTH = 12
 
     private fun getStringSafe(
         context: Context,

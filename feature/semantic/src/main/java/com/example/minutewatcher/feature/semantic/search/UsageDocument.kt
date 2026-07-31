@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.semantic.search
 
 import androidx.appsearch.annotation.Document
 import androidx.appsearch.app.AppSearchSchema
+import com.example.minutewatcher.core.model.SemanticEntity
 
 @Document
 data class UsageDocument(
@@ -31,4 +32,24 @@ data class UsageDocument(
     val slot: Long,
     @Document.StringProperty
     val status: String,
-)
+) {
+    companion object {
+        fun fromSemanticEntity(entity: SemanticEntity): UsageDocument {
+            val percent = if (entity.limit > 0) (entity.remaining * 100 / entity.limit) else 0L
+            return UsageDocument(
+                namespace = "usage",
+                id = entity.id,
+                operatorName = entity.operatorName,
+                packageType = entity.packageType.name,
+                remainingValue = entity.remaining,
+                unit = entity.unit.name,
+                usedValue = entity.used,
+                limitValue = entity.limit,
+                remainingPercent = percent,
+                periodEnd = entity.periodEnd,
+                slot = entity.simSlot.toLong(),
+                status = if (percent < 10) "LOW" else "OK",
+            )
+        }
+    }
+}

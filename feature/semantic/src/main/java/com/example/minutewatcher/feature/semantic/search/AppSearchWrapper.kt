@@ -10,6 +10,9 @@ import kotlinx.coroutines.guava.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Interface to wrap AppSearch operations for better testability and error handling.
+ */
 interface AppSearchWrapper {
     suspend fun createSearchSession(
         context: Context,
@@ -19,6 +22,9 @@ interface AppSearchWrapper {
     fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest
 }
 
+/**
+ * Wrapper for [AppSearchSession] to simplify suspend calls.
+ */
 interface AppSearchSessionWrapper : AutoCloseable {
     suspend fun setSchema(request: SetSchemaRequest)
 
@@ -58,11 +64,19 @@ private class AppSearchSessionWrapperImpl(
     }
 
     override suspend fun putDocuments(request: PutDocumentsRequest) {
-        session.putAsync(request).await()
+        val result = session.putAsync(request).await()
+        if (!result.isSuccess) {
+            val firstError = result.failures.values.firstOrNull()
+            throw IllegalStateException("Failed to put documents: ${firstError?.errorMessage}")
+        }
     }
 
     override suspend fun removeByDocumentId(request: RemoveByDocumentIdRequest) {
-        session.removeAsync(request).await()
+        val result = session.removeAsync(request).await()
+        if (!result.isSuccess) {
+            val firstError = result.failures.values.firstOrNull()
+            throw IllegalStateException("Failed to remove documents: ${firstError?.errorMessage}")
+        }
     }
 
     override fun close() {

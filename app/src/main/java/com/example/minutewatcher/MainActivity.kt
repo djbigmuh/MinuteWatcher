@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.data.WorkScheduler
@@ -56,9 +57,24 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
 
+        observeAppTheme()
+        observeAppLanguage()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            setLocusContext(LocusId("main_screen"), null)
+        }
+
+        setContent {
+            AppContent()
+        }
+
+        checkPermissionsAndInit()
+        handleIntent(intent)
+    }
+
+    private fun observeAppTheme() {
         lifecycleScope.launch {
             viewModel.appTheme.collect { theme ->
                 val mode =
@@ -70,7 +86,9 @@ class MainActivity : AppCompatActivity() {
                 AppCompatDelegate.setDefaultNightMode(mode)
             }
         }
+    }
 
+    private fun observeAppLanguage() {
         lifecycleScope.launch {
             viewModel.appLanguage.collect { lang ->
                 val appLocale: LocaleListCompat =
@@ -84,67 +102,59 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            setLocusContext(LocusId("main_screen"), null)
-        }
+    @androidx.compose.runtime.Composable
+    private fun AppContent() {
+        val themeState by viewModel.appTheme.collectAsState()
+        val darkTheme =
+            when (themeState) {
+                AppTheme.DARK -> true
+                AppTheme.LIGHT -> false
+                AppTheme.FOLLOW_SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+            }
 
-        setContent {
-            val themeState by viewModel.appTheme.collectAsState()
-            val darkTheme =
-                when (themeState) {
-                    AppTheme.DARK -> true
-                    AppTheme.LIGHT -> false
-                    AppTheme.FOLLOW_SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-                }
-
-            MinuteWatcherTheme(darkTheme = darkTheme) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    SimCardScreen(
-                        viewModel = viewModel,
-                        onOpenSettings = {
-                            openWidgetSettings()
-                        },
-                        onAddWidget = { addWidgetToHomeScreen() },
-                        onThemeChange = { theme ->
-                            viewModel.setTheme(theme)
-                        },
-                        onLanguageChange = { lang ->
-                            val appLocale: LocaleListCompat =
-                                if (lang == null) {
-                                    LocaleListCompat.getEmptyLocaleList()
-                                } else {
-                                    LocaleListCompat.forLanguageTags(lang)
-                                }
-                            AppCompatDelegate.setApplicationLocales(appLocale)
-                            viewModel.setLanguage(lang)
-                        },
-                        onGrantPhonePermission = {
-                            viewModel.setPhonePermissionRequested()
-                            phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-                        },
-                        onShowUsageAccessDialog = {
-                            viewModel.setUsageAccessDialog(true)
-                        },
-                        onOpenUsageAccessSettings = {
-                            openUsageAccessSettings()
-                        },
-                        onOpenAppSettings = {
-                            openAppSettings()
-                        },
-                        onGrantNotificationPermission = {
-                            requestNotificationPermission()
-                        },
-                    )
-                }
+        MinuteWatcherTheme(darkTheme = darkTheme) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                SimCardScreen(
+                    viewModel = viewModel,
+                    onOpenSettings = { openWidgetSettings() },
+                    onAddWidget = { addWidgetToHomeScreen() },
+                    onThemeChange = { theme -> viewModel.setTheme(theme) },
+                    onLanguageChange = { lang -> handleLanguageChange(lang) },
+                    onGrantPhonePermission = {
+                        viewModel.setPhonePermissionRequested()
+                        phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+                    },
+                    onShowUsageAccessDialog = {
+                        viewModel.setUsageAccessDialog(true)
+                    },
+                    onOpenUsageAccessSettings = {
+                        openUsageAccessSettings()
+                    },
+                    onOpenAppSettings = {
+                        openAppSettings()
+                    },
+                    onGrantNotificationPermission = {
+                        requestNotificationPermission()
+                    },
+                )
             }
         }
+    }
 
-        checkPermissionsAndInit()
-        handleIntent(intent)
+    private fun handleLanguageChange(lang: String?) {
+        val appLocale: LocaleListCompat =
+            if (lang == null) {
+                LocaleListCompat.getEmptyLocaleList()
+            } else {
+                LocaleListCompat.forLanguageTags(lang)
+            }
+        AppCompatDelegate.setApplicationLocales(appLocale)
+        viewModel.setLanguage(lang)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -168,16 +178,14 @@ class MainActivity : AppCompatActivity() {
 
     private val phonePermissionLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts
-                .RequestPermission(),
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
         ) { granted ->
             handlePhonePermissionResult(granted)
         }
 
     private val notificationPermissionLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts
-                .RequestPermission(),
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
         ) { granted ->
             if (!granted) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -197,7 +205,6 @@ class MainActivity : AppCompatActivity() {
             workScheduler.scheduleInitialSetup()
             workScheduler.schedulePeriodicUsageCheck()
             viewModel.setPhonePermissionPermanentlyDenied(false)
-            // Move to next step: Usage Access
             if (!permissionManager.hasUsageStatsPermission()) {
                 viewModel.setUsageAccessDialog(true)
             } else {
@@ -241,7 +248,6 @@ class MainActivity : AppCompatActivity() {
                 if (autoRequest && !settings.notificationPermissionRequested) {
                     requestNotificationPermission()
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    // Determine if it was permanently denied based on rationale
                     val permanentlyDenied =
                         !ActivityCompat.shouldShowRequestPermissionRationale(
                             this@MainActivity,
@@ -271,7 +277,8 @@ class MainActivity : AppCompatActivity() {
     private fun openUsageAccessSettings() {
         try {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        } catch (_: ActivityNotFoundException) {
+        } catch (e: ActivityNotFoundException) {
+            AppLogger.e("Usage access settings not found, opening app settings", e)
             openAppSettings()
         }
     }
@@ -302,7 +309,6 @@ class MainActivity : AppCompatActivity() {
             permissionStateNotifier = permissionStateNotifier,
         )
 
-        // If we returned from settings, check if we can move to notifications
         if (permissionManager.hasPhoneStatePermission()) {
             viewModel.setPhonePermissionPermanentlyDenied(false)
             if (permissionManager.hasUsageStatsPermission()) {

@@ -155,6 +155,20 @@ class UsageCheckWorkerTest {
         }
 
     @Test
+    fun `doWork retries on IOException`() = runTest {
+        whenever(usageUseCase.refreshOperatorInfo()).thenThrow(java.io.IOException("Disk full"))
+        val result = worker.doWork()
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `doWork fails on unexpected Exception`() = runTest {
+        whenever(usageUseCase.refreshOperatorInfo()).thenThrow(RuntimeException("Fatal"))
+        val result = worker.doWork()
+        assertEquals(ListenableWorker.Result.failure(), result)
+    }
+
+    @Test
     fun `doWork sends notification when traffic low`() =
         runTest {
             val identity = "sim_0"

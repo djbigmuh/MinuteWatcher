@@ -3,6 +3,9 @@ package com.example.minutewatcher.feature.main
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.minutewatcher.core.common.di.IoDispatcher
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -26,7 +29,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -48,7 +50,7 @@ class MainViewModel
         permissionRepository: PermissionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
         savedStateHandle: SavedStateHandle,
-        @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val dialogStateHolder = MainDialogStateHolder(savedStateHandle)
         private val bannerStateHolder =
@@ -154,13 +156,17 @@ class MainViewModel
 
         private fun initializeApp() {
             viewModelScope.launch(ioDispatcher) {
-                val settings = appSettingsRepository.getAppSettings().first()
-                if (!settings.onboardingCompleted) {
-                    dialogStateHolder.setShowOnboardingDialog(true)
+                try {
+                    val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
+                    if (settings?.onboardingCompleted == false) {
+                        dialogStateHolder.setShowOnboardingDialog(true)
+                    }
+                    val snapshot = usageStateRepository.observeSnapshot().value
+                    autoResetUseCase.performAutoReset(snapshot)
+                    refreshSimCards()
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to initialize app in ViewModel", e)
                 }
-                val snapshot = usageStateRepository.observeSnapshot().value
-                autoResetUseCase.performAutoReset(snapshot)
-                refreshSimCards()
             }
         }
 
@@ -256,7 +262,7 @@ class MainViewModel
                     if (currentState is SimCardListState.Success) {
                         currentState.simCards.find { it.slot == slot }?.autoResetDay ?: 1
                     } else {
-                        simLimitsRepository.getAutoResetDay(identity).first()
+                        simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
                     }
                 simLimitsRepository.setAutoReset(identity, currentDay, enabled)
                 refreshAndNotify()
@@ -274,7 +280,7 @@ class MainViewModel
                     if (currentState is SimCardListState.Success) {
                         currentState.simCards.find { it.slot == slot }?.autoResetEnabled ?: false
                     } else {
-                        simLimitsRepository.getAutoReset(identity).first()
+                        simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
                     }
                 simLimitsRepository.setAutoReset(identity, day, enabled)
                 refreshAndNotify()

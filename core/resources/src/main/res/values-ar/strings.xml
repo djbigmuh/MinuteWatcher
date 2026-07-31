@@ -52,8 +52,9 @@
     <string name="tracking_banner_phone_permission">مطلوب إذن الهاتف.</string>
     <string name="tracking_banner_usage_access">مطلوب الوصول إلى الاستخدام.</string>
     <string name="tracking_banner_traffic_error">خطأ في بيانات حركة المرور.</string>
+    <string name="tracking_banner_calls_error">حدث خطأ أثناء تحديث بيانات تتبع المكالمات.</string>
     <string name="tracking_banner_appsearch_error">فشل فهرسة AppSearch.</string>
-    <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
+    <string name="tracking_banner_shortcuts_error">فشل تحديث الاختصارات الديناميكية.</string>
     <string name="tracking_banner_notification_permission">يوصى بإذن الإشعارات لتلقي تنبيهات الاستخدام.</string>
     <string name="notification_permission_permanent_denial">الإشعارات معطلة. يرجى تفعيلها في إعدادات التطبيق لتلقي التنبيهات.</string>
     <string name="action_grant">منح</string>
@@ -75,8 +76,8 @@
     <string name="action_ok">موافق</string>
     <string name="reset_limits_button">إعادة ضبط الحدود</string>
     <string name="reset_counters">إعادة ضبط العدادات</string>
-    <string name="reset_confirmation_title">Reset Counters?</string>
-    <string name="reset_confirmation_body">This will clear all tracked usage and adjustments for this SIM card. This action cannot be undone.</string>
+    <string name="reset_confirmation_title">إعادة ضبط العدادات؟</string>
+    <string name="reset_confirmation_body">سيؤدي هذا إلى مسح كافة الاستخدامات والتعديلات المتعقبة لبطاقة SIM هذه. لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="choose_reset_day">اختر يوم الشهر لإعادة الضبط التلقائي:</string>
     <string name="choose_reset_day_dialog_title">اختر يوم إعادة الضبط</string>
     <string name="rollover_label">تراكم الباقي</string>

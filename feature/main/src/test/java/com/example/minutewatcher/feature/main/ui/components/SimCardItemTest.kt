@@ -12,7 +12,7 @@ import org.robolectric.annotation.Config
 import com.example.minutewatcher.core.resources.R as coreR
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], qualifiers = "en")
+@Config(sdk = [33], qualifiers = "en")
 class SimCardItemTest {
     @get:Rule
     val composeTestRule = createComposeRule()

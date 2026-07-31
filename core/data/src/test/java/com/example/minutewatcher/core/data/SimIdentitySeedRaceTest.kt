@@ -12,7 +12,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,7 +32,6 @@ class SimIdentitySeedRaceTest {
     private val dataStore: DataStore<Preferences> = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
-    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setup() {

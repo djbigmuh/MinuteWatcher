@@ -1,3 +1,5 @@
+import org.gradle.api.reporting.ReportingExtension
+
 // DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
@@ -35,10 +37,9 @@ allprojects {
 
     // Workaround for Gradle 10 deprecation in detekt 1.x
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+        val reporting = project.extensions.getByType<ReportingExtension>()
         reportsDir.set(
-            project.layout.buildDirectory
-                .dir("reports/detekt")
-                .map { it.asFile },
+            reporting.baseDirectory.dir("detekt").map { it.asFile }
         )
     }
 }
@@ -52,7 +53,7 @@ subprojects {
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Default SDK for Robolectric
-        jvmArgs("-Drobolectric.sdk=37")
+        jvmArgs("-Drobolectric.sdk=33")
         // Robolectric + JDK 17/21 compatibility
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",

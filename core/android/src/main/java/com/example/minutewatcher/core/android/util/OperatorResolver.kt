@@ -93,12 +93,7 @@ object OperatorResolver {
         networkOperator: String,
         simSlot: Int,
     ): String {
-        // If name is already a valid specific name, keep it
-        if (operatorName.isNotEmpty() &&
-            operatorName != "null" &&
-            !genericSimRegex.matches(operatorName.trim()) &&
-            !SimUtils.isInactiveSim(operatorName)
-        ) {
+        if (isValidSpecificName(operatorName)) {
             return operatorName
         }
 
@@ -106,27 +101,49 @@ object OperatorResolver {
         val resKey = database[networkOperator]
 
         if (resKey != null) {
-            val resId = operatorResourceMap[resKey]
-            if (resId != null) {
-                return context.getString(resId)
-            }
-            // If it's not in the resource map, it might be a literal name from the DB
-            if (!resKey.startsWith("operator_")) {
-                return resKey
-            }
+            val resolvedFromDb = resolveFromDbKey(context, resKey)
+            if (resolvedFromDb != null) return resolvedFromDb
         }
 
-        // Final fallback to MCC/MNC info or generic "SIM X"
+        return fallbackResolution(context, networkOperator, simSlot)
+    }
+
+    private fun isValidSpecificName(name: String): Boolean {
+        return name.isNotEmpty() &&
+            name != "null" &&
+            !genericSimRegex.matches(name.trim()) &&
+            !SimUtils.isInactiveSim(name)
+    }
+
+    private fun resolveFromDbKey(context: Context, resKey: String): String? {
+        val resId = operatorResourceMap[resKey]
+        if (resId != null) {
+            return context.getString(resId)
+        }
+        if (!resKey.startsWith("operator_")) {
+            return resKey
+        }
+        return null
+    }
+
+    private fun fallbackResolution(context: Context, networkOperator: String, simSlot: Int): String {
         return if (networkOperator.isNotEmpty()) {
-            if (networkOperator.length >= 5) {
-                val mcc = networkOperator.take(3)
-                val mnc = networkOperator.drop(3)
-                context.getString(R.string.operator_with_mcc, "MCC:$mcc MNC:$mnc")
-            } else {
-                context.getString(R.string.operator_with_mcc, networkOperator)
-            }
+            formatMccMnc(context, networkOperator)
         } else {
             context.getString(R.string.operator_generic, simSlot + 1)
         }
     }
+
+    private fun formatMccMnc(context: Context, networkOperator: String): String {
+        return if (networkOperator.length >= MIN_MCC_MNC_LENGTH) {
+            val mcc = networkOperator.take(MCC_LENGTH)
+            val mnc = networkOperator.drop(MCC_LENGTH)
+            context.getString(R.string.operator_with_mcc, "MCC:$mcc MNC:$mnc")
+        } else {
+            context.getString(R.string.operator_with_mcc, networkOperator)
+        }
+    }
+
+    private const val MCC_LENGTH = 3
+    private const val MIN_MCC_MNC_LENGTH = 5
 }

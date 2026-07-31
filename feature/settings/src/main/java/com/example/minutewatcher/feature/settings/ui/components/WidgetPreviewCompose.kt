@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
+import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
@@ -39,17 +41,7 @@ fun WidgetPreview(
 ) {
     val alpha = 1f - uiState.transparency / 100f
     val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
-
-    val luminance =
-        androidx.core.graphics.ColorUtils
-            .calculateLuminance(uiState.backgroundColor)
-
-    val noDataColor =
-        if (uiState.useSystemColors) {
-            androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-        } else {
-            if (luminance > 0.5f) Color.Black else Color.White
-        }
+    val noDataColor = getNoDataColor(uiState)
 
     Box(
         modifier =
@@ -74,63 +66,80 @@ fun WidgetPreview(
 }
 
 @Composable
+private fun getNoDataColor(uiState: WidgetUiState): Color {
+    return if (uiState.useSystemColors) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(uiState.backgroundColor)
+        if (luminance > 0.5f) Color.Black else Color.White
+    }
+}
+
+@Composable
 private fun MultiSimPreviewLayout(
     sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
     if (uiState.isHorizontal) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            sims.forEachIndexed { index, sim ->
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    SimItemPreview(sim, uiState)
-                }
-                if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor =
-                        if (uiState.useSystemColors) {
-                            androidx.compose.material3.MaterialTheme.colorScheme.outline
-                        } else {
-                            Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
-                        }
-                    Spacer(
-                        modifier =
-                            Modifier
-                                .width(1.dp)
-                                .fillMaxHeight()
-                                .background(separatorColor),
-                    )
-                }
-            }
-        }
+        HorizontalSimPreviewLayout(sims, uiState)
     } else {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            sims.forEachIndexed { index, sim ->
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    SimItemPreview(sim, uiState)
-                }
-                if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor =
-                        if (uiState.useSystemColors) {
-                            androidx.compose.material3.MaterialTheme.colorScheme.outline
-                        } else {
-                            Color(sims[0].secondaryTextColor).copy(alpha = 0.5f)
-                        }
-                    Spacer(
-                        modifier =
-                            Modifier
-                                .height(1.dp)
-                                .fillMaxWidth()
-                                .background(separatorColor),
-                    )
-                }
+        VerticalSimPreviewLayout(sims, uiState)
+    }
+}
+
+@Composable
+private fun HorizontalSimPreviewLayout(
+    sims: List<SimUiState>,
+    uiState: WidgetUiState,
+) {
+    Row(
+        modifier = Modifier.fillMaxSize().padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        sims.forEachIndexed { index, sim ->
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                SimItemPreview(sim, uiState)
+            }
+            if (uiState.showSeparator && index < sims.size - 1) {
+                Separator(isHorizontal = true, uiState = uiState, firstSim = sims[0])
             }
         }
     }
+}
+
+@Composable
+private fun VerticalSimPreviewLayout(
+    sims: List<SimUiState>,
+    uiState: WidgetUiState,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        sims.forEachIndexed { index, sim ->
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                SimItemPreview(sim, uiState)
+            }
+            if (uiState.showSeparator && index < sims.size - 1) {
+                Separator(isHorizontal = false, uiState = uiState, firstSim = sims[0])
+            }
+        }
+    }
+}
+
+@Composable
+private fun Separator(isHorizontal: Boolean, uiState: WidgetUiState, firstSim: SimUiState) {
+    val separatorColor = if (uiState.useSystemColors) {
+        MaterialTheme.colorScheme.outline
+    } else {
+        Color(firstSim.secondaryTextColor).copy(alpha = 0.5f)
+    }
+    val modifier = if (isHorizontal) {
+        Modifier.width(1.dp).fillMaxHeight()
+    } else {
+        Modifier.height(1.dp).fillMaxWidth()
+    }
+    Spacer(modifier = modifier.background(separatorColor))
 }
 
 @Composable
@@ -162,14 +171,7 @@ private fun SimItemPreview(
                 )
             },
             textRenderer = { component ->
-                val textColor =
-                    if (uiState.useSystemColors && component.color == sim.textColor) {
-                        androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-                    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                        androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        Color(component.color)
-                    }
+                val textColor = getTextColor(uiState, sim, component)
                 Text(
                     text = component.text,
                     color = textColor,
@@ -186,5 +188,16 @@ private fun SimItemPreview(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun getTextColor(uiState: WidgetUiState, sim: SimUiState, component: SimLayoutComponent.Text): Color {
+    return if (uiState.useSystemColors && component.color == sim.textColor) {
+        MaterialTheme.colorScheme.onSurface
+    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        Color(component.color)
     }
 }

@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.android.util.FormatUtils
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -16,6 +17,7 @@ import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
@@ -24,7 +26,6 @@ import com.example.minutewatcher.core.resources.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 @HiltWorker
@@ -49,7 +50,7 @@ class UsageCheckWorker
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
                 try {
-                    // Refresh operator info periodically (if permissions allow)
+                    // Refresh operator info periodically
                     usageUseCase.refreshOperatorInfo()
 
                     checkUsageAndNotify()
@@ -76,7 +77,7 @@ class UsageCheckWorker
             val finalSnapshot = usageStateRepository.refresh().snapshot
             dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
-            val appSettings = appSettingsRepository.getAppSettings().first()
+            val appSettings = appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
                     processSimSnapshot(simSnapshot, appSettings)
@@ -86,10 +87,10 @@ class UsageCheckWorker
 
         private suspend fun processSimSnapshot(
             simSnapshot: com.example.minutewatcher.core.model.SimSnapshot,
-            appSettings: com.example.minutewatcher.core.model.AppSettings,
+            appSettings: AppSettings,
         ) {
             val identity = simIdentityRepository.getIdentity(simSnapshot.slot)
-            val simUsage = simUsageRepository.getSimUsage(identity).first()
+            val simUsage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
             val now = timeProvider.now()
 
             val monthProgress = DateUtils.getMonthProgressPercentage(simUsage.autoResetDay, now)
@@ -108,14 +109,14 @@ class UsageCheckWorker
             monthProgress: Int,
             daysRemaining: Int,
             identity: String,
-            appSettings: com.example.minutewatcher.core.model.AppSettings,
+            appSettings: AppSettings,
         ) {
             if (entity.limit <= 0 || !appSettings.notifyLowMinutes) return
 
             val usagePercentage = (entity.used * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
 
-            val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).first()
+            val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(entity.operatorName, R.string.notification_minutes_exhausted_body, entity.simSlot, 0)
@@ -135,7 +136,7 @@ class UsageCheckWorker
             daysRem: Int,
             identity: String,
         ) {
-            val notifiedLow = simNotificationFlagsRepository.getNotifiedLowMinutes(identity).first()
+            val notifiedLow = simNotificationFlagsRepository.getNotifiedLowMinutes(identity).firstWithTimeout() ?: false
             if (usagePct > monthProg && !notifiedLow) {
                 val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
                 val level = applicationContext.getString(levelRes)
@@ -176,7 +177,7 @@ class UsageCheckWorker
             monthProgress: Int,
             daysRemaining: Int,
             identity: String,
-            appSettings: com.example.minutewatcher.core.model.AppSettings,
+            appSettings: AppSettings,
         ) {
             if (entity.limit <= 0 || !appSettings.notifyLowTraffic) return
 
@@ -184,7 +185,7 @@ class UsageCheckWorker
             val remainingPercentage = HUNDRED - usagePercentage
             val remainingGb = entity.remaining.toFloat() / Constants.BYTES_PER_GB
 
-            val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).first()
+            val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(entity.operatorName, R.string.notification_traffic_exhausted_body, entity.simSlot, 1)
@@ -205,7 +206,7 @@ class UsageCheckWorker
             daysRem: Int,
             identity: String,
         ) {
-            val notifiedLow = simNotificationFlagsRepository.getNotifiedLowTraffic(identity).first()
+            val notifiedLow = simNotificationFlagsRepository.getNotifiedLowTraffic(identity).firstWithTimeout() ?: false
             if (usagePct > monthProg && !notifiedLow) {
                 val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
                 val level = applicationContext.getString(levelRes)

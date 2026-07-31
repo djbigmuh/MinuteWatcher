@@ -7,9 +7,13 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -77,6 +81,20 @@ class SettingsRepositoryImplTest {
         }
 
     @Test
+    fun testDefaultValues() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val settings = repository.getAppSettings().first()
+
+            assertEquals(AppTheme.FOLLOW_SYSTEM, settings.theme)
+            assertEquals(true, settings.notifyLowMinutes)
+            assertEquals(true, settings.notifyLowTraffic)
+            assertEquals(2, settings.widgetLayoutMode)
+            assertEquals(50, settings.widgetTransparency)
+            assertEquals(false, settings.onboardingCompleted)
+        }
+
+    @Test
     fun testUpdateAppSettings_AtomicUpdate() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
@@ -94,11 +112,14 @@ class SettingsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateAppSettings_PreservesOnboardingCompleted() =
+    fun testUpdateAppSettings_PreservesOtherFields() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
-            dataStore.edit { it[SettingsKeys.ONBOARDING_COMPLETED] = true }
+            dataStore.edit {
+                it[SettingsKeys.ONBOARDING_COMPLETED] = true
+                it[SettingsKeys.APP_THEME] = AppTheme.DARK.value
+            }
 
             repository.updateAppSettings { current ->
                 current.copy(widgetTransparency = 10)
@@ -106,6 +127,7 @@ class SettingsRepositoryImplTest {
 
             val prefs = dataStore.data.first()
             assertEquals(true, prefs[SettingsKeys.ONBOARDING_COMPLETED])
+            assertEquals(AppTheme.DARK.value, prefs[SettingsKeys.APP_THEME])
             assertEquals(10, prefs[SettingsKeys.WIDGET_TRANSPARENCY])
         }
 
@@ -114,15 +136,47 @@ class SettingsRepositoryImplTest {
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
-            val initialSettings = repository.getAppSettings().first()
-            assertEquals(false, initialSettings.onboardingCompleted)
+            repository.updateAppSettings { it.copy(onboardingCompleted = true) }
+
+            val settings = repository.getAppSettings().first()
+            assertEquals(true, settings.onboardingCompleted)
+        }
+
+    @Test
+    fun testConcurrentUpdates() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+
+            val job1 = launch {
+                repository.updateAppSettings { it.copy(widgetTransparency = 10) }
+            }
+            val job2 = launch {
+                repository.updateAppSettings { it.copy(widgetFontSize = 4) }
+            }
+
+            job1.join()
+            job2.join()
+
+            val settings = repository.getAppSettings().first()
+            assertEquals(10, settings.widgetTransparency)
+            assertEquals(4, settings.widgetFontSize)
+        }
+
+    @Test
+    fun testFlowEmitsUpdatedValue() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val settingsList = mutableListOf<com.example.minutewatcher.core.model.AppSettings>()
+
+            val job = launch {
+                repository.getAppSettings().take(2).toList(settingsList)
+            }
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
 
-            val prefs = dataStore.data.first()
-            assertEquals(true, prefs[SettingsKeys.ONBOARDING_COMPLETED])
-
-            val finalSettings = repository.getAppSettings().first()
-            assertEquals(true, finalSettings.onboardingCompleted)
+            job.join()
+            assertEquals(2, settingsList.size)
+            assertEquals(false, settingsList[0].onboardingCompleted)
+            assertEquals(true, settingsList[1].onboardingCompleted)
         }
 }

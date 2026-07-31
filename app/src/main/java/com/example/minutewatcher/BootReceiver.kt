@@ -27,7 +27,7 @@ class BootReceiver : BroadcastReceiver() {
                 OneTimeWorkRequestBuilder<InitialSetupWorker>()
                     .setBackoffCriteria(
                         BackoffPolicy.EXPONENTIAL,
-                        30,
+                        BACKOFF_DELAY_SECONDS,
                         TimeUnit.SECONDS,
                     ).build()
             WorkManager.getInstance(appContext).enqueueUniqueWork(
@@ -41,5 +41,9 @@ class BootReceiver : BroadcastReceiver() {
         } catch (e: Exception) {
             AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
         }
+    }
+
+    companion object {
+        private const val BACKOFF_DELAY_SECONDS = 30L
     }
 }

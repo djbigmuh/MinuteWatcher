@@ -14,7 +14,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UpdateCoordinatorTest {
@@ -37,13 +36,13 @@ class UpdateCoordinatorTest {
             // 1. First meaningful snapshot
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.value = s1
-            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater).updateAll()
 
             // 2. Second change
             val s2 = createSnapshot(timestamp = 2000L, content = "B")
             snapshotFlow.value = s2
-            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater, times(2)).updateAll()
         }
 
@@ -54,13 +53,13 @@ class UpdateCoordinatorTest {
 
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.value = s1
-            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater, times(1)).updateAll()
 
             // Same content, different timestamp
             val s2 = createSnapshot(timestamp = 2000L, content = "A")
             snapshotFlow.value = s2
-            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.advanceTimeBy(1000)
 
             // Still only 1 call
             verify(widgetUpdater, times(1)).updateAll()
@@ -69,7 +68,13 @@ class UpdateCoordinatorTest {
     @Test
     fun `notifyDataChanged with force triggers immediate widget update`() =
         runTest {
-            val coordinator = UpdateCoordinator(dataRefreshNotifier, widgetUpdater, { usageStateRepository }, backgroundScope)
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    { usageStateRepository },
+                    backgroundScope,
+                )
 
             coordinator.notifyDataChanged(updateWidget = true, force = true)
 
@@ -94,26 +99,27 @@ class UpdateCoordinatorTest {
         simSnapshots =
             listOf(
                 com.example.minutewatcher.core.model.SimSnapshot(
-                    0,
-                    "MTS",
-                    true,
-                    mapOf(
-                        com.example.minutewatcher.core.model.PackageType.MINUTES to
-                            com.example.minutewatcher.core.model.SemanticEntity(
-                                id = content, // Use content here to change hash
-                                simSlot = 0,
-                                operatorName = "MTS",
-                                packageType = com.example.minutewatcher.core.model.PackageType.MINUTES,
-                                limit = 100L,
-                                used = 10L,
-                                remaining = 90L,
-                                unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
-                                periodStart = 0L,
-                                periodEnd = 0L,
-                                sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM,
-                                lastUpdateTime = 0L,
-                            ),
-                    ),
+                    slot = 0,
+                    operator = "MTS",
+                    isActive = true,
+                    entities =
+                        mapOf(
+                            com.example.minutewatcher.core.model.PackageType.MINUTES to
+                                com.example.minutewatcher.core.model.SemanticEntity(
+                                    id = content, // Use content here to change hash
+                                    simSlot = 0,
+                                    operatorName = "MTS",
+                                    packageType = com.example.minutewatcher.core.model.PackageType.MINUTES,
+                                    limit = 100L,
+                                    used = 10L,
+                                    remaining = 90L,
+                                    unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
+                                    periodStart = 0L,
+                                    periodEnd = 0L,
+                                    sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM,
+                                    lastUpdateTime = 0L,
+                                ),
+                        ),
                 ),
             ),
         capabilities = emptyList(),

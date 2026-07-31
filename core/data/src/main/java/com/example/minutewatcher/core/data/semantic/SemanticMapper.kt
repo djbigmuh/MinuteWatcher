@@ -41,10 +41,9 @@ object SemanticMapper {
         resetDay: Int,
         nowMillis: Long,
     ): SemanticEntity {
-        val bytesPerMb = 1024L * 1024L
-        val limitBytes = (model.effectiveLimitGb * 1024 * bytesPerMb).toLong()
-        val usedBytes = (model.usedMb * bytesPerMb).toLong()
-        val remainingBytes = if (model.remainingGb >= 0) (model.remainingGb * 1024 * bytesPerMb).toLong() else 0L
+        val limitBytes = (model.effectiveLimitGb * com.example.minutewatcher.core.model.Constants.BYTES_PER_GB).toLong()
+        val usedBytes = (model.usedMb * com.example.minutewatcher.core.model.Constants.BYTES_PER_MB).toLong()
+        val remainingBytes = if (model.remainingGb >= 0) (model.remainingGb * com.example.minutewatcher.core.model.Constants.BYTES_PER_GB).toLong() else 0L
         val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis)
 
         return SemanticEntity(

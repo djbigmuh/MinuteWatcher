@@ -52,8 +52,9 @@
     <string name="tracking_banner_phone_permission">फ़ोन अनुमति आवश्यक है।</string>
     <string name="tracking_banner_usage_access">उपयोग एक्सेस आवश्यक है।</string>
     <string name="tracking_banner_traffic_error">ट्रैफ़िक डेटा में त्रुटि हुई।</string>
+    <string name="tracking_banner_calls_error">कॉल ट्रैकिंग डेटा अपडेट करने में त्रुटि हुई।</string>
     <string name="tracking_banner_appsearch_error">AppSearch अनुक्रमण विफल रहा।</string>
-    <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
+    <string name="tracking_banner_shortcuts_error">डायनामिक शॉर्टकट अपडेट विफल रहा।</string>
     <string name="tracking_banner_notification_permission">उपयोग अलर्ट प्राप्त करने के लिए अधिसूचना अनुमति की सिफारिश की जाती है।</string>
     <string name="notification_permission_permanent_denial">सूचनाएं अक्षम हैं। अलर्ट प्राप्त करने के लिए कृपया उन्हें ऐप सेटिंग में सक्षम करें।</string>
     <string name="action_grant">अनुमति दें</string>
@@ -76,7 +77,7 @@
     <string name="reset_limits_button">सीमाएं रीसेट करें</string>
     <string name="reset_counters">काउंटर रीसेट करें</string>
     <string name="reset_confirmation_title">काउंटर रीसेट करें?</string>
-    <string name="reset_confirmation_body">यह इस सिम कार्ड के लिए सभी ट्रैक किए गए उपयोग और समायोजन को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता है।</string>
+    <string name="reset_confirmation_body">यह इस सिम कार्ड के लिए सभी ट्रैक किए गए उपयोग और समायोजन को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा سکتا है।</string>
     <string name="choose_reset_day">स्वचालित रीसेट के लिए महीने का दिन चुनें:</string>
     <string name="choose_reset_day_dialog_title">रीसेट दिन चुनें</string>
     <string name="rollover_label">शेष राशि जमा करें</string>

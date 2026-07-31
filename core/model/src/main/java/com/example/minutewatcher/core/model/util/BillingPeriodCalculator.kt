@@ -42,7 +42,7 @@ object BillingPeriodCalculator {
 
         val totalDuration = ChronoUnit.MILLIS.between(startDate, endDate)
         val elapsed = ChronoUnit.MILLIS.between(startDate, now)
-        val progress = if (totalDuration > 0) ((elapsed.toDouble() / totalDuration) * 100).toInt() else 0
+        val progress = if (totalDuration > 0) ((elapsed.toDouble() / totalDuration) * PERCENT_MAX).toInt() else 0
 
         // Accurate days remaining calculation
         val daysRemaining = ChronoUnit.DAYS.between(now.toLocalDate(), endDate.toLocalDate()).toInt()
@@ -51,7 +51,9 @@ object BillingPeriodCalculator {
             startDate = startDate.toInstant().toEpochMilli(),
             endDate = endDate.toInstant().toEpochMilli(),
             daysRemaining = maxOf(0, daysRemaining),
-            progressPercentage = progress.coerceIn(0, 100),
+            progressPercentage = progress.coerceIn(0, PERCENT_MAX),
         )
     }
+
+    private const val PERCENT_MAX = 100
 }

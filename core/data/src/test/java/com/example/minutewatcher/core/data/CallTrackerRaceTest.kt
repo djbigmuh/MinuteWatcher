@@ -10,6 +10,8 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -18,6 +20,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -51,28 +54,42 @@ class CallTrackerRaceTest {
                 kotlinx.coroutines.CoroutineScope(testDispatcher),
                 timeProvider,
             )
+
+        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(com.example.minutewatcher.core.model.AppSettings(callTrackingEnabled = true)))
     }
 
     @Test
-    fun `call is tracked if enabled in DataStore even if StateFlow not updated`() =
+    fun `concurrent onCallStarted calls are handled safely by mutex`() =
         runTest {
-            // Mock getAppSettings().first() to return enabled=true
-            whenever(
-                appSettingsRepository.getAppSettings(),
-            ).thenReturn(
-                flowOf(
-                    com.example.minutewatcher.core.model
-                        .AppSettings(callTrackingEnabled = true),
-                ),
-            )
-
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(1)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
-            tracker.onCallStarted(1)
+            // Launch multiple concurrent start events
+            val jobs = List(10) {
+                launch {
+                    tracker.onCallStarted(1)
+                }
+            }
+            jobs.joinAll()
+
+            // Verification of interaction count
+            verify(callSessionRepository, times(10)).getCallStartTime(1)
+        }
+
+    @Test
+    fun `concurrent call start and end for different subIds`() =
+        runTest {
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+
+            launch { tracker.onCallStarted(1) }
+            launch { tracker.onCallStarted(2) }
 
             verify(callSessionRepository).setCallStartTime(eq(1), any())
+            verify(callSessionRepository).setCallStartTime(eq(2), any())
         }
 }
