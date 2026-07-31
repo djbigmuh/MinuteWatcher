@@ -39,6 +39,12 @@ class CallSessionRepositoryImpl @Inject constructor(
         dataStore.edit { it[SettingsKeys.bootTimeKey(subId)] = time }
     }
 
+    override fun getUptime(subId: Int): Flow<Long> = get(SettingsKeys.uptimeKey(subId), 0L)
+
+    override suspend fun setUptime(subId: Int, time: Long) {
+        dataStore.edit { it[SettingsKeys.uptimeKey(subId)] = time }
+    }
+
     override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[SettingsKeys.callIdentityKey(subId)] }
 
     override suspend fun setCallIdentity(subId: Int, identity: String?) {
@@ -57,6 +63,7 @@ class CallSessionRepositoryImpl @Inject constructor(
                 .filter { key ->
                     key.name.startsWith("call_start_time_") ||
                         key.name.startsWith("boot_time_") ||
+                        key.name.startsWith("uptime_") ||
                         key.name.startsWith("call_identity_")
                 }.forEach { key ->
                     prefs.remove(key)

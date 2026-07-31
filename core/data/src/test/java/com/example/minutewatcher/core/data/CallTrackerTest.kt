@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
@@ -48,9 +49,10 @@ class CallTrackerTest {
     @Before
     fun setup() =
         runTest {
-            whenever(appSettingsRepository.getCallTrackingEnabled()).thenReturn(flowOf(true))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = true)))
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getUptime(any())).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
 
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("id_0")
@@ -86,11 +88,13 @@ class CallTrackerTest {
         runTest {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
 
             callTracker.onCallEnded(subId = 1)
 
             verify(callSessionRepository).setCallStartTime(1, 0)
             verify(callSessionRepository).setBootTime(1, 0)
+            verify(callSessionRepository).setUptime(1, 0)
         }
 
     @Test
@@ -119,6 +123,7 @@ class CallTrackerTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
 
             callTracker.onCallEnded(-1)
 
@@ -131,8 +136,10 @@ class CallTrackerTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
             whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
+            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(200L))
 
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(2)
 
@@ -149,8 +156,10 @@ class CallTrackerTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(2000L))
             whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
+            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(200L))
 
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 
@@ -205,8 +214,10 @@ class CallTrackerTest {
         runTest {
             val startTime = 1000L
             val bootTime = 500L
+            val uptime = 500L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             // Advance clock so currentBootTime - savedBootTime > 0
@@ -244,8 +255,10 @@ class CallTrackerTest {
             // Arrange: Force attribution failure in processCallDuration
             val startTime = 1000L
             val bootTime = 500L
+            val uptime = 500L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
             // No identity found
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
@@ -269,6 +282,7 @@ class CallTrackerTest {
             // Arrange: Start with an error status
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(500L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(500L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
@@ -292,7 +306,7 @@ class CallTrackerTest {
     fun `call tracking disabled does not increment minutes`() =
         runTest {
             // Arrange
-            whenever(appSettingsRepository.getCallTrackingEnabled()).thenReturn(flowOf(false))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
             // Re-create tracker to pick up new setting state
             callTracker = CallTracker(
                 simIdentityRepository, simUsageRepository, appSettingsRepository,
@@ -302,8 +316,10 @@ class CallTrackerTest {
             
             val startTime = 1000L
             val bootTime = 500L
+            val uptime = 500L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             timeProvider.advance(10000)
@@ -321,8 +337,10 @@ class CallTrackerTest {
             // Arrange: saved boot time is in the future relative to current (impossible session)
             val startTime = 1000L
             val bootTime = 500001L // 1ms after current realtime
+            val uptime = 500001L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             // Act
@@ -330,6 +348,27 @@ class CallTrackerTest {
 
             // Assert
             verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+        }
+
+    @Test
+    fun `call duration excludes deep sleep`() =
+        runTest {
+            val startTime = 1000L
+            val bootTime = 500L
+            val uptime = 500L
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // Simulate 100 seconds elapsedRealtime but only 60 seconds uptime (40s deep sleep)
+            timeProvider.advance(60000) // now, realtime, uptime all +60s
+            timeProvider.advanceRealtimeOnly(40000) // realtime +40s (total 100s since start)
+
+            callTracker.onCallEnded(subId = 1)
+
+            // Duration should be 60 seconds (1 minute), not 100 seconds
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_0"), eq(1))
         }
 }
 

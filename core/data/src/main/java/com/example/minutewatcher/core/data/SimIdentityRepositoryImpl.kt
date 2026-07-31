@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -51,10 +50,7 @@ class SimIdentityRepositoryImpl @Inject constructor(
 ) : SimIdentityRepository {
 
     private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
-        combine(
-            seedRepository.getSeed(),
-            permissionStateNotifier.changes,
-        ) { seed, _ -> seed }
+        seedRepository.getSeed()
             .flatMapLatest { seed ->
                 callbackFlow {
                     val listener =
@@ -66,22 +62,39 @@ class SimIdentityRepositoryImpl @Inject constructor(
                             }
                         }
 
-                    if (permissionManager.hasPhoneStatePermission()) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            subscriptionManager.addOnSubscriptionsChangedListener(context.mainExecutor, listener)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            subscriptionManager.addOnSubscriptionsChangedListener(listener)
+                    var isListenerRegistered = false
+
+                    fun updateListenerRegistration() {
+                        val hasPermission = permissionManager.hasPhoneStatePermission()
+                        if (hasPermission && !isListenerRegistered) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                subscriptionManager.addOnSubscriptionsChangedListener(context.mainExecutor, listener)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                subscriptionManager.addOnSubscriptionsChangedListener(listener)
+                            }
+                            isListenerRegistered = true
+                        } else if (!hasPermission && isListenerRegistered) {
+                            subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                            isListenerRegistered = false
                         }
-                        launch {
-                            trySend(getActiveSimsInternal(seed))
+                    }
+
+                    launch {
+                        permissionStateNotifier.changes.collect {
+                            updateListenerRegistration()
+                            if (permissionManager.hasPhoneStatePermission()) {
+                                trySend(getActiveSimsInternal(seed))
+                            } else {
+                                trySend(emptyList())
+                            }
                         }
-                    } else {
-                        trySend(emptyList())
                     }
 
                     awaitClose {
-                        subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                        if (isListenerRegistered) {
+                            subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                        }
                     }
                 }
             }

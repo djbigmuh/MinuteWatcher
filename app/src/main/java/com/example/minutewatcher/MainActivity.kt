@@ -281,24 +281,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private var lastRefreshAt = 0L
-    private var lastResumeNotifyTime = 0L
-
     override fun onResume() {
         super.onResume()
 
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastRefreshAt > 20_000L) {
-            lastRefreshAt = now
-            viewModel.refreshSimCards()
-            viewModel.notifyDataChanged()
-        }
-
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastResumeNotifyTime > 1000) {
-            permissionStateNotifier.notifyChanged()
-            lastResumeNotifyTime = currentTime
-        }
+        viewModel.onActivityResume(
+            nowElapsed = SystemClock.elapsedRealtime(),
+            currentTimeMillis = System.currentTimeMillis(),
+            permissionStateNotifier = permissionStateNotifier,
+        )
 
         // If we returned from settings, check if we can move to notifications
         if (permissionManager.hasPhoneStatePermission()) {

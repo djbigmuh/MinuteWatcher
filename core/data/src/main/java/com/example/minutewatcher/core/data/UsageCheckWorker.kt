@@ -76,7 +76,7 @@ class UsageCheckWorker
             val finalSnapshot = usageStateRepository.refresh()
             dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
-            val appSettings = appSettingsRepository.observeAppSettings().value
+            val appSettings = appSettingsRepository.getAppSettings().first()
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
                     processSimSnapshot(simSnapshot, appSettings)

@@ -247,7 +247,7 @@ class MainViewModel
         private suspend fun refreshSimCardsInternal() =
             withContext(ioDispatcher) {
                 val acquired =
-                    withTimeoutOrNull(10.seconds) {
+                    withTimeoutOrNull(2.seconds) {
                         simCheckMutex.withLock {
                             _refreshStatus.value = RefreshState.Loading
                             try {
@@ -381,6 +381,26 @@ class MainViewModel
                 if (_highlightedSlot.value == slot) {
                     _highlightedSlot.value = null
                 }
+            }
+        }
+
+        private var lastRefreshAt = 0L
+        private var lastResumeNotifyTime = 0L
+
+        fun onActivityResume(
+            nowElapsed: Long,
+            currentTimeMillis: Long,
+            permissionStateNotifier: com.example.minutewatcher.core.domain.PermissionStateNotifier,
+        ) {
+            if (nowElapsed - lastRefreshAt > 20_000L) {
+                lastRefreshAt = nowElapsed
+                refreshSimCards()
+                notifyDataChanged()
+            }
+
+            if (currentTimeMillis - lastResumeNotifyTime > 1000) {
+                permissionStateNotifier.notifyChanged()
+                lastResumeNotifyTime = currentTimeMillis
             }
         }
 

@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.ColorProvider
+import com.example.minutewatcher.core.model.util.SnapshotUtils
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,7 +24,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -90,7 +90,7 @@ open class SemanticSearchManager
 
                     if (success) {
                         snapshotFlow
-                            .collectLatest { snapshot ->
+                            .collect { snapshot ->
                                 if (snapshot.timestamp > 0) {
                                     withContext(ioDispatcher) {
                                         indexSnapshot(snapshot)
@@ -167,7 +167,7 @@ open class SemanticSearchManager
         private val minIndexInterval = 5 * 60 * 1000L // 5 minutes
 
         internal suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
-            val currentHash = SnapshotHashCalculator.calculate(snapshot)
+            val currentHash = SnapshotUtils.calculateContentHash(snapshot)
             if (currentHash == lastSnapshotHash) return
 
             if (!snapshot.isManualUpdate) {
@@ -175,6 +175,13 @@ open class SemanticSearchManager
                 val timeSinceLast = currentTime - lastIndexTime
                 if (timeSinceLast < minIndexInterval) {
                     delay((minIndexInterval - timeSinceLast).milliseconds)
+                    
+                    // After delay, re-check hash in case snapshot data changed during wait
+                    // but we are still processing the same (now stale) snapshot instance.
+                    // Conflate ensures we will get the latest one in the next loop iteration,
+                    // but we can skip this one if it's no longer the "current" meaningful state.
+                    val updatedSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
+                    if (updatedSnapshotHash == lastSnapshotHash) return
                 }
             }
 

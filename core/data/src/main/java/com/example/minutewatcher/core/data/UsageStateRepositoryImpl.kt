@@ -17,6 +17,7 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.android.util.SimCardMapper
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -162,7 +163,10 @@ class UsageStateRepositoryImpl
             coroutineScope {
                 val nextSnapshot = async { snapshotFlow.drop(1).first() }
                 dataRefreshNotifier.notifyRefresh()
-                withTimeoutOrNull(5000.milliseconds) { nextSnapshot.await() } ?: snapshotFlow.value
+                withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() } ?: run {
+                    AppLogger.w("UsageStateRepository: Refresh timed out after 2s, returning current snapshot")
+                    snapshotFlow.value
+                }
             }
 
         private fun createEmptySnapshot() =

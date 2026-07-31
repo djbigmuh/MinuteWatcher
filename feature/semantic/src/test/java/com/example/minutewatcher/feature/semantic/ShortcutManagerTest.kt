@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.resources.R
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
@@ -33,6 +34,7 @@ class ShortcutManagerTest {
     private val navigationProvider: NavigationProvider = mock()
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
+    private val timeProvider = FixedTimeProvider(100000L)
     private lateinit var shortcutManager: ShortcutManager
     private lateinit var androidShortcutManager: AndroidShortcutManager
 
@@ -55,9 +57,41 @@ class ShortcutManagerTest {
                 context,
                 testScope,
                 navigationProvider,
+                timeProvider,
                 testDispatcher,
             )
     }
+
+    @Test
+    fun `shortcuts are eventually updated even with frequent changes`() =
+        runTest(testDispatcher) {
+            val flow = MutableStateFlow(createSnapshot(listOf(SimSnapshot(0, "MTS", true, mapOf(
+                PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)
+            )))))
+
+            shortcutManager.initialize(flow)
+            
+            // Emit changes every 10 seconds. In old implementation (collectLatest + 30s delay), 
+            // this would never trigger updateShortcuts.
+            repeat(10) { i ->
+                timeProvider.advance(10_000)
+                flow.value = createSnapshot(listOf(SimSnapshot(0, "Op_$i", true, mapOf(
+                    PackageType.MINUTES to createEntity(0, "Op_$i", PackageType.MINUTES, 100, 10)
+                ))))
+                // Each emit cancels previous block in collectLatest, but NOT in collect.
+                // In collect, it will wait for delay and then process the LATEST value.
+            }
+
+            // After 100s, we should have had at least some updates.
+            // The first update was immediate.
+            // Subsequent updates are throttled to 30s.
+            // 100s / 30s approx 3 updates.
+            
+            // Check the current operator in shortcuts - it should be the latest one (Op_9)
+            // or close to it depending on exactly when the last 30s delay ended.
+            val shortcuts = androidShortcutManager.dynamicShortcuts
+            assertTrue("Op_" in shortcuts[0].longLabel.toString())
+        }
 
     @Test
     fun `initialize updates shortcuts immediately with correct labels`() =

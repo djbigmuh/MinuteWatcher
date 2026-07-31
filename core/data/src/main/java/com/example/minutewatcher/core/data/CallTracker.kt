@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import android.os.Build
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -50,7 +52,8 @@ class CallTracker
 
         private val callTrackingEnabled =
             appSettingsRepository
-                .getCallTrackingEnabled()
+                .getAppSettings()
+                .map { it.callTrackingEnabled }
                 .stateIn(scope, SharingStarted.Eagerly, false)
 
         /**
@@ -84,6 +87,7 @@ class CallTracker
                 val startTime = callSessionRepository.getCallStartTime(effectiveSubId).first()
                 val savedBootTime = callSessionRepository.getBootTime(effectiveSubId).first()
                 val currentBootTime = timeProvider.elapsedRealtime()
+                val currentUptime = timeProvider.uptimeMillis()
 
                 val isStale = startTime == 0L || savedBootTime == 0L || savedBootTime > currentBootTime
 
@@ -96,6 +100,7 @@ class CallTracker
                     val identity = resolveIdentity(effectiveSubId)
                     callSessionRepository.setCallStartTime(effectiveSubId, timeProvider.now())
                     callSessionRepository.setBootTime(effectiveSubId, currentBootTime)
+                    callSessionRepository.setUptime(effectiveSubId, currentUptime)
                     callSessionRepository.setCallIdentity(effectiveSubId, identity)
                     _status.value = TrackingStatus.Active
                     AppLogger.d("Call started for subId $effectiveSubId (identity: $identity)")
@@ -159,10 +164,14 @@ class CallTracker
                             else -> {
                                 // Try individual check for API 31+
                                 val idleSubs =
-                                    activeSubIds.filter { id ->
-                                        val manager = telephonyManager.createForSubscriptionId(id)
-                                        @Suppress("DEPRECATION")
-                                        manager.callState == TelephonyManager.CALL_STATE_IDLE
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        activeSubIds.filter { id ->
+                                            val manager = telephonyManager.createForSubscriptionId(id)
+                                            @Suppress("DEPRECATION")
+                                            manager.callState == TelephonyManager.CALL_STATE_IDLE
+                                        }
+                                    } else {
+                                        emptyList()
                                     }
 
                                 if (idleSubs.size == 1) {
@@ -211,11 +220,11 @@ class CallTracker
         private suspend fun endCall(subId: Int) {
             val startTime = callSessionRepository.getCallStartTime(subId).first()
             val savedBootTime = callSessionRepository.getBootTime(subId).first()
+            val savedUptime = callSessionRepository.getUptime(subId).first()
             val savedIdentity = callSessionRepository.getCallIdentity(subId).first()
-            // Note: elapsedRealtime includes time spent in deep sleep. 
-            // This is a platform limitation; if the device sleeps during a call,
-            // the duration might be slightly over-reported.
+            
             val currentBootTime = timeProvider.elapsedRealtime()
+            val currentUptime = timeProvider.uptimeMillis()
 
             if (startTime > 0) {
                 // Clear session state first
@@ -226,13 +235,14 @@ class CallTracker
                     return
                 }
 
-                // Validate session against reboots/corruption
+                // Validate session against reboots/corruption using elapsedRealtime
                 if (savedBootTime == 0L || savedBootTime > currentBootTime) {
                     AppLogger.d("Stale call session detected for subId $subId (reboot or corrupted state)")
                     return
                 }
 
-                val durationSeconds = (currentBootTime - savedBootTime) / MILLIS_IN_SECOND
+                // Use uptimeMillis for duration calculation (excludes deep sleep)
+                val durationSeconds = (currentUptime - savedUptime) / MILLIS_IN_SECOND
                 if (durationSeconds > 0) {
                     processCallDuration(durationSeconds.toInt(), subId, savedIdentity)
                 }
@@ -254,6 +264,7 @@ class CallTracker
         private suspend fun clearSession(subId: Int) {
             callSessionRepository.setCallStartTime(subId, 0)
             callSessionRepository.setBootTime(subId, 0)
+            callSessionRepository.setUptime(subId, 0)
             callSessionRepository.setCallIdentity(subId, null)
         }
 

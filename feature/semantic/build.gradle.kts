@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidxAppsearchLocalStorage)
     implementation(libs.kotlinxCoroutinesGuava)
 
+    testImplementation(testFixtures(project(":core:common")))
     testImplementation(libs.junit)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.robolectric)

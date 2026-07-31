@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.Lazy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -44,9 +45,7 @@ class UpdateCoordinator
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .map { usageStateRepository.get().observeSnapshot().value }
                     .distinctUntilChanged { old, new ->
-                        // Add hash check: only update widget if the actual data in snapshot changed.
-                        // We ignore timestamp and version for this comparison.
-                        old.simSnapshots == new.simSnapshots && old.capabilities == new.capabilities
+                        SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
                     }
                     .collect { _ ->
                         widgetUpdater.updateAll()

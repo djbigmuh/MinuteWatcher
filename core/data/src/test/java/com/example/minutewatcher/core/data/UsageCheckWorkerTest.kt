@@ -129,7 +129,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(snapshot)
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings(notifyLowMinutes = true)))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
@@ -180,7 +180,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(snapshot)
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings(notifyLowTraffic = true)))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
@@ -219,7 +219,7 @@ class UsageCheckWorkerTest {
             )
 
             whenever(usageStateRepository.refresh()).thenReturn(snapshot)
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings(notifyLowMinutes = true)))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
@@ -260,7 +260,7 @@ class UsageCheckWorkerTest {
             )
 
             whenever(usageStateRepository.refresh()).thenReturn(snapshot)
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings(notifyLowTraffic = true)))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 950f, trafficLimit = 1000)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))

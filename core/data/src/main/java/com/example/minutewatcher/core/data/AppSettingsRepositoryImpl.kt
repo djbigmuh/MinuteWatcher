@@ -46,80 +46,10 @@ class AppSettingsRepositoryImpl @Inject constructor(
                 ),
             )
 
-    override fun getAppSettings(): Flow<AppSettings> = appSettingsState
+    override fun getAppSettings(): Flow<AppSettings> =
+        dataStore.data.map { prefs -> prefs.toAppSettings() }
 
     override fun observeAppSettings(): StateFlow<AppSettings> = appSettingsState
-
-    private fun <T> get(
-        key: Preferences.Key<T>,
-        defaultValue: T,
-    ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
-
-    override fun getAppTheme(): Flow<AppTheme> = get(SettingsKeys.APP_THEME, -1).map { AppTheme.fromValue(it) }
-
-    override suspend fun setAppTheme(theme: AppTheme) {
-        dataStore.edit { it[SettingsKeys.APP_THEME] = theme.value }
-    }
-
-    override fun getAppLanguage(): Flow<String?> = dataStore.data.map { it[SettingsKeys.APP_LANGUAGE] }
-
-    override suspend fun setAppLanguage(language: String?) {
-        dataStore.edit {
-            if (language == null) {
-                it.remove(SettingsKeys.APP_LANGUAGE)
-            } else {
-                it[SettingsKeys.APP_LANGUAGE] = language
-            }
-        }
-    }
-
-    override fun getWidgetLayoutMode(): Flow<Int> = get(SettingsKeys.WIDGET_LAYOUT_MODE, 2)
-
-    override suspend fun setWidgetLayoutMode(mode: Int) {
-        dataStore.edit { it[SettingsKeys.WIDGET_LAYOUT_MODE] = mode }
-    }
-
-    override fun getWidgetSimArrangement(): Flow<Int> = get(SettingsKeys.WIDGET_SIM_ARRANGEMENT, 0)
-
-    override suspend fun setWidgetSimArrangement(arrangement: Int) {
-        dataStore.edit { it[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = arrangement }
-    }
-
-    override fun getWidgetTransparency(): Flow<Int> = get(SettingsKeys.WIDGET_TRANSPARENCY, 50)
-
-    override suspend fun setWidgetTransparency(transparency: Int) {
-        dataStore.edit { it[SettingsKeys.WIDGET_TRANSPARENCY] = transparency }
-    }
-
-    override fun getWidgetFontSize(): Flow<Int> = get(SettingsKeys.WIDGET_FONT_SIZE, 2)
-
-    override suspend fun setWidgetFontSize(size: Int) {
-        dataStore.edit { it[SettingsKeys.WIDGET_FONT_SIZE] = size }
-    }
-
-    override fun getWidgetBackgroundColor(): Flow<Int> = get(SettingsKeys.WIDGET_BACKGROUND_COLOR, Constants.UI.DEFAULT_BG_COLOR)
-
-    override suspend fun setWidgetBackgroundColor(color: Int) {
-        dataStore.edit { it[SettingsKeys.WIDGET_BACKGROUND_COLOR] = color }
-    }
-
-    override fun getNotifyLowMinutes(): Flow<Boolean> = get(SettingsKeys.NOTIFY_LOW_MINUTES, true)
-
-    override suspend fun setNotifyLowMinutes(enabled: Boolean) {
-        dataStore.edit { it[SettingsKeys.NOTIFY_LOW_MINUTES] = enabled }
-    }
-
-    override fun getNotifyLowTraffic(): Flow<Boolean> = get(SettingsKeys.NOTIFY_LOW_TRAFFIC, true)
-
-    override suspend fun setNotifyLowTraffic(enabled: Boolean) {
-        dataStore.edit { it[SettingsKeys.NOTIFY_LOW_TRAFFIC] = enabled }
-    }
-
-    override fun getCallTrackingEnabled(): Flow<Boolean> = get(SettingsKeys.CALL_TRACKING_ENABLED, true)
-
-    override suspend fun setCallTrackingEnabled(enabled: Boolean) {
-        dataStore.edit { it[SettingsKeys.CALL_TRACKING_ENABLED] = enabled }
-    }
 
     override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
         dataStore.edit { prefs ->

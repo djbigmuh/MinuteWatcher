@@ -18,7 +18,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -64,7 +64,7 @@ class UsageCheckWorkerModuleTest {
             )
         runTest {
             whenever(usageStateRepository.refresh()).thenReturn(emptySnapshot)
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         }
     }
 

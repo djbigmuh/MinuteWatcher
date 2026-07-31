@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.android.util.SimUtils
@@ -77,7 +78,7 @@ class TrafficTracker
             trafficMutex.withLock {
                 try {
                     val usage = simUsageRepository.getSimUsage(identity).first()
-                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate)
+                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
                     if (currentBytes != -1L) {
                         simUsageRepository.setLastTotalBytes(identity, currentBytes)
                         AppLogger.d("Traffic baseline reset for $identity to $currentBytes (startTime: ${usage.lastResetDate})")
@@ -112,7 +113,7 @@ class TrafficTracker
                     val (targetSim, currentDataSubId) = targetInfo
                     val targetIdentity = simIdentityRepository.getIdentity(targetSim)
                     val usage = simUsageRepository.getSimUsage(targetIdentity).first()
-                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate)
+                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
                     if (currentBytes == -1L) {
                         AppLogger.d("Traffic stats unavailable for $targetIdentity, skipping update")
                         if (!permissionManager.hasUsageStatsPermission()) {
@@ -138,7 +139,7 @@ class TrafficTracker
                     }
 
                     val deltaBytes = currentBytes - lastTotalBytes
-                    if (deltaBytes.compareTo(0L) > 0) {
+                    if (deltaBytes > 0L) {
                         val deltaMB = deltaBytes.toFloat() / Constants.BYTES_PER_MB
                         if (deltaMB >= 0.0001f) {
                             simUsageRepository.setLastTotalBytes(targetIdentity, currentBytes)
@@ -165,10 +166,15 @@ class TrafficTracker
             }
         }
 
-        private fun getCurrentMobileBytes(startTime: Long): Long {
+        private fun getCurrentMobileBytes(startTime: Long, autoResetDay: Int): Long {
             if (networkStatsManager == null) return -1L
 
-            val safeStart = if (startTime > 0) startTime else timeProvider.now() - DEFAULT_QUERY_RANGE_MS
+            val now = timeProvider.now()
+            val safeStart = if (startTime > 0) {
+                startTime
+            } else {
+                BillingPeriodCalculator.calculate(autoResetDay, now).startDate
+            }
 
             return try {
                 val bucket =
@@ -176,7 +182,7 @@ class TrafficTracker
                         NetworkCapabilities.TRANSPORT_CELLULAR,
                         null,
                         safeStart,
-                        timeProvider.now(),
+                        now,
                     )
                 bucket.rxBytes + bucket.txBytes
             } catch (e: SecurityException) {
@@ -198,8 +204,6 @@ class TrafficTracker
                 }
             } catch (e: SecurityException) {
                 throw e
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error getting default data SIM", e)
             }
@@ -220,7 +224,7 @@ class TrafficTracker
                 AppLogger.d("Default data SIM changed (from $savedLastDataSubId to $currentDataSubId). Resetting baseline.")
                 val identity = simIdentityRepository.getIdentity(targetSim)
                 val usage = simUsageRepository.getSimUsage(identity).first()
-                val currentBytes = getCurrentMobileBytes(usage.lastResetDate)
+                val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
                 if (currentBytes != -1L) {
                     simUsageRepository.setLastTotalBytes(identity, currentBytes)
                 }
@@ -252,9 +256,5 @@ class TrafficTracker
             }
 
             return if (activeSlots.size == 1) activeSlots.first() else null
-        }
-
-        companion object {
-            private const val DEFAULT_QUERY_RANGE_MS = 30L * 24 * 3600 * 1000 // 30 days
         }
     }
