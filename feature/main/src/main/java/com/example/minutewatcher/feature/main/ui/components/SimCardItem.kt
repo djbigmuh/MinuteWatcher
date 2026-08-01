@@ -52,7 +52,6 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.UsageStatus
 import com.example.minutewatcher.core.resources.R
-
 import com.example.minutewatcher.feature.main.ui.theme.usageColor
 
 private const val SWITCH_SCALE = 0.8f
@@ -101,7 +100,10 @@ fun SimCardItem(
 }
 
 @Composable
-private fun SimCardHeader(model: SimCardUiModel, onSetLimits: () -> Unit) {
+private fun SimCardHeader(
+    model: SimCardUiModel,
+    onSetLimits: () -> Unit,
+) {
     val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Image(
@@ -110,13 +112,19 @@ private fun SimCardHeader(model: SimCardUiModel, onSetLimits: () -> Unit) {
             modifier = Modifier.size(32.dp),
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = model.operatorName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(
+            text = model.operatorName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
         OutlinedButton(
             onClick = onSetLimits,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            modifier = Modifier.height(32.dp).semantics {
-                contentDescription = setLimitsDesc
-            },
+            modifier =
+                Modifier.height(32.dp).semantics {
+                    contentDescription = setLimitsDesc
+                },
         ) {
             Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
         }
@@ -124,27 +132,45 @@ private fun SimCardHeader(model: SimCardUiModel, onSetLimits: () -> Unit) {
 }
 
 @Composable
-private fun MinutesSection(model: SimCardUiModel, onAdjustMinutes: () -> Unit) {
+private fun MinutesSection(
+    model: SimCardUiModel,
+    onAdjustMinutes: () -> Unit,
+) {
     val status = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                text = "${stringResource(R.string.used_text)}: ${FormatUtils.formatMinutes(model.minutesUsed)} ${stringResource(R.string.minutes_abbr)}",
+                text = "${stringResource(
+                    R.string.used_text,
+                )}: ${FormatUtils.formatMinutes(model.minutesUsed)} ${stringResource(R.string.minutes_abbr)}",
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (model.isMinutesLimitSet) {
                 Text(
-                    text = "${stringResource(R.string.limit_text)}: ${FormatUtils.formatMinutes(model.effectiveMinutesLimit)} ${stringResource(R.string.minutes_abbr)}",
+                    text = "${stringResource(
+                        R.string.limit_text,
+                    )}: ${FormatUtils.formatMinutes(model.effectiveMinutesLimit)} ${stringResource(R.string.minutes_abbr)}",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = stringResource(id = R.string.remaining_text), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(
+                text = stringResource(id = R.string.remaining_text),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
             Spacer(modifier = Modifier.width(8.dp))
             EditableValueBox(
-                value = FormatUtils.formatMinutesDisplay(LocalContext.current, model.minutesRemaining, model.minutesLimit, model.manualAdjustment, false),
+                value =
+                    FormatUtils.formatMinutesDisplay(
+                        LocalContext.current,
+                        model.minutesRemaining,
+                        model.minutesLimit,
+                        model.manualAdjustment,
+                        false,
+                    ),
                 color = getStatusColor(status),
                 onClick = onAdjustMinutes,
                 contentDescription = stringResource(id = R.string.adjust_minutes_content_desc),
@@ -157,7 +183,11 @@ private fun MinutesSection(model: SimCardUiModel, onAdjustMinutes: () -> Unit) {
 }
 
 @Composable
-private fun TrafficSection(model: SimCardUiModel, onAdjustTraffic: () -> Unit, onShowTrafficInfo: () -> Unit) {
+private fun TrafficSection(
+    model: SimCardUiModel,
+    onAdjustTraffic: () -> Unit,
+    onShowTrafficInfo: () -> Unit,
+) {
     if (!model.isTrafficLimitSet && model.trafficUsedMb <= 0) return
     val status = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb)
     val context = LocalContext.current
@@ -166,37 +196,77 @@ private fun TrafficSection(model: SimCardUiModel, onAdjustTraffic: () -> Unit, o
     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(id = R.string.traffic_label), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(
+                text = stringResource(id = R.string.traffic_label),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
             Spacer(modifier = Modifier.width(4.dp))
             IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Info, contentDescription = trafficInfoDesc, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = trafficInfoDesc,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "${stringResource(R.string.used_text)}: ${FormatUtils.formatMbAsGb(context, model.trafficUsedMb)}", style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "${stringResource(R.string.used_text)}: ${FormatUtils.formatMbAsGb(context, model.trafficUsedMb)}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
             if (model.isTrafficLimitSet) {
-                Text(text = "${stringResource(R.string.limit_text)}: ${FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb)}${stringResource(R.string.gb_abbr)}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "${stringResource(
+                        R.string.limit_text,
+                    )}: ${FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb)}${stringResource(R.string.gb_abbr)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = stringResource(id = R.string.traffic_remaining_text), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(
+                text = stringResource(id = R.string.traffic_remaining_text),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
             Spacer(modifier = Modifier.width(8.dp))
             EditableValueBox(
-                value = FormatUtils.formatTrafficDisplay(context, model.trafficRemainingGb, model.trafficLimitMb / Constants.MB_PER_GB, false),
+                value =
+                    FormatUtils.formatTrafficDisplay(
+                        context,
+                        model.trafficRemainingGb,
+                        model.trafficLimitMb / Constants.MB_PER_GB,
+                        false,
+                    ),
                 color = getStatusColor(status),
                 onClick = onAdjustTraffic,
                 contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
             )
         }
         if (model.trafficAdjustmentGb != 0f) {
-            AdjustmentLabel(value = FormatUtils.formatTrafficGb(model.trafficAdjustmentGb), unit = stringResource(R.string.gb_abbr), isPositive = model.trafficAdjustmentGb > 0)
+            AdjustmentLabel(
+                value = FormatUtils.formatTrafficGb(model.trafficAdjustmentGb),
+                unit = stringResource(R.string.gb_abbr),
+                isPositive =
+                    model.trafficAdjustmentGb > 0,
+            )
         }
     }
 }
 
 @Composable
-private fun AdjustmentLabel(value: String, unit: String, isPositive: Boolean = true) {
+private fun AdjustmentLabel(
+    value: String,
+    unit: String,
+    isPositive: Boolean = true,
+) {
     Text(
         text = "${stringResource(R.string.adjustment_mark)}: ${if (isPositive) "+" else ""}$value$unit",
         style = MaterialTheme.typography.labelMedium,
@@ -206,7 +276,11 @@ private fun AdjustmentLabel(value: String, unit: String, isPositive: Boolean = t
 }
 
 @Composable
-private fun AutoResetSection(model: SimCardUiModel, onToggleAutoReset: (Boolean) -> Unit, onEditAutoResetDay: () -> Unit) {
+private fun AutoResetSection(
+    model: SimCardUiModel,
+    onToggleAutoReset: (Boolean) -> Unit,
+    onEditAutoResetDay: () -> Unit,
+) {
     val toggleAutoResetDesc = stringResource(id = R.string.toggle_auto_reset_content_desc)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Text(text = stringResource(id = R.string.reset_label), style = MaterialTheme.typography.bodyMedium)
@@ -218,13 +292,18 @@ private fun AutoResetSection(model: SimCardUiModel, onToggleAutoReset: (Boolean)
             horizontalPadding = 8,
             contentDescription = stringResource(id = R.string.change_auto_reset_day_content_desc),
         )
-        Text(text = " " + stringResource(id = R.string.auto_reset_day_suffix), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(
+            text = " " + stringResource(id = R.string.auto_reset_day_suffix),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f),
+        )
         Switch(
             checked = model.autoResetEnabled,
             onCheckedChange = onToggleAutoReset,
-            modifier = Modifier.minimumInteractiveComponentSize().scale(SWITCH_SCALE).semantics {
-                contentDescription = toggleAutoResetDesc
-            },
+            modifier =
+                Modifier.minimumInteractiveComponentSize().scale(SWITCH_SCALE).semantics {
+                    contentDescription = toggleAutoResetDesc
+                },
         )
     }
 }

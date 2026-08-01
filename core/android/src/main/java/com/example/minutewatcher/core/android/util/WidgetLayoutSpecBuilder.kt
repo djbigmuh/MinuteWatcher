@@ -159,7 +159,17 @@ object WidgetLayoutSpecBuilder {
 
     private fun createSixLinesRows(sim: SimUiState): List<SimLayoutRow> {
         val rows = mutableListOf<SimLayoutRow>()
+        addNameRow(rows, sim)
+        addIconRow(rows, sim)
+        addMinutesRows(rows, sim)
+        addTrafficRows(rows, sim)
+        return rows
+    }
 
+    private fun addNameRow(
+        rows: MutableList<SimLayoutRow>,
+        sim: SimUiState,
+    ) {
         if (sim.showName) {
             rows.add(
                 SimLayoutRow(
@@ -173,7 +183,12 @@ object WidgetLayoutSpecBuilder {
                 ),
             )
         }
+    }
 
+    private fun addIconRow(
+        rows: MutableList<SimLayoutRow>,
+        sim: SimUiState,
+    ) {
         if (sim.showIcon) {
             rows.add(
                 SimLayoutRow(
@@ -181,7 +196,12 @@ object WidgetLayoutSpecBuilder {
                 ),
             )
         }
+    }
 
+    private fun addMinutesRows(
+        rows: MutableList<SimLayoutRow>,
+        sim: SimUiState,
+    ) {
         if (sim.showMinutes) {
             rows.add(
                 SimLayoutRow(
@@ -208,7 +228,12 @@ object WidgetLayoutSpecBuilder {
                 )
             }
         }
+    }
 
+    private fun addTrafficRows(
+        rows: MutableList<SimLayoutRow>,
+        sim: SimUiState,
+    ) {
         if (sim.showTraffic) {
             rows.add(
                 SimLayoutRow(
@@ -235,7 +260,5 @@ object WidgetLayoutSpecBuilder {
                 )
             }
         }
-
-        return rows
     }
 }

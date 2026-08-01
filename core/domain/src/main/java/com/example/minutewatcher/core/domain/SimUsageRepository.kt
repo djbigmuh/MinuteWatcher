@@ -1,0 +1,45 @@
+package com.example.minutewatcher.core.domain
+
+import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.flow.Flow
+
+interface SimUsageRepository {
+    fun getSimUsage(identity: String): Flow<SimUsage>
+
+    suspend fun setMinutesUsed(
+        identity: String,
+        value: Int,
+    )
+
+    suspend fun incrementMinutesUsed(
+        identity: String,
+        delta: Int,
+    )
+
+    suspend fun setTrafficUsed(
+        identity: String,
+        value: Float,
+    )
+
+    suspend fun incrementTrafficUsed(
+        identity: String,
+        deltaMb: Float,
+    )
+
+    suspend fun setManualAdjustment(
+        identity: String,
+        value: Int,
+    )
+
+    suspend fun setTrafficAdjustment(
+        identity: String,
+        value: Float,
+    )
+
+    suspend fun updateSimStats(
+        identity: String,
+        minutesUsed: Int,
+        trafficUsed: Float,
+        manualAdjustment: Int,
+    )
+}

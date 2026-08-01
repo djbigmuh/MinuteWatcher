@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
@@ -21,7 +22,8 @@ class SimUsageRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
         private val timeProvider: TimeProvider,
-    ) : SimUsageRepository {
+    ) : SimUsageRepository,
+        SimUsageResetRepository {
         override fun getSimUsage(identity: String): Flow<SimUsage> =
             dataStore.data.map { prefs ->
                 SimUsage(
@@ -47,8 +49,6 @@ class SimUsageRepositoryImpl
             defaultValue: T,
         ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-        override fun getMinutesUsed(identity: String): Flow<Int> = get(SimSettingsKeys.minutesUsedKey(identity), 0)
-
         override suspend fun setMinutesUsed(
             identity: String,
             value: Int,
@@ -62,8 +62,6 @@ class SimUsageRepositoryImpl
         ) {
             dataStore.edit { it[SimSettingsKeys.minutesUsedKey(identity)] = (it[SimSettingsKeys.minutesUsedKey(identity)] ?: 0) + delta }
         }
-
-        override fun getTrafficUsed(identity: String): Flow<Float> = get(SimSettingsKeys.trafficUsedKey(identity), 0f)
 
         override suspend fun setTrafficUsed(
             identity: String,
@@ -79,16 +77,12 @@ class SimUsageRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.trafficUsedKey(identity)] = (it[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f) + deltaMb }
         }
 
-        override fun getManualAdjustment(identity: String): Flow<Int> = get(SimSettingsKeys.manualAdjustmentKey(identity), 0)
-
         override suspend fun setManualAdjustment(
             identity: String,
             value: Int,
         ) {
             dataStore.edit { it[SimSettingsKeys.manualAdjustmentKey(identity)] = value }
         }
-
-        override fun getTrafficAdjustment(identity: String): Flow<Float> = get(SimSettingsKeys.trafficAdjustmentKey(identity), 0f)
 
         override suspend fun setTrafficAdjustment(
             identity: String,
@@ -124,10 +118,10 @@ class SimUsageRepositoryImpl
                 prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
                 prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
 
-                prefs[SettingsKeys.notifiedLowMinutesKey(identity)] = false
-                prefs[SettingsKeys.notifiedLowTrafficKey(identity)] = false
-                prefs[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-                prefs[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+                prefs[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = false
+                prefs[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = false
+                prefs[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+                prefs[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
             }
         }
 
@@ -177,10 +171,10 @@ class SimUsageRepositoryImpl
             this[SimSettingsKeys.trafficUsedKey(identity)] = 0f
             this[SimSettingsKeys.lastResetDateKey(identity)] = nowMillis
 
-            this[SettingsKeys.notifiedLowMinutesKey(identity)] = false
-            this[SettingsKeys.notifiedLowTrafficKey(identity)] = false
-            this[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-            this[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+            this[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = false
+            this[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = false
+            this[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
+            this[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
         override fun getLastResetDate(identity: String): Flow<Long> = get(SimSettingsKeys.lastResetDateKey(identity), 0L)

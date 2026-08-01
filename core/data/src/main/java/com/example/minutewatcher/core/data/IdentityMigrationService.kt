@@ -167,7 +167,10 @@ class IdentityMigrationService
                 is Long -> migrateOrBackup(longPreferencesKey(newKeyName), longPreferencesKey(conflictKeyName), value, storeName)
                 is Boolean -> migrateOrBackup(booleanPreferencesKey(newKeyName), booleanPreferencesKey(conflictKeyName), value, storeName)
                 is String -> migrateOrBackup(stringPreferencesKey(newKeyName), stringPreferencesKey(conflictKeyName), value, storeName)
-                else -> false
+                else -> {
+                    AppLogger.e("Unknown type for key ${oldKey.name}: ${value::class.simpleName}, skipping migration")
+                    false
+                }
             }
         }
 

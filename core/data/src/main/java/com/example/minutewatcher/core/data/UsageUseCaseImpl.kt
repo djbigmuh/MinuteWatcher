@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
@@ -24,6 +25,7 @@ class UsageUseCaseImpl
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val simLimitsRepository: SimLimitsRepository,
+        private val simUsageResetRepository: SimUsageResetRepository,
         private val trafficTracker: TrafficTracker,
         private val permissionManager: PermissionManager,
     ) : UsageUseCase {
@@ -59,7 +61,8 @@ class UsageUseCaseImpl
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
             val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
-            val used = simUsageRepository.getMinutesUsed(identity).firstWithTimeout() ?: 0
+            val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+            val used = usage?.minutesUsed ?: 0
 
             val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
             val adj = (safeRemaining - limit).toLong() + used.toLong()
@@ -73,7 +76,8 @@ class UsageUseCaseImpl
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
             val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
-            val usedMb = simUsageRepository.getTrafficUsed(identity).firstWithTimeout() ?: 0f
+            val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+            val usedMb = usage?.trafficUsed ?: 0f
 
             val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
             val limitGb = limitMb.toFloat() / Constants.MB_PER_GB
@@ -85,7 +89,7 @@ class UsageUseCaseImpl
 
         override suspend fun resetCounters(slot: Int) {
             val identity = simIdentityRepository.getIdentity(slot)
-            simUsageRepository.resetSimUsageManual(identity)
+            simUsageResetRepository.resetSimUsageManual(identity)
             trafficTracker.resetBaseline(identity)
         }
     }

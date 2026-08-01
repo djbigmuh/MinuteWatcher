@@ -15,7 +15,6 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class BenchmarkReceiver : BroadcastReceiver() {
-
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -23,9 +22,10 @@ class BenchmarkReceiver : BroadcastReceiver() {
         if (intent.action == ACTION_POPULATE_DATA) {
             val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
 
-            val workRequest = OneTimeWorkRequestBuilder<BenchmarkPopulateWorker>()
-                .setInputData(BenchmarkPopulateWorker.createInputData(simCount))
-                .build()
+            val workRequest =
+                OneTimeWorkRequestBuilder<BenchmarkPopulateWorker>()
+                    .setInputData(BenchmarkPopulateWorker.createInputData(simCount))
+                    .build()
 
             WorkManager.getInstance(context).enqueueUniqueWork(
                 WORK_NAME,

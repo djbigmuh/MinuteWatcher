@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data.semantic
 
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.MeasurementUnit
 import com.example.minutewatcher.core.model.MinutesModel
@@ -9,6 +10,11 @@ import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 
 object SemanticMapper {
+    fun getDocumentId(
+        slot: Int,
+        type: PackageType,
+    ): String = "sim_${slot}_${type.name.lowercase()}"
+
     fun mapMinutes(
         slot: Int,
         operator: String,
@@ -19,7 +25,7 @@ object SemanticMapper {
         val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis)
 
         return SemanticEntity(
-            id = "sim_${slot}_minutes",
+            id = getDocumentId(slot, PackageType.MINUTES),
             simSlot = slot,
             operatorName = operator,
             packageType = PackageType.MINUTES,
@@ -41,13 +47,18 @@ object SemanticMapper {
         resetDay: Int,
         nowMillis: Long,
     ): SemanticEntity {
-        val limitBytes = (model.effectiveLimitGb * com.example.minutewatcher.core.model.Constants.BYTES_PER_GB).toLong()
-        val usedBytes = (model.usedMb * com.example.minutewatcher.core.model.Constants.BYTES_PER_MB).toLong()
-        val remainingBytes = if (model.remainingGb >= 0) (model.remainingGb * com.example.minutewatcher.core.model.Constants.BYTES_PER_GB).toLong() else 0L
+        val limitBytes = (model.effectiveLimitGb * Constants.BYTES_PER_GB).toLong()
+        val usedBytes = (model.usedMb * Constants.BYTES_PER_MB).toLong()
+        val remainingBytes =
+            if (model.remainingGb >= 0) {
+                (model.remainingGb * Constants.BYTES_PER_GB).toLong()
+            } else {
+                0L
+            }
         val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis)
 
         return SemanticEntity(
-            id = "sim_${slot}_data",
+            id = getDocumentId(slot, PackageType.DATA),
             simSlot = slot,
             operatorName = operator,
             packageType = PackageType.DATA,

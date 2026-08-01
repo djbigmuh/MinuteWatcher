@@ -5,23 +5,26 @@ import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.exceptions.AppSearchException
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -40,7 +43,7 @@ open class SemanticSearchManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-        private val scope: CoroutineScope,
+        @ApplicationScope private val scope: CoroutineScope,
         private val appSearchWrapper: AppSearchWrapper,
         private val timeProvider: TimeProvider,
         @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -65,14 +68,18 @@ open class SemanticSearchManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
+        @OptIn(FlowPreview::class)
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             lastSnapshotFlow = snapshotFlow
             job?.cancel()
             job =
                 scope.launch {
-                    snapshotFlow.collectLatest { snapshot ->
-                        indexSnapshot(snapshot)
-                    }
+                    snapshotFlow
+                        .debounce { snapshot ->
+                            if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                        }.collect { snapshot ->
+                            indexSnapshot(snapshot)
+                        }
                 }
         }
 
@@ -106,13 +113,6 @@ open class SemanticSearchManager
             if (currentHash == lastSnapshotHash) return
 
             val now = timeProvider.now()
-            // Allow manual updates to skip throttle, others are delayed to ensure eventual indexing
-            if (!snapshot.isManualUpdate) {
-                val timeSinceLast = now - lastIndexTime
-                if (timeSinceLast < Constants.Semantic.THROTTLE_MS) {
-                    delay((Constants.Semantic.THROTTLE_MS - timeSinceLast).milliseconds)
-                }
-            }
 
             sessionMutex.withLock {
                 if (!ensureSession()) return@withLock
@@ -151,13 +151,20 @@ open class SemanticSearchManager
             return documents
         }
 
-        private suspend fun performIndexUpdate(documents: List<UsageDocument>, snapshot: GlobalSnapshot) {
+        private suspend fun performIndexUpdate(
+            documents: List<UsageDocument>,
+            snapshot: GlobalSnapshot,
+        ) {
             val currentIds = documents.map { it.id }.toSet()
 
             val activeSlots = snapshot.simSnapshots.filter { it.isActive }.map { it.slot }
             val staleIds = mutableSetOf<String>()
             activeSlots.forEach { slot ->
-                val possibleIds = listOf("sim_${slot}_MINUTES", "sim_${slot}_DATA")
+                val possibleIds =
+                    listOf(
+                        SemanticMapper.getDocumentId(slot, PackageType.MINUTES),
+                        SemanticMapper.getDocumentId(slot, PackageType.DATA),
+                    )
                 staleIds.addAll(possibleIds.filter { it !in currentIds })
             }
 

@@ -51,7 +51,7 @@ class CallTracker
             }
         }
 
-        private suspend fun isCallTrackingEnabled(): Boolean = 
+        private suspend fun isCallTrackingEnabled(): Boolean =
             appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled ?: true
 
         /**
@@ -104,9 +104,10 @@ class CallTracker
                         callSessionRepository.setBootTime(effectiveSubId, currentBootTime)
                         callSessionRepository.setUptime(effectiveSubId, currentUptime)
                         callSessionRepository.setCallIdentity(effectiveSubId, identity)
-                        _status.value = TrackingStatus.Active
                         AppLogger.d("Call started for subId $effectiveSubId")
                     }
+
+                    _status.value = TrackingStatus.Active
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
                 } catch (e: CancellationException) {
@@ -173,7 +174,7 @@ class CallTracker
                 return
             }
 
-            @Suppress("DEPRECATION") // Use legacy callState for global check as it's sufficient for attribution safety.
+            @Suppress("DEPRECATION") // Use legacy callState for global check as it's sufficient for attribution safety and compatibility.
             val globalState = telephonyManager.callState
             if (globalState == TelephonyManager.CALL_STATE_IDLE) {
                 AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
@@ -218,7 +219,8 @@ class CallTracker
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     activeSubIds.filter { id ->
                         val manager = telephonyManager.createForSubscriptionId(id)
-                        @Suppress("DEPRECATION") // Use legacy callState per-SIM check for better attribution on older dual-SIM devices.
+                        // Use legacy callState per-SIM check for better attribution on older dual-SIM devices (fallback logic).
+                        @Suppress("DEPRECATION")
                         manager.callState == TelephonyManager.CALL_STATE_IDLE
                     }
                 } else {
@@ -288,6 +290,13 @@ class CallTracker
             }
         }
 
+        /**
+         * Processes the completed call duration and attributes it to a SIM identity.
+         *
+         * Rounding logic:
+         * Uses ceiling rounding for minutes (1 sec = 1 min, 61 sec = 2 min).
+         * This follows the most common carrier billing practices.
+         */
         private suspend fun processCallDuration(
             durationSeconds: Int,
             subId: Int,

@@ -1,7 +1,9 @@
 package com.example.minutewatcher.core.data.util
 
 import android.content.Context
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
+import kotlinx.coroutines.CancellationException
 import java.util.Locale
 
 object SimUtils {
@@ -61,7 +63,9 @@ object SimUtils {
                         localizedContext.getString(R.string.no_sim_found)
                     }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            AppLogger.e("Error resolving short operator name for: $operatorName", e)
             if (operatorName.isNotEmpty()) {
                 if (operatorName.length > MAX_OPERATOR_NAME_LENGTH) {
                     operatorName.take(TRUNCATED_OPERATOR_NAME_LENGTH) + "..."
@@ -84,10 +88,14 @@ object SimUtils {
     ): String =
         try {
             context.getString(resId)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            AppLogger.w("Resource not found or failed to load: $resId. Using default: $default")
             default
         }
 
+    // AppBundleLocaleChanges is suppressed because we need a temporary context with a specific locale
+    // to resolve operator names from resources correctly when the app language is manually changed.
     @Suppress("AppBundleLocaleChanges")
     private fun getLocalizedContext(context: Context): Context {
         val appLocales =

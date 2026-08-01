@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -35,8 +34,6 @@ import org.robolectric.Shadows
 @RunWith(RobolectricTestRunner::class)
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
-    @Mock lateinit var simIdentityRepository: SimIdentityRepository
-
     @Mock lateinit var simUsageRepository: SimUsageRepository
 
     @Mock lateinit var simNotificationFlagsRepository: SimNotificationFlagsRepository
@@ -97,7 +94,6 @@ class UsageCheckWorkerModuleTest {
                                 UsageCheckWorker(
                                     appContext,
                                     workerParameters,
-                                    simIdentityRepository,
                                     simUsageRepository,
                                     simNotificationFlagsRepository,
                                     appSettingsRepository,

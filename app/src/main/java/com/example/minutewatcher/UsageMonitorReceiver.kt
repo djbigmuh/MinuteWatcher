@@ -30,6 +30,10 @@ class UsageMonitorReceiver : BroadcastReceiver() {
                     if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
                 }
 
+            if (subId == -1) {
+                AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
+            }
+
             try {
                 val data =
                     Data

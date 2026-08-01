@@ -65,6 +65,7 @@
     <string name="validation_error_invalid_number">يرجى إدخال رقم صالح</string>
     <string name="widget_pin_unsupported">لا يدعم المشغل الخاص بك وضع الأدوات التلقائي. يرجى إضافة القطعة يدويا.</string>
     <string name="widget_already_added">القطعة مضافة بالفعل إلى الشاشة الرئيسية</string>
+    <string name="widget_added_success">تمت إضافة القطعة إلى الشاشة الرئيسية</string>
     <string name="onboarding_title">مرحباً بك في MinuteWatcher!</string>
     <string name="onboarding_message">لا يمكن لـ MinuteWatcher استرداد تفاصيل خطتك تلقائيًا من شركة الاتصالات الخاصة بك.\n\nلبدء التتبع، يرجى ضبط حدود الدقائق/البيانات ويوم إعادة التعيين الشهري يدويًا لكل بطاقة SIM. سيتولى التطبيق جميع عمليات المراقبة من ذلك الحين فصاعدًا.</string>
     <string name="onboarding_button">حسناً</string>

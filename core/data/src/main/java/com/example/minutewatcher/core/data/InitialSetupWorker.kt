@@ -9,12 +9,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.MigrationFlagsRepository
-import com.example.minutewatcher.core.domain.SimIdentityRepository
-import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -25,49 +19,40 @@ class InitialSetupWorker
     constructor(
         @Assisted appContext: Context,
         @Assisted workerParams: WorkerParameters,
-        private val callTracker: CallTracker,
-        private val trafficTracker: TrafficTracker,
-        private val simIdentityRepository: SimIdentityRepository,
-        private val migrationFlagsRepository: MigrationFlagsRepository,
-        private val usageStateRepository: UsageStateRepository,
-        private val autoResetUseCase: AutoResetUseCase,
-        private val usageUseCase: UsageUseCase,
-        private val migrationService: IdentityMigrationService,
-        private val dataChangeNotifier: DataChangeNotifier,
-        private val workScheduler: WorkScheduler,
+        private val deps: InitialSetupWorkerDependencies,
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result {
             try {
                 // Refresh operator metadata first to ensure it's available for migration and UI.
-                usageUseCase.refreshOperatorInfo()
+                deps.usageUseCase.refreshOperatorInfo()
 
                 // Always clear stale call sessions first.
                 // This does not require phone permission and must not be blocked by migration.
-                callTracker.onBoot()
+                deps.callTracker.onBoot()
 
                 checkAndPerformMigrations()
 
                 // Perform auto-reset immediately after boot/migration
-                val snapshotAfterMigration = usageStateRepository.refresh().snapshot
-                autoResetUseCase.performAutoReset(snapshotAfterMigration)
+                val snapshotAfterMigration = deps.usageStateRepository.refresh().snapshot
+                deps.autoResetUseCase.performAutoReset(snapshotAfterMigration)
 
                 // Reset traffic baseline after reboot for active SIMs
-                val activeSimsForTraffic = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                val activeSimsForTraffic = deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
                 activeSimsForTraffic.forEach { info ->
-                    trafficTracker.resetBaseline(info.identity.stableId)
+                    deps.trafficTracker.resetBaseline(info.identity.stableId)
                 }
 
                 // Final refresh to capture results of auto-reset
-                usageStateRepository.refresh()
+                deps.usageStateRepository.refresh()
 
                 // Refresh widgets and snapshot
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
 
                 // Schedule periodic monitoring if permissions are granted
                 if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.READ_PHONE_STATE) ==
                     PackageManager.PERMISSION_GRANTED
                 ) {
-                    workScheduler.schedulePeriodicUsageCheck()
+                    deps.workScheduler.schedulePeriodicUsageCheck()
                 }
 
                 return Result.success()
@@ -86,8 +71,9 @@ class InitialSetupWorker
         }
 
         private suspend fun checkAndPerformMigrations() {
-            val migrationV1Completed = migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout() ?: true
-            val migrationStabilityCompleted = migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout() ?: true
+            val migrationV1Completed = deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout() ?: true
+            val migrationStabilityCompleted =
+                deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout() ?: true
 
             if (migrationV1Completed && migrationStabilityCompleted) return
 
@@ -105,42 +91,42 @@ class InitialSetupWorker
         }
 
         private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean) {
-            if (migrationService.hasLegacyData()) {
+            if (deps.migrationService.hasLegacyData()) {
                 AppLogger.d("Migration deferred: permission missing but legacy data exists")
             } else {
                 if (!v1Completed) {
-                    migrationFlagsRepository.setMigrationV1Completed(true)
-                    migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                    deps.migrationFlagsRepository.setMigrationV1Completed(true)
+                    deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
                     AppLogger.d("Migration V1 skipped: no legacy data found")
                 }
-                migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
-                migrationService.markSchemaCurrent()
+                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                deps.migrationService.markSchemaCurrent()
             }
         }
 
         private suspend fun handleMigrationWithPermission(v1Completed: Boolean) {
-            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+            val activeSims = deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
             val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
 
             if (activeSims.isEmpty()) {
-                if (migrationService.hasLegacyData(activeIdentities)) {
+                if (deps.migrationService.hasLegacyData(activeIdentities)) {
                     AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
                 } else {
                     if (!v1Completed) {
-                        migrationFlagsRepository.setMigrationV1Completed(true)
-                        migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                        deps.migrationFlagsRepository.setMigrationV1Completed(true)
+                        deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
                         AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
                     }
-                    migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
-                    migrationService.markSchemaCurrent()
+                    deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                    deps.migrationService.markSchemaCurrent()
                 }
             } else {
                 activeSims.forEach { info ->
-                    migrationService.migrateLegacyData(info.identity)
+                    deps.migrationService.migrateLegacyData(info.identity)
                 }
-                migrationFlagsRepository.setMigrationV1Completed(true)
-                migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
-                migrationService.markSchemaCurrent()
+                deps.migrationFlagsRepository.setMigrationV1Completed(true)
+                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                deps.migrationService.markSchemaCurrent()
                 AppLogger.d("Identity migrations completed in InitialSetupWorker")
             }
         }

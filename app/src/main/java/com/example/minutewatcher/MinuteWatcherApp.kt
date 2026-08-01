@@ -32,6 +32,7 @@ class MinuteWatcherApp :
 
     override fun onCreate() {
         super.onCreate()
+        AppLogger.init(this)
 
         // Defer semantic layer initialization to improve cold start performance
         applicationScope.launch {

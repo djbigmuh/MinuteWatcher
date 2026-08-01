@@ -65,6 +65,7 @@
     <string name="validation_error_invalid_number">有効な数字を入力してください</string>
     <string name="widget_pin_unsupported">お使いのランチャーはウィジェットの自動配置をサポートしていません。ウィジェットを手動で追加してください。</string>
     <string name="widget_already_added">ウィジェットは既にホーム画面に追加されています</string>
+    <string name="widget_added_success">ウィジェットがホーム画面に追加されました</string>
     <string name="onboarding_title">MinuteWatcherへようこそ！</string>
     <string name="onboarding_message">MinuteWatcherは、携帯電話会社からプランの詳細を自動的に取得することはできません。\n\n追跡を開始するには、各SIMカードの無料通話/データ通信量の制限と毎月のリセット日を手動で設定してください。それ以降の監視はすべてアプリが行います。</string>
     <string name="onboarding_button">了解</string>

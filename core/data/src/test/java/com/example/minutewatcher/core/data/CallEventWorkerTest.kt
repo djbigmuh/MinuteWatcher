@@ -26,52 +26,62 @@ class CallEventWorkerTest {
     }
 
     @Test
-    fun `doWork calls onCallStarted for OFFHOOK`() = runTest {
-        val subId = 1
-        val inputData = Data.Builder()
-            .putString("state", TelephonyManager.EXTRA_STATE_OFFHOOK)
-            .putInt("subId", subId)
-            .build()
+    fun `doWork calls onCallStarted for OFFHOOK`() =
+        runTest {
+            val subId = 1
+            val inputData =
+                Data
+                    .Builder()
+                    .putString("state", TelephonyManager.EXTRA_STATE_OFFHOOK)
+                    .putInt("subId", subId)
+                    .build()
 
-        val worker = TestListenableWorkerBuilder<CallEventWorker>(context)
-            .setWorkerFactory(object : androidx.work.WorkerFactory() {
-                override fun createWorker(
-                    appContext: Context,
-                    workerClassName: String,
-                    workerParameters: androidx.work.WorkerParameters
-                ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
-            })
-            .setInputData(inputData)
-            .build()
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : androidx.work.WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: androidx.work.WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .build()
 
-        val result = worker.doWork()
+            val result = worker.doWork()
 
-        assertEquals(ListenableWorker.Result.success(), result)
-        verify(callTracker).onCallStarted(subId)
-    }
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(callTracker).onCallStarted(subId)
+        }
 
     @Test
-    fun `doWork calls onCallEnded for IDLE`() = runTest {
-        val subId = 1
-        val inputData = Data.Builder()
-            .putString("state", TelephonyManager.EXTRA_STATE_IDLE)
-            .putInt("subId", subId)
-            .build()
+    fun `doWork calls onCallEnded for IDLE`() =
+        runTest {
+            val subId = 1
+            val inputData =
+                Data
+                    .Builder()
+                    .putString("state", TelephonyManager.EXTRA_STATE_IDLE)
+                    .putInt("subId", subId)
+                    .build()
 
-        val worker = TestListenableWorkerBuilder<CallEventWorker>(context)
-            .setWorkerFactory(object : androidx.work.WorkerFactory() {
-                override fun createWorker(
-                    appContext: Context,
-                    workerClassName: String,
-                    workerParameters: androidx.work.WorkerParameters
-                ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
-            })
-            .setInputData(inputData)
-            .build()
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : androidx.work.WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: androidx.work.WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .build()
 
-        val result = worker.doWork()
+            val result = worker.doWork()
 
-        assertEquals(ListenableWorker.Result.success(), result)
-        verify(callTracker).onCallEnded(subId)
-    }
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(callTracker).onCallEnded(subId)
+        }
 }

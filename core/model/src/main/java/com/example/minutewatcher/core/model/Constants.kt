@@ -9,6 +9,7 @@ object Constants {
 
     object UI {
         const val DEFAULT_BG_COLOR: Int = 0xFF000000.toInt()
+        const val LUMINANCE_THRESHOLD = 0.5f
     }
 
     object Widget {
@@ -16,6 +17,11 @@ object Constants {
 
         const val DEBOUNCE_MS = 300L
         const val REFRESH_TIMEOUT_MS = 3000L
+
+        const val SIM_ARRANGEMENT_HORIZONTAL = 0
+        const val SIM_ARRANGEMENT_VERTICAL = 1
+
+        const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80
     }
 
     object Traffic {
@@ -35,6 +41,7 @@ object Constants {
         const val STATE_FLOW_STOP_TIMEOUT_MS = 5_000L
     }
 
+    const val MILLIS_PER_SECOND = 1000L
     const val BYTES_PER_MB = 1024L * 1024L
     const val BYTES_PER_GB = 1024L * 1024L * 1024L
     const val MB_PER_GB = 1024.0f

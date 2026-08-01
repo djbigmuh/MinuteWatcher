@@ -65,6 +65,7 @@
     <string name="validation_error_invalid_number">Bitte geben Sie eine gültige Zahl ein</string>
     <string name="widget_pin_unsupported">Ihr Launcher unterstützt keine automatische Widget-Platzierung. Bitte fügen Sie das Widget manuell hinzu.</string>
     <string name="widget_already_added">Widget bereits zum Startbildschirm hinzugefügt</string>
+    <string name="widget_added_success">Widget zum Startbildschirm hinzugefügt</string>
     <string name="onboarding_title">Willkommen bei MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher kann Ihre Tarifdetails nicht automatisch von Ihrem Mobilfunkanbieter abrufen.\n\nUm mit der Nachverfolgung zu beginnen, legen Sie bitte manuell Ihre Minuten-/Datengrenzen und den monatlichen Rücksetzungstag für jede SIM-Karte fest. Die App übernimmt ab diesem Zeitpunkt die gesamte Überwachung.</string>
     <string name="onboarding_button">Verstanden</string>

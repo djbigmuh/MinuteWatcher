@@ -29,6 +29,7 @@ class PermissionManager
             ) == PackageManager.PERMISSION_GRANTED
 
         // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
+        // This method provides a safe way to get active subscriptions without crashing if permission is revoked.
         @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> =
             try {
@@ -43,6 +44,7 @@ class PermissionManager
             }
 
         // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
+        // Returns -1 if permission is missing or an error occurs.
         @SuppressLint("MissingPermission")
         fun getDefaultVoiceSubscriptionId(): Int =
             try {
@@ -57,6 +59,7 @@ class PermissionManager
             }
 
         // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
+        // Returns -1 if permission is missing or an error occurs.
         @SuppressLint("MissingPermission")
         fun getDefaultDataSubscriptionId(): Int =
             try {
@@ -85,7 +88,6 @@ class PermissionManager
             val mode =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // unsafeCheckOpNoThrow is preferred on Q+ for better security/accuracy in some contexts.
-                    @Suppress("DEPRECATION")
                     appOps.unsafeCheckOpNoThrow(
                         AppOpsManager.OPSTR_GET_USAGE_STATS,
                         Process.myUid(),

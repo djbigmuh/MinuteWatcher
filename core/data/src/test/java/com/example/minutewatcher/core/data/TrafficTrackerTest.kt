@@ -3,8 +3,8 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
-import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -73,6 +73,7 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
         }
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
@@ -311,7 +312,7 @@ class TrafficTrackerTest {
             verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
-    @Suppress("SameParameterValue")
+    @Suppress("SameParameterValue") // Helper for creating test data with defaults.
     private fun createSimUsage(
         id: String,
         lastResetDate: Long = 0L,

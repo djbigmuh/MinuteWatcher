@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.semantic.search
 import androidx.appsearch.annotation.Document
 import androidx.appsearch.app.AppSearchSchema
 import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.util.ColorProvider
 
 @Document
 data class UsageDocument(
@@ -34,8 +35,12 @@ data class UsageDocument(
     val status: String,
 ) {
     companion object {
+        private const val PERCENT_MULTIPLIER = 100L
+
         fun fromSemanticEntity(entity: SemanticEntity): UsageDocument {
-            val percent = if (entity.limit > 0) (entity.remaining * 100 / entity.limit) else 0L
+            val percent = if (entity.limit > 0) (entity.remaining * PERCENT_MULTIPLIER / entity.limit) else 0L
+            val usageStatus = ColorProvider.getUsageStatus(entity.remaining.toFloat(), entity.limit.toFloat())
+
             return UsageDocument(
                 namespace = "usage",
                 id = entity.id,
@@ -48,7 +53,7 @@ data class UsageDocument(
                 remainingPercent = percent,
                 periodEnd = entity.periodEnd,
                 slot = entity.simSlot.toLong(),
-                status = if (percent < 10) "LOW" else "OK",
+                status = usageStatus.name,
             )
         }
     }

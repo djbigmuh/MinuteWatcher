@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -19,6 +20,7 @@ class ResetManager
     @Inject
     constructor(
         private val simUsageRepository: SimUsageRepository,
+        private val simUsageResetRepository: SimUsageResetRepository,
         private val trafficTracker: TrafficTracker,
         private val dataChangeNotifier: DataChangeNotifier,
         private val timeProvider: TimeProvider,
@@ -47,7 +49,7 @@ class ResetManager
                         val usage = simUsageRepository.getSimUsage(identity).first()
                         if (usage.autoReset) {
                             val reset =
-                                simUsageRepository.resetSimUsageIfDue(
+                                simUsageResetRepository.resetSimUsageIfDue(
                                     identity,
                                     usage.autoResetDay,
                                     now,

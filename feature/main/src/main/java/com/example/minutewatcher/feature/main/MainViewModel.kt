@@ -329,13 +329,13 @@ class MainViewModel
             currentTimeMillis: Long,
             permissionStateNotifier: com.example.minutewatcher.core.domain.PermissionStateNotifier,
         ) {
-            if (nowElapsed - lastRefreshAt > 20_000L) {
+            if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
                 lastRefreshAt = nowElapsed
                 refreshSimCards()
                 notifyDataChanged()
             }
 
-            if (currentTimeMillis - lastResumeNotifyTime > 1000) {
+            if (currentTimeMillis - lastResumeNotifyTime > Constants.MILLIS_PER_SECOND) {
                 permissionStateNotifier.notifyChanged()
                 lastResumeNotifyTime = currentTimeMillis
             }
@@ -343,5 +343,6 @@ class MainViewModel
 
         companion object {
             private const val HIGHLIGHT_DELAY_SECONDS = 3L
+            private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
         }
     }

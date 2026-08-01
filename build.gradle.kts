@@ -39,7 +39,7 @@ allprojects {
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         val reporting = project.extensions.getByType<ReportingExtension>()
         reportsDir.set(
-            reporting.baseDirectory.dir("detekt").map { it.asFile }
+            reporting.baseDirectory.dir("detekt").map { it.asFile },
         )
     }
 }
@@ -53,7 +53,7 @@ subprojects {
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Default SDK for Robolectric
-        jvmArgs("-Drobolectric.sdk=33")
+        jvmArgs("-Drobolectric.sdk=35")
         // Robolectric + JDK 17/21 compatibility
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",

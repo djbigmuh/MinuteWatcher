@@ -31,3 +31,8 @@ Thumbs.db
 *.bak
 *.tmp
 *.swp
+
+# Audit scripts
+MAKE_AUDIT_DUMP.bat
+make_audit_dump.ps1
+audit_dump/

@@ -17,50 +17,44 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.resources.R
+import com.example.minutewatcher.feature.main.TrackingBannerCallbacks
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
 @Composable
 fun TrackingBanners(
     state: TrackingBannerState,
-    onGrantPhonePermission: () -> Unit,
-    onShowUsageAccessDialog: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onRetryAppSearch: () -> Unit,
-    onRetryCalls: () -> Unit,
-    onRetryShortcuts: () -> Unit,
-    onRetryTraffic: () -> Unit,
-    onGrantNotificationPermission: () -> Unit,
+    callbacks: TrackingBannerCallbacks,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         PhonePermissionBanner(
             state = state,
-            onGrantPhonePermission = onGrantPhonePermission,
-            onOpenAppSettings = onOpenAppSettings,
+            onGrantPhonePermission = callbacks.onGrantPhonePermission,
+            onOpenAppSettings = callbacks.onOpenAppSettings,
         )
         UsageAccessBanner(
             state = state,
-            onShowUsageAccessDialog = onShowUsageAccessDialog,
+            onShowUsageAccessDialog = callbacks.onShowUsageAccessDialog,
         )
         TrafficErrorBanner(
             state = state,
-            onRetryTraffic = onRetryTraffic,
+            onRetryTraffic = callbacks.onRetryTraffic,
         )
         CallsErrorBanner(
             state = state,
-            onRetryCalls = onRetryCalls,
+            onRetryCalls = callbacks.onRetryCalls,
         )
         AppSearchErrorBanner(
             state = state,
-            onRetryAppSearch = onRetryAppSearch,
+            onRetryAppSearch = callbacks.onRetryAppSearch,
         )
         ShortcutsErrorBanner(
             state = state,
-            onRetryShortcuts = onRetryShortcuts,
+            onRetryShortcuts = callbacks.onRetryShortcuts,
         )
         NotificationPermissionBanner(
             state = state,
-            onGrantNotificationPermission = onGrantNotificationPermission,
-            onOpenAppSettings = onOpenAppSettings,
+            onGrantNotificationPermission = callbacks.onGrantNotificationPermission,
+            onOpenAppSettings = callbacks.onOpenAppSettings,
         )
     }
 }

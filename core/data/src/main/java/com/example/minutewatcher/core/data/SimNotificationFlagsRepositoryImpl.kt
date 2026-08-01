@@ -16,47 +16,49 @@ class SimNotificationFlagsRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimNotificationFlagsRepository {
-        @Suppress("SameParameterValue")
+        @Suppress("SameParameterValue") // Consistent pattern for DataStore helpers across repositories.
         private fun <T> get(
             key: Preferences.Key<T>,
             defaultValue: T,
         ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-        override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> = get(SettingsKeys.notifiedLowMinutesKey(identity), false)
+        override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> =
+            get(NotificationSettingsKeys.notifiedLowMinutesKey(identity), false)
 
         override suspend fun setNotifiedLowMinutes(
             identity: String,
             notified: Boolean,
         ) {
-            dataStore.edit { it[SettingsKeys.notifiedLowMinutesKey(identity)] = notified }
+            dataStore.edit { it[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = notified }
         }
 
-        override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> = get(SettingsKeys.notifiedLowTrafficKey(identity), false)
+        override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> =
+            get(NotificationSettingsKeys.notifiedLowTrafficKey(identity), false)
 
         override suspend fun setNotifiedLowTraffic(
             identity: String,
             notified: Boolean,
         ) {
-            dataStore.edit { it[SettingsKeys.notifiedLowTrafficKey(identity)] = notified }
+            dataStore.edit { it[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = notified }
         }
 
         override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> =
-            get(SettingsKeys.notifiedExhaustedMinutesKey(identity), false)
+            get(NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity), false)
 
         override suspend fun setNotifiedExhaustedMinutes(
             identity: String,
             notified: Boolean,
         ) {
-            dataStore.edit { it[SettingsKeys.notifiedExhaustedMinutesKey(identity)] = notified }
+            dataStore.edit { it[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = notified }
         }
 
         override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> =
-            get(SettingsKeys.notifiedExhaustedTrafficKey(identity), false)
+            get(NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity), false)
 
         override suspend fun setNotifiedExhaustedTraffic(
             identity: String,
             notified: Boolean,
         ) {
-            dataStore.edit { it[SettingsKeys.notifiedExhaustedTrafficKey(identity)] = notified }
+            dataStore.edit { it[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = notified }
         }
     }

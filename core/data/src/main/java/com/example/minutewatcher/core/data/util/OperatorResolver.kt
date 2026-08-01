@@ -108,14 +108,16 @@ object OperatorResolver {
         return fallbackResolution(context, networkOperator, simSlot)
     }
 
-    private fun isValidSpecificName(name: String): Boolean {
-        return name.isNotEmpty() &&
+    private fun isValidSpecificName(name: String): Boolean =
+        name.isNotEmpty() &&
             name != "null" &&
             !genericSimRegex.matches(name.trim()) &&
             !SimUtils.isInactiveSim(name)
-    }
 
-    private fun resolveFromDbKey(context: Context, resKey: String): String? {
+    private fun resolveFromDbKey(
+        context: Context,
+        resKey: String,
+    ): String? {
         val resId = operatorResourceMap[resKey]
         if (resId != null) {
             return context.getString(resId)
@@ -126,23 +128,28 @@ object OperatorResolver {
         return null
     }
 
-    private fun fallbackResolution(context: Context, networkOperator: String, simSlot: Int): String {
-        return if (networkOperator.isNotEmpty()) {
+    private fun fallbackResolution(
+        context: Context,
+        networkOperator: String,
+        simSlot: Int,
+    ): String =
+        if (networkOperator.isNotEmpty()) {
             formatMccMnc(context, networkOperator)
         } else {
             context.getString(R.string.operator_generic, simSlot + 1)
         }
-    }
 
-    private fun formatMccMnc(context: Context, networkOperator: String): String {
-        return if (networkOperator.length >= MIN_MCC_MNC_LENGTH) {
+    private fun formatMccMnc(
+        context: Context,
+        networkOperator: String,
+    ): String =
+        if (networkOperator.length >= MIN_MCC_MNC_LENGTH) {
             val mcc = networkOperator.take(MCC_LENGTH)
             val mnc = networkOperator.drop(MCC_LENGTH)
             context.getString(R.string.operator_with_mcc, "MCC:$mcc MNC:$mnc")
         } else {
             context.getString(R.string.operator_with_mcc, networkOperator)
         }
-    }
 
     private const val MCC_LENGTH = 3
     private const val MIN_MCC_MNC_LENGTH = 5

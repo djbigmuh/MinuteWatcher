@@ -66,20 +66,25 @@ fun DayPickerComposeDialog(
 }
 
 @Composable
-private fun rememberSelectedDay(listState: LazyListState) = remember {
-    derivedStateOf {
-        val layoutInfo = listState.layoutInfo
-        val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportSize.height / 2
-        val centeredItem = layoutInfo.visibleItemsInfo.minByOrNull { item ->
-            abs((item.offset + item.size / 2) - viewportCenter)
+private fun rememberSelectedDay(listState: LazyListState) =
+    remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportSize.height / 2
+            val centeredItem =
+                layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                    abs((item.offset + item.size / 2) - viewportCenter)
+                }
+            (centeredItem?.index ?: 0) + 1
         }
-        (centeredItem?.index ?: 0) + 1
     }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DayPickerContent(listState: LazyListState, selectedDay: Int) {
+private fun DayPickerContent(
+    listState: LazyListState,
+    selectedDay: Int,
+) {
     val days = (1..MAX_DAYS).toList()
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
 
@@ -121,16 +126,20 @@ private fun SelectorHighlight() {
 }
 
 @Composable
-private fun DayItem(day: Int, isSelected: Boolean) {
+private fun DayItem(
+    day: Int,
+    isSelected: Boolean,
+) {
     Text(
         text = day.toString(),
         fontSize = if (isSelected) 32.sp else 22.sp,
         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-        color = if (isSelected) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-        },
+        color =
+            if (isSelected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            },
         modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
         textAlign = TextAlign.Center,
         maxLines = 1,

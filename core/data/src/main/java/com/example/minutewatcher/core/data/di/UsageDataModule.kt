@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -30,6 +31,10 @@ abstract class UsageDataModule {
     @Binds
     @Singleton
     abstract fun bindSimUsageRepository(impl: SimUsageRepositoryImpl): SimUsageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSimUsageResetRepository(impl: SimUsageRepositoryImpl): SimUsageResetRepository
 
     @Binds
     @Singleton

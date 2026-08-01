@@ -65,6 +65,7 @@
     <string name="validation_error_invalid_number">कृपया एक मान्य संख्या दर्ज करें</string>
     <string name="widget_pin_unsupported">आपका लॉन्चर स्वचालित विजेट प्लेसमेंट का समर्थन नहीं करता है। कृपया विजेट को मैन्युअल रूप से जोड़ें।</string>
     <string name="widget_already_added">विजेट पहले से ही होम स्क्रीन पर जोड़ा गया है</string>
+    <string name="widget_added_success">विजेट होम स्क्रीन पर जोड़ा गया</string>
     <string name="onboarding_title">MinuteWatcher में आपका स्वागत है!</string>
     <string name="onboarding_message">MinuteWatcher आपके मोबाइल कैरियर से आपके प्लान का विवरण स्वचालित रूप से प्राप्त नहीं कर सकता है।\n\nट्रैकिंग शुरू करने के लिए, कृपया प्रत्येक सिम कार्ड के लिए मिनट/डेटा सीमा और मासिक रीसेट दिन मैन्युअल रूप से सेट करें। ऐप उस बिंदु से आगे की सभी निगरानी को संभालेगा।</string>
     <string name="onboarding_button">समझ गया</string>

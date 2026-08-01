@@ -24,7 +24,7 @@ import org.robolectric.RobolectricTestRunner
 class ResetManagerTest {
     private val trafficTracker: TrafficTracker = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
-    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
+    private val timeProvider = FixedTimeProvider(currentTime = 5000000L)
     private val simUsageRepository: SimUsageRepository = mock()
 
     private lateinit var resetManager: ResetManager

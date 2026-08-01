@@ -11,9 +11,9 @@ import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -40,6 +40,7 @@ class TrafficTracker
         @param:ApplicationContext private val context: Context,
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
+        private val simUsageResetRepository: SimUsageResetRepository,
         private val callSessionRepository: CallSessionRepository,
         private val permissionManager: PermissionManager,
         private val timeProvider: TimeProvider,
@@ -75,7 +76,7 @@ class TrafficTracker
                     val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return@withLock
                     val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
                     if (currentBytes != -1L) {
-                        simUsageRepository.setLastTotalBytes(identity, currentBytes)
+                        simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
                         AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
                         _status.value = TrackingStatus.Active
                     } else {
@@ -96,10 +97,11 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return@withLock
 
-                    val target = getTargetSimInfo() ?: run {
-                        handleNoTarget()
-                        return@withLock
-                    }
+                    val target =
+                        getTargetSimInfo() ?: run {
+                            handleNoTarget()
+                            return@withLock
+                        }
 
                     if (target.skipDelta) {
                         _status.value = TrackingStatus.Active
@@ -149,7 +151,7 @@ class TrafficTracker
                 return
             }
 
-            val lastTotalBytes = simUsageRepository.getLastTotalBytes(targetIdentity).firstWithTimeout() ?: -1L
+            val lastTotalBytes = simUsageResetRepository.getLastTotalBytes(targetIdentity).firstWithTimeout() ?: -1L
 
             if (lastTotalBytes == -1L || currentBytes < lastTotalBytes) {
                 handleFirstRunOrReset(targetIdentity, currentBytes, target.dataSubId)
@@ -169,7 +171,7 @@ class TrafficTracker
             currentBytes: Long,
             dataSubId: Int,
         ) {
-            simUsageRepository.setLastTotalBytes(identity, currentBytes)
+            simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
             AppLogger.d("Traffic baseline initialized/reset for $identity to $currentBytes")
             updateLastDataSubId(dataSubId)
         }
@@ -185,7 +187,7 @@ class TrafficTracker
             if (deltaBytes > 0L) {
                 val deltaMB = deltaBytes.toFloat() / Constants.BYTES_PER_MB
                 if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
-                    simUsageRepository.setLastTotalBytes(identity, currentBytes)
+                    simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
                     simUsageRepository.incrementTrafficUsed(identity, deltaMB)
                     AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
                     updateLastDataSubId(dataSubId)
@@ -215,6 +217,10 @@ class TrafficTracker
                 }
 
             return try {
+                // NOTE: subscriberId is null, which means querySummaryForDevice returns aggregate
+                // mobile traffic for ALL SIM cards. Per-SIM attribution is currently implemented by
+                // assigning all mobile traffic to the active Default Data SIM.
+                // On dual-SIM devices, traffic from SIM 2 will be attributed to SIM 1 if SIM 1 is default.
                 val bucket =
                     networkStatsManager.querySummaryForDevice(
                         NetworkCapabilities.TRANSPORT_CELLULAR,
@@ -223,11 +229,9 @@ class TrafficTracker
                         now,
                     )
                 bucket.rxBytes + bucket.txBytes
-            } catch (e: SecurityException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error querying NetworkStatsManager", e)
-                -1L
+                throw e
             }
         }
 
@@ -269,24 +273,34 @@ class TrafficTracker
             return TargetInfo(targetSim, currentDataSubId, skipDelta = false)
         }
 
-        private suspend fun handleSimChange(targetSim: Int, currentDataSubId: Int, savedLastDataSubId: Int) {
+        private suspend fun handleSimChange(
+            targetSim: Int,
+            currentDataSubId: Int,
+            savedLastDataSubId: Int,
+        ) {
             AppLogger.d("Default data SIM changed from $savedLastDataSubId to $currentDataSubId. Resetting baseline.")
             val identity = simIdentityRepository.getIdentity(targetSim)
             val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
             val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
             if (currentBytes != -1L) {
-                simUsageRepository.setLastTotalBytes(identity, currentBytes)
+                simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
             }
             callSessionRepository.setLastDataSubId(currentDataSubId)
             inMemoryLastDataSubId.set(currentDataSubId)
         }
 
-        private fun findFallbackActiveSimSlot(): Pair<Int, Int>? {
+        private suspend fun findFallbackActiveSimSlot(): Pair<Int, Int>? {
+            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+            val defaultDataSim = activeSims.find { it.isDefaultData }
+
+            if (defaultDataSim != null) {
+                return defaultDataSim.slotIndex to defaultDataSim.subscriptionId
+            }
+
             val activeSubs = permissionManager.getActiveSubscriptions()
             if (activeSubs.isEmpty()) return null
-            return activeSubs.first().simSlotIndex to activeSubs.first().subscriptionId
-        }
 
-        companion object {
+            // Fallback to the first active subscription if no explicit default data SIM is identified
+            return activeSubs.first().simSlotIndex to activeSubs.first().subscriptionId
         }
     }

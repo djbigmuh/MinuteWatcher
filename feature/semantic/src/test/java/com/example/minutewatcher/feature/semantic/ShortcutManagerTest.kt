@@ -24,9 +24,11 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShortcutManagerTest {
     private val context: Context = mock()
@@ -85,10 +87,10 @@ class ShortcutManagerTest {
 
             shortcutManager.initialize(flow)
 
-            // Emit changes every 10 seconds. In old implementation (collectLatest + 30s delay),
-            // this would never trigger updateShortcuts.
+            // Emit changes every 10 seconds.
             repeat(10) { i ->
                 timeProvider.advance(10_000)
+                testDispatcher.scheduler.advanceTimeBy(10_000)
                 flow.value =
                     createSnapshot(
                         listOf(
@@ -106,6 +108,8 @@ class ShortcutManagerTest {
                 // Each emit cancels previous block in collectLatest, but NOT in collect.
                 // In collect, it will wait for delay and then process the LATEST value.
             }
+
+            testDispatcher.scheduler.advanceTimeBy(31_000)
 
             // After 100s, we should have had at least some updates.
             // The first update was immediate.
@@ -128,6 +132,7 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
+            testDispatcher.scheduler.advanceTimeBy(31_000)
 
             val shortcuts = androidShortcutManager.dynamicShortcuts
             assertEquals(1, shortcuts.size)
@@ -147,6 +152,7 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
+            testDispatcher.scheduler.advanceTimeBy(31_000)
 
             assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
         }
@@ -183,6 +189,7 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
+            testDispatcher.scheduler.advanceTimeBy(31_000)
 
             val shortcuts = androidShortcutManager.dynamicShortcuts
             // In Robolectric, they should be added.
@@ -210,6 +217,7 @@ class ShortcutManagerTest {
                 )
 
             shortcutManager.initialize(flow)
+            testDispatcher.scheduler.advanceTimeBy(31_000)
             assertEquals("MTS: Remaining: 90 min.", androidShortcutManager.dynamicShortcuts[0].longLabel.toString())
 
             // Change operator

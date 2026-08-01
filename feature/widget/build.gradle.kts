@@ -35,7 +35,7 @@ android {
 }
 
 tasks.withType<Test>().configureEach {
-    systemProperty("robolectric.sdk", 33)
+    systemProperty("robolectric.sdk", 35)
 }
 
 dependencies {

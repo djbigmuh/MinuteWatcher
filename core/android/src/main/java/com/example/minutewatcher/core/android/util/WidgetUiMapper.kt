@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.core.graphics.ColorUtils
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -44,9 +45,9 @@ object WidgetUiMapper {
             backgroundColor = state.backgroundColor,
             transparency = state.transparency,
             simUiStates = simUiStates,
-            isHorizontal = state.simArrangement == 0,
+            isHorizontal = state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
             showSeparator = simUiStates.size >= 2,
-            useSystemColors = state.transparency > 80,
+            useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
         )
     }
 }

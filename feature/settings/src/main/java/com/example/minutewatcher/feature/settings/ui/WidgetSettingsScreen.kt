@@ -101,7 +101,7 @@ private fun WidgetSettingsContent(
 
     if (showColorPicker) {
         ColorPickerWrapper(
-            onColorSelected = { viewModel.updateBackgroundColor(it) },
+            onColorSelected = { color -> viewModel.updateSettings { it.copy(backgroundColor = color) } },
             onDismiss = { showColorPicker = false },
         )
     }
@@ -133,10 +133,10 @@ private fun WidgetSettingsContent(
         ) {
             GeneralSettingsSection(
                 state = state,
-                onUpdateLayoutMode = viewModel::updateLayoutMode,
-                onUpdateSimArrangement = viewModel::updateSimArrangement,
-                onUpdateTransparency = viewModel::updateTransparency,
-                onUpdateFontSize = viewModel::updateFontSize,
+                onUpdateLayoutMode = { mode -> viewModel.updateSettings { it.copy(layoutMode = mode) } },
+                onUpdateSimArrangement = { arr -> viewModel.updateSettings { it.copy(simArrangement = arr) } },
+                onUpdateTransparency = { tr -> viewModel.updateSettings { it.copy(transparency = tr) } },
+                onUpdateFontSize = { fs -> viewModel.updateSettings { it.copy(fontSize = fs) } },
                 onShowColorPicker = { showColorPicker = true },
             )
 
@@ -144,9 +144,9 @@ private fun WidgetSettingsContent(
 
             NotificationSettingsSection(
                 state = state,
-                onUpdateNotifyMinutes = viewModel::updateNotifyMinutes,
-                onUpdateNotifyTraffic = viewModel::updateNotifyTraffic,
-                onUpdateCallTracking = viewModel::updateCallTracking,
+                onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
+                onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
+                onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
             )
 
             Spacer(modifier = Modifier.height(16.dp))

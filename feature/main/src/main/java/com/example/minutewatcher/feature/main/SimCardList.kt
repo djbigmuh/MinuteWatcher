@@ -39,46 +39,24 @@ fun SimCardList(
         item {
             TrackingBanners(
                 state = trackingBannerState,
-                onGrantPhonePermission = onGrantPhonePermission,
-                onShowUsageAccessDialog = onShowUsageAccessDialog,
-                onOpenAppSettings = onOpenAppSettings,
-                onRetryAppSearch = { viewModel.retryAppSearch() },
-                onRetryCalls = { viewModel.retryCalls() },
-                onRetryShortcuts = { viewModel.retryShortcuts() },
-                onRetryTraffic = { viewModel.retryTraffic() },
-                onGrantNotificationPermission = onGrantNotificationPermission,
+                callbacks =
+                    TrackingBannerCallbacks(
+                        onGrantPhonePermission = onGrantPhonePermission,
+                        onShowUsageAccessDialog = onShowUsageAccessDialog,
+                        onOpenAppSettings = onOpenAppSettings,
+                        onRetryAppSearch = { viewModel.retryAppSearch() },
+                        onRetryCalls = { viewModel.retryCalls() },
+                        onRetryShortcuts = { viewModel.retryShortcuts() },
+                        onRetryTraffic = { viewModel.retryTraffic() },
+                        onGrantNotificationPermission = onGrantNotificationPermission,
+                    ),
             )
         }
         items(simCards) { model ->
-            SimCardItem(
+            SimCardListRow(
                 model = model,
-                onSetLimits = {
-                    viewModel.setLimitDialog(
-                        LimitDialogData(
-                            model.slot,
-                            model.operatorName,
-                            model.minutesLimit,
-                            model.trafficLimitMb,
-                            model.rolloverEnabled,
-                        ),
-                    )
-                },
-                onResetCounters = { showResetConfirmSlot = model.slot },
-                onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
-                onEditAutoResetDay = {
-                    viewModel.setDayDialog(DayDialogData(model.slot, model.autoResetDay))
-                },
-                onAdjustMinutes = {
-                    viewModel.setAdjustDialog(
-                        AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true),
-                    )
-                },
-                onAdjustTraffic = {
-                    viewModel.setAdjustDialog(
-                        AdjustDialogData(model.slot, model.trafficRemainingGb, false),
-                    )
-                },
-                onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
+                viewModel = viewModel,
+                onReset = { showResetConfirmSlot = model.slot },
             )
         }
     }
@@ -89,4 +67,42 @@ fun SimCardList(
             showResetConfirmSlot = null
         })
     }
+}
+
+@Composable
+private fun SimCardListRow(
+    model: SimCardUiModel,
+    viewModel: MainViewModel,
+    onReset: () -> Unit,
+) {
+    SimCardItem(
+        model = model,
+        onSetLimits = {
+            viewModel.setLimitDialog(
+                LimitDialogData(
+                    model.slot,
+                    model.operatorName,
+                    model.minutesLimit,
+                    model.trafficLimitMb,
+                    model.rolloverEnabled,
+                ),
+            )
+        },
+        onResetCounters = onReset,
+        onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
+        onEditAutoResetDay = {
+            viewModel.setDayDialog(DayDialogData(model.slot, model.autoResetDay))
+        },
+        onAdjustMinutes = {
+            viewModel.setAdjustDialog(
+                AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true),
+            )
+        },
+        onAdjustTraffic = {
+            viewModel.setAdjustDialog(
+                AdjustDialogData(model.slot, model.trafficRemainingGb, false),
+            )
+        },
+        onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
+    )
 }

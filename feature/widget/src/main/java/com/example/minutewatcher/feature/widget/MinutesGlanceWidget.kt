@@ -51,6 +51,10 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val PERCENT_MAX_FLOAT = 100f
+private const val SEPARATOR_ALPHA = 0.5f
+private const val SEPARATOR_THICKNESS = 1
+
 class MinutesGlanceWidget : GlanceAppWidget() {
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -127,7 +131,7 @@ private fun WidgetContent(
     uiState: WidgetUiState,
     navigationProvider: NavigationProvider,
 ) {
-    val alpha = 1f - uiState.transparency / 100f
+    val alpha = 1f - uiState.transparency / PERCENT_MAX_FLOAT
     val bgColor =
         androidx.compose.ui.graphics
             .Color(uiState.backgroundColor)
@@ -141,7 +145,7 @@ private fun WidgetContent(
         if (uiState.useSystemColors) {
             GlanceTheme.colors.onSurface
         } else {
-            val colorInt = if (luminance > 0.5f) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+            val colorInt = if (luminance > Constants.UI.LUMINANCE_THRESHOLD) android.graphics.Color.BLACK else android.graphics.Color.WHITE
             val composeColor =
                 androidx.compose.ui.graphics
                     .Color(colorInt)
@@ -197,13 +201,13 @@ private fun MultiSimLayout(
                             val color =
                                 androidx.compose.ui.graphics
                                     .Color(sims[0].secondaryTextColor)
-                                    .copy(alpha = 0.5f)
+                                    .copy(alpha = SEPARATOR_ALPHA)
                             ColorProvider(day = color, night = color)
                         }
                     Spacer(
                         modifier =
                             GlanceModifier
-                                .width(1.dp)
+                                .width(SEPARATOR_THICKNESS.dp)
                                 .fillMaxHeight()
                                 .background(separatorColor),
                     )
@@ -227,13 +231,13 @@ private fun MultiSimLayout(
                             val color =
                                 androidx.compose.ui.graphics
                                     .Color(sims[0].secondaryTextColor)
-                                    .copy(alpha = 0.5f)
+                                    .copy(alpha = SEPARATOR_ALPHA)
                             ColorProvider(day = color, night = color)
                         }
                     Spacer(
                         modifier =
                             GlanceModifier
-                                .height(1.dp)
+                                .height(SEPARATOR_THICKNESS.dp)
                                 .fillMaxWidth()
                                 .background(separatorColor),
                     )

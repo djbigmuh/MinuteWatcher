@@ -17,7 +17,7 @@ class MigrationFlagsRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : MigrationFlagsRepository {
-        @Suppress("SameParameterValue")
+        @Suppress("SameParameterValue") // Helper method used with different keys in other classes, here used with specific constants.
         private fun <T> get(
             key: Preferences.Key<T>,
             defaultValue: T,

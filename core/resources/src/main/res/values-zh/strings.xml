@@ -65,6 +65,7 @@
     <string name="validation_error_invalid_number">请输入有效的数字</string>
     <string name="widget_pin_unsupported">您的启动器不支持自动放置小部件。请手动添加小部件。</string>
     <string name="widget_already_added">小部件已添加到主屏幕</string>
+    <string name="widget_added_success">小部件已添加到主屏幕</string>
     <string name="onboarding_title">欢迎使用 MinuteWatcher！</string>
     <string name="onboarding_message">MinuteWatcher 无法自动从您的移动运营商获取套餐详情。\n\n要开始追踪，请手动为每张 SIM 卡设置通话分钟/流量限制以及每月重置日期。此后，应用程序将负责所有监控工作。</string>
     <string name="onboarding_button">知道了</string>

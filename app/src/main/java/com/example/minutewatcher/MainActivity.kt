@@ -1,6 +1,7 @@
 package com.example.minutewatcher
 
 import android.Manifest
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
@@ -26,9 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
@@ -301,7 +302,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (appWidgetManager.isRequestPinAppWidgetSupported) {
-            appWidgetManager.requestPinAppWidget(myProvider, null, null)
+            val callbackIntent = Intent(this, PinWidgetReceiver::class.java)
+            val successCallback =
+                PendingIntent.getBroadcast(
+                    this,
+                    0,
+                    callbackIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            appWidgetManager.requestPinAppWidget(myProvider, null, successCallback)
         } else {
             Toast.makeText(this, getString(R.string.widget_pin_unsupported), Toast.LENGTH_SHORT).show()
         }

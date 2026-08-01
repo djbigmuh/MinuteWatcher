@@ -7,15 +7,7 @@ import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FormatUtils
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
-import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
@@ -33,23 +25,14 @@ class UsageCheckWorker
     constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
-        private val simUsageRepository: SimUsageRepository,
-        private val simNotificationFlagsRepository: SimNotificationFlagsRepository,
-        private val appSettingsRepository: AppSettingsRepository,
-        private val autoResetUseCase: AutoResetUseCase,
-        private val trafficTracker: TrafficTracker,
-        private val notificationHelper: NotificationHelper,
-        private val dataChangeNotifier: DataChangeNotifier,
-        private val usageStateRepository: UsageStateRepository,
-        private val usageUseCase: UsageUseCase,
-        private val timeProvider: TimeProvider,
+        private val deps: UsageWorkerDependencies,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
                 try {
                     // Refresh operator info periodically
-                    usageUseCase.refreshOperatorInfo()
+                    deps.usageUseCase.refreshOperatorInfo()
 
                     checkUsageAndNotify()
                     Result.success()
@@ -68,14 +51,19 @@ class UsageCheckWorker
             }
 
         private suspend fun checkUsageAndNotify() {
-            autoResetUseCase.performAutoReset(usageStateRepository.observeSnapshot().value)
-            trafficTracker.updateTrafficUsage()
+            deps.trafficTracker.updateTrafficUsage()
 
-            val refreshResult = usageStateRepository.refresh()
+            // First refresh to ensure we have a valid snapshot for auto-reset
+            val initialRefresh = deps.usageStateRepository.refresh()
+            deps.autoResetUseCase.performAutoReset(initialRefresh.snapshot)
+
+            // Final refresh to capture results of auto-reset for notifications
+            val refreshResult = deps.usageStateRepository.refresh()
             val finalSnapshot = refreshResult.snapshot
-            dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
-            val appSettings = appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()
+            deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
+
+            val appSettings = deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
                     processSimSnapshot(simSnapshot, appSettings)
@@ -88,8 +76,8 @@ class UsageCheckWorker
             appSettings: AppSettings,
         ) {
             val identity = simSnapshot.identity
-            val simUsage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
-            val now = timeProvider.now()
+            val simUsage = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
+            val now = deps.timeProvider.now()
 
             val monthProgress = DateUtils.getMonthProgressPercentage(simUsage.autoResetDay, now)
             val daysRemaining = DateUtils.getDaysRemainingInMonth(simUsage.autoResetDay, now)
@@ -114,14 +102,19 @@ class UsageCheckWorker
             val usagePercentage = (entity.used * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
 
-            val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).firstWithTimeout() ?: false
+            val notifiedExhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
-                    sendNotificationWithBodyRes(entity.operatorName, R.string.notification_minutes_exhausted_body, entity.simSlot, 0)
-                    simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
+                    sendNotificationWithBodyRes(
+                        entity.operatorName,
+                        R.string.notification_minutes_exhausted_body,
+                        entity.simSlot,
+                        NOTIFICATION_TYPE_MINUTES,
+                    )
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
                 }
             } else {
-                if (notifiedExhausted) simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = false)
+                if (notifiedExhausted) deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = false)
                 handleLowMinutesAlert(entity, usagePercentage, remainingPercentage, monthProgress, daysRemaining, identity)
             }
         }
@@ -134,7 +127,7 @@ class UsageCheckWorker
             daysRem: Int,
             identity: String,
         ) {
-            val notifiedLow = simNotificationFlagsRepository.getNotifiedLowMinutes(identity).firstWithTimeout() ?: false
+            val notifiedLow = deps.simNotificationFlagsRepository.getNotifiedLowMinutes(identity).firstWithTimeout() ?: false
             if (usagePct > monthProg && !notifiedLow) {
                 val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
                 val level = applicationContext.getString(levelRes)
@@ -142,10 +135,10 @@ class UsageCheckWorker
                 val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
 
                 val body = applicationContext.getString(R.string.notification_minutes_body, level, remText, remPct, daysText)
-                sendNotificationWithBody(entity.operatorName, body, entity.simSlot, 0)
-                simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
+                sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_MINUTES)
+                deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
             } else if (usagePct <= monthProg && notifiedLow) {
-                simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
+                deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
             }
         }
 
@@ -165,9 +158,16 @@ class UsageCheckWorker
             slot: Int,
             type: Int,
         ) {
-            val titleRes = if (type == 0) R.string.notification_minutes_title else R.string.notification_traffic_title
+            val titleRes =
+                if (type ==
+                    NOTIFICATION_TYPE_MINUTES
+                ) {
+                    R.string.notification_minutes_title
+                } else {
+                    R.string.notification_traffic_title
+                }
             val title = applicationContext.getString(titleRes, operator)
-            notificationHelper.sendUsageNotification(title, body, slot, type)
+            deps.notificationHelper.sendUsageNotification(title, body, slot, type)
         }
 
         private suspend fun checkTrafficUsage(
@@ -183,14 +183,19 @@ class UsageCheckWorker
             val remainingPercentage = HUNDRED - usagePercentage
             val remainingGb = entity.remaining.toFloat() / Constants.BYTES_PER_GB
 
-            val notifiedExhausted = simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
+            val notifiedExhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
-                    sendNotificationWithBodyRes(entity.operatorName, R.string.notification_traffic_exhausted_body, entity.simSlot, 1)
-                    simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
+                    sendNotificationWithBodyRes(
+                        entity.operatorName,
+                        R.string.notification_traffic_exhausted_body,
+                        entity.simSlot,
+                        NOTIFICATION_TYPE_TRAFFIC,
+                    )
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
                 }
             } else {
-                if (notifiedExhausted) simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = false)
+                if (notifiedExhausted) deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = false)
                 handleLowTrafficAlert(entity, usagePercentage, remainingPercentage, remainingGb, monthProgress, daysRemaining, identity)
             }
         }
@@ -204,21 +209,24 @@ class UsageCheckWorker
             daysRem: Int,
             identity: String,
         ) {
-            val notifiedLow = simNotificationFlagsRepository.getNotifiedLowTraffic(identity).firstWithTimeout() ?: false
+            val notifiedLow = deps.simNotificationFlagsRepository.getNotifiedLowTraffic(identity).firstWithTimeout() ?: false
             if (usagePct > monthProg && !notifiedLow) {
                 val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
                 val level = applicationContext.getString(levelRes)
                 val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
                 val body = applicationContext.getString(R.string.notification_traffic_body, level, remGb, remPct, daysText)
-                sendNotificationWithBody(entity.operatorName, body, entity.simSlot, 1)
-                simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
+                sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_TRAFFIC)
+                deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
             } else if (usagePct <= monthProg && notifiedLow) {
-                simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)
+                deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)
             }
         }
 
         companion object {
             private const val HUNDRED = 100
             private const val CRITICAL_THRESHOLD = 10
+
+            private const val NOTIFICATION_TYPE_MINUTES = 0
+            private const val NOTIFICATION_TYPE_TRAFFIC = 1
         }
     }

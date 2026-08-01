@@ -7,7 +7,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
@@ -20,7 +19,6 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -62,14 +60,12 @@ class SimIdentityRepositoryImpl
             seedRepository
                 .getSeed()
                 .map { seed ->
-                    if (seed.isEmpty()) {
+                    seed.ifEmpty {
                         seedRepository.getOrCreateSeed {
                             java.util.UUID
                                 .randomUUID()
                                 .toString()
                         }
-                    } else {
-                        seed
                     }
                 }.filter { it.isNotEmpty() }
                 .distinctUntilChanged()
@@ -140,7 +136,7 @@ class SimIdentityRepositoryImpl
             }.flatMapLatest { (physical, settings, seed) ->
                 flow {
                     if (settings.benchmarkSimCount > 0) {
-                        emit(generateMockActiveSims(settings.benchmarkSimCount, seed))
+                        emit(generateMockActiveSims(settings.benchmarkSimCount))
                     } else {
                         emit(physical)
                     }
@@ -151,10 +147,7 @@ class SimIdentityRepositoryImpl
                 initialValue = emptyList(),
             )
 
-        private suspend fun generateMockActiveSims(
-            count: Int,
-            seed: String,
-        ): List<ActiveSimInfo> {
+        private suspend fun generateMockActiveSims(count: Int): List<ActiveSimInfo> {
             val safeCount = count.coerceIn(0, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
             return coroutineScope {
                 (0 until safeCount).map { i ->
@@ -166,14 +159,6 @@ class SimIdentityRepositoryImpl
                             source = IdentitySource.SLOT_FALLBACK,
                         )
 
-                    try {
-                        saveSimIdentityInfo(identity)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to save mock SIM identity info", e)
-                    }
-
                     ActiveSimInfo(
                         identity = identity,
                         slotIndex = i,
@@ -181,8 +166,8 @@ class SimIdentityRepositoryImpl
                         displayName = "SIM ${i + 1}",
                         carrierName = "Mock Carrier ${i + 1}",
                         mccMnc = "001001",
-                        isDefaultData = i == 0,
-                        isDefaultVoice = i == 0,
+                        isDefaultData = i == DEFAULT_SIM_INDEX,
+                        isDefaultVoice = i == DEFAULT_SIM_INDEX,
                     )
                 }
             }
@@ -277,7 +262,7 @@ class SimIdentityRepositoryImpl
                 .debounce(300.milliseconds)
                 .distinctUntilChanged()
 
-        @Suppress("SameParameterValue")
+        @Suppress("SameParameterValue") // Helper method for consistent access to DataStore with defaults.
         private fun <T> get(
             key: Preferences.Key<T>,
             defaultValue: T,
@@ -302,5 +287,6 @@ class SimIdentityRepositoryImpl
         }
 
         companion object {
+            private const val DEFAULT_SIM_INDEX = 0
         }
     }

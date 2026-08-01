@@ -49,6 +49,11 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".PinWidgetReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <!-- Главная активность -->
         <activity
             android:name=".MainActivity"

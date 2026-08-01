@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -169,13 +168,19 @@ class UsageStateRepositoryImpl
         override suspend fun refresh(): com.example.minutewatcher.core.domain.RefreshResult =
             refreshMutex.withLock {
                 coroutineScope {
-                    val nextSnapshot = async { snapshotFlow.drop(1).first() }
+                    val currentTimestamp = snapshotFlow.value.timestamp
+                    val nextSnapshot =
+                        async {
+                            snapshotFlow.first { it.timestamp > currentTimestamp }
+                        }
                     dataRefreshNotifier.notifyRefresh()
                     withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) { nextSnapshot.await() }?.let {
                         com.example.minutewatcher.core.domain.RefreshResult
                             .Success(it)
                     } ?: run {
-                        AppLogger.w("UsageStateRepository: Refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS / 1000}s, returning current snapshot")
+                        AppLogger.w(
+                            "UsageStateRepository: Refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s, returning current snapshot",
+                        )
                         com.example.minutewatcher.core.domain.RefreshResult
                             .Timeout(snapshotFlow.value)
                     }

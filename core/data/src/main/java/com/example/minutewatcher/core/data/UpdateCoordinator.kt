@@ -54,7 +54,7 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             dataRefreshNotifier.notifyRefresh(isManual = force)
-            if (updateWidget && force) {
+            if (updateWidget) {
                 widgetUpdater.updateAll()
             }
         }

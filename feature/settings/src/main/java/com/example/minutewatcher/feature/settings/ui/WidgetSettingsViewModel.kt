@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
@@ -45,7 +46,7 @@ class WidgetSettingsViewModel
                 .filterNotNull()
                 .combine(usageStateRepository.observeSnapshot()) { state, snapshot ->
                     WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS), null)
 
         init {
             loadSettings()
@@ -70,36 +71,8 @@ class WidgetSettingsViewModel
             }
         }
 
-        fun updateTransparency(progress: Int) {
-            _settingsState.value = _settingsState.value?.copy(transparency = progress)
-        }
-
-        fun updateFontSize(progress: Int) {
-            _settingsState.value = _settingsState.value?.copy(fontSize = progress)
-        }
-
-        fun updateBackgroundColor(color: Int) {
-            _settingsState.value = _settingsState.value?.copy(backgroundColor = color)
-        }
-
-        fun updateLayoutMode(mode: Int) {
-            _settingsState.value = _settingsState.value?.copy(layoutMode = mode)
-        }
-
-        fun updateSimArrangement(arrangement: Int) {
-            _settingsState.value = _settingsState.value?.copy(simArrangement = arrangement)
-        }
-
-        fun updateNotifyMinutes(enabled: Boolean) {
-            _settingsState.value = _settingsState.value?.copy(notifyLowMinutes = enabled)
-        }
-
-        fun updateNotifyTraffic(enabled: Boolean) {
-            _settingsState.value = _settingsState.value?.copy(notifyLowTraffic = enabled)
-        }
-
-        fun updateCallTracking(enabled: Boolean) {
-            _settingsState.value = _settingsState.value?.copy(callTrackingEnabled = enabled)
+        fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
+            _settingsState.value = _settingsState.value?.let(transform)
         }
 
         fun updateSimSettings(
@@ -121,7 +94,12 @@ class WidgetSettingsViewModel
                 }
 
             viewModelScope.launch {
-                if (!saveMutex.tryLock()) return@launch
+                if (!saveMutex.tryLock()) {
+                    com.example.minutewatcher.core.common.util.AppLogger
+                        .d("Save already in progress, skipping")
+                    onComplete(false)
+                    return@launch
+                }
                 try {
                     loader.save(currentState)
                     dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)

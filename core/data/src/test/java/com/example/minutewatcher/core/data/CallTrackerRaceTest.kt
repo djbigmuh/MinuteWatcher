@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
@@ -56,7 +57,9 @@ class CallTrackerRaceTest {
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(com.example.minutewatcher.core.model.AppSettings(callTrackingEnabled = true)))
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(
+            flowOf(AppSettings(callTrackingEnabled = true)),
+        )
     }
 
     @Test
@@ -68,11 +71,12 @@ class CallTrackerRaceTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             // Launch multiple concurrent start events
-            val jobs = List(10) {
-                launch {
-                    tracker.onCallStarted(1)
+            val jobs =
+                List(10) {
+                    launch {
+                        tracker.onCallStarted(1)
+                    }
                 }
-            }
             jobs.joinAll()
 
             // Verification of interaction count

@@ -67,6 +67,7 @@
     <string name="validation_error_invalid_number">Please enter a valid number</string>
     <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">Widget already added to the home screen</string>
+    <string name="widget_added_success">Widget added to the home screen</string>
     <string name="onboarding_title">Welcome to MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher cannot automatically retrieve your plan details from your mobile carrier.\n\nTo begin tracking, please manually set your minutes/data limits and the monthly reset day for each SIM card. The app will handle all monitoring from that point forward.</string>
     <string name="onboarding_button">Got it</string>

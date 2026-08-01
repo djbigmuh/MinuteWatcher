@@ -49,7 +49,8 @@ fun SimLimitComposeDialog(
 
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
     val minutesRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_MINUTES_LIMIT.toString())
-    val trafficRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString())
+    val trafficRangeMsg =
+        stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString())
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -61,15 +62,28 @@ fun SimLimitComposeDialog(
                 rolloverEnabled = rolloverEnabled,
                 minutesError = minutesError,
                 trafficError = trafficError,
-                onMinutesChange = { minutesText = it; minutesError = null },
-                onTrafficChange = { trafficText = it; trafficError = null },
-                onRolloverChange = { rolloverEnabled = it }
+                onMinutesChange = {
+                    minutesText = it
+                    minutesError = null
+                },
+                onTrafficChange = {
+                    trafficText = it
+                    trafficError = null
+                },
+                onRolloverChange = { rolloverEnabled = it },
             )
         },
         confirmButton = {
             DialogButtons(
                 onConfirm = {
-                    val (min, trafGb, minErr, trafErr) = validateLimits(minutesText, trafficText, invalidNumberMsg, minutesRangeMsg, trafficRangeMsg)
+                    val (min, trafGb, minErr, trafErr) =
+                        SimLimitValidator.validate(
+                            minutesText,
+                            trafficText,
+                            invalidNumberMsg,
+                            minutesRangeMsg,
+                            trafficRangeMsg,
+                        )
                     minutesError = minErr
                     trafficError = trafErr
                     if (minErr == null && trafErr == null) {
@@ -77,7 +91,7 @@ fun SimLimitComposeDialog(
                     }
                 },
                 onReset = onReset,
-                onDismiss = onDismiss
+                onDismiss = onDismiss,
             )
         },
         dismissButton = null,
@@ -147,38 +161,4 @@ private fun DialogButtons(
             Text(stringResource(id = R.string.cancel_button))
         }
     }
-}
-
-private data class ValidationResult(
-    val minutes: Int?,
-    val trafficGb: Float?,
-    val minutesError: String?,
-    val trafficError: String?,
-)
-
-private fun validateLimits(
-    minutesText: String,
-    trafficText: String,
-    invalidNumberMsg: String,
-    minutesRangeMsg: String,
-    trafficRangeMsg: String,
-): ValidationResult {
-    val min = minutesText.toIntOrNull()
-    val trafGb = trafficText.toFloatOrNull()
-
-    var minErr: String? = null
-    if (minutesText.isNotEmpty() && min == null) {
-        minErr = invalidNumberMsg
-    } else if (min != null && (min < 0 || min > Constants.MAX_MINUTES_LIMIT)) {
-        minErr = minutesRangeMsg
-    }
-
-    var trafErr: String? = null
-    if (trafficText.isNotEmpty() && trafGb == null) {
-        trafErr = invalidNumberMsg
-    } else if (trafGb != null && (trafGb < 0 || trafGb > Constants.MAX_TRAFFIC_LIMIT_GB)) {
-        trafErr = trafficRangeMsg
-    }
-
-    return ValidationResult(min, trafGb, minErr, trafErr)
 }

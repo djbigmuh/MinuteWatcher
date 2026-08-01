@@ -119,14 +119,17 @@ class UsageAccessNavigationTest {
         composeTestRule.setContent {
             com.example.minutewatcher.feature.main.ui.components.TrackingBanners(
                 state = TrackingBannerState(showUsageAccessBanner = true),
-                onGrantPhonePermission = {},
-                onShowUsageAccessDialog = { dialogOpened = true },
-                onOpenAppSettings = {},
-                onRetryAppSearch = {},
-                onRetryCalls = {},
-                onRetryShortcuts = {},
-                onRetryTraffic = {},
-                onGrantNotificationPermission = {},
+                callbacks =
+                    TrackingBannerCallbacks(
+                        onGrantPhonePermission = {},
+                        onShowUsageAccessDialog = { dialogOpened = true },
+                        onOpenAppSettings = {},
+                        onRetryAppSearch = {},
+                        onRetryCalls = {},
+                        onRetryShortcuts = {},
+                        onRetryTraffic = {},
+                        onGrantNotificationPermission = {},
+                    ),
             )
         }
 

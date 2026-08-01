@@ -5,11 +5,11 @@ import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import com.example.minutewatcher.core.data.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.util.SimUtils
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -22,19 +22,18 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class ShortcutManager
@@ -63,36 +62,30 @@ class ShortcutManager
          *
          * @param snapshotFlow The flow of global snapshots to monitor.
          */
+        @OptIn(FlowPreview::class)
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             lastSnapshotFlow = snapshotFlow
             job?.cancel()
             job =
                 scope.launch {
                     _status.value = TrackingStatus.Active
-                    var isFirst = true
-                    snapshotFlow.collectLatest { snapshot ->
-                        // Debounce logic for automatic updates
-                        if (!isFirst && !snapshot.isManualUpdate) {
-                            val timeSinceLast = timeProvider.now() - lastUpdateTime
-                            if (timeSinceLast < Constants.Semantic.THROTTLE_MS) {
-                                delay((Constants.Semantic.THROTTLE_MS - timeSinceLast).milliseconds)
+                    snapshotFlow
+                        .debounce { snapshot ->
+                            if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                        }.collect { snapshot ->
+                            try {
+                                withContext(ioDispatcher) {
+                                    updateShortcuts(snapshot)
+                                }
+                                lastUpdateTime = timeProvider.now()
+                                _status.value = TrackingStatus.Active
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to update dynamic shortcuts", e)
+                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                             }
                         }
-                        isFirst = false
-
-                        try {
-                            withContext(ioDispatcher) {
-                                updateShortcuts(snapshot)
-                            }
-                            lastUpdateTime = timeProvider.now()
-                            _status.value = TrackingStatus.Active
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to update dynamic shortcuts", e)
-                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                        }
-                    }
                 }
         }
 

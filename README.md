@@ -22,6 +22,7 @@ Android provides mobile data usage as an aggregate value for the entire device r
 Call duration is tracked using real-time system state changes.
 - The app does **not** read your call log history.
 - Tracking begins when a call enters the "Off-hook" state and ends when the device returns to "Idle".
+- **Rounding Logic**: Call duration is rounded **up** to the nearest minute (e.g., a 1-second call adds 1 minute to usage, a 61-second call adds 2 minutes). This aligns with common mobile carrier billing policies.
 
 ## Permissions
 

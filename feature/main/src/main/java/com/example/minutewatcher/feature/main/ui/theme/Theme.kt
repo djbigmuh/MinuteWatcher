@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
 
@@ -64,13 +65,13 @@ fun MinuteWatcherTheme(
 }
 
 val ColorScheme.usageNormal: Color
-    get() = Color(UsageColors.normal(background.luminance() < 0.5f))
+    get() = Color(UsageColors.normal(background.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
 
 val ColorScheme.usageLow: Color
-    get() = Color(UsageColors.low(background.luminance() < 0.5f))
+    get() = Color(UsageColors.low(background.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
 
 val ColorScheme.usageCritical: Color
-    get() = Color(UsageColors.critical(background.luminance() < 0.5f))
+    get() = Color(UsageColors.critical(background.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
 
 fun ColorScheme.usageColor(status: UsageStatus): Color =
     when (status) {

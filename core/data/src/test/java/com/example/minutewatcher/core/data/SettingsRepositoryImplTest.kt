@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -147,12 +146,14 @@ class SettingsRepositoryImplTest {
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
-            val job1 = launch {
-                repository.updateAppSettings { it.copy(widgetTransparency = 10) }
-            }
-            val job2 = launch {
-                repository.updateAppSettings { it.copy(widgetFontSize = 4) }
-            }
+            val job1 =
+                launch {
+                    repository.updateAppSettings { it.copy(widgetTransparency = 10) }
+                }
+            val job2 =
+                launch {
+                    repository.updateAppSettings { it.copy(widgetFontSize = 4) }
+                }
 
             job1.join()
             job2.join()
@@ -168,9 +169,10 @@ class SettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
             val settingsList = mutableListOf<com.example.minutewatcher.core.model.AppSettings>()
 
-            val job = launch {
-                repository.getAppSettings().take(2).toList(settingsList)
-            }
+            val job =
+                launch {
+                    repository.getAppSettings().take(2).toList(settingsList)
+                }
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
 

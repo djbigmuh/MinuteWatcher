@@ -12,18 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.resources.R
-
-data class TrackingBannerState(
-    val phonePermissionState: PermissionUiState = PermissionUiState.GRANTED,
-    val showUsageAccessBanner: Boolean = false,
-    val showTrafficErrorBanner: Boolean = false,
-    val showCallsErrorBanner: Boolean = false,
-    val showAppSearchErrorBanner: Boolean = false,
-    val showShortcutsErrorBanner: Boolean = false,
-    val notificationPermissionState: PermissionUiState = PermissionUiState.GRANTED,
-)
 
 @Composable
 fun EmptyState() {

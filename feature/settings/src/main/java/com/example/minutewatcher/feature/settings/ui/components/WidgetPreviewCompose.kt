@@ -29,17 +29,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
+
+private const val PERCENT_MAX_FLOAT = 100f
+private const val SEPARATOR_ALPHA = 0.5f
 
 @Composable
 fun WidgetPreview(
     uiState: WidgetUiState,
     modifier: Modifier = Modifier,
 ) {
-    val alpha = 1f - uiState.transparency / 100f
+    val alpha = 1f - uiState.transparency / PERCENT_MAX_FLOAT
     val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
     val noDataColor = getNoDataColor(uiState)
 
@@ -66,14 +70,15 @@ fun WidgetPreview(
 }
 
 @Composable
-private fun getNoDataColor(uiState: WidgetUiState): Color {
-    return if (uiState.useSystemColors) {
+private fun getNoDataColor(uiState: WidgetUiState): Color =
+    if (uiState.useSystemColors) {
         MaterialTheme.colorScheme.onSurface
     } else {
-        val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(uiState.backgroundColor)
-        if (luminance > 0.5f) Color.Black else Color.White
+        val luminance =
+            androidx.core.graphics.ColorUtils
+                .calculateLuminance(uiState.backgroundColor)
+        if (luminance > Constants.UI.LUMINANCE_THRESHOLD) Color.Black else Color.White
     }
-}
 
 @Composable
 private fun MultiSimPreviewLayout(
@@ -128,17 +133,23 @@ private fun VerticalSimPreviewLayout(
 }
 
 @Composable
-private fun Separator(isHorizontal: Boolean, uiState: WidgetUiState, firstSim: SimUiState) {
-    val separatorColor = if (uiState.useSystemColors) {
-        MaterialTheme.colorScheme.outline
-    } else {
-        Color(firstSim.secondaryTextColor).copy(alpha = 0.5f)
-    }
-    val modifier = if (isHorizontal) {
-        Modifier.width(1.dp).fillMaxHeight()
-    } else {
-        Modifier.height(1.dp).fillMaxWidth()
-    }
+private fun Separator(
+    isHorizontal: Boolean,
+    uiState: WidgetUiState,
+    firstSim: SimUiState,
+) {
+    val separatorColor =
+        if (uiState.useSystemColors) {
+            MaterialTheme.colorScheme.outline
+        } else {
+            Color(firstSim.secondaryTextColor).copy(alpha = SEPARATOR_ALPHA)
+        }
+    val modifier =
+        if (isHorizontal) {
+            Modifier.width(1.dp).fillMaxHeight()
+        } else {
+            Modifier.height(1.dp).fillMaxWidth()
+        }
     Spacer(modifier = modifier.background(separatorColor))
 }
 
@@ -192,12 +203,15 @@ private fun SimItemPreview(
 }
 
 @Composable
-private fun getTextColor(uiState: WidgetUiState, sim: SimUiState, component: SimLayoutComponent.Text): Color {
-    return if (uiState.useSystemColors && component.color == sim.textColor) {
+private fun getTextColor(
+    uiState: WidgetUiState,
+    sim: SimUiState,
+    component: SimLayoutComponent.Text,
+): Color =
+    if (uiState.useSystemColors && component.color == sim.textColor) {
         MaterialTheme.colorScheme.onSurface
     } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
         MaterialTheme.colorScheme.onSurfaceVariant
     } else {
         Color(component.color)
     }
-}

@@ -67,7 +67,7 @@ private class AppSearchSessionWrapperImpl(
         val result = session.putAsync(request).await()
         if (!result.isSuccess) {
             val firstError = result.failures.values.firstOrNull()
-            throw IllegalStateException("Failed to put documents: ${firstError?.errorMessage}")
+            error("Failed to put documents: ${firstError?.errorMessage}")
         }
     }
 
@@ -75,7 +75,7 @@ private class AppSearchSessionWrapperImpl(
         val result = session.removeAsync(request).await()
         if (!result.isSuccess) {
             val firstError = result.failures.values.firstOrNull()
-            throw IllegalStateException("Failed to remove documents: ${firstError?.errorMessage}")
+            error("Failed to remove documents: ${firstError?.errorMessage}")
         }
     }
 

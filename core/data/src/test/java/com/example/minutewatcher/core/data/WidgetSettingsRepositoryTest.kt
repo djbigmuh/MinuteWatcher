@@ -15,7 +15,6 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -63,10 +62,6 @@ class WidgetSettingsRepositoryTest {
                     0,
                     com.example.minutewatcher.core.model.IdentitySource.ICCID,
                 )
-            val sim0 =
-                com.example.minutewatcher.core.model
-                    .ActiveSimInfo(identity0, 0, 100, "SIM 1", "MTS", "25001", true, true)
-
             val identity1 =
                 com.example.minutewatcher.core.model.SimIdentity(
                     "id1",
@@ -74,11 +69,17 @@ class WidgetSettingsRepositoryTest {
                     1,
                     com.example.minutewatcher.core.model.IdentitySource.ICCID,
                 )
-            val sim1 =
-                com.example.minutewatcher.core.model
-                    .ActiveSimInfo(identity1, 1, 101, "SIM 2", "MTS", "25001", false, false)
+            val identity2 =
+                com.example.minutewatcher.core.model.SimIdentity(
+                    "id2",
+                    null,
+                    2,
+                    com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK,
+                )
 
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
+            whenever(simIdentityRepository.getSimIdentity(0)).thenReturn(identity0)
+            whenever(simIdentityRepository.getSimIdentity(1)).thenReturn(identity1)
+            whenever(simIdentityRepository.getSimIdentity(2)).thenReturn(identity2)
 
             val simSettings =
                 SimSettingsState(
@@ -90,7 +91,8 @@ class WidgetSettingsRepositoryTest {
                     showTraffic = true,
                     showTrafficLimit = false,
                 )
-            whenever(simWidgetVisibilityRepository.getSimSettings(any())).thenReturn(flowOf(simSettings))
+            val batchSettings = mapOf("id0" to simSettings, "id1" to simSettings, "id2" to simSettings)
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(flowOf(batchSettings))
 
             val result = repository.load()
 
@@ -102,10 +104,10 @@ class WidgetSettingsRepositoryTest {
             assertEquals(true, result.notifyLowMinutes)
             assertEquals(false, result.notifyLowTraffic)
 
-            assertEquals(2, result.simStates.size)
+            assertEquals(3, result.simStates.size)
 
             verify(settingsRepository).getAppSettings()
-            verify(simWidgetVisibilityRepository, times(2)).getSimSettings(any())
+            verify(simWidgetVisibilityRepository).getSimSettingsBatch(any())
         }
 
     @Test
@@ -151,6 +153,34 @@ class WidgetSettingsRepositoryTest {
             repository.save(state)
 
             verify(settingsRepository).updateAppSettings(any())
-            verify(simWidgetVisibilityRepository).setSimSettingsBatch(any())
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(
+                org.mockito.kotlin.check { map ->
+                    assertEquals(2, map.size)
+                    assertEquals("sim0", map.keys.first { map[it] == state.simStates[0] })
+                    assertEquals("sim1", map.keys.first { map[it] == state.simStates[1] })
+                },
+            )
+        }
+
+    @Test
+    fun `save should include inactive sim settings`() =
+        runTest {
+            val state =
+                WidgetSettingsState(
+                    simStates =
+                        mapOf(
+                            2 to SimSettingsState(showSim = true),
+                        ),
+                )
+            whenever(simIdentityRepository.getIdentity(2)).thenReturn("sim2_inactive")
+
+            repository.save(state)
+
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(
+                org.mockito.kotlin.check { map ->
+                    assertEquals(1, map.size)
+                    assertEquals(true, map["sim2_inactive"]?.showSim)
+                },
+            )
         }
 }

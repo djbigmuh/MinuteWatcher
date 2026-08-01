@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -48,7 +47,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerTest {
-    private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -81,7 +79,6 @@ class UsageCheckWorkerTest {
                             UsageCheckWorker(
                                 appContext,
                                 workerParameters,
-                                simIdentityRepository,
                                 simUsageRepository,
                                 simNotificationFlagsRepository,
                                 appSettingsRepository,
@@ -141,7 +138,6 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
@@ -156,18 +152,20 @@ class UsageCheckWorkerTest {
         }
 
     @Test
-    fun `doWork retries on IOException`() = runTest {
-        whenever(usageUseCase.refreshOperatorInfo()).thenThrow(java.io.IOException("Disk full"))
-        val result = worker.doWork()
-        assertEquals(ListenableWorker.Result.retry(), result)
-    }
+    fun `doWork retries on IOException`() =
+        runTest {
+            whenever(usageUseCase.refreshOperatorInfo()).thenThrow(java.io.IOException("Disk full"))
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
 
     @Test
-    fun `doWork fails on unexpected Exception`() = runTest {
-        whenever(usageUseCase.refreshOperatorInfo()).thenThrow(RuntimeException("Fatal"))
-        val result = worker.doWork()
-        assertEquals(ListenableWorker.Result.failure(), result)
-    }
+    fun `doWork fails on unexpected Exception`() =
+        runTest {
+            whenever(usageUseCase.refreshOperatorInfo()).thenThrow(RuntimeException("Fatal"))
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.failure(), result)
+        }
 
     @Test
     fun `doWork sends notification when traffic low`() =
@@ -212,7 +210,6 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))
@@ -272,7 +269,6 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
@@ -334,7 +330,6 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 950f, trafficLimit = 1000)))

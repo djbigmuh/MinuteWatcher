@@ -1,8 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.TelephonyManager
-import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -69,6 +69,7 @@ class CallTrackerTest {
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
             whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
             callTracker =
                 CallTracker(
