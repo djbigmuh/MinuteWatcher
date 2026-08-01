@@ -72,6 +72,7 @@ class ShortcutManagerTest {
                         listOf(
                             SimSnapshot(
                                 0,
+                                "sim_0",
                                 "MTS",
                                 true,
                                 mapOf(
@@ -93,6 +94,7 @@ class ShortcutManagerTest {
                         listOf(
                             SimSnapshot(
                                 0,
+                                "sim_0",
                                 "Op_$i",
                                 true,
                                 mapOf(
@@ -122,7 +124,7 @@ class ShortcutManagerTest {
             val remainingMinutes = 90L
             val operator = "MTS"
             val entity = createEntity(0, operator, PackageType.MINUTES, 100, 100 - remainingMinutes)
-            val snapshot = createSnapshot(listOf(SimSnapshot(0, operator, true, mapOf(PackageType.MINUTES to entity))))
+            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", operator, true, mapOf(PackageType.MINUTES to entity))))
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
@@ -141,7 +143,7 @@ class ShortcutManagerTest {
     fun `no shortcut is created when limit is 0`() =
         runTest(testDispatcher) {
             val entity = createEntity(0, "MTS", PackageType.MINUTES, 0, 0)
-            val snapshot = createSnapshot(listOf(SimSnapshot(0, "MTS", true, mapOf(PackageType.MINUTES to entity))))
+            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", "MTS", true, mapOf(PackageType.MINUTES to entity))))
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
@@ -157,6 +159,7 @@ class ShortcutManagerTest {
             val sim0 =
                 SimSnapshot(
                     0,
+                    "sim_0",
                     "Op0",
                     true,
                     mapOf(
@@ -167,6 +170,7 @@ class ShortcutManagerTest {
             val sim1 =
                 SimSnapshot(
                     1,
+                    "sim_1",
                     "Op1",
                     true,
                     mapOf(
@@ -194,6 +198,7 @@ class ShortcutManagerTest {
                         listOf(
                             SimSnapshot(
                                 0,
+                                "sim_0",
                                 "MTS",
                                 true,
                                 mapOf(
@@ -213,6 +218,7 @@ class ShortcutManagerTest {
                     listOf(
                         SimSnapshot(
                             0,
+                            "sim_0",
                             "MegaFon",
                             true,
                             mapOf(

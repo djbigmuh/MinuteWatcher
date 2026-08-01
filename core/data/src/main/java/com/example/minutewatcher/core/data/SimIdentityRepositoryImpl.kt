@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -19,6 +20,7 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -159,7 +161,15 @@ class SimIdentityRepositoryImpl
                 // Note: saveSimIdentityInfo is suspend and can't be easily called here.
                 // However, the identities "sim_$i" with slotIndex=i are predictable.
                 // We should ensure they are saved when used.
-                scope.launch { saveSimIdentityInfo(identity) }
+                scope.launch {
+                    try {
+                        saveSimIdentityInfo(identity)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to save mock SIM identity info", e)
+                    }
+                }
 
                 ActiveSimInfo(
                     identity = identity,

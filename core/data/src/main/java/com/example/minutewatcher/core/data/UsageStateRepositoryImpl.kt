@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,6 +57,8 @@ class UsageStateRepositoryImpl
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
     ) : UsageStateRepository {
+        private val refreshMutex = Mutex()
+
         override fun recoverTracking(key: String) {
             statusProviders.find { it.key == key }?.recover()
         }
@@ -143,6 +147,7 @@ class UsageStateRepositoryImpl
 
                     SimSnapshot(
                         slot = slot,
+                        identity = usage.identity,
                         operator = operator,
                         isActive = isActive,
                         entities = entities,
@@ -161,16 +166,18 @@ class UsageStateRepositoryImpl
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
         override suspend fun refresh(): com.example.minutewatcher.core.domain.RefreshResult =
-            coroutineScope {
-                val nextSnapshot = async { snapshotFlow.drop(1).first() }
-                dataRefreshNotifier.notifyRefresh()
-                withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() }?.let {
-                    com.example.minutewatcher.core.domain.RefreshResult
-                        .Success(it)
-                } ?: run {
-                    AppLogger.w("UsageStateRepository: Refresh timed out after 2s, returning current snapshot")
-                    com.example.minutewatcher.core.domain.RefreshResult
-                        .Timeout(snapshotFlow.value)
+            refreshMutex.withLock {
+                coroutineScope {
+                    val nextSnapshot = async { snapshotFlow.drop(1).first() }
+                    dataRefreshNotifier.notifyRefresh()
+                    withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() }?.let {
+                        com.example.minutewatcher.core.domain.RefreshResult
+                            .Success(it)
+                    } ?: run {
+                        AppLogger.w("UsageStateRepository: Refresh timed out after 2s, returning current snapshot")
+                        com.example.minutewatcher.core.domain.RefreshResult
+                            .Timeout(snapshotFlow.value)
+                    }
                 }
             }
 

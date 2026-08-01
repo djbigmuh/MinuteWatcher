@@ -185,7 +185,7 @@ class WidgetLayoutTest {
                 )
         }
 
-        val simSnapshot = SimSnapshot(0, "MTS", true, entities)
+        val simSnapshot = SimSnapshot(0, "MTS", "MTS", true, entities)
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),

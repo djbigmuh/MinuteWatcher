@@ -93,7 +93,7 @@ class SemanticSearchManagerTest {
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
 
-            val s = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))
+            val s = createSnapshot(listOf(SimSnapshot(0, "sim_0", "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))
             manager.indexSnapshot(s)
             val session = fakeWrapper.lastSession!!
             val initialPuts = session.putRequests.size
@@ -106,13 +106,13 @@ class SemanticSearchManagerTest {
     fun `putDocuments failure sets error status and does not update hash`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val snapshot = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))
+            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))
 
             manager.indexSnapshot(snapshot)
             val session = fakeWrapper.lastSession!!
             session.failPutDocuments = true
 
-            val updatedSnapshot = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))))
+            val updatedSnapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))))
             manager.indexSnapshot(updatedSnapshot)
 
             assertTrue(manager.status.value is TrackingStatus.Error)
@@ -128,7 +128,7 @@ class SemanticSearchManagerTest {
     fun `indexSnapshot works with slot 1`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val snapshot = createSnapshot(listOf(SimSnapshot(1, "B", true, mapOf(PackageType.DATA to createEntity(1, PackageType.DATA, 50)))))
+            val snapshot = createSnapshot(listOf(SimSnapshot(1, "sim_1", "B", true, mapOf(PackageType.DATA to createEntity(1, PackageType.DATA, 50)))))
             manager.indexSnapshot(snapshot)
 
             val lastPut = fakeWrapper.lastSession!!.putRequests.last()

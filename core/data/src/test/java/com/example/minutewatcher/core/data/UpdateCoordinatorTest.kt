@@ -100,6 +100,7 @@ class UpdateCoordinatorTest {
             listOf(
                 com.example.minutewatcher.core.model.SimSnapshot(
                     slot = 0,
+                    identity = "sim_0",
                     operator = "MTS",
                     isActive = true,
                     entities =

@@ -110,6 +110,7 @@ class UsageCheckWorkerTest {
                         listOf(
                             SimSnapshot(
                                 slot = 0,
+                                identity = "sim_0",
                                 operator = "MTS",
                                 isActive = true,
                                 entities =
@@ -180,6 +181,7 @@ class UsageCheckWorkerTest {
                         listOf(
                             SimSnapshot(
                                 slot = 0,
+                                identity = "sim_0",
                                 operator = "MTS",
                                 isActive = true,
                                 entities =
@@ -239,6 +241,7 @@ class UsageCheckWorkerTest {
                         listOf(
                             SimSnapshot(
                                 slot = 0,
+                                identity = "sim_0",
                                 operator = "MTS",
                                 isActive = true,
                                 entities =
@@ -300,6 +303,7 @@ class UsageCheckWorkerTest {
                         listOf(
                             SimSnapshot(
                                 slot = 0,
+                                identity = "sim_0",
                                 operator = "MTS",
                                 isActive = true,
                                 entities =

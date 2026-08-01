@@ -114,7 +114,11 @@ class CallTracker
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallStarted", e)
                 } finally {
-                    refreshStatus()
+                    try {
+                        refreshStatus()
+                    } catch (_: CancellationException) {
+                        // Ignore cancellation in finally to avoid suppressing original exception
+                    }
                 }
             }
         }
@@ -140,7 +144,11 @@ class CallTracker
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallEnded", e)
                 } finally {
-                    refreshStatus()
+                    try {
+                        refreshStatus()
+                    } catch (_: CancellationException) {
+                        // Ignore cancellation in finally to avoid suppressing original exception
+                    }
                 }
             }
         }

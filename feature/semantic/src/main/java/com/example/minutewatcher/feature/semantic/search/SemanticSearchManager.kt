@@ -16,9 +16,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -67,7 +69,7 @@ open class SemanticSearchManager
             job?.cancel()
             job =
                 scope.launch {
-                    snapshotFlow.collect { snapshot ->
+                    snapshotFlow.collectLatest { snapshot ->
                         indexSnapshot(snapshot)
                     }
                 }
@@ -103,8 +105,13 @@ open class SemanticSearchManager
             if (currentHash == lastSnapshotHash) return
 
             val now = timeProvider.now()
-            // Allow manual updates to skip throttle
-            if (!snapshot.isManualUpdate && (now - lastIndexTime < INDEX_THROTTLE_MS)) return
+            // Allow manual updates to skip throttle, others are delayed to ensure eventual indexing
+            if (!snapshot.isManualUpdate) {
+                val timeSinceLast = now - lastIndexTime
+                if (timeSinceLast < INDEX_THROTTLE_MS) {
+                    delay((INDEX_THROTTLE_MS - timeSinceLast).milliseconds)
+                }
+            }
 
             sessionMutex.withLock {
                 if (!ensureSession()) return@withLock

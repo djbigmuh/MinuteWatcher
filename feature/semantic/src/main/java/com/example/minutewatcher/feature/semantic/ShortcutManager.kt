@@ -26,6 +26,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -67,9 +69,8 @@ class ShortcutManager
                 scope.launch {
                     _status.value = TrackingStatus.Active
                     var isFirst = true
-                    snapshotFlow.collect { snapshot ->
-                        // Logic: immediate for first or manual update, 30s debounce for others.
-                        // We use collect instead of collectLatest to avoid starvation during frequent updates.
+                    snapshotFlow.collectLatest { snapshot ->
+                        // Debounce logic for automatic updates
                         if (!isFirst && !snapshot.isManualUpdate) {
                             val timeSinceLast = timeProvider.now() - lastUpdateTime
                             if (timeSinceLast < 30_000L) {

@@ -4,7 +4,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import kotlinx.coroutines.CancellationException
@@ -18,7 +17,6 @@ import javax.inject.Singleton
 class ResetManager
     @Inject
     constructor(
-        private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val trafficTracker: TrafficTracker,
         private val dataChangeNotifier: DataChangeNotifier,
@@ -34,7 +32,7 @@ class ResetManager
                         if (!simSnapshot.isActive) continue
 
                         val slot = simSnapshot.slot
-                        val identity = simIdentityRepository.getIdentity(slot)
+                        val identity = simSnapshot.identity
 
                         val usage = simUsageRepository.getSimUsage(identity).first()
                         if (usage.autoReset) {

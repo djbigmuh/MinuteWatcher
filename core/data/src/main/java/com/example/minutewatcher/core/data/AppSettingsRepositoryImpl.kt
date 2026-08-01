@@ -57,26 +57,56 @@ class AppSettingsRepositoryImpl
                 val current = prefs.toAppSettings()
                 val updated = transform(current)
 
-                prefs[SettingsKeys.APP_THEME] = updated.theme.value
-                val language = updated.language
-                if (language == null) {
-                    prefs.remove(SettingsKeys.APP_LANGUAGE)
-                } else {
-                    prefs[SettingsKeys.APP_LANGUAGE] = language
+                if (current.theme != updated.theme) {
+                    prefs[SettingsKeys.APP_THEME] = updated.theme.value
                 }
-                prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
-                prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
-                prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
-                prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
-                prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
-                prefs[SettingsKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
-                prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
-                prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
-                prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
-                prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
-                prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
-                prefs[SettingsKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
-                prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
+                if (current.language != updated.language) {
+                    val language = updated.language
+                    if (language == null) {
+                        prefs.remove(SettingsKeys.APP_LANGUAGE)
+                    } else {
+                        prefs[SettingsKeys.APP_LANGUAGE] = language
+                    }
+                }
+                if (current.notifyLowMinutes != updated.notifyLowMinutes) {
+                    prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
+                }
+                if (current.notifyLowTraffic != updated.notifyLowTraffic) {
+                    prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
+                }
+                if (current.callTrackingEnabled != updated.callTrackingEnabled) {
+                    prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
+                }
+                if (current.widgetLayoutMode != updated.widgetLayoutMode) {
+                    prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
+                }
+                if (current.widgetSimArrangement != updated.widgetSimArrangement) {
+                    prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
+                }
+                if (current.widgetTransparency != updated.widgetTransparency) {
+                    prefs[SettingsKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
+                }
+                if (current.widgetFontSize != updated.widgetFontSize) {
+                    prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
+                }
+                if (current.widgetBackgroundColor != updated.widgetBackgroundColor) {
+                    prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
+                }
+                if (current.migrationV1Completed != updated.migrationV1Completed) {
+                    prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
+                }
+                if (current.onboardingCompleted != updated.onboardingCompleted) {
+                    prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
+                }
+                if (current.notificationPermissionRequested != updated.notificationPermissionRequested) {
+                    prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
+                }
+                if (current.phonePermissionRequested != updated.phonePermissionRequested) {
+                    prefs[SettingsKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
+                }
+                if (current.benchmarkSimCount != updated.benchmarkSimCount) {
+                    prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
+                }
             }
         }
 

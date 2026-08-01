@@ -45,7 +45,7 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "MTS", false, emptyMap()),
+                            SimSnapshot(0, "sim_0", "MTS", false, emptyMap()),
                         ),
                     capabilities = emptyList(),
                 )
@@ -65,7 +65,7 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "MTS", true, emptyMap()),
+                            SimSnapshot(0, "sim_0", "MTS", true, emptyMap()),
                         ),
                     capabilities = emptyList(),
                 )
@@ -110,7 +110,7 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "MTS", true, emptyMap()),
+                            SimSnapshot(0, "sim_0", "MTS", true, emptyMap()),
                         ),
                     capabilities = emptyList(),
                 )
@@ -157,7 +157,7 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "MTS", true, emptyMap()),
+                            SimSnapshot(0, "sim_0", "MTS", true, emptyMap()),
                         ),
                     capabilities = emptyList(),
                 )

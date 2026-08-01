@@ -163,8 +163,8 @@ class SimUsageRepositoryImpl
                 val trafficLimitMb = this[SimSettingsKeys.trafficLimitKey(identity)] ?: 0
                 val trafficUsedMb = this[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f
                 val trafficAdjGb = this[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f
-                val trafficLimitGb = trafficLimitMb.toFloat() / Constants.MB_PER_GB
-                val remainingTrafficGb = maxOf(0f, (trafficLimitGb + trafficAdjGb) - (trafficUsedMb / Constants.MB_PER_GB))
+                val remainingMb = maxOf(0f, (trafficLimitMb.toFloat() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb)
+                val remainingTrafficGb = remainingMb / Constants.MB_PER_GB
 
                 this[SimSettingsKeys.manualAdjustmentKey(identity)] = remainingMinutes
                 this[SimSettingsKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb

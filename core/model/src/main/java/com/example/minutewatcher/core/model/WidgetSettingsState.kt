@@ -13,11 +13,11 @@ data class WidgetSettingsState(
 )
 
 data class SimSettingsState(
-    val showSim: Boolean,
-    val showIcon: Boolean,
-    val showName: Boolean,
-    val showMinutes: Boolean,
-    val showMinutesLimit: Boolean,
-    val showTraffic: Boolean,
-    val showTrafficLimit: Boolean,
+    val showSim: Boolean = true,
+    val showIcon: Boolean = true,
+    val showName: Boolean = true,
+    val showMinutes: Boolean = true,
+    val showMinutesLimit: Boolean = false,
+    val showTraffic: Boolean = true,
+    val showTrafficLimit: Boolean = false,
 )

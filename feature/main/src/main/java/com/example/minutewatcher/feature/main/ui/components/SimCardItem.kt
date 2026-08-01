@@ -55,7 +55,7 @@ import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.ui.theme.usageColor
 
 @Composable
-fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorScheme.usageColor(status)
+private fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorScheme.usageColor(status)
 
 @Composable
 fun SimCardItem(

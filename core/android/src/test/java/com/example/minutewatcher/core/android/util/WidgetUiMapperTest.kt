@@ -34,6 +34,7 @@ class WidgetUiMapperTest {
                     listOf(
                         SimSnapshot(
                             slot = 0,
+                            identity = "sim_0",
                             operator = "MTS",
                             isActive = true,
                             entities =
@@ -120,6 +121,7 @@ class WidgetUiMapperTest {
                     listOf(
                         SimSnapshot(
                             slot = 0,
+                            identity = "sim_0",
                             operator = "MTS",
                             isActive = true,
                             entities =
@@ -169,7 +171,7 @@ class WidgetUiMapperTest {
                 timestamp = System.currentTimeMillis(),
                 simSnapshots =
                     listOf(
-                        SimSnapshot(0, "Operator", true, emptyMap()),
+                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap()),
                     ),
                 capabilities = emptyList(),
             )
@@ -203,6 +205,7 @@ class WidgetUiMapperTest {
                     listOf(
                         SimSnapshot(
                             slot = 0,
+                            identity = "sim_0",
                             operator = "MTS",
                             isActive = true,
                             entities =

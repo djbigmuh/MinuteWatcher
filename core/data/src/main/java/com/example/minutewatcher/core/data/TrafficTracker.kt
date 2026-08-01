@@ -4,7 +4,6 @@ import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.NetworkCapabilities
 import com.example.minutewatcher.core.android.util.PermissionManager
-import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -275,24 +274,9 @@ class TrafficTracker
             inMemoryLastDataSubId = currentDataSubId
         }
 
-        private suspend fun findSingleActiveSimSlot(): Int? {
-            val activeSlots = mutableListOf<Int>()
-            for (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
-                try {
-                    val identity = simIdentityRepository.getIdentity(slot)
-                    val operator = simIdentityRepository.getSimOperator(identity).firstWithTimeout() ?: ""
-
-                    if (!SimUtils.isInactiveSim(operator)) {
-                        activeSlots.add(slot)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("Error checking active status for slot $slot: ${e.message}")
-                }
-            }
-
-            return if (activeSlots.size == 1) activeSlots.first() else null
+        private fun findSingleActiveSimSlot(): Int? {
+            val activeSubs = permissionManager.getActiveSubscriptions()
+            return if (activeSubs.size == 1) activeSubs.first().simSlotIndex else null
         }
 
         companion object {

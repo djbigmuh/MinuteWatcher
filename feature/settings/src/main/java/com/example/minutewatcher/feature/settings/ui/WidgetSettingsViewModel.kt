@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,6 +33,7 @@ class WidgetSettingsViewModel
         private val dataChangeNotifier: DataChangeNotifier,
         usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
+        private val saveMutex = Mutex()
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()
 
@@ -119,6 +121,7 @@ class WidgetSettingsViewModel
                 }
 
             viewModelScope.launch {
+                if (!saveMutex.tryLock()) return@launch
                 try {
                     loader.save(currentState)
                     dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
@@ -129,6 +132,8 @@ class WidgetSettingsViewModel
                     com.example.minutewatcher.core.common.util.AppLogger
                         .e("Failed to save widget settings", e)
                     onComplete(false)
+                } finally {
+                    saveMutex.unlock()
                 }
             }
         }

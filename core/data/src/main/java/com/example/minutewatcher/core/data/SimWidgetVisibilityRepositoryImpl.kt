@@ -30,6 +30,21 @@ class SimWidgetVisibilityRepositoryImpl
                 )
             }
 
+        override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
+            dataStore.data.map { prefs ->
+                identities.associateWith { identity ->
+                    SimSettingsState(
+                        showSim = prefs[SettingsKeys.showSimKey(identity)] ?: true,
+                        showIcon = prefs[SettingsKeys.showSimIconKey(identity)] ?: true,
+                        showName = prefs[SettingsKeys.showSimNameKey(identity)] ?: true,
+                        showMinutes = prefs[SettingsKeys.showMinutesKey(identity)] ?: true,
+                        showMinutesLimit = prefs[SettingsKeys.showMinutesLimitKey(identity)] ?: false,
+                        showTraffic = prefs[SettingsKeys.showTrafficKey(identity)] ?: true,
+                        showTrafficLimit = prefs[SettingsKeys.showTrafficLimitKey(identity)] ?: false,
+                    )
+                }
+            }
+
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
             dataStore.edit { prefs ->
                 settingsMap.forEach { (identity, settings) ->

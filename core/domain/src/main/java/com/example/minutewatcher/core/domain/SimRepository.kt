@@ -131,6 +131,8 @@ interface SimLimitsRepository {
 interface SimWidgetVisibilityRepository {
     fun getSimSettings(identity: String): Flow<SimSettingsState>
 
+    fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>>
+
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
 
     fun getShowSim(identity: String): Flow<Boolean>

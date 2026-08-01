@@ -143,9 +143,11 @@ private fun MainScreenContent(
     var isRefreshing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(highlightedSlot, uiState) {
-        if (highlightedSlot != null && uiState is SimCardListState.Success) {
-            val index = uiState.simCards.indexOfFirst { it.slot == highlightedSlot }
+    LaunchedEffect(highlightedSlot) {
+        val slot = highlightedSlot ?: return@LaunchedEffect
+        val state = uiState
+        if (state is SimCardListState.Success) {
+            val index = state.simCards.indexOfFirst { it.slot == slot }
             if (index >= 0) listState.animateScrollToItem(index)
         }
     }

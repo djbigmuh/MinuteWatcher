@@ -83,7 +83,7 @@ class SnapshotUtilsTest {
                 lastUpdateTime = lastUpdateTime,
                 sourceType = DataSourceType.SYSTEM,
             )
-        val sim = SimSnapshot(0, "ABC", true, mapOf(PackageType.MINUTES to entity))
+        val sim = SimSnapshot(0, "ABC", "ABC", true, mapOf(PackageType.MINUTES to entity))
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
             timestamp = timestamp,

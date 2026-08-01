@@ -24,9 +24,12 @@ class WidgetSettingsRepository
             val settings = appSettingsRepository.getAppSettings().first()
 
             val activeSims = simIdentityRepository.observeActiveSims().first()
+            val identities = activeSims.map { it.identity.stableId }
+            val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(identities).first()
+
             val simStates =
                 activeSims.associate { info ->
-                    info.slotIndex to simWidgetVisibilityRepository.getSimSettings(info.identity.stableId).first()
+                    info.slotIndex to (batchSettings[info.identity.stableId] ?: SimSettingsState())
                 }
 
             return WidgetSettingsState(
@@ -56,10 +59,13 @@ class WidgetSettingsRepository
                 )
             }
 
+            val activeSims = simIdentityRepository.observeActiveSims().first()
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             for ((slot, simSettings) in state.simStates) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simSettingsMap[identity] = simSettings
+                val identity = activeSims.find { it.slotIndex == slot }?.identity?.stableId
+                if (identity != null) {
+                    simSettingsMap[identity] = simSettings
+                }
             }
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
             dataChangeNotifier.notifyDataChanged(updateWidget = true)
