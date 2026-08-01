@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.android.util
+package com.example.minutewatcher.core.common.util
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -10,7 +10,6 @@ import android.os.Process
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.core.content.ContextCompat
-import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

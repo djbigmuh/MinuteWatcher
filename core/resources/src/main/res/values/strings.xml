@@ -160,8 +160,10 @@
     <string name="operator_china_mobile" translatable="false">China Mobile</string>
     <string name="operator_china_unicom" translatable="false">China Unicom</string>
     <string name="operator_china_telecom" translatable="false">China Telecom</string>
-    <string name="operator_jio" translatable="false">Jio</string>
+    <string name="operator_movistar" translatable="false">Movistar</string>
+    <string name="operator_claro" translatable="false">Claro</string>
     <string name="operator_airtel" translatable="false">Airtel</string>
+    <string name="operator_jio" translatable="false">Jio</string>
     <string name="operator_vi" translatable="false">Vi</string>
     <string name="operator_stc" translatable="false">STC</string>
     <string name="operator_mobily" translatable="false">Mobily</string>

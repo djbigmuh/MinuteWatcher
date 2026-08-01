@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.hours
 
 @Singleton
 class ResetManager
@@ -23,10 +24,12 @@ class ResetManager
         private val timeProvider: TimeProvider,
     ) : AutoResetUseCase {
         private val resetMutex = Mutex()
+        private val lastResetCheck = mutableMapOf<String, Long>()
 
         override suspend fun performAutoReset(snapshot: GlobalSnapshot) {
             resetMutex.withLock {
                 try {
+                    val now = timeProvider.now()
                     val resetIdentities = mutableSetOf<String>()
                     for (simSnapshot in snapshot.simSnapshots) {
                         if (!simSnapshot.isActive) continue
@@ -34,13 +37,20 @@ class ResetManager
                         val slot = simSnapshot.slot
                         val identity = simSnapshot.identity
 
+                        // Skip if we checked this identity recently (e.g. within the last hour)
+                        val lastCheck = lastResetCheck[identity] ?: 0L
+                        if (now - lastCheck < CHECK_INTERVAL_MS) continue
+
+                        // Update last check time early to avoid redundant checks even if not due or disabled
+                        lastResetCheck[identity] = now
+
                         val usage = simUsageRepository.getSimUsage(identity).first()
                         if (usage.autoReset) {
                             val reset =
                                 simUsageRepository.resetSimUsageIfDue(
                                     identity,
                                     usage.autoResetDay,
-                                    timeProvider.now(),
+                                    now,
                                 )
                             if (reset) {
                                 resetIdentities.add(identity)
@@ -60,5 +70,9 @@ class ResetManager
                     AppLogger.e("Error in auto reset: ${e.message}")
                 }
             }
+        }
+
+        companion object {
+            private val CHECK_INTERVAL_MS = 1.hours.inWholeMilliseconds
         }
     }

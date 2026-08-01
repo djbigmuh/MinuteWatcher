@@ -34,6 +34,10 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("robolectric.sdk", 33)
+}
+
 dependencies {
     implementation(libs.androidxAppcompat)
     implementation(libs.googleMaterial)

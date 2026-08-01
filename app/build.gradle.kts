@@ -86,6 +86,10 @@ configure<ApplicationExtension> {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("robolectric.sdk", 33)
+}
+
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))

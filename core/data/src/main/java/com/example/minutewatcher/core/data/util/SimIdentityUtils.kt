@@ -1,27 +1,16 @@
 package com.example.minutewatcher.core.data.util
 
-import android.os.Build
 import android.telephony.SubscriptionInfo
+import com.example.minutewatcher.core.common.util.mccStringCompat
+import com.example.minutewatcher.core.common.util.mncStringCompat
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import java.security.MessageDigest
 
 object SimIdentityUtils {
     fun getMccMnc(info: SubscriptionInfo): String {
-        val mcc =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                info.mccString ?: ""
-            } else {
-                @Suppress("DEPRECATION") // Legacy mcc/mnc access for API < 29.
-                info.mcc.toString()
-            }
-        val mnc =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                info.mncString ?: ""
-            } else {
-                @Suppress("DEPRECATION") // Legacy mcc/mnc access for API < 29.
-                info.mnc.toString()
-            }
+        val mcc = info.mccStringCompat
+        val mnc = info.mncStringCompat
         return if (mcc.isNotEmpty() && mnc.isNotEmpty()) "$mcc$mnc" else ""
     }
 

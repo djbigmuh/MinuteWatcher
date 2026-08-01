@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import android.telephony.SubscriptionInfo
-import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository

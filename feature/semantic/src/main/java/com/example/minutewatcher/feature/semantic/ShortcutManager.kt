@@ -5,13 +5,14 @@ import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import com.example.minutewatcher.core.android.util.SimUtils
+import com.example.minutewatcher.core.data.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SimConstants
@@ -73,8 +74,8 @@ class ShortcutManager
                         // Debounce logic for automatic updates
                         if (!isFirst && !snapshot.isManualUpdate) {
                             val timeSinceLast = timeProvider.now() - lastUpdateTime
-                            if (timeSinceLast < 30_000L) {
-                                delay((30_000L - timeSinceLast).milliseconds)
+                            if (timeSinceLast < Constants.Semantic.THROTTLE_MS) {
+                                delay((Constants.Semantic.THROTTLE_MS - timeSinceLast).milliseconds)
                             }
                         }
                         isFirst = false
@@ -142,7 +143,7 @@ class ShortcutManager
                     traffic?.let {
                         if (it.limit > 0) {
                             val trafficGb =
-                                it.remaining.toFloat() / com.example.minutewatcher.core.model.Constants.BYTES_PER_GB
+                                it.remaining.toFloat() / Constants.BYTES_PER_GB
                             val label =
                                 String.format(
                                     Locale.getDefault(),

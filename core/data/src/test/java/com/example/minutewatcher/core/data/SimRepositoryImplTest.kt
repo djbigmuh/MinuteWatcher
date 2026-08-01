@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -36,7 +37,7 @@ class SimRepositoryImplTest {
     private lateinit var seedRepository: SimIdentitySeedRepository
     private lateinit var permissionStateNotifier: PermissionStateNotifier
     private lateinit var appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository
-    private lateinit var permissionManager: com.example.minutewatcher.core.android.util.PermissionManager
+    private lateinit var permissionManager: com.example.minutewatcher.core.common.util.PermissionManager
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     @Before

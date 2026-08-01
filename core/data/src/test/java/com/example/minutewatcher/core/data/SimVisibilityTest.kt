@@ -5,7 +5,7 @@ import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo

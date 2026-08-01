@@ -36,11 +36,13 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUiState
+import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -94,18 +96,28 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         var snapshot = usageRepository.observeSnapshot().value
         if (snapshot.timestamp == 0L) {
             // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
-            snapshot = withTimeoutOrNull(2000.milliseconds) {
+            snapshot = withTimeoutOrNull(WIDGET_REFRESH_TIMEOUT) {
                 usageRepository.refresh().snapshot
             } ?: snapshot
         }
 
-        val settingsState = widgetSettingsLoader.load()
+        val settingsState =
+            try {
+                widgetSettingsLoader.load()
+            } catch (e: Exception) {
+                AppLogger.e("Failed to load widget settings, using defaults", e)
+                WidgetSettingsState()
+            }
 
         return WidgetUiMapper.mapFromSnapshot(
             context,
             snapshot,
             settingsState,
         )
+    }
+
+    companion object {
+        private val WIDGET_REFRESH_TIMEOUT = Constants.Widget.REFRESH_TIMEOUT_MS.milliseconds
     }
 }
 

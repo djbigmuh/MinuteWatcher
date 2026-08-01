@@ -1,17 +1,18 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
-import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
+import com.example.minutewatcher.core.data.util.SimCardMapper
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.PackageType
@@ -170,11 +171,11 @@ class UsageStateRepositoryImpl
                 coroutineScope {
                     val nextSnapshot = async { snapshotFlow.drop(1).first() }
                     dataRefreshNotifier.notifyRefresh()
-                    withTimeoutOrNull(2000.milliseconds) { nextSnapshot.await() }?.let {
+                    withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) { nextSnapshot.await() }?.let {
                         com.example.minutewatcher.core.domain.RefreshResult
                             .Success(it)
                     } ?: run {
-                        AppLogger.w("UsageStateRepository: Refresh timed out after 2s, returning current snapshot")
+                        AppLogger.w("UsageStateRepository: Refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS / 1000}s, returning current snapshot")
                         com.example.minutewatcher.core.domain.RefreshResult
                             .Timeout(snapshotFlow.value)
                     }

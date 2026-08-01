@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.TelephonyManager
-import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository

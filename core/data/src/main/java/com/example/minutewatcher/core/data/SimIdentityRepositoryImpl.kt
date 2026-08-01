@@ -6,9 +6,9 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -127,16 +129,21 @@ class SimIdentityRepositoryImpl
                     }
                 }
 
+        @OptIn(ExperimentalCoroutinesApi::class)
         private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
             combine(
                 physicalActiveSims,
                 appSettingsRepository.observeAppSettings(),
                 seedFlow,
             ) { physical, settings, seed ->
-                if (settings.benchmarkSimCount > 0) {
-                    generateMockActiveSims(settings.benchmarkSimCount, seed)
-                } else {
-                    physical
+                Triple(physical, settings, seed)
+            }.flatMapLatest { (physical, settings, seed) ->
+                flow {
+                    if (settings.benchmarkSimCount > 0) {
+                        emit(generateMockActiveSims(settings.benchmarkSimCount, seed))
+                    } else {
+                        emit(physical)
+                    }
                 }
             }.stateIn(
                 scope = scope,
@@ -144,24 +151,21 @@ class SimIdentityRepositoryImpl
                 initialValue = emptyList(),
             )
 
-        private fun generateMockActiveSims(
+        private suspend fun generateMockActiveSims(
             count: Int,
             seed: String,
         ): List<ActiveSimInfo> {
             val safeCount = count.coerceIn(0, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
-            return (0 until safeCount).map { i ->
-                val identity =
-                    SimIdentity(
-                        stableId = "sim_$i",
-                        subscriptionId = i + 1000,
-                        slotIndex = i,
-                        source = IdentitySource.SLOT_FALLBACK,
-                    )
+            return coroutineScope {
+                (0 until safeCount).map { i ->
+                    val identity =
+                        SimIdentity(
+                            stableId = "sim_$i",
+                            subscriptionId = SimConstants.MOCK_SUB_ID_BASE + i,
+                            slotIndex = i,
+                            source = IdentitySource.SLOT_FALLBACK,
+                        )
 
-                // Note: saveSimIdentityInfo is suspend and can't be easily called here.
-                // However, the identities "sim_$i" with slotIndex=i are predictable.
-                // We should ensure they are saved when used.
-                scope.launch {
                     try {
                         saveSimIdentityInfo(identity)
                     } catch (e: CancellationException) {
@@ -169,18 +173,18 @@ class SimIdentityRepositoryImpl
                     } catch (e: Exception) {
                         AppLogger.e("Failed to save mock SIM identity info", e)
                     }
-                }
 
-                ActiveSimInfo(
-                    identity = identity,
-                    slotIndex = i,
-                    subscriptionId = identity.subscriptionId ?: (i + 1000),
-                    displayName = "SIM ${i + 1}",
-                    carrierName = "Mock Carrier ${i + 1}",
-                    mccMnc = "001001",
-                    isDefaultData = i == 0,
-                    isDefaultVoice = i == 0,
-                )
+                    ActiveSimInfo(
+                        identity = identity,
+                        slotIndex = i,
+                        subscriptionId = identity.subscriptionId ?: (SimConstants.MOCK_SUB_ID_BASE + i),
+                        displayName = "SIM ${i + 1}",
+                        carrierName = "Mock Carrier ${i + 1}",
+                        mccMnc = "001001",
+                        isDefaultData = i == 0,
+                        isDefaultVoice = i == 0,
+                    )
+                }
             }
         }
 
@@ -295,5 +299,8 @@ class SimIdentityRepositoryImpl
             code: String,
         ) {
             dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
+        }
+
+        companion object {
         }
     }

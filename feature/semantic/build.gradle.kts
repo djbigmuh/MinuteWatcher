@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
     implementation(project(":core:common"))
+    implementation(project(":core:data"))
     implementation(project(":core:android"))
     implementation(project(":core:resources"))
 
@@ -56,6 +57,7 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
+    systemProperty("robolectric.sdk", 33)
     jvmArgs(
         "--add-opens=java.base/java.lang=ALL-UNNAMED",
         "--add-opens=java.base/java.util=ALL-UNNAMED",

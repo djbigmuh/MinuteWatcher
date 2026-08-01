@@ -8,6 +8,7 @@ import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -108,8 +109,8 @@ open class SemanticSearchManager
             // Allow manual updates to skip throttle, others are delayed to ensure eventual indexing
             if (!snapshot.isManualUpdate) {
                 val timeSinceLast = now - lastIndexTime
-                if (timeSinceLast < INDEX_THROTTLE_MS) {
-                    delay((INDEX_THROTTLE_MS - timeSinceLast).milliseconds)
+                if (timeSinceLast < Constants.Semantic.THROTTLE_MS) {
+                    delay((Constants.Semantic.THROTTLE_MS - timeSinceLast).milliseconds)
                 }
             }
 
@@ -118,7 +119,7 @@ open class SemanticSearchManager
 
                 withContext(ioDispatcher) {
                     try {
-                        withTimeout(INDEX_TIMEOUT_MS.milliseconds) {
+                        withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                             val documents = convertSnapshotToDocuments(snapshot)
                             if (documents.isEmpty()) {
                                 lastSnapshotHash = currentHash
@@ -176,7 +177,5 @@ open class SemanticSearchManager
         companion object {
             private const val DATABASE_NAME = "usage"
             private const val NAMESPACE = "usage"
-            private const val INDEX_THROTTLE_MS = 30_000L
-            private const val INDEX_TIMEOUT_MS = 10_000L
         }
     }

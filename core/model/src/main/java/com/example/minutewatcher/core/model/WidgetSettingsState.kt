@@ -1,15 +1,15 @@
 package com.example.minutewatcher.core.model
 
 data class WidgetSettingsState(
-    val layoutMode: Int,
-    val simArrangement: Int,
-    val transparency: Int,
-    val fontSize: Int,
-    val backgroundColor: Int,
-    val notifyLowMinutes: Boolean,
-    val notifyLowTraffic: Boolean,
-    val callTrackingEnabled: Boolean,
-    val simStates: Map<Int, SimSettingsState>,
+    val layoutMode: Int = 2,
+    val simArrangement: Int = 0,
+    val transparency: Int = 50,
+    val fontSize: Int = 2,
+    val backgroundColor: Int = 0xFF000000.toInt(),
+    val notifyLowMinutes: Boolean = true,
+    val notifyLowTraffic: Boolean = true,
+    val callTrackingEnabled: Boolean = true,
+    val simStates: Map<Int, SimSettingsState> = emptyMap(),
 )
 
 data class SimSettingsState(

@@ -35,6 +35,7 @@ android {
 }
 
 tasks.withType<Test>().configureEach {
+    systemProperty("robolectric.sdk", 33)
     jvmArgs(
         "--add-opens=java.base/java.lang=ALL-UNNAMED",
         "--add-opens=java.base/java.util=ALL-UNNAMED",

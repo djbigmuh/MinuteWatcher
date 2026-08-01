@@ -2,17 +2,19 @@ package com.example.minutewatcher.feature.main.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Standard Material 3 color definitions. Suppressing MagicNumber as these are hex color literals.
-@Suppress("MagicNumber")
-val Purple80 = Color(0xFFD0BCFF)
-@Suppress("MagicNumber")
-val PurpleGrey80 = Color(0xFFCCC2DC)
-@Suppress("MagicNumber")
-val Pink80 = Color(0xFFEFB8C8)
+// Standard Material 3 color definitions.
+private const val PURPLE_80_HEX = 0xFFD0BCFF
+private const val PURPLE_GREY_80_HEX = 0xFFCCC2DC
+private const val PINK_80_HEX = 0xFFEFB8C8
 
-@Suppress("MagicNumber")
-val Purple40 = Color(0xFF6650a4)
-@Suppress("MagicNumber")
-val PurpleGrey40 = Color(0xFF625b71)
-@Suppress("MagicNumber")
-val Pink40 = Color(0xFF7D5260)
+private const val PURPLE_40_HEX = 0xFF6650a4
+private const val PURPLE_GREY_40_HEX = 0xFF625b71
+private const val PINK_40_HEX = 0xFF7D5260
+
+val Purple80 = Color(PURPLE_80_HEX)
+val PurpleGrey80 = Color(PURPLE_GREY_80_HEX)
+val Pink80 = Color(PINK_80_HEX)
+
+val Purple40 = Color(PURPLE_40_HEX)
+val PurpleGrey40 = Color(PURPLE_GREY_40_HEX)
+val Pink40 = Color(PINK_40_HEX)

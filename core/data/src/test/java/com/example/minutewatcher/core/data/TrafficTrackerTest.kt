@@ -3,7 +3,7 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
-import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository

@@ -15,6 +15,24 @@ object Constants {
         const val FONT_SIZE_MEDIUM = 14f
 
         const val DEBOUNCE_MS = 300L
+        const val REFRESH_TIMEOUT_MS = 3000L
+    }
+
+    object Traffic {
+        const val MIN_DELTA_MB = 0.0001f
+    }
+
+    object Data {
+        const val SNAPSHOT_TIMEOUT_MS = 2000L
+    }
+
+    object Semantic {
+        const val THROTTLE_MS = 30_000L
+        const val SEARCH_INDEX_TIMEOUT_MS = 10_000L
+    }
+
+    object Flow {
+        const val STATE_FLOW_STOP_TIMEOUT_MS = 5_000L
     }
 
     const val BYTES_PER_MB = 1024L * 1024L
@@ -28,5 +46,6 @@ object Constants {
 
 object SimConstants {
     const val MAX_SUPPORTED_SIM_SLOTS = 3
+    const val MOCK_SUB_ID_BASE = 1000
     val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
 }

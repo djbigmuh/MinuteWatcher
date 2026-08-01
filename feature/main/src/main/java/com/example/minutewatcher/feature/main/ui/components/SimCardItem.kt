@@ -46,13 +46,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.minutewatcher.core.android.util.FormatUtils
+import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.model.util.UsageStatus
 import com.example.minutewatcher.core.resources.R
+
 import com.example.minutewatcher.feature.main.ui.theme.usageColor
+
+private const val SWITCH_SCALE = 0.8f
 
 @Composable
 private fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorScheme.usageColor(status)
@@ -219,7 +222,7 @@ private fun AutoResetSection(model: SimCardUiModel, onToggleAutoReset: (Boolean)
         Switch(
             checked = model.autoResetEnabled,
             onCheckedChange = onToggleAutoReset,
-            modifier = Modifier.minimumInteractiveComponentSize().scale(0.8f).semantics {
+            modifier = Modifier.minimumInteractiveComponentSize().scale(SWITCH_SCALE).semantics {
                 contentDescription = toggleAutoResetDesc
             },
         )

@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
@@ -23,6 +24,7 @@ class NotificationHelper
     constructor(
         @param:ApplicationContext private val context: Context,
         private val navigationProvider: NavigationProvider,
+        private val permissionManager: PermissionManager,
     ) {
         private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -47,7 +49,9 @@ class NotificationHelper
             type: Int,
         ) {
             try {
-                if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                if (!permissionManager.hasNotificationPermission() ||
+                    !NotificationManagerCompat.from(context).areNotificationsEnabled()
+                ) {
                     return
                 }
 

@@ -32,6 +32,10 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:resources"))
+    implementation(libs.androidxCoreKtx)
+    implementation(libs.androidxAppcompat)
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
     implementation(libs.kotlinxCoroutinesCore)

@@ -4,15 +4,14 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.minutewatcher.core.android.util.FormatUtils
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -34,7 +33,6 @@ class UsageCheckWorker
     constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
-        private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val simNotificationFlagsRepository: SimNotificationFlagsRepository,
         private val appSettingsRepository: AppSettingsRepository,
@@ -70,11 +68,11 @@ class UsageCheckWorker
             }
 
         private suspend fun checkUsageAndNotify() {
-            usageStateRepository.refresh()
             autoResetUseCase.performAutoReset(usageStateRepository.observeSnapshot().value)
             trafficTracker.updateTrafficUsage()
 
-            val finalSnapshot = usageStateRepository.refresh().snapshot
+            val refreshResult = usageStateRepository.refresh()
+            val finalSnapshot = refreshResult.snapshot
             dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
             val appSettings = appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()
@@ -89,7 +87,7 @@ class UsageCheckWorker
             simSnapshot: com.example.minutewatcher.core.model.SimSnapshot,
             appSettings: AppSettings,
         ) {
-            val identity = simIdentityRepository.getIdentity(simSnapshot.slot)
+            val identity = simSnapshot.identity
             val simUsage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
             val now = timeProvider.now()
 

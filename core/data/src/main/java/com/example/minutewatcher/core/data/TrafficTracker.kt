@@ -3,9 +3,9 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.NetworkCapabilities
-import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.CallSessionRepository
@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,7 +59,7 @@ class TrafficTracker
         private val trafficMutex = Mutex()
         private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
 
-        private var inMemoryLastDataSubId: Int = -1
+        private val inMemoryLastDataSubId = AtomicInteger(-1)
 
         private data class TargetInfo(
             val slot: Int,
@@ -183,7 +184,7 @@ class TrafficTracker
             val deltaBytes = currentBytes - lastTotalBytes
             if (deltaBytes > 0L) {
                 val deltaMB = deltaBytes.toFloat() / Constants.BYTES_PER_MB
-                if (deltaMB >= MIN_TRAFFIC_DELTA_MB) {
+                if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
                     simUsageRepository.setLastTotalBytes(identity, currentBytes)
                     simUsageRepository.incrementTrafficUsed(identity, deltaMB)
                     AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
@@ -195,7 +196,7 @@ class TrafficTracker
         private suspend fun updateLastDataSubId(dataSubId: Int) {
             if (dataSubId != -1) {
                 callSessionRepository.setLastDataSubId(dataSubId)
-                inMemoryLastDataSubId = dataSubId
+                inMemoryLastDataSubId.set(dataSubId)
             }
         }
 
@@ -244,16 +245,22 @@ class TrafficTracker
             }
 
             if (targetSim == -1) {
-                targetSim = findSingleActiveSimSlot() ?: -1
+                val fallback = findFallbackActiveSimSlot()
+                if (fallback != null) {
+                    targetSim = fallback.first
+                    currentDataSubId = fallback.second
+                    AppLogger.d("No default data SIM found. Using fallback Slot $targetSim")
+                }
             }
 
             if (targetSim == -1) return null
 
-            if (inMemoryLastDataSubId == -1) {
-                inMemoryLastDataSubId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
+            if (inMemoryLastDataSubId.get() == -1) {
+                val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
+                inMemoryLastDataSubId.compareAndSet(-1, savedId)
             }
 
-            val savedLastDataSubId = inMemoryLastDataSubId
+            val savedLastDataSubId = inMemoryLastDataSubId.get()
             if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
                 handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
                 return TargetInfo(targetSim, currentDataSubId, skipDelta = true)
@@ -271,15 +278,15 @@ class TrafficTracker
                 simUsageRepository.setLastTotalBytes(identity, currentBytes)
             }
             callSessionRepository.setLastDataSubId(currentDataSubId)
-            inMemoryLastDataSubId = currentDataSubId
+            inMemoryLastDataSubId.set(currentDataSubId)
         }
 
-        private fun findSingleActiveSimSlot(): Int? {
+        private fun findFallbackActiveSimSlot(): Pair<Int, Int>? {
             val activeSubs = permissionManager.getActiveSubscriptions()
-            return if (activeSubs.size == 1) activeSubs.first().simSlotIndex else null
+            if (activeSubs.isEmpty()) return null
+            return activeSubs.first().simSlotIndex to activeSubs.first().subscriptionId
         }
 
         companion object {
-            private const val MIN_TRAFFIC_DELTA_MB = 0.0001f
         }
     }

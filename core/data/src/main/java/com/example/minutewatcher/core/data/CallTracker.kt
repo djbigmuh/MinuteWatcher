@@ -2,8 +2,8 @@ package com.example.minutewatcher.core.data
 
 import android.os.Build
 import android.telephony.TelephonyManager
-import com.example.minutewatcher.core.android.util.PermissionManager
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -186,7 +186,26 @@ class CallTracker
             if (target != null) {
                 endCall(target)
             } else {
-                AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls")
+                AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using fallback.")
+
+                // Fallback: end extremely long sessions OR the oldest session
+                val now = timeProvider.now()
+                val staleSessions =
+                    activeSubIds.filter { subId ->
+                        val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
+                        startTime > 0 && (now - startTime) > MAX_CALL_DURATION_MS
+                    }
+
+                if (staleSessions.isNotEmpty()) {
+                    AppLogger.d("Ending ${staleSessions.size} stale sessions")
+                    staleSessions.forEach { endCall(it) }
+                } else {
+                    val oldest = fallbackAttribution(activeSubIds)
+                    if (oldest != null) {
+                        AppLogger.d("Attributing unknown IDLE event to oldest session: $oldest")
+                        endCall(oldest)
+                    }
+                }
             }
         }
 
@@ -206,11 +225,11 @@ class CallTracker
                     emptyList()
                 }
 
-            if (idleSubs.size == 1) {
-                return idleSubs.first()
+            return if (idleSubs.size == 1) {
+                idleSubs.first()
+            } else {
+                null
             }
-
-            return fallbackAttribution(activeSubIds)
         }
 
         private suspend fun fallbackAttribution(activeSubIds: List<Int>): Int? {
@@ -297,5 +316,6 @@ class CallTracker
         companion object {
             private const val MILLIS_IN_SECOND = 1000L
             private const val SECONDS_IN_MINUTE = 60
+            private const val MAX_CALL_DURATION_MS = 12 * 60 * 60 * 1000L // 12 hours
         }
     }

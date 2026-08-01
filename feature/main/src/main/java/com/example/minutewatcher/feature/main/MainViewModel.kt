@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.state.MainDialogStateHolder
@@ -59,7 +60,7 @@ class MainViewModel
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 scope = viewModelScope,
-                stateFlowTimeout = STATE_FLOW_TIMEOUT,
+                stateFlowTimeout = Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS,
             )
         private val refreshStateHolder =
             SimRefreshStateHolder(
@@ -134,7 +135,7 @@ class MainViewModel
                 .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
                 .stateIn(
                     scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                     initialValue = SimCardListState.Loading,
                 )
 
@@ -146,7 +147,7 @@ class MainViewModel
             settingsUseCase.appTheme
                 .stateIn(
                     scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                     initialValue = AppTheme.FOLLOW_SYSTEM,
                 )
 
@@ -161,8 +162,8 @@ class MainViewModel
                     if (settings?.onboardingCompleted == false) {
                         dialogStateHolder.setShowOnboardingDialog(true)
                     }
-                    val snapshot = usageStateRepository.observeSnapshot().value
-                    autoResetUseCase.performAutoReset(snapshot)
+                    val result = usageStateRepository.refresh()
+                    autoResetUseCase.performAutoReset(result.snapshot)
                     refreshSimCards()
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
@@ -221,7 +222,7 @@ class MainViewModel
             settingsUseCase.appLanguage
                 .stateIn(
                     scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(STATE_FLOW_TIMEOUT),
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                     initialValue = null,
                 )
 
@@ -313,7 +314,7 @@ class MainViewModel
         fun highlightSlot(slot: Int) {
             _highlightedSlot.value = slot
             viewModelScope.launch {
-                delay(HIGHLIGHT_DELAY.seconds)
+                delay(HIGHLIGHT_DELAY_SECONDS.seconds)
                 if (_highlightedSlot.value == slot) {
                     _highlightedSlot.value = null
                 }
@@ -341,7 +342,6 @@ class MainViewModel
         }
 
         companion object {
-            private const val STATE_FLOW_TIMEOUT = 5_000L
-            private const val HIGHLIGHT_DELAY = 3L
+            private const val HIGHLIGHT_DELAY_SECONDS = 3L
         }
     }

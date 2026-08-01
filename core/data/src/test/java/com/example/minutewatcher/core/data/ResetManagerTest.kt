@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
@@ -26,14 +25,13 @@ class ResetManagerTest {
     private val trafficTracker: TrafficTracker = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
-    private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
 
     private lateinit var resetManager: ResetManager
 
     @Before
     fun setup() {
-        resetManager = ResetManager(simIdentityRepository, simUsageRepository, trafficTracker, dataChangeNotifier, timeProvider)
+        resetManager = ResetManager(simUsageRepository, trafficTracker, dataChangeNotifier, timeProvider)
     }
 
     @Test
@@ -70,7 +68,6 @@ class ResetManagerTest {
                     capabilities = emptyList(),
                 )
 
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
@@ -115,7 +112,6 @@ class ResetManagerTest {
                     capabilities = emptyList(),
                 )
 
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
@@ -146,10 +142,8 @@ class ResetManagerTest {
         }
 
     @Test
-    fun `performAutoReset is idempotent per snapshot session`() =
+    fun `performAutoReset is optimized for repeated calls`() =
         runTest {
-            // Even if we call it multiple times, it depends on SimRepository to handle actual timing.
-            // But we can verify it at least tries to check each time.
             val identity = "sim_0"
             val snapshot =
                 com.example.minutewatcher.core.model.GlobalSnapshot(
@@ -162,7 +156,6 @@ class ResetManagerTest {
                     capabilities = emptyList(),
                 )
 
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
                 flowOf(
                     SimUsage(
@@ -185,12 +178,21 @@ class ResetManagerTest {
             )
             whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
-            repeat(5) {
-                resetManager.performAutoReset(snapshot)
-            }
+            // First call should trigger check
+            resetManager.performAutoReset(snapshot)
 
-            // The idempotency is REALLY at the SimRepository level (DataStore edit block).
-            // ResetManager just loops.
-            verify(simUsageRepository, times(5)).resetSimUsageIfDue(eq(identity), eq(1), any())
+            // Second call immediately after should skip check
+            resetManager.performAutoReset(snapshot)
+
+            // Verify only one check happened
+            verify(simUsageRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
+
+            // Advance time beyond 1 hour (3600000ms)
+            timeProvider.advance(3600001L)
+
+            // Third call after time advance should trigger check again
+            resetManager.performAutoReset(snapshot)
+
+            verify(simUsageRepository, times(2)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }

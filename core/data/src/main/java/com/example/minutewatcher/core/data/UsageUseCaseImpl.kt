@@ -1,8 +1,9 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
-import com.example.minutewatcher.core.android.util.OperatorResolver
-import com.example.minutewatcher.core.android.util.PermissionManager
+import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.util.OperatorResolver
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
@@ -12,7 +13,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,12 +58,13 @@ class UsageUseCaseImpl
             remainingMinutes: Int,
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
-            val limit = simLimitsRepository.getMonthlyLimit(identity).first()
-            val used = simUsageRepository.getMinutesUsed(identity).first()
+            val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
+            val used = simUsageRepository.getMinutesUsed(identity).firstWithTimeout() ?: 0
 
             val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
-            val adj = (safeRemaining - limit) + used
-            simUsageRepository.setManualAdjustment(identity, adj)
+            val adj = (safeRemaining - limit).toLong() + used.toLong()
+            val safeAdj = adj.coerceIn(-Constants.MAX_MINUTES_LIMIT.toLong(), Constants.MAX_MINUTES_LIMIT.toLong()).toInt()
+            simUsageRepository.setManualAdjustment(identity, safeAdj)
         }
 
         override suspend fun adjustTraffic(
@@ -71,14 +72,15 @@ class UsageUseCaseImpl
             remainingGb: Float,
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
-            val limitMb = simLimitsRepository.getTrafficLimit(identity).first()
-            val usedMb = simUsageRepository.getTrafficUsed(identity).first()
+            val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
+            val usedMb = simUsageRepository.getTrafficUsed(identity).firstWithTimeout() ?: 0f
 
             val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
-            val limitGb = limitMb / Constants.MB_PER_GB
+            val limitGb = limitMb.toFloat() / Constants.MB_PER_GB
             val usedGb = usedMb / Constants.MB_PER_GB
             val adj = safeRemainingGb - (limitGb - usedGb)
-            simUsageRepository.setTrafficAdjustment(identity, adj)
+            val safeAdj = adj.coerceIn(-Constants.MAX_TRAFFIC_LIMIT_GB, Constants.MAX_TRAFFIC_LIMIT_GB)
+            simUsageRepository.setTrafficAdjustment(identity, safeAdj)
         }
 
         override suspend fun resetCounters(slot: Int) {

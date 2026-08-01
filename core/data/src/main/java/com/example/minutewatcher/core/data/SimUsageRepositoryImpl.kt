@@ -158,7 +158,7 @@ class SimUsageRepositoryImpl
                 val minutesLimit = this[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0
                 val minutesUsed = this[SimSettingsKeys.minutesUsedKey(identity)] ?: 0
                 val manualAdj = this[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0
-                val remainingMinutes = maxOf(0, (minutesLimit + manualAdj) - minutesUsed)
+                val remainingMinutes = maxOf(0L, (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong()).toInt()
 
                 val trafficLimitMb = this[SimSettingsKeys.trafficLimitKey(identity)] ?: 0
                 val trafficUsedMb = this[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f

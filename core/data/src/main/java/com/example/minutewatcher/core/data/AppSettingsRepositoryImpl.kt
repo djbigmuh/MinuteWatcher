@@ -30,7 +30,7 @@ class AppSettingsRepositoryImpl
                 .map { prefs -> prefs.toAppSettings() }
                 .stateIn(
                     scope,
-                    SharingStarted.WhileSubscribed(5_000),
+                    SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                     AppSettings(
                         theme = AppTheme.FOLLOW_SYSTEM,
                         language = null,

@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.android.util
+package com.example.minutewatcher.core.data.util
 
 import android.content.Context
 import com.example.minutewatcher.core.resources.R
@@ -39,17 +39,17 @@ object SimUtils {
                 ) ||
                     operatorName.hasToken("telekom") -> getStringSafe(localizedContext, R.string.operator_t_mobile, "T-Mobile")
                 operatorName.hasToken("orange") -> getStringSafe(localizedContext, R.string.operator_orange, "Orange")
-                operatorName.hasToken("o2") -> "O2"
+                operatorName.hasToken("o2") -> getStringSafe(localizedContext, R.string.operator_o2, "O2")
                 operatorName.hasToken("at&t") -> getStringSafe(localizedContext, R.string.operator_att, "AT&T")
                 operatorName.hasToken("verizon") -> getStringSafe(localizedContext, R.string.operator_verizon, "Verizon")
                 operatorName.hasToken("tim") -> getStringSafe(localizedContext, R.string.operator_tim, "TIM")
                 operatorName.hasToken("sfr") -> getStringSafe(localizedContext, R.string.operator_sfr, "SFR")
                 operatorName.hasToken("bouygues") -> getStringSafe(localizedContext, R.string.operator_bouygues, "Bouygues")
                 operatorName.hasToken("windtre") -> getStringSafe(localizedContext, R.string.operator_windtre, "WindTre")
-                operatorName.hasToken("movistar") -> "Movistar"
-                operatorName.hasToken("claro") -> "Claro"
-                operatorName.hasToken("airtel") -> "Airtel"
-                operatorName.hasToken("jio") -> "Jio"
+                operatorName.hasToken("movistar") -> getStringSafe(localizedContext, R.string.operator_movistar, "Movistar")
+                operatorName.hasToken("claro") -> getStringSafe(localizedContext, R.string.operator_claro, "Claro")
+                operatorName.hasToken("airtel") -> getStringSafe(localizedContext, R.string.operator_airtel, "Airtel")
+                operatorName.hasToken("jio") -> getStringSafe(localizedContext, R.string.operator_jio, "Jio")
                 else ->
                     if (operatorName.isNotEmpty()) {
                         if (operatorName.length > MAX_OPERATOR_NAME_LENGTH) {
