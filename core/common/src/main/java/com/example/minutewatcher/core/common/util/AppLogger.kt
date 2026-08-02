@@ -75,7 +75,7 @@ object AppLogger {
                 FileWriter(logFile, true).use { writer ->
                     writer.write(entry)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Fail silently for file logging to avoid recursive errors
             }
         }

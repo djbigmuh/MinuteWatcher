@@ -51,8 +51,8 @@ class SimIdentityRepositoryImpl
         private val permissionManager: PermissionManager,
         permissionStateNotifier: PermissionStateNotifier,
         @SimDataStore private val dataStore: DataStore<Preferences>,
-        private val seedRepository: SimIdentitySeedRepository,
-        private val appSettingsRepository: AppSettingsRepository,
+        seedRepository: SimIdentitySeedRepository,
+        appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : SimIdentityRepository {
         private val seedFlow: Flow<String> =

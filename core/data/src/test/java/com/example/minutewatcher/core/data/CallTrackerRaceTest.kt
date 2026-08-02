@@ -66,9 +66,10 @@ class CallTrackerRaceTest {
     @Test
     fun `concurrent onCallStarted calls are handled safely by mutex`() =
         runTest {
+            val emptyFlow = flowOf(0L)
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(1)
-            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(emptyFlow)
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(emptyFlow)
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             // Launch multiple concurrent start events
@@ -82,14 +83,17 @@ class CallTrackerRaceTest {
             advanceUntilIdle()
 
             // Verification of interaction count
-            verify(callSessionRepository, times(10)).getCallStartTime(1)
+            val flow = verify(callSessionRepository, times(10)).getCallStartTime(1)
+            @Suppress("SENSELESS_COMPARISON")
+            assert(flow != null)
         }
 
     @Test
     fun `concurrent call start and end for different subIds`() =
         runTest {
-            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            val emptyFlow = flowOf(0L)
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(emptyFlow)
+            whenever(callSessionRepository.getBootTime(any())).thenReturn(emptyFlow)
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             launch { tracker.onCallStarted(1) }

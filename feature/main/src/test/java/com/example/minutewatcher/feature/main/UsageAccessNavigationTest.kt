@@ -15,6 +15,9 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.feature.main.MainViewModelDependencies
+import com.example.minutewatcher.feature.main.TrackingBannerState
+import com.example.minutewatcher.feature.main.TrackingBannerCallbacks
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -75,17 +78,23 @@ class UsageAccessNavigationTest {
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
 
+        val deps =
+            MainViewModelDependencies(
+                simIdentityRepository = simIdentityRepository,
+                simLimitsRepository = simLimitsRepository,
+                appSettingsRepository = appSettingsRepository,
+                usageStateRepository = usageStateRepository,
+                autoResetUseCase = autoResetUseCase,
+                usageUseCase = usageUseCase,
+                settingsUseCase = settingsUseCase,
+                permissionStateNotifier = mock(),
+                permissionRepository = permissionRepository,
+                dataChangeNotifier = dataChangeNotifier,
+            )
+
         viewModel =
             MainViewModel(
-                simIdentityRepository,
-                simLimitsRepository,
-                appSettingsRepository,
-                usageStateRepository,
-                autoResetUseCase,
-                usageUseCase,
-                settingsUseCase,
-                permissionRepository,
-                dataChangeNotifier,
+                deps,
                 savedStateHandle,
                 testDispatcher,
             )

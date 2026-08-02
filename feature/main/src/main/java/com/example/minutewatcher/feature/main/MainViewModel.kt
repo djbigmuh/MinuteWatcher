@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.RefreshState
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.state.MainDialogStateHolder
 import com.example.minutewatcher.feature.main.state.SimRefreshStateHolder
@@ -106,7 +105,6 @@ class MainViewModel
             }
         }
 
-        val trackingStatus: StateFlow<Map<String, TrackingStatus>> = bannerStateHolder.trackingStatus
         val trackingBannerState: StateFlow<TrackingBannerState> = bannerStateHolder.trackingBannerState
 
         val uiState: StateFlow<SimCardListState> =
@@ -121,10 +119,6 @@ class MainViewModel
                     started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                     initialValue = SimCardListState.Loading,
                 )
-
-        val refreshStatus: StateFlow<RefreshState> = refreshStateHolder.refreshStatus
-
-        fun consumeRefreshStatus() = refreshStateHolder.consumeRefreshStatus()
 
         val appTheme: StateFlow<AppTheme> =
             deps.settingsUseCase.appTheme

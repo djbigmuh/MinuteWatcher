@@ -221,7 +221,7 @@ class CallTracker
         }
 
         @SuppressLint("MissingPermission")
-        private suspend fun findTargetSubId(activeSubIds: List<Int>): Int? {
+        private fun findTargetSubId(activeSubIds: List<Int>): Int? {
             if (activeSubIds.size == 1) {
                 return activeSubIds.first()
             }
