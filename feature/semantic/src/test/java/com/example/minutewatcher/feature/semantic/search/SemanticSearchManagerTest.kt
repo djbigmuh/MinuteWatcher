@@ -96,13 +96,14 @@ class SemanticSearchManagerTest {
                 createSnapshot(
                     listOf(
                         SimSnapshot(
-                            0,
-                            "sim_0",
-                            "A",
-                            true,
-                            mapOf(
+                            slot = 0,
+                            identity = "sim_0",
+                            operator = "A",
+                            isActive = true,
+                            entities = mapOf(
                                 PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
                             ),
+                            autoResetDay = 1,
                         ),
                     ),
                 )
@@ -122,13 +123,14 @@ class SemanticSearchManagerTest {
                 createSnapshot(
                     listOf(
                         SimSnapshot(
-                            0,
-                            "sim_0",
-                            "A",
-                            true,
-                            mapOf(
+                            slot = 0,
+                            identity = "sim_0",
+                            operator = "A",
+                            isActive = true,
+                            entities = mapOf(
                                 PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
                             ),
+                            autoResetDay = 1,
                         ),
                     ),
                 )
@@ -141,13 +143,14 @@ class SemanticSearchManagerTest {
                 createSnapshot(
                     listOf(
                         SimSnapshot(
-                            0,
-                            "sim_0",
-                            "A",
-                            true,
-                            mapOf(
+                            slot = 0,
+                            identity = "sim_0",
+                            operator = "A",
+                            isActive = true,
+                            entities = mapOf(
                                 PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101),
                             ),
+                            autoResetDay = 1,
                         ),
                     ),
                 )
@@ -170,13 +173,14 @@ class SemanticSearchManagerTest {
                 createSnapshot(
                     listOf(
                         SimSnapshot(
-                            1,
-                            "sim_1",
-                            "B",
-                            true,
-                            mapOf(
+                            slot = 1,
+                            identity = "sim_1",
+                            operator = "B",
+                            isActive = true,
+                            entities = mapOf(
                                 PackageType.DATA to createEntity(1, PackageType.DATA, 50),
                             ),
+                            autoResetDay = 1,
                         ),
                     ),
                 )

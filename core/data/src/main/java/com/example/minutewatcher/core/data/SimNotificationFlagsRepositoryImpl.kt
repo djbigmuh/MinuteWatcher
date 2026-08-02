@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 

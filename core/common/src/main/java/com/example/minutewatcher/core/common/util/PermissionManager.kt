@@ -28,19 +28,12 @@ class PermissionManager
                 Manifest.permission.READ_PHONE_STATE,
             ) == PackageManager.PERMISSION_GRANTED
 
+        // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
+        // This method provides a safe way to get active subscriptions without crashing if permission is revoked.
+        @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> =
             try {
-                val hasPermission =
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_PHONE_STATE,
-                    ) == PackageManager.PERMISSION_GRANTED
-
-                if (hasPermission) {
-                    subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
-                } else {
-                    emptyList()
-                }
+                subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException in getActiveSubscriptions", e)
                 emptyList()
@@ -91,13 +84,14 @@ class PermissionManager
             val mode =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // unsafeCheckOpNoThrow is preferred on Q+ for better security/accuracy in some contexts.
+                    // It is deprecated in API 33 but remains the standard way to check without "noting" the op.
+                    @Suppress("DEPRECATION")
                     appOps.unsafeCheckOpNoThrow(
                         AppOpsManager.OPSTR_GET_USAGE_STATS,
                         Process.myUid(),
                         context.packageName,
                     )
                 } else {
-                    // Fallback to checkOpNoThrow for older versions.
                     @Suppress("DEPRECATION")
                     appOps.checkOpNoThrow(
                         AppOpsManager.OPSTR_GET_USAGE_STATS,

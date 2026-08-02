@@ -72,8 +72,8 @@ data class SimSnapshot(
     val identity: String,
     val operator: String,
     val isActive: Boolean,
-    val autoResetDay: Int,
     val entities: Map<PackageType, SemanticEntity>,
+    val autoResetDay: Int,
 )
 
 /**

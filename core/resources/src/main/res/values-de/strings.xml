@@ -52,6 +52,7 @@
     <string name="tracking_banner_phone_permission">Telefonberechtigung erforderlich.</string>
     <string name="tracking_banner_usage_access">Nutzungszugriff erforderlich.</string>
     <string name="tracking_banner_traffic_error">Fehler bei Verkehrsdaten.</string>
+    <string name="tracking_banner_traffic_fallback">Standard-Daten-SIM nicht identifiziert. Der Datenverkehr wird Slot %1$d zugeordnet. Überprüfen Sie die SIM-Einstellungen, falls dies nicht korrekt ist.</string>
     <string name="tracking_banner_calls_error">Fehler beim Aktualisieren der Anrufverfolgungsdaten.</string>
     <string name="tracking_banner_appsearch_error">AppSearch-Indizierung fehlgeschlagen.</string>
     <string name="tracking_banner_shortcuts_error">Fehler beim Aktualisieren der dynamischen Verknüpfungen.</string>
@@ -66,6 +67,7 @@
     <string name="action_retry">Wiederholen</string>
     <string name="validation_error_invalid_range">Bitte geben Sie einen Wert zwischen %1$s und %2$s ein</string>
     <string name="validation_error_invalid_number">Bitte geben Sie eine gültige Zahl ein</string>
+    <string name="validation_error_field_required">Feld darf nicht leer sein</string>
     <string name="widget_pin_unsupported">Ihr Launcher unterstützt keine automatische Widget-Platzierung. Bitte fügen Sie das Widget manuell hinzu.</string>
     <string name="widget_already_added">Widget bereits zum Startbildschirm hinzugefügt</string>
     <string name="widget_added_success">Widget zum Startbildschirm hinzugefügt</string>

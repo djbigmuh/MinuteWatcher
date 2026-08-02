@@ -51,7 +51,14 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "sim_0", "MTS", false, emptyMap()),
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "MTS",
+                                isActive = false,
+                                entities = emptyMap(),
+                                autoResetDay = 1
+                            ),
                         ),
                     capabilities = emptyList(),
                 )
@@ -84,7 +91,14 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "sim_0", "MTS", true, emptyMap()),
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "MTS",
+                                isActive = true,
+                                entities = emptyMap(),
+                                autoResetDay = 1
+                            ),
                         ),
                     capabilities = emptyList(),
                 )
@@ -141,7 +155,14 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "sim_0", "MTS", true, emptyMap()),
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "MTS",
+                                isActive = true,
+                                entities = emptyMap(),
+                                autoResetDay = 1
+                            ),
                         ),
                     capabilities = emptyList(),
                 )
@@ -198,7 +219,14 @@ class ResetManagerTest {
                     timestamp = 0L,
                     simSnapshots =
                         listOf(
-                            SimSnapshot(0, "sim_0", "MTS", true, emptyMap()),
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "MTS",
+                                isActive = true,
+                                entities = emptyMap(),
+                                autoResetDay = 1
+                            ),
                         ),
                     capabilities = emptyList(),
                 )

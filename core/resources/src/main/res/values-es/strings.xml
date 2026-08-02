@@ -52,6 +52,7 @@
     <string name="tracking_banner_phone_permission">Se requiere permiso de teléfono.</string>
     <string name="tracking_banner_usage_access">Se requiere acceso de uso.</string>
     <string name="tracking_banner_traffic_error">Error en los datos de tráfico.</string>
+    <string name="tracking_banner_traffic_fallback">SIM de datos predeterminada no identificada. Atribuyendo tráfico a la ranura %1$d. Verifique la configuración de la SIM si esto es incorrecto.</string>
     <string name="tracking_banner_calls_error">Error al actualizar los datos de seguimiento de llamadas.</string>
     <string name="tracking_banner_appsearch_error">Falló la indexación de AppSearch.</string>
     <string name="tracking_banner_shortcuts_error">Error al actualizar los accesos directos dinámicos.</string>
@@ -66,6 +67,7 @@
     <string name="action_retry">Reintentar</string>
     <string name="validation_error_invalid_range">Por favor, introduzca un valor entre %1$s y %2$s</string>
     <string name="validation_error_invalid_number">Por favor, introduzca un número válido</string>
+    <string name="validation_error_field_required">El campo no puede estar vacío</string>
     <string name="widget_pin_unsupported">Tu lanzador no admite la colocación automática de widgets. Por favor, añade el widget manualmente.</string>
     <string name="widget_already_added">Widget ya añadido a la pantalla de inicio</string>
     <string name="widget_added_success">Widget añadido a la pantalla de inicio</string>

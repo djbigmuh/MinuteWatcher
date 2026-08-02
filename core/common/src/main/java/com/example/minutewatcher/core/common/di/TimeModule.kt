@@ -2,16 +2,16 @@ package com.example.minutewatcher.core.common.di
 
 import com.example.minutewatcher.core.common.util.SystemTimeProvider
 import com.example.minutewatcher.core.common.util.TimeProvider
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class TimeModule {
-    @Binds
+object TimeModule {
+    @Provides
     @Singleton
-    abstract fun bindTimeProvider(impl: SystemTimeProvider): TimeProvider
+    fun providesTimeProvider(): TimeProvider = SystemTimeProvider()
 }

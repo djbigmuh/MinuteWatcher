@@ -160,8 +160,8 @@ class UsageStateRepositoryImpl
                         identity = usage.identity,
                         operator = operator,
                         isActive = isActive,
-                        autoResetDay = usage.autoResetDay,
                         entities = entities,
+                        autoResetDay = usage.autoResetDay,
                     )
                 }
 
