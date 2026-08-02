@@ -1,0 +1,93 @@
+package com.example.minutewatcher.feature.main.controller
+
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.SettingsUseCase
+import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+class MainSettingsController @Inject constructor(
+    private val appSettingsRepository: AppSettingsRepository,
+    private val settingsUseCase: SettingsUseCase,
+) {
+    private lateinit var scope: CoroutineScope
+
+    fun initialize(scope: CoroutineScope) {
+        this.scope = scope
+    }
+
+    val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> by lazy {
+        appSettingsRepository
+            .observeAppSettings()
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = com.example.minutewatcher.core.model.AppSettings(),
+            )
+    }
+
+    val appTheme: StateFlow<AppTheme> by lazy {
+        settingsUseCase.appTheme
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                initialValue = AppTheme.FOLLOW_SYSTEM,
+            )
+    }
+
+    val appLanguage: StateFlow<String?> by lazy {
+        settingsUseCase.appLanguage
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                initialValue = null,
+            )
+    }
+
+    fun setTheme(theme: AppTheme) {
+        scope.launch {
+            settingsUseCase.setTheme(theme)
+        }
+    }
+
+    fun setLanguage(language: String?) {
+        scope.launch {
+            settingsUseCase.setLanguage(language)
+        }
+    }
+
+    fun completeOnboarding() {
+        scope.launch {
+            appSettingsRepository.updateAppSettings { it.copy(onboardingCompleted = true) }
+        }
+    }
+
+    fun dismissWidgetError() {
+        scope.launch {
+            appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+        }
+    }
+
+    fun dismissInaccurateCalls() {
+        scope.launch {
+            appSettingsRepository.updateAppSettings { it.copy(inaccurateCallAttributionsCount = 0) }
+        }
+    }
+
+    fun setNotificationPermissionRequested() {
+        scope.launch {
+            appSettingsRepository.updateAppSettings { it.copy(notificationPermissionRequested = true) }
+        }
+    }
+
+    fun setPhonePermissionRequested() {
+        scope.launch {
+            appSettingsRepository.updateAppSettings { it.copy(phonePermissionRequested = true) }
+        }
+    }
+}

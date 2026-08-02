@@ -25,6 +25,8 @@ object SettingsKeys {
     val PHONE_PERMISSION_REQUESTED = booleanPreferencesKey("phone_permission_requested")
     val DATA_SCHEMA_VERSION = intPreferencesKey("data_schema_version")
     val BENCHMARK_SIM_COUNT = intPreferencesKey("benchmark_sim_count")
+    val WIDGET_LIMIT_EXCEEDED = booleanPreferencesKey("widget_limit_exceeded")
+    val INACCURATE_CALL_ATTRIBUTIONS_COUNT = intPreferencesKey("inaccurate_call_attributions_count")
 
     const val CURRENT_DATA_SCHEMA_VERSION = 2
 

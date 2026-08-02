@@ -58,6 +58,9 @@
     <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated.</string>
     <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
     <string name="tracking_banner_notification_permission">Notification permission is recommended to receive usage alerts.</string>
+    <string name="tracking_banner_widget_error">Widget cannot be updated due to system limitations.</string>
+    <string name="tracking_banner_inaccurate_calls">Multiple active calls detected. Minutes might be attributed inaccurately.</string>
+    <string name="settings_load_error">Settings load error</string>
     <string name="notification_permission_permanent_denial">Notifications are disabled. Please enable them in App Settings to receive alerts.</string>
     <string name="action_grant">Grant</string>
     <string name="action_settings">Settings</string>

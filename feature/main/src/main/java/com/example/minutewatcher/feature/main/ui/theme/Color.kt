@@ -11,6 +11,11 @@ private const val PURPLE_40_HEX = 0xFF6650a4
 private const val PURPLE_GREY_40_HEX = 0xFF625b71
 private const val PINK_40_HEX = 0xFF7D5260
 
+// Usage status colors
+private const val GREEN_500_HEX = 0xFF4CAF50
+private const val RED_500_HEX = 0xFFF44336
+private const val ORANGE_500_HEX = 0xFFFFA500
+
 val Purple80 = Color(PURPLE_80_HEX)
 val PurpleGrey80 = Color(PURPLE_GREY_80_HEX)
 val Pink80 = Color(PINK_80_HEX)
@@ -18,3 +23,7 @@ val Pink80 = Color(PINK_80_HEX)
 val Purple40 = Color(PURPLE_40_HEX)
 val PurpleGrey40 = Color(PURPLE_GREY_40_HEX)
 val Pink40 = Color(PINK_40_HEX)
+
+val UsageGreen = Color(GREEN_500_HEX)
+val UsageRed = Color(RED_500_HEX)
+val UsageOrange = Color(ORANGE_500_HEX)

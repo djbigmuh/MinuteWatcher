@@ -3,7 +3,7 @@
     <cloud-backup>
         <!-- Разрешаем бэкап SharedPreferences -->
         <include domain="sharedpref" path="."/>
-        <include domain="file" path="datastore/"/>
+        <!-- DataStore исключен из облачного бэкапа для защиты приватности (идентификаторы SIM) -->
     </cloud-backup>
     <device-transfer>
         <!-- Разрешаем передачу SharedPreferences между устройствами -->

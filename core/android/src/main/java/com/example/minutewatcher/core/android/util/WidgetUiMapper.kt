@@ -18,7 +18,12 @@ object WidgetUiMapper {
         val luminance = ColorUtils.calculateLuminance(state.backgroundColor)
         val (textColor, secondaryTextColor) = WidgetColorResolver.resolveTextColors(luminance)
         val fontMultiplier = FontScaleProvider.getMultiplier(state.fontSize)
-        val layoutMode = WidgetLayoutMode.fromValue(state.layoutMode)
+        val layoutMode =
+            if (state.widgetLimitExceeded) {
+                WidgetLayoutMode.SIMPLE
+            } else {
+                WidgetLayoutMode.fromValue(state.layoutMode)
+            }
 
         val simUiStates =
             snapshot.simSnapshots
@@ -46,8 +51,10 @@ object WidgetUiMapper {
             transparency = state.transparency,
             simUiStates = simUiStates,
             isHorizontal = state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
-            showSeparator = simUiStates.size >= 2,
+            showSeparator = simUiStates.size >= 2 && !state.widgetLimitExceeded,
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
+            forceSimpleLayout = state.widgetLimitExceeded,
+            settingsLoadFailed = state.settingsLoadFailed,
         )
     }
 }

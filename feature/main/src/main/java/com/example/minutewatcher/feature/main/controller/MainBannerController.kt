@@ -1,9 +1,10 @@
-package com.example.minutewatcher.feature.main.state
+package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
@@ -14,13 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
 
-class TrackingBannerStateHolder(
+class MainBannerController @Inject constructor(
     private val usageStateRepository: UsageStateRepository,
     private val permissionRepository: PermissionRepository,
     private val appSettingsRepository: AppSettingsRepository,
-    private val scope: CoroutineScope,
-    private val stateFlowTimeout: Long,
 ) {
     private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
     val isPhonePermissionPermanentlyDenied: StateFlow<Boolean> = _isPhonePermissionPermanentlyDenied.asStateFlow()
@@ -36,16 +36,23 @@ class TrackingBannerStateHolder(
         _isNotificationPermissionPermanentlyDenied.value = denied
     }
 
-    val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
+    private lateinit var scope: CoroutineScope
+
+    fun initialize(scope: CoroutineScope) {
+        this.scope = scope
+    }
+
+    val trackingStatus: StateFlow<Map<String, TrackingStatus>> by lazy {
         usageStateRepository
             .observeTrackingStatus()
             .stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(stateFlowTimeout),
+                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                 initialValue = emptyMap(),
             )
+    }
 
-    val trackingBannerState: StateFlow<TrackingBannerState> =
+    val trackingBannerState: StateFlow<TrackingBannerState> by lazy {
         combine(
             combine(
                 trackingStatus,
@@ -77,9 +84,10 @@ class TrackingBannerStateHolder(
             )
         }.stateIn(
             scope = scope,
-            started = SharingStarted.WhileSubscribed(stateFlowTimeout),
+            started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
             initialValue = TrackingBannerState(),
         )
+    }
 
     private data class BannerInputsPart2(
         val notificationsGranted: Boolean,

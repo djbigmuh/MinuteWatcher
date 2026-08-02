@@ -46,6 +46,7 @@ class WidgetSettingsRepository
                 notifyLowTraffic = settings.notifyLowTraffic,
                 callTrackingEnabled = settings.callTrackingEnabled,
                 simStates = simStates,
+                widgetLimitExceeded = settings.widgetLimitExceeded,
             )
         }
 
@@ -65,6 +66,7 @@ class WidgetSettingsRepository
 
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             for ((slot, simSettings) in state.simStates) {
+                if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) continue
                 val identity = simIdentityRepository.getIdentity(slot)
                 simSettingsMap[identity] = simSettings
             }

@@ -35,15 +35,12 @@ import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
 
-private const val PERCENT_MAX_FLOAT = 100f
-private const val SEPARATOR_ALPHA = 0.5f
-
 @Composable
 fun WidgetPreview(
     uiState: WidgetUiState,
     modifier: Modifier = Modifier,
 ) {
-    val alpha = 1f - uiState.transparency / PERCENT_MAX_FLOAT
+    val alpha = 1f - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
     val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
     val noDataColor = getNoDataColor(uiState)
 
@@ -142,7 +139,7 @@ private fun Separator(
         if (uiState.useSystemColors) {
             MaterialTheme.colorScheme.outline
         } else {
-            Color(firstSim.secondaryTextColor).copy(alpha = SEPARATOR_ALPHA)
+            Color(firstSim.secondaryTextColor).copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
         }
     val modifier =
         if (isHorizontal) {

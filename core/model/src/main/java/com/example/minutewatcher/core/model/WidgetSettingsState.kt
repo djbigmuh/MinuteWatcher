@@ -10,6 +10,8 @@ data class WidgetSettingsState(
     val notifyLowTraffic: Boolean = true,
     val callTrackingEnabled: Boolean = true,
     val simStates: Map<Int, SimSettingsState> = emptyMap(),
+    val widgetLimitExceeded: Boolean = false,
+    val settingsLoadFailed: Boolean = false,
 )
 
 data class SimSettingsState(

@@ -6,7 +6,6 @@ import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -15,9 +14,11 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.feature.main.MainViewModelDependencies
-import com.example.minutewatcher.feature.main.TrackingBannerState
-import com.example.minutewatcher.feature.main.TrackingBannerCallbacks
+import com.example.minutewatcher.feature.main.controller.MainBannerController
+import com.example.minutewatcher.feature.main.controller.MainDialogController
+import com.example.minutewatcher.feature.main.controller.MainSettingsController
+import com.example.minutewatcher.feature.main.controller.MainSimDataController
+import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,7 +39,7 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
+@Config(sdk = [35])
 class UsageAccessNavigationTest {
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -50,7 +51,6 @@ class UsageAccessNavigationTest {
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
-    private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val savedStateHandle = SavedStateHandle()
 
@@ -78,25 +78,31 @@ class UsageAccessNavigationTest {
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
 
-        val deps =
-            MainViewModelDependencies(
-                simIdentityRepository = simIdentityRepository,
-                simLimitsRepository = simLimitsRepository,
-                appSettingsRepository = appSettingsRepository,
-                usageStateRepository = usageStateRepository,
-                autoResetUseCase = autoResetUseCase,
-                usageUseCase = usageUseCase,
-                settingsUseCase = settingsUseCase,
-                permissionStateNotifier = mock(),
-                permissionRepository = permissionRepository,
-                dataChangeNotifier = dataChangeNotifier,
-            )
+        val dialogController = MainDialogController(savedStateHandle)
+        val bannerController = MainBannerController(usageStateRepository, permissionRepository, appSettingsRepository)
+        val refreshController = MainSimRefreshController(usageUseCase, usageStateRepository, testDispatcher)
+        val settingsController = MainSettingsController(appSettingsRepository, settingsUseCase)
+        val simDataController = MainSimDataController(
+            usageStateRepository = usageStateRepository,
+            simIdentityRepository = simIdentityRepository,
+            simLimitsRepository = simLimitsRepository,
+            usageUseCase = usageUseCase,
+            dataChangeNotifier = mock(),
+            ioDispatcher = testDispatcher
+        )
 
         viewModel =
             MainViewModel(
-                deps,
-                savedStateHandle,
-                testDispatcher,
+                dialogController = dialogController,
+                bannerController = bannerController,
+                refreshController = refreshController,
+                settingsController = settingsController,
+                simDataController = simDataController,
+                appSettingsRepository = appSettingsRepository,
+                usageStateRepository = usageStateRepository,
+                autoResetUseCase = autoResetUseCase,
+                permissionStateNotifier = mock(),
+                ioDispatcher = testDispatcher,
             )
     }
 
@@ -130,7 +136,7 @@ class UsageAccessNavigationTest {
             com.example.minutewatcher.feature.main.ui.components.TrackingBanners(
                 state = TrackingBannerState(showUsageAccessBanner = true),
                 callbacks =
-                    TrackingBannerCallbacks(
+                    com.example.minutewatcher.feature.main.TrackingBannerCallbacks(
                         onGrantPhonePermission = {},
                         onShowUsageAccessDialog = { dialogOpened = true },
                         onOpenAppSettings = {},

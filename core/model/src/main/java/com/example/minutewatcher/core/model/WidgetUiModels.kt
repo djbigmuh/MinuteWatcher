@@ -13,6 +13,8 @@ data class WidgetUiState(
     val isHorizontal: Boolean = true,
     val showSeparator: Boolean = false,
     val useSystemColors: Boolean = false,
+    val forceSimpleLayout: Boolean = false,
+    val settingsLoadFailed: Boolean = false,
 )
 
 @Immutable

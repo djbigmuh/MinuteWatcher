@@ -51,8 +51,6 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
-private const val PERCENT_MAX_FLOAT = 100f
-private const val SEPARATOR_ALPHA = 0.5f
 private const val SEPARATOR_THICKNESS = 1
 
 class MinutesGlanceWidget : GlanceAppWidget() {
@@ -116,7 +114,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                 widgetSettingsLoader.load()
             } catch (e: Exception) {
                 AppLogger.e("Failed to load widget settings, using defaults", e)
-                WidgetSettingsState()
+                WidgetSettingsState(settingsLoadFailed = true)
             }
 
         return WidgetUiMapper.mapFromSnapshot(
@@ -137,7 +135,7 @@ private fun WidgetContent(
     uiState: WidgetUiState,
     navigationProvider: NavigationProvider,
 ) {
-    val alpha = 1f - uiState.transparency / PERCENT_MAX_FLOAT
+    val alpha = 1f - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
     val bgColor =
         androidx.compose.ui.graphics
             .Color(uiState.backgroundColor)
@@ -181,7 +179,16 @@ private fun WidgetContent(
     ) {
         val simUiStates = uiState.simUiStates.filter { it.showSim }
 
-        if (simUiStates.isEmpty()) {
+        if (uiState.settingsLoadFailed) {
+            Text(
+                text = context.getString(com.example.minutewatcher.core.resources.R.string.settings_load_error),
+                style =
+                    TextStyle(
+                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                        color = noDataColor,
+                    ),
+            )
+        } else if (simUiStates.isEmpty()) {
             Text(
                 text = context.getString(com.example.minutewatcher.core.resources.R.string.no_data),
                 style =
@@ -219,7 +226,7 @@ private fun MultiSimLayout(
                             val color =
                                 androidx.compose.ui.graphics
                                     .Color(sims[0].secondaryTextColor)
-                                    .copy(alpha = SEPARATOR_ALPHA)
+                                    .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
                             ColorProvider(day = color, night = color)
                         }
                     Spacer(
@@ -249,7 +256,7 @@ private fun MultiSimLayout(
                             val color =
                                 androidx.compose.ui.graphics
                                     .Color(sims[0].secondaryTextColor)
-                                    .copy(alpha = SEPARATOR_ALPHA)
+                                    .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
                             ColorProvider(day = color, night = color)
                         }
                     Spacer(

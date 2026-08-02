@@ -16,4 +16,6 @@ data class AppSettings(
     val notificationPermissionRequested: Boolean = false,
     val phonePermissionRequested: Boolean = false,
     val benchmarkSimCount: Int = 0,
+    val widgetLimitExceeded: Boolean = false,
+    val inaccurateCallAttributionsCount: Int = 0,
 )

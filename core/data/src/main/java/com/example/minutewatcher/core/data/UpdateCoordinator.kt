@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -31,7 +32,11 @@ class UpdateCoordinator
         private val usageStateRepository: Lazy<UsageStateRepository>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        init {
+        private val isObserving = AtomicBoolean(false)
+
+        private fun startObserving() {
+            if (isObserving.getAndSet(true)) return
+
             scope.launch {
                 usageStateRepository
                     .get()
@@ -53,6 +58,7 @@ class UpdateCoordinator
             updateWidget: Boolean,
             force: Boolean,
         ) {
+            startObserving()
             dataRefreshNotifier.notifyRefresh(isManual = force)
             if (updateWidget) {
                 widgetUpdater.updateAll()

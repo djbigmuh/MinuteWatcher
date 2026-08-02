@@ -12,6 +12,7 @@ enum class WidgetLayoutMode(
     TWO_LINES(VAL_TWO_LINES),
     THREE_LINES(VAL_THREE_LINES),
     SIX_LINES(VAL_SIX_LINES),
+    SIMPLE(VAL_SINGLE_LINE),
     ;
 
     companion object {

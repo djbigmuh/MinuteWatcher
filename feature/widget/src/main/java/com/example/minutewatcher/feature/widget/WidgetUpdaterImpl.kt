@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -18,15 +19,23 @@ class WidgetUpdaterImpl
     constructor(
         @param:ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
+        private val appSettingsRepository: AppSettingsRepository,
     ) : WidgetUpdater {
         override fun updateAll() {
             scope.launch {
                 try {
                     MinutesGlanceWidget().updateAll(context)
+                    appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                 } catch (e: IllegalArgumentException) {
-                    // Narrowed down: IAE during updateAll is often related to RemoteViews size limits 
-                    // or internal PendingIntent issues in older Glance versions.
-                    AppLogger.e("Glance internal error during updateAll", e)
+                    val message = e.message ?: ""
+                    val isLimitIssue = message.contains("RemoteViews size limit", ignoreCase = true)
+                    val isPendingIntentIssue = message.contains("PendingIntent", ignoreCase = true)
+
+                    AppLogger.e("Glance internal error during updateAll. Limit issue: $isLimitIssue, PI issue: $isPendingIntentIssue", e)
+
+                    if (isLimitIssue) {
+                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

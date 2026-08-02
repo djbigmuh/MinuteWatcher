@@ -99,7 +99,7 @@ class UsageCheckWorker
         ) {
             if (entity.limit <= 0 || !appSettings.notifyLowMinutes) return
 
-            val usagePercentage = (entity.used * HUNDRED / entity.limit).toInt()
+            val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
 
             val notifiedExhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).firstWithTimeout() ?: false
@@ -179,9 +179,9 @@ class UsageCheckWorker
         ) {
             if (entity.limit <= 0 || !appSettings.notifyLowTraffic) return
 
-            val usagePercentage = (entity.used * HUNDRED / entity.limit).toInt()
+            val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
-            val remainingGb = entity.remaining.toFloat() / Constants.BYTES_PER_GB
+            val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
 
             val notifiedExhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
             if (entity.remaining <= 0) {

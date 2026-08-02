@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,22 +52,71 @@ fun MainScreenContent(
         },
         modifier = Modifier.fillMaxSize().padding(paddingValues),
     ) {
-        when (uiState) {
-            is SimCardListState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-            is SimCardListState.Empty -> EmptyState()
-            is SimCardListState.Error -> ErrorState(uiState.message)
-            is SimCardListState.Success -> {
-                SimCardList(
-                    simCards = uiState.simCards,
+        Column(modifier = Modifier.fillMaxSize()) {
+            TrackingBanners(
+                state = trackingBannerState,
+                callbacks =
+                    rememberTrackingBannerCallbacks(
+                        viewModel = viewModel,
+                        onGrantPhonePermission = onGrantPhonePermission,
+                        onShowUsageAccessDialog = onShowUsageAccessDialog,
+                        onOpenAppSettings = onOpenAppSettings,
+                        onGrantNotificationPermission = onGrantNotificationPermission,
+                    ),
+            )
+
+            Box(modifier = Modifier.weight(1f)) {
+                SimCardListContent(
+                    uiState = uiState,
                     listState = listState,
                     viewModel = viewModel,
-                    trackingBannerState = trackingBannerState,
                     onGrantPhonePermission = onGrantPhonePermission,
-                    onShowUsageAccessDialog = onShowUsageAccessDialog,
-                    onOpenAppSettings = onOpenAppSettings,
-                    onGrantNotificationPermission = onGrantNotificationPermission,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun rememberTrackingBannerCallbacks(
+    viewModel: MainViewModel,
+    onGrantPhonePermission: () -> Unit,
+    onShowUsageAccessDialog: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    onGrantNotificationPermission: () -> Unit,
+): TrackingBannerCallbacks =
+    remember(viewModel) {
+        TrackingBannerCallbacks(
+            onGrantPhonePermission = onGrantPhonePermission,
+            onShowUsageAccessDialog = onShowUsageAccessDialog,
+            onOpenAppSettings = onOpenAppSettings,
+            onRetryAppSearch = { viewModel.retryAppSearch() },
+            onRetryCalls = { viewModel.retryCalls() },
+            onRetryShortcuts = { viewModel.retryShortcuts() },
+            onRetryTraffic = { viewModel.retryTraffic() },
+            onGrantNotificationPermission = onGrantNotificationPermission,
+            onDismissWidgetError = { viewModel.dismissWidgetError() },
+            onDismissInaccurateCalls = { viewModel.dismissInaccurateCalls() },
+        )
+    }
+
+@Composable
+private fun SimCardListContent(
+    uiState: SimCardListState,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    viewModel: MainViewModel,
+    onGrantPhonePermission: () -> Unit,
+) {
+    when (uiState) {
+        is SimCardListState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+        is SimCardListState.Empty -> EmptyState(onGrantPhonePermission)
+        is SimCardListState.Error -> ErrorState(uiState.message)
+        is SimCardListState.Success -> {
+            SimCardList(
+                simCards = uiState.simCards,
+                listState = listState,
+                viewModel = viewModel,
+            )
         }
     }
 }

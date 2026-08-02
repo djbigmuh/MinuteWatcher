@@ -16,18 +16,12 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.feature.main.ui.components.ResetConfirmationDialog
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
-import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
 
 @Composable
 fun SimCardList(
     simCards: List<SimCardUiModel>,
     listState: LazyListState,
     viewModel: MainViewModel,
-    trackingBannerState: TrackingBannerState,
-    onGrantPhonePermission: () -> Unit,
-    onShowUsageAccessDialog: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onGrantNotificationPermission: () -> Unit,
 ) {
     var showResetConfirmSlot by remember { mutableStateOf<Int?>(null) }
 
@@ -36,22 +30,6 @@ fun SimCardList(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
-        item {
-            TrackingBanners(
-                state = trackingBannerState,
-                callbacks =
-                    TrackingBannerCallbacks(
-                        onGrantPhonePermission = onGrantPhonePermission,
-                        onShowUsageAccessDialog = onShowUsageAccessDialog,
-                        onOpenAppSettings = onOpenAppSettings,
-                        onRetryAppSearch = { viewModel.retryAppSearch() },
-                        onRetryCalls = { viewModel.retryCalls() },
-                        onRetryShortcuts = { viewModel.retryShortcuts() },
-                        onRetryTraffic = { viewModel.retryTraffic() },
-                        onGrantNotificationPermission = onGrantNotificationPermission,
-                    ),
-            )
-        }
         items(simCards) { model ->
             SimCardListRow(
                 model = model,

@@ -100,9 +100,9 @@ object WidgetSimUiFactory {
         luminance: Double,
     ): PackageUiData {
         val limitBytes = entity?.limit ?: 0L
-        val limitGb = limitBytes.toFloat() / Constants.BYTES_PER_GB
-        val remGb = if (limitBytes > 0) maxOf(0f, (entity?.remaining ?: 0L).toFloat() / Constants.BYTES_PER_GB) else -1f
-        val usedGb = (entity?.used ?: 0L).toFloat() / Constants.BYTES_PER_GB
+        val limitGb = (limitBytes.toDouble() / Constants.BYTES_PER_GB).toFloat()
+        val remGb = if (limitBytes > 0) maxOf(0f, ((entity?.remaining ?: 0L).toDouble() / Constants.BYTES_PER_GB).toFloat()) else -1f
+        val usedGb = ((entity?.used ?: 0L).toDouble() / Constants.BYTES_PER_GB).toFloat()
         val hasData = limitGb > 0f || usedGb > 0f
         val status = ColorProvider.getUsageStatus(remGb, limitGb)
 

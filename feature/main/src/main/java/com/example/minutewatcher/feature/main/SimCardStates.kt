@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.resources.R
 
 @Composable
-fun EmptyState() {
+fun EmptyState(onGrantPermission: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -31,6 +32,10 @@ fun EmptyState() {
             text = stringResource(id = R.string.check_permissions_sim),
             style = MaterialTheme.typography.bodyMedium,
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onGrantPermission) {
+            Text(text = stringResource(id = R.string.action_grant))
+        }
     }
 }
 

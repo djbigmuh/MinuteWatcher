@@ -131,6 +131,7 @@ class CallTracker
         suspend fun onCallEnded(subId: Int) {
             callMutex.withLock {
                 try {
+                    if (!isCallTrackingEnabled()) return
                     if (!checkPermissions()) return
 
                     if (subId == -1) {
@@ -214,9 +215,16 @@ class CallTracker
                     val oldest = fallbackAttribution(activeSubIds)
                     if (oldest != null) {
                         AppLogger.d("Attributing unknown IDLE event to oldest session: $oldest")
+                        incrementInaccurateAttributions()
                         endCall(oldest)
                     }
                 }
+            }
+        }
+
+        private suspend fun incrementInaccurateAttributions() {
+            appSettingsRepository.updateAppSettings { current ->
+                current.copy(inaccurateCallAttributionsCount = current.inaccurateCallAttributionsCount + 1)
             }
         }
 

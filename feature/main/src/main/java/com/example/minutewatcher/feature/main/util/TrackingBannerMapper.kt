@@ -52,6 +52,8 @@ object TrackingBannerMapper {
                 ),
             showAppSearchErrorBanner = appsearch is TrackingStatus.Error,
             showShortcutsErrorBanner = shortcuts is TrackingStatus.Error,
+            showWidgetErrorBanner = settings.widgetLimitExceeded,
+            showInaccurateCallsBanner = settings.inaccurateCallAttributionsCount >= 3,
             notificationPermissionState = notificationPermissionState,
         )
     }

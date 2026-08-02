@@ -107,6 +107,12 @@ class AppSettingsRepositoryImpl
                 if (current.benchmarkSimCount != updated.benchmarkSimCount) {
                     prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
                 }
+                if (current.widgetLimitExceeded != updated.widgetLimitExceeded) {
+                    prefs[SettingsKeys.WIDGET_LIMIT_EXCEEDED] = updated.widgetLimitExceeded
+                }
+                if (current.inaccurateCallAttributionsCount != updated.inaccurateCallAttributionsCount) {
+                    prefs[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
+                }
             }
         }
 
@@ -127,5 +133,7 @@ class AppSettingsRepositoryImpl
                 notificationPermissionRequested = this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: false,
                 phonePermissionRequested = this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: false,
                 benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: 0,
+                widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: false,
+                inaccurateCallAttributionsCount = this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] ?: 0,
             )
     }

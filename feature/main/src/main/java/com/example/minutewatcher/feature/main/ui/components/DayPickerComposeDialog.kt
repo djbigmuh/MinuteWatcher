@@ -50,19 +50,29 @@ fun DayPickerComposeDialog(
             DayPickerContent(listState = listState, selectedDay = selectedDay)
         },
         confirmButton = {
-            Button(
-                onClick = { onDaySelected(selectedDay.coerceIn(1, MAX_DAYS)) },
-                modifier = Modifier.padding(horizontal = 8.dp),
-            ) {
-                Text(stringResource(id = R.string.set_button))
-            }
+            DayPickerConfirmButton(onConfirm = { onDaySelected(selectedDay.coerceIn(1, MAX_DAYS)) })
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            DayPickerCancelButton(onDismiss = onDismiss)
         },
     )
+}
+
+@Composable
+private fun DayPickerConfirmButton(onConfirm: () -> Unit) {
+    Button(
+        onClick = onConfirm,
+        modifier = Modifier.padding(horizontal = 8.dp),
+    ) {
+        Text(stringResource(id = R.string.set_button))
+    }
+}
+
+@Composable
+private fun DayPickerCancelButton(onDismiss: () -> Unit) {
+    TextButton(onClick = onDismiss) {
+        Text(stringResource(id = R.string.cancel_button))
+    }
 }
 
 @Composable

@@ -47,11 +47,11 @@ object SemanticMapper {
         resetDay: Int,
         nowMillis: Long,
     ): SemanticEntity {
-        val limitBytes = (model.effectiveLimitGb * Constants.BYTES_PER_GB).toLong()
-        val usedBytes = (model.usedMb * Constants.BYTES_PER_MB).toLong()
+        val limitBytes = (model.effectiveLimitGb.toDouble() * Constants.BYTES_PER_GB).toLong()
+        val usedBytes = (model.usedMb.toDouble() * Constants.BYTES_PER_MB).toLong()
         val remainingBytes =
             if (model.remainingGb >= 0) {
-                (model.remainingGb * Constants.BYTES_PER_GB).toLong()
+                (model.remainingGb.toDouble() * Constants.BYTES_PER_GB).toLong()
             } else {
                 0L
             }

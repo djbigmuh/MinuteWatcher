@@ -1,4 +1,4 @@
-package com.example.minutewatcher.feature.main.state
+package com.example.minutewatcher.feature.main.controller
 
 import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.feature.main.AdjustDialogData
@@ -7,8 +7,9 @@ import com.example.minutewatcher.feature.main.LimitDialogData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
 
-class MainDialogStateHolder(
+class MainDialogController @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
 ) {
     val showLimitDialog = savedStateHandle.getStateFlow<LimitDialogData?>("limit_dialog", null)

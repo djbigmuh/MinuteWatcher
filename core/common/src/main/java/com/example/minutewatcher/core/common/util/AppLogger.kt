@@ -18,7 +18,7 @@ object AppLogger {
     private const val MAX_FILE_SIZE = 1 * 1024 * 1024 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
-    private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
+    private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG // Disabled in release for privacy and security
 
     private var logDir: File? = null
     private val executor = Executors.newSingleThreadExecutor()

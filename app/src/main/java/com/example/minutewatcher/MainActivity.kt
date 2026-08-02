@@ -35,6 +35,7 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
+import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
@@ -122,26 +123,29 @@ class MainActivity : AppCompatActivity() {
             ) {
                 SimCardScreen(
                     viewModel = viewModel,
-                    onOpenSettings = { openWidgetSettings() },
-                    onAddWidget = { addWidgetToHomeScreen() },
-                    onThemeChange = { theme -> viewModel.setTheme(theme) },
-                    onLanguageChange = { lang -> handleLanguageChange(lang) },
-                    onGrantPhonePermission = {
-                        viewModel.setPhonePermissionRequested()
-                        permissionHandler.phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-                    },
-                    onShowUsageAccessDialog = {
-                        viewModel.setUsageAccessDialog(true)
-                    },
-                    onOpenUsageAccessSettings = {
-                        openUsageAccessSettings()
-                    },
-                    onOpenAppSettings = {
-                        openAppSettings()
-                    },
-                    onGrantNotificationPermission = {
-                        permissionHandler.requestNotificationPermission()
-                    },
+                    actions =
+                        SimCardScreenActions(
+                            onOpenSettings = { openWidgetSettings() },
+                            onAddWidget = { addWidgetToHomeScreen() },
+                            onThemeChange = { theme -> viewModel.setTheme(theme) },
+                            onLanguageChange = { lang -> handleLanguageChange(lang) },
+                            onGrantPhonePermission = {
+                                viewModel.setPhonePermissionRequested()
+                                permissionHandler.phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+                            },
+                            onShowUsageAccessDialog = {
+                                viewModel.setUsageAccessDialog(true)
+                            },
+                            onOpenUsageAccessSettings = {
+                                openUsageAccessSettings()
+                            },
+                            onOpenAppSettings = {
+                                openAppSettings()
+                            },
+                            onGrantNotificationPermission = {
+                                permissionHandler.requestNotificationPermission()
+                            },
+                        ),
                 )
             }
         }
@@ -243,6 +247,9 @@ class MainActivity : AppCompatActivity() {
                             Manifest.permission.READ_PHONE_STATE,
                         )
                     viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
+                } else {
+                    viewModel.setPhonePermissionRequested()
+                    phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                 }
             }
         }

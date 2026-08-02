@@ -18,8 +18,36 @@ object WidgetLayoutSpecBuilder {
                 WidgetLayoutMode.TWO_LINES -> createTwoLinesRows(sim)
                 WidgetLayoutMode.THREE_LINES -> createThreeLinesRows(sim)
                 WidgetLayoutMode.SIX_LINES -> createSixLinesRows(sim)
+                WidgetLayoutMode.SIMPLE -> listOf(createSimpleRow(sim))
             }
         return SimLayoutSpec(rows)
+    }
+
+    private fun createSimpleRow(sim: SimUiState): SimLayoutRow {
+        val components = mutableListOf<SimLayoutComponent>()
+        // Simple row: No icons, no names, just values
+        if (sim.showMinutes) {
+            components.add(
+                SimLayoutComponent.Text(
+                    sim.minutesText,
+                    sim.minutesColor,
+                    WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
+                    isBold = true,
+                ),
+            )
+        }
+        if (sim.showTraffic) {
+            if (components.isNotEmpty()) components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
+            components.add(
+                SimLayoutComponent.Text(
+                    sim.trafficText,
+                    sim.trafficColor,
+                    WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
+                    isBold = true,
+                ),
+            )
+        }
+        return SimLayoutRow(components)
     }
 
     private fun createSingleLineRow(sim: SimUiState): SimLayoutRow {

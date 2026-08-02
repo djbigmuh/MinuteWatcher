@@ -28,6 +28,11 @@ class BenchmarkPopulateWorker
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
+                if (!com.example.minutewatcher.core.common.BuildConfig.DEBUG) {
+                    AppLogger.w("BenchmarkPopulateWorker blocked: Not in DEBUG mode")
+                    return@withContext Result.failure()
+                }
+
                 try {
                     val simCount = inputData.getInt(EXTRA_SIM_COUNT, 1)
                     AppLogger.d("BenchmarkPopulateWorker: Starting population for $simCount SIMs")

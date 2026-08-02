@@ -46,9 +46,10 @@ allprojects {
 
 subprojects {
     tasks.withType<Test>().configureEach {
-        failOnNoDiscoveredTests = false
+        val isAppModule = project.path == ":app"
+        failOnNoDiscoveredTests = !isAppModule
         filter {
-            isFailOnNoMatchingTests = false
+            isFailOnNoMatchingTests = !isAppModule
         }
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")

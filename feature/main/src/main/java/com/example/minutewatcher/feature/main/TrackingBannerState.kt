@@ -9,6 +9,8 @@ data class TrackingBannerState(
     val showCallsErrorBanner: Boolean = false,
     val showAppSearchErrorBanner: Boolean = false,
     val showShortcutsErrorBanner: Boolean = false,
+    val showWidgetErrorBanner: Boolean = false,
+    val showInaccurateCallsBanner: Boolean = false,
     val notificationPermissionState: PermissionUiState = PermissionUiState.GRANTED,
 )
 
@@ -21,4 +23,6 @@ data class TrackingBannerCallbacks(
     val onRetryShortcuts: () -> Unit,
     val onRetryTraffic: () -> Unit,
     val onGrantNotificationPermission: () -> Unit,
+    val onDismissWidgetError: () -> Unit,
+    val onDismissInaccurateCalls: () -> Unit,
 )

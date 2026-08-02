@@ -66,6 +66,7 @@ class TrafficTracker
             val slot: Int,
             val dataSubId: Int,
             val skipDelta: Boolean,
+            val isFallback: Boolean = false,
         )
 
         suspend fun resetBaseline(identity: String) {
@@ -104,7 +105,12 @@ class TrafficTracker
                         }
 
                     if (target.skipDelta) {
-                        _status.value = TrackingStatus.Active
+                        _status.value =
+                            if (target.isFallback) {
+                                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Fallback SIM attribution")
+                            } else {
+                                TrackingStatus.Active
+                            }
                         return@withLock
                     }
 
@@ -158,7 +164,13 @@ class TrafficTracker
             } else {
                 handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot, target.dataSubId)
             }
-            _status.value = TrackingStatus.Active
+
+            _status.value =
+                if (target.isFallback) {
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Fallback SIM attribution")
+                } else {
+                    TrackingStatus.Active
+                }
         }
 
         private fun handleStatsUnavailable(targetIdentity: String) {
@@ -189,7 +201,7 @@ class TrafficTracker
         ) {
             val deltaBytes = currentBytes - lastTotalBytes
             if (deltaBytes > 0L) {
-                val deltaMB = deltaBytes.toFloat() / Constants.BYTES_PER_MB
+                val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
                 if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
                     simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
                     simUsageRepository.incrementTrafficUsed(identity, deltaMB)
@@ -242,6 +254,7 @@ class TrafficTracker
         private suspend fun getTargetSimInfo(): TargetInfo? {
             var targetSim = -1
             var currentDataSubId = -1
+            var isFallback = false
             try {
                 currentDataSubId = permissionManager.getDefaultDataSubscriptionId()
                 if (currentDataSubId != -1) {
@@ -253,11 +266,21 @@ class TrafficTracker
             }
 
             if (targetSim == -1) {
-                val fallback = findFallbackActiveSimSlot()
-                if (fallback != null) {
-                    targetSim = fallback.first
-                    currentDataSubId = fallback.second
-                    AppLogger.w("No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.")
+                val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                val defaultDataSim = activeSims.find { it.isDefaultData }
+
+                if (defaultDataSim != null) {
+                    targetSim = defaultDataSim.slotIndex
+                    currentDataSubId = defaultDataSim.subscriptionId
+                } else {
+                    val activeSubs = permissionManager.getActiveSubscriptions()
+                    if (activeSubs.isNotEmpty()) {
+                        val first = activeSubs.first()
+                        targetSim = first.simSlotIndex
+                        currentDataSubId = first.subscriptionId
+                        isFallback = true
+                        AppLogger.w("No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.")
+                    }
                 }
             }
 
@@ -271,10 +294,10 @@ class TrafficTracker
             val savedLastDataSubId = inMemoryLastDataSubId.get()
             if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
                 handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
-                return TargetInfo(targetSim, currentDataSubId, skipDelta = true)
+                return TargetInfo(targetSim, currentDataSubId, skipDelta = true, isFallback = isFallback)
             }
 
-            return TargetInfo(targetSim, currentDataSubId, skipDelta = false)
+            return TargetInfo(targetSim, currentDataSubId, skipDelta = false, isFallback = isFallback)
         }
 
         private suspend fun handleSimChange(
@@ -291,20 +314,5 @@ class TrafficTracker
             }
             callSessionRepository.setLastDataSubId(currentDataSubId)
             inMemoryLastDataSubId.set(currentDataSubId)
-        }
-
-        private suspend fun findFallbackActiveSimSlot(): Pair<Int, Int>? {
-            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
-            val defaultDataSim = activeSims.find { it.isDefaultData }
-
-            if (defaultDataSim != null) {
-                return defaultDataSim.slotIndex to defaultDataSim.subscriptionId
-            }
-
-            val activeSubs = permissionManager.getActiveSubscriptions()
-            if (activeSubs.isEmpty()) return null
-
-            // Fallback to the first active subscription if no explicit default data SIM is identified
-            return activeSubs.first().simSlotIndex to activeSubs.first().subscriptionId
         }
     }

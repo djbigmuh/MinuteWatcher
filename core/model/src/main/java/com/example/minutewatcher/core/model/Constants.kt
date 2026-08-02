@@ -10,6 +10,7 @@ object Constants {
     object UI {
         const val DEFAULT_BG_COLOR: Int = 0xFF000000.toInt()
         const val LUMINANCE_THRESHOLD = 0.5f
+        const val SWITCH_SCALE = 0.8f
     }
 
     object Widget {
@@ -22,6 +23,9 @@ object Constants {
         const val SIM_ARRANGEMENT_VERTICAL = 1
 
         const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80
+
+        const val PERCENT_MAX_FLOAT = 100f
+        const val SEPARATOR_ALPHA = 0.5f
     }
 
     object Traffic {

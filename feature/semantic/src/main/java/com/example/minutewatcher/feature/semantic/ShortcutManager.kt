@@ -136,7 +136,7 @@ class ShortcutManager
                     traffic?.let {
                         if (it.limit > 0) {
                             val trafficGb =
-                                it.remaining.toFloat() / Constants.BYTES_PER_GB
+                                (it.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
                             val label =
                                 String.format(
                                     Locale.getDefault(),

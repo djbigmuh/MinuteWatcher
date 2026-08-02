@@ -26,37 +26,69 @@ fun TrackingBanners(
     callbacks: TrackingBannerCallbacks,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        PhonePermissionBanner(
-            state = state,
-            onGrantPhonePermission = callbacks.onGrantPhonePermission,
-            onOpenAppSettings = callbacks.onOpenAppSettings,
-        )
-        UsageAccessBanner(
-            state = state,
-            onShowUsageAccessDialog = callbacks.onShowUsageAccessDialog,
-        )
-        TrafficErrorBanner(
-            state = state,
-            onRetryTraffic = callbacks.onRetryTraffic,
-        )
-        CallsErrorBanner(
-            state = state,
-            onRetryCalls = callbacks.onRetryCalls,
-        )
-        AppSearchErrorBanner(
-            state = state,
-            onRetryAppSearch = callbacks.onRetryAppSearch,
-        )
-        ShortcutsErrorBanner(
-            state = state,
-            onRetryShortcuts = callbacks.onRetryShortcuts,
-        )
-        NotificationPermissionBanner(
-            state = state,
-            onGrantNotificationPermission = callbacks.onGrantNotificationPermission,
-            onOpenAppSettings = callbacks.onOpenAppSettings,
-        )
+        PermissionBanners(state, callbacks)
+        ErrorBanners(state, callbacks)
+        StatusBanners(state, callbacks)
     }
+}
+
+@Composable
+private fun PermissionBanners(
+    state: TrackingBannerState,
+    callbacks: TrackingBannerCallbacks,
+) {
+    PhonePermissionBanner(
+        state = state,
+        onGrantPhonePermission = callbacks.onGrantPhonePermission,
+        onOpenAppSettings = callbacks.onOpenAppSettings,
+    )
+    UsageAccessBanner(
+        state = state,
+        onShowUsageAccessDialog = callbacks.onShowUsageAccessDialog,
+    )
+    NotificationPermissionBanner(
+        state = state,
+        onGrantNotificationPermission = callbacks.onGrantNotificationPermission,
+        onOpenAppSettings = callbacks.onOpenAppSettings,
+    )
+}
+
+@Composable
+private fun ErrorBanners(
+    state: TrackingBannerState,
+    callbacks: TrackingBannerCallbacks,
+) {
+    TrafficErrorBanner(
+        state = state,
+        onRetryTraffic = callbacks.onRetryTraffic,
+    )
+    CallsErrorBanner(
+        state = state,
+        onRetryCalls = callbacks.onRetryCalls,
+    )
+    AppSearchErrorBanner(
+        state = state,
+        onRetryAppSearch = callbacks.onRetryAppSearch,
+    )
+    ShortcutsErrorBanner(
+        state = state,
+        onRetryShortcuts = callbacks.onRetryShortcuts,
+    )
+}
+
+@Composable
+private fun StatusBanners(
+    state: TrackingBannerState,
+    callbacks: TrackingBannerCallbacks,
+) {
+    WidgetErrorBanner(
+        state = state,
+        onDismiss = callbacks.onDismissWidgetError,
+    )
+    InaccurateCallsBanner(
+        state = state,
+        onDismiss = callbacks.onDismissInaccurateCalls,
+    )
 }
 
 @Composable
@@ -213,6 +245,38 @@ private fun NotificationPermissionBanner(
             onAction = onAction,
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+@Composable
+private fun WidgetErrorBanner(
+    state: TrackingBannerState,
+    onDismiss: () -> Unit,
+) {
+    if (state.showWidgetErrorBanner) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_widget_error),
+            actionText = stringResource(id = R.string.action_ok),
+            onAction = onDismiss,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
+private fun InaccurateCallsBanner(
+    state: TrackingBannerState,
+    onDismiss: () -> Unit,
+) {
+    if (state.showInaccurateCallsBanner) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_inaccurate_calls),
+            actionText = stringResource(id = R.string.action_ok),
+            onAction = onDismiss,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         )
     }
 }

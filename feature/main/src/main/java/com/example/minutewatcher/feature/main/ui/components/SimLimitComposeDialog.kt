@@ -38,14 +38,7 @@ fun SimLimitComposeDialog(
     onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -> Unit,
     onReset: () -> Unit,
 ) {
-    var minutesText by remember { mutableStateOf(if (initialMinutes > 0) initialMinutes.toString() else "") }
-    var trafficText by remember {
-        val gb = initialTrafficMb / Constants.MB_PER_GB
-        mutableStateOf(if (gb > 0) "%.1f".format(gb).replace(",", ".") else "")
-    }
-    var rolloverEnabled by remember { mutableStateOf(initialRolloverEnabled) }
-    var minutesError by remember { mutableStateOf<String?>(null) }
-    var trafficError by remember { mutableStateOf<String?>(null) }
+    val state = rememberSimLimitState(initialMinutes, initialTrafficMb, initialRolloverEnabled)
 
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
     val minutesRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_MINUTES_LIMIT.toString())
@@ -57,20 +50,7 @@ fun SimLimitComposeDialog(
         title = { Text(stringResource(id = R.string.limits_for_operator, operatorName)) },
         text = {
             DialogFields(
-                minutesText = minutesText,
-                trafficText = trafficText,
-                rolloverEnabled = rolloverEnabled,
-                minutesError = minutesError,
-                trafficError = trafficError,
-                onMinutesChange = {
-                    minutesText = it
-                    minutesError = null
-                },
-                onTrafficChange = {
-                    trafficText = it
-                    trafficError = null
-                },
-                onRolloverChange = { rolloverEnabled = it },
+                state = state,
             )
         },
         confirmButton = {
@@ -78,16 +58,16 @@ fun SimLimitComposeDialog(
                 onConfirm = {
                     val (min, trafGb, minErr, trafErr) =
                         SimLimitValidator.validate(
-                            minutesText,
-                            trafficText,
+                            state.minutesText,
+                            state.trafficText,
                             invalidNumberMsg,
                             minutesRangeMsg,
                             trafficRangeMsg,
                         )
-                    minutesError = minErr
-                    trafficError = trafErr
+                    state.minutesError = minErr
+                    state.trafficError = trafErr
                     if (minErr == null && trafErr == null) {
-                        onConfirm(min ?: 0, ((trafGb ?: 0f) * Constants.MB_PER_GB).toInt(), rolloverEnabled)
+                        onConfirm(min ?: 0, ((trafGb ?: 0f) * Constants.MB_PER_GB).toInt(), state.rolloverEnabled)
                     }
                 },
                 onReset = onReset,
@@ -99,34 +79,69 @@ fun SimLimitComposeDialog(
 }
 
 @Composable
+private fun rememberSimLimitState(
+    initialMinutes: Int,
+    initialTrafficMb: Int,
+    initialRolloverEnabled: Boolean,
+): SimLimitState {
+    val initialTrafficText = remember(initialTrafficMb) {
+        val gb = initialTrafficMb / Constants.MB_PER_GB
+        if (gb > 0) "%.1f".format(gb).replace(",", ".") else ""
+    }
+
+    return remember {
+        SimLimitState(
+            initialMinutesText = if (initialMinutes > 0) initialMinutes.toString() else "",
+            initialTrafficText = initialTrafficText,
+            initialRolloverEnabled = initialRolloverEnabled,
+        )
+    }
+}
+
+private class SimLimitState(
+    initialMinutesText: String,
+    initialTrafficText: String,
+    initialRolloverEnabled: Boolean,
+) {
+    var minutesText by mutableStateOf(initialMinutesText)
+    var trafficText by mutableStateOf(initialTrafficText)
+    var rolloverEnabled by mutableStateOf(initialRolloverEnabled)
+    var minutesError by mutableStateOf<String?>(null)
+    var trafficError by mutableStateOf<String?>(null)
+
+    fun onMinutesChange(text: String) {
+        minutesText = text
+        minutesError = null
+    }
+
+    fun onTrafficChange(text: String) {
+        trafficText = text
+        trafficError = null
+    }
+}
+
+@Composable
 private fun DialogFields(
-    minutesText: String,
-    trafficText: String,
-    rolloverEnabled: Boolean,
-    minutesError: String?,
-    trafficError: String?,
-    onMinutesChange: (String) -> Unit,
-    onTrafficChange: (String) -> Unit,
-    onRolloverChange: (Boolean) -> Unit,
+    state: SimLimitState,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
-            value = minutesText,
-            onValueChange = { if (it.length <= 6) onMinutesChange(it.filter { c -> c.isDigit() }) },
+            value = state.minutesText,
+            onValueChange = { if (it.length <= 6) state.onMinutesChange(it.filter { c -> c.isDigit() }) },
             label = { Text(stringResource(id = R.string.set_minutes_limit)) },
             placeholder = { Text(stringResource(id = R.string.minutes_limit_hint)) },
-            isError = minutesError != null,
-            supportingText = { if (minutesError != null) Text(text = minutesError) },
+            isError = state.minutesError != null,
+            supportingText = { if (state.minutesError != null) Text(text = state.minutesError!!) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = trafficText,
-            onValueChange = { if (it.length <= 10) onTrafficChange(it.replace(",", ".")) },
+            value = state.trafficText,
+            onValueChange = { if (it.length <= 10) state.onTrafficChange(it.replace(",", ".")) },
             label = { Text(stringResource(id = R.string.set_traffic_limit)) },
             placeholder = { Text(stringResource(id = R.string.traffic_limit_gb_hint_dialog)) },
-            isError = trafficError != null,
-            supportingText = { if (trafficError != null) Text(text = trafficError) },
+            isError = state.trafficError != null,
+            supportingText = { if (state.trafficError != null) Text(text = state.trafficError!!) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -134,7 +149,7 @@ private fun DialogFields(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = rolloverEnabled, onCheckedChange = onRolloverChange)
+            Checkbox(checked = state.rolloverEnabled, onCheckedChange = { state.rolloverEnabled = it })
             Spacer(Modifier.width(8.dp))
             Text(text = stringResource(id = R.string.rollover_label), style = MaterialTheme.typography.bodyMedium)
         }

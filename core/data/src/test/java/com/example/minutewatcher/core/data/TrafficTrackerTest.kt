@@ -165,7 +165,7 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            val deltaMb = 500f / Constants.BYTES_PER_MB
+            val deltaMb = (500L.toDouble() / Constants.BYTES_PER_MB).toFloat()
             verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }

@@ -9,15 +9,7 @@ import com.example.minutewatcher.core.model.AppTheme
 @Composable
 fun SimCardScreen(
     viewModel: MainViewModel,
-    onOpenSettings: () -> Unit,
-    onAddWidget: () -> Unit,
-    onThemeChange: (AppTheme) -> Unit,
-    onLanguageChange: (String?) -> Unit,
-    onGrantPhonePermission: () -> Unit = {},
-    onShowUsageAccessDialog: () -> Unit = {},
-    onOpenUsageAccessSettings: () -> Unit = {},
-    onOpenAppSettings: () -> Unit = {},
-    onGrantNotificationPermission: () -> Unit = {},
+    actions: SimCardScreenActions,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val trackingBannerState by viewModel.trackingBannerState.collectAsStateWithLifecycle()
@@ -32,12 +24,12 @@ fun SimCardScreen(
             SimCardTopBar(
                 currentTheme = appTheme,
                 currentLanguage = appLanguage,
-                onThemeChange = onThemeChange,
-                onLanguageChange = onLanguageChange,
-                onOpenSettings = onOpenSettings,
+                onThemeChange = actions.onThemeChange,
+                onLanguageChange = actions.onLanguageChange,
+                onOpenSettings = actions.onOpenSettings,
             )
         },
-        floatingActionButton = { MainFab(onAddWidget = onAddWidget) },
+        floatingActionButton = { MainFab(onAddWidget = actions.onAddWidget) },
     ) { paddingValues ->
         MainScreenContent(
             uiState = uiState,
@@ -45,17 +37,17 @@ fun SimCardScreen(
             viewModel = viewModel,
             trackingBannerState = trackingBannerState,
             highlightedSlot = highlightedSlot,
-            onGrantPhonePermission = onGrantPhonePermission,
-            onShowUsageAccessDialog = onShowUsageAccessDialog,
-            onOpenAppSettings = onOpenAppSettings,
-            onGrantNotificationPermission = onGrantNotificationPermission,
+            onGrantPhonePermission = actions.onGrantPhonePermission,
+            onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
+            onOpenAppSettings = actions.onOpenAppSettings,
+            onGrantNotificationPermission = actions.onGrantNotificationPermission,
         )
 
         DialogRenderer(
             viewModel = viewModel,
             showUsageAccessDialog = showUsageAccessDialog,
             showOnboardingDialog = showOnboardingDialog,
-            onOpenUsageAccessSettings = onOpenUsageAccessSettings,
+            onOpenUsageAccessSettings = actions.onOpenUsageAccessSettings,
         )
     }
 }

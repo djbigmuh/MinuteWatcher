@@ -86,26 +86,31 @@ open class SemanticSearchManager
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
             if (session != null && !forceOverride) return true
 
-            return try {
-                val newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
-                val request = appSearchWrapper.createSchemaRequest(forceOverride)
-                newSession.setSchema(request)
-                session = newSession
-                _status.value = TrackingStatus.Active
-                true
-            } catch (e: AppSearchException) {
-                if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !forceOverride) {
-                    AppLogger.w("AppSearch schema mismatch, retrying with force override")
-                    return ensureSession(forceOverride = true)
+            var shouldForce = forceOverride
+            repeat(2) { attempt ->
+                try {
+                    val newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
+                    val request = appSearchWrapper.createSchemaRequest(shouldForce)
+                    newSession.setSchema(request)
+                    session = newSession
+                    _status.value = TrackingStatus.Active
+                    return true
+                } catch (e: AppSearchException) {
+                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce && attempt == 0) {
+                        AppLogger.w("AppSearch schema mismatch, retrying with force override")
+                        shouldForce = true
+                    } else {
+                        AppLogger.e("Fatal AppSearch error", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                        return false
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to initialize AppSearch session", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    return false
                 }
-                AppLogger.e("Fatal AppSearch error", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                false
-            } catch (e: Exception) {
-                AppLogger.e("Failed to initialize AppSearch session", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                false
             }
+            return false
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot) {

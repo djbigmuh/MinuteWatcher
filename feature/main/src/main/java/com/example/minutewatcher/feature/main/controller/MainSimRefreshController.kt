@@ -1,5 +1,6 @@
-package com.example.minutewatcher.feature.main.state
+package com.example.minutewatcher.feature.main.controller
 
+import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -12,11 +13,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-class SimRefreshStateHolder(
+class MainSimRefreshController @Inject constructor(
     private val usageUseCase: UsageUseCase,
     private val usageStateRepository: UsageStateRepository,
-    private val ioDispatcher: CoroutineDispatcher,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     private val _refreshStatus = MutableStateFlow<RefreshState>(RefreshState.Idle)
     val refreshStatus: StateFlow<RefreshState> = _refreshStatus.asStateFlow()
