@@ -2,9 +2,12 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
+import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.flowOf
@@ -26,6 +29,7 @@ class ResetManagerTest {
     private val trafficTracker: TrafficTracker = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 5000000L)
+    private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simUsageResetRepository: SimUsageResetRepository = mock()
 
@@ -33,12 +37,14 @@ class ResetManagerTest {
 
     @Before
     fun setup() {
-        resetManager = ResetManager(simUsageRepository, simUsageResetRepository, trafficTracker, dataChangeNotifier, timeProvider)
+        resetManager = ResetManager(simIdentityRepository, simUsageRepository, simUsageResetRepository, trafficTracker, dataChangeNotifier, timeProvider)
     }
 
     @Test
     fun `performAutoReset skips inactive sims`() =
         runTest {
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
             val snapshot =
                 com.example.minutewatcher.core.model.GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -59,6 +65,19 @@ class ResetManagerTest {
     fun `performAutoReset calls repository when due`() =
         runTest {
             val identity = "sim_0"
+            val mockActiveSim =
+                com.example.minutewatcher.core.model.ActiveSimInfo(
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    displayName = "MTS",
+                    carrierName = "MTS",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(mockActiveSim)))
+
             val snapshot =
                 com.example.minutewatcher.core.model.GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -103,6 +122,19 @@ class ResetManagerTest {
     fun `performAutoReset does nothing when not due`() =
         runTest {
             val identity = "sim_0"
+            val mockActiveSim =
+                com.example.minutewatcher.core.model.ActiveSimInfo(
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    displayName = "MTS",
+                    carrierName = "MTS",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(mockActiveSim)))
+
             val snapshot =
                 com.example.minutewatcher.core.model.GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -147,6 +179,19 @@ class ResetManagerTest {
     fun `performAutoReset is optimized for repeated calls`() =
         runTest {
             val identity = "sim_0"
+            val mockActiveSim =
+                com.example.minutewatcher.core.model.ActiveSimInfo(
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    displayName = "MTS",
+                    carrierName = "MTS",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(mockActiveSim)))
+
             val snapshot =
                 com.example.minutewatcher.core.model.GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),

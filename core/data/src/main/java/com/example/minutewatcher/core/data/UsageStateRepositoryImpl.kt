@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -82,7 +81,7 @@ class UsageStateRepositoryImpl
                     } else {
                         combine(identities.map { simUsageRepository.getSimUsage(it) }) { it.toList() }
                     }
-                }.distinctUntilChanged()
+                }
 
         override fun observeSimUsages(): Flow<List<SimUsage>> =
             combine(simUsagesFlow, dataRefreshNotifier.refreshFlow) { usages, _ -> usages }

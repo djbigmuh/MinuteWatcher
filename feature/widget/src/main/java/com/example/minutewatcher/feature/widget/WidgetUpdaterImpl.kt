@@ -27,15 +27,8 @@ class WidgetUpdaterImpl
                     MinutesGlanceWidget().updateAll(context)
                     appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                 } catch (e: IllegalArgumentException) {
-                    val message = e.message ?: ""
-                    val isLimitIssue = message.contains("RemoteViews size limit", ignoreCase = true)
-                    val isPendingIntentIssue = message.contains("PendingIntent", ignoreCase = true)
-
-                    AppLogger.e("Glance internal error during updateAll. Limit issue: $isLimitIssue, PI issue: $isPendingIntentIssue", e)
-
-                    if (isLimitIssue) {
-                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
-                    }
+                    AppLogger.e("Glance internal error during updateAll (possible RemoteViews limit exceeded)", e)
+                    appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

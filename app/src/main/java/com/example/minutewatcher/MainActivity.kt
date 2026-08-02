@@ -323,8 +323,9 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.onActivityResume(
             nowElapsed = SystemClock.elapsedRealtime(),
-            currentTimeMillis = System.currentTimeMillis(),
         )
+
+        checkPermissionChanges()
 
         if (permissionManager.hasPhoneStatePermission()) {
             viewModel.setPhonePermissionPermanentlyDenied(false)
@@ -332,5 +333,19 @@ class MainActivity : AppCompatActivity() {
                 permissionHandler.checkNotifications(autoRequest = false)
             }
         }
+    }
+
+    private var lastPermissionState: Int = -1
+
+    private fun checkPermissionChanges() {
+        val currentState =
+            (if (permissionManager.hasPhoneStatePermission()) 1 else 0) or
+                (if (permissionManager.hasUsageStatsPermission()) 2 else 0) or
+                (if (permissionManager.hasNotificationPermission()) 4 else 0)
+
+        if (lastPermissionState != -1 && currentState != lastPermissionState) {
+            permissionStateNotifier.notifyChanged()
+        }
+        lastPermissionState = currentState
     }
 }

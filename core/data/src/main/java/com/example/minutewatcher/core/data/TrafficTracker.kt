@@ -79,6 +79,24 @@ class TrafficTracker
                     if (currentBytes != -1L) {
                         simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
                         AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+
+                        // Sync in-memory last data subId if this identity is currently the default data SIM.
+                        // This prevents handleSimChange from triggering immediately after a manual reset.
+                        val currentDataSubId = try {
+                            permissionManager.getDefaultDataSubscriptionId()
+                        } catch (_: Exception) {
+                            -1
+                        }
+                        if (currentDataSubId != -1) {
+                            val info = permissionManager.getActiveSubscriptions().find { it.subscriptionId == currentDataSubId }
+                            if (info != null) {
+                                val currentIdentity = simIdentityRepository.getIdentity(info.simSlotIndex)
+                                if (currentIdentity == identity) {
+                                    updateLastDataSubId(currentDataSubId)
+                                }
+                            }
+                        }
+
                         _status.value = TrackingStatus.Active
                     } else {
                         _status.value = TrackingStatus.Idle
@@ -275,9 +293,9 @@ class TrafficTracker
                 } else {
                     val activeSubs = permissionManager.getActiveSubscriptions()
                     if (activeSubs.isNotEmpty()) {
-                        val first = activeSubs.first()
-                        targetSim = first.simSlotIndex
-                        currentDataSubId = first.subscriptionId
+                        val selected = activeSubs.minByOrNull { it.simSlotIndex }!!
+                        targetSim = selected.simSlotIndex
+                        currentDataSubId = selected.subscriptionId
                         isFallback = true
                         AppLogger.w("No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.")
                     }
@@ -306,13 +324,18 @@ class TrafficTracker
             savedLastDataSubId: Int,
         ) {
             AppLogger.d("Default data SIM changed from $savedLastDataSubId to $currentDataSubId. Resetting baseline.")
-            val identity = simIdentityRepository.getIdentity(targetSim)
-            val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
-            val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
-            if (currentBytes != -1L) {
-                simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+            try {
+                val identity = simIdentityRepository.getIdentity(targetSim)
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
+                val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
+                if (currentBytes != -1L) {
+                    simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+                }
+            } catch (e: Exception) {
+                AppLogger.e("Failed to reset baseline on SIM change", e)
+            } finally {
+                callSessionRepository.setLastDataSubId(currentDataSubId)
+                inMemoryLastDataSubId.set(currentDataSubId)
             }
-            callSessionRepository.setLastDataSubId(currentDataSubId)
-            inMemoryLastDataSubId.set(currentDataSubId)
         }
     }

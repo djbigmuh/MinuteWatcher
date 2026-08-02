@@ -54,8 +54,11 @@ class IdentityMigrationService
                 return true
             }
 
-            // Dangerous patterns: only treat as legacy if schema is not current.
-            return name.contains("_sub_") || name.contains("_icc_")
+            // Legacy: keys ENDING with _sub_N or _icc_<hash>
+            // Modern: keys containing _sub_/_icc_ IN THE MIDDLE (e.g., minutes_used_sub_123)
+            val legacySubPattern = Regex("_sub_\\d+$")
+            val legacyIccPattern = Regex("_icc_[a-f0-9]+$")
+            return legacySubPattern.containsMatchIn(name) || legacyIccPattern.containsMatchIn(name)
         }
 
         suspend fun markSchemaCurrent() {

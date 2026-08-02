@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -19,6 +20,7 @@ import kotlin.time.Duration.Companion.hours
 class ResetManager
     @Inject
     constructor(
+        private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val simUsageResetRepository: SimUsageResetRepository,
         private val trafficTracker: TrafficTracker,
@@ -33,11 +35,13 @@ class ResetManager
                 try {
                     val now = timeProvider.now()
                     val resetIdentities = mutableSetOf<String>()
-                    for (simSnapshot in snapshot.simSnapshots) {
-                        if (!simSnapshot.isActive) continue
 
-                        val slot = simSnapshot.slot
-                        val identity = simSnapshot.identity
+                    // Use active SIMs from repository to ensure we don't skip SIMs on stale snapshots
+                    val activeSims = simIdentityRepository.observeActiveSims().first()
+
+                    for (simInfo in activeSims) {
+                        val slot = simInfo.slotIndex
+                        val identity = simInfo.identity.stableId
 
                         // Skip if we checked this identity recently (e.g. within the last hour)
                         val lastCheck = lastResetCheck[identity] ?: 0L

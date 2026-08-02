@@ -120,10 +120,7 @@ class SimUsageRepositoryImpl
                 prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
                 prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
 
-                prefs[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = false
-                prefs[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = false
-                prefs[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-                prefs[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+                prefs.resetNotificationFlags(identity)
             }
         }
 
@@ -173,6 +170,10 @@ class SimUsageRepositoryImpl
             this[SimSettingsKeys.trafficUsedKey(identity)] = 0f
             this[SimSettingsKeys.lastResetDateKey(identity)] = nowMillis
 
+            resetNotificationFlags(identity)
+        }
+
+        private fun MutablePreferences.resetNotificationFlags(identity: String) {
             this[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = false
             this[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = false
             this[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = false

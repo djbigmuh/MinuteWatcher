@@ -55,6 +55,7 @@ class SimVisibilityTest {
             on { getSeed() } doReturn flowOf("test_seed")
             on { getOrCreateSeed(any()) } doReturn "test_seed"
         }
+    private val migrationService: IdentityMigrationService = mock()
 
     private val permissionChanges = MutableSharedFlow<Int>(replay = 1)
 
@@ -79,6 +80,7 @@ class SimVisibilityTest {
                     dataStore,
                     seedRepository,
                     appSettingsRepository,
+                    migrationService,
                     backgroundScope,
                 )
 
@@ -100,6 +102,7 @@ class SimVisibilityTest {
                     dataStore,
                     seedRepository,
                     appSettingsRepository,
+                    migrationService,
                     backgroundScope,
                 )
 

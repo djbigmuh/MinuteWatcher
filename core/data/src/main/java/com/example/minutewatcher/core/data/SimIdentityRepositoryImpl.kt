@@ -53,6 +53,7 @@ class SimIdentityRepositoryImpl
         @SimDataStore private val dataStore: DataStore<Preferences>,
         seedRepository: SimIdentitySeedRepository,
         appSettingsRepository: AppSettingsRepository,
+        private val migrationService: IdentityMigrationService,
         @ApplicationScope private val scope: CoroutineScope,
     ) : SimIdentityRepository {
         private val seedFlow: Flow<String> =
@@ -211,6 +212,12 @@ class SimIdentityRepositoryImpl
             val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
 
             if ((currentSlot == slot) && (currentSub == subId)) return
+
+            // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
+            // it might be a transition from fallback sim_$slot.
+            if (identity.source != IdentitySource.SLOT_FALLBACK && currentSlot == null) {
+                migrationService.migrateLegacyData(identity)
+            }
 
             dataStore.edit { prefs ->
                 slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }

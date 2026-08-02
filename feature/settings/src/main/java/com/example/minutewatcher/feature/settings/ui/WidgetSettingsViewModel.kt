@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @HiltViewModel
@@ -94,15 +95,11 @@ class WidgetSettingsViewModel
                 }
 
             viewModelScope.launch {
-                if (!saveMutex.tryLock()) {
-                    com.example.minutewatcher.core.common.util.AppLogger
-                        .d("Save already in progress, skipping")
-                    onComplete(false)
-                    return@launch
-                }
                 try {
-                    loader.save(currentState)
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                    saveMutex.withLock {
+                        loader.save(currentState)
+                        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                    }
                     onComplete(true)
                 } catch (e: CancellationException) {
                     throw e
@@ -110,8 +107,6 @@ class WidgetSettingsViewModel
                     com.example.minutewatcher.core.common.util.AppLogger
                         .e("Failed to save widget settings", e)
                     onComplete(false)
-                } finally {
-                    saveMutex.unlock()
                 }
             }
         }

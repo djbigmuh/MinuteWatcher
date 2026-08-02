@@ -7,7 +7,6 @@ import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -192,14 +191,6 @@ class SemanticSearchManagerTest {
             context = context,
             scope = scope,
             appSearchWrapper = fakeWrapper,
-            timeProvider =
-                object : TimeProvider {
-                    override fun now(): Long = currentTime
-
-                    override fun elapsedRealtime(): Long = currentTime
-
-                    override fun uptimeMillis(): Long = currentTime
-                },
             ioDispatcher = testDispatcher,
         ) {
             override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {

@@ -7,7 +7,6 @@ import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -45,7 +44,6 @@ open class SemanticSearchManager
         @ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
         private val appSearchWrapper: AppSearchWrapper,
-        private val timeProvider: TimeProvider,
         @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
@@ -55,7 +53,6 @@ open class SemanticSearchManager
         private var lastSnapshotHash: Int = -1
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
-        private var lastIndexTime = 0L
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
@@ -85,6 +82,9 @@ open class SemanticSearchManager
 
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
             if (session != null && !forceOverride) return true
+
+            session?.close()
+            session = null
 
             var shouldForce = forceOverride
             repeat(2) { attempt ->
@@ -117,8 +117,6 @@ open class SemanticSearchManager
             val currentHash = SnapshotUtils.calculateContentHash(snapshot)
             if (currentHash == lastSnapshotHash) return
 
-            val now = timeProvider.now()
-
             sessionMutex.withLock {
                 if (!ensureSession()) return@withLock
 
@@ -126,14 +124,8 @@ open class SemanticSearchManager
                     try {
                         withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                             val documents = convertSnapshotToDocuments(snapshot)
-                            if (documents.isEmpty()) {
-                                lastSnapshotHash = currentHash
-                                return@withTimeout
-                            }
-
                             performIndexUpdate(documents, snapshot)
                             lastSnapshotHash = currentHash
-                            lastIndexTime = now
                             _status.value = TrackingStatus.Active
                         }
                     } catch (e: Exception) {
@@ -162,9 +154,9 @@ open class SemanticSearchManager
         ) {
             val currentIds = documents.map { it.id }.toSet()
 
-            val activeSlots = snapshot.simSnapshots.filter { it.isActive }.map { it.slot }
             val staleIds = mutableSetOf<String>()
-            activeSlots.forEach { slot ->
+            snapshot.simSnapshots.forEach { sim ->
+                val slot = sim.slot
                 val possibleIds =
                     listOf(
                         SemanticMapper.getDocumentId(slot, PackageType.MINUTES),
@@ -177,7 +169,9 @@ open class SemanticSearchManager
                 session?.removeByDocumentId(createRemoveRequest(staleIds))
             }
 
-            session?.putDocuments(createPutRequest(documents))
+            if (documents.isNotEmpty()) {
+                session?.putDocuments(createPutRequest(documents))
+            }
         }
 
         protected open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =

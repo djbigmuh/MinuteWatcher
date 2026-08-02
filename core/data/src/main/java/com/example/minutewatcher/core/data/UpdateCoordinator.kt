@@ -10,11 +10,12 @@ import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.Lazy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -32,15 +33,12 @@ class UpdateCoordinator
         private val usageStateRepository: Lazy<UsageStateRepository>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val isObserving = AtomicBoolean(false)
+        private val isObserving = MutableStateFlow(false)
 
-        private fun startObserving() {
-            if (isObserving.getAndSet(true)) return
-
+        init {
             scope.launch {
-                usageStateRepository
-                    .get()
-                    .observeSnapshot()
+                isObserving.first { it }
+                usageStateRepository.get().observeSnapshot()
                     .filter { it.timestamp > 0L }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .distinctUntilChanged { old, new ->
@@ -49,6 +47,10 @@ class UpdateCoordinator
                         widgetUpdater.updateAll()
                     }
             }
+        }
+
+        private fun startObserving() {
+            isObserving.value = true
         }
 
         /**

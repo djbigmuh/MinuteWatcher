@@ -165,11 +165,15 @@ class ShortcutManager
                     }
                 }
 
-            if (shortcuts.isNotEmpty()) {
-                // Max 5 dynamic shortcuts are allowed by Android system
-                ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts.take(MAX_DYNAMIC_SHORTCUTS))
-            } else {
-                ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+            try {
+                if (shortcuts.isNotEmpty()) {
+                    // Max 5 dynamic shortcuts are allowed by Android system
+                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts.take(MAX_DYNAMIC_SHORTCUTS))
+                } else {
+                    ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+                }
+            } catch (e: IllegalArgumentException) {
+                AppLogger.e("Failed to set dynamic shortcuts. This might be due to a label being too long.", e)
             }
         }
 

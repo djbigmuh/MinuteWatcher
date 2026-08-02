@@ -71,6 +71,7 @@ class CallTracker
          */
         suspend fun onCallStarted(subId: Int) {
             callMutex.withLock {
+                var errorSet = false
                 try {
                     if (!isCallTrackingEnabled()) return
                     if (!checkPermissions()) return
@@ -111,13 +112,18 @@ class CallTracker
                     _status.value = TrackingStatus.Active
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
+                    errorSet = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallStarted", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    errorSet = true
                 } finally {
                     try {
-                        refreshStatus()
+                        if (!errorSet) {
+                            refreshStatus()
+                        }
                     } catch (_: CancellationException) {
                         // Ignore cancellation in finally to avoid suppressing original exception
                     }
@@ -130,6 +136,7 @@ class CallTracker
          */
         suspend fun onCallEnded(subId: Int) {
             callMutex.withLock {
+                var errorSet = false
                 try {
                     if (!isCallTrackingEnabled()) return
                     if (!checkPermissions()) return
@@ -142,13 +149,18 @@ class CallTracker
                     endCall(subId)
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
+                    errorSet = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallEnded", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    errorSet = true
                 } finally {
                     try {
-                        refreshStatus()
+                        if (!errorSet) {
+                            refreshStatus()
+                        }
                     } catch (_: CancellationException) {
                         // Ignore cancellation in finally to avoid suppressing original exception
                     }
@@ -189,7 +201,8 @@ class CallTracker
 
             if (isDeviceIdle) {
                 AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-                activeSubIds.forEach { endCall(it) }
+                activeSubIds.forEach { endCall(it, notify = false) }
+                dataChangeNotifier.notifyDataChanged()
                 return
             }
 
@@ -210,7 +223,8 @@ class CallTracker
 
                 if (staleSessions.isNotEmpty()) {
                     AppLogger.d("Ending ${staleSessions.size} stale sessions")
-                    staleSessions.forEach { endCall(it) }
+                    staleSessions.forEach { endCall(it, notify = false) }
+                    dataChangeNotifier.notifyDataChanged()
                 } else {
                     val oldest = fallbackAttribution(activeSubIds)
                     if (oldest != null) {
@@ -257,7 +271,10 @@ class CallTracker
                 ?: activeSubIds.minByOrNull { callSessionRepository.getCallStartTime(it).firstWithTimeout() ?: 0L }
         }
 
-        private suspend fun endCall(subId: Int) {
+        private suspend fun endCall(
+            subId: Int,
+            notify: Boolean = true,
+        ) {
             val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
             val savedBootTime = callSessionRepository.getBootTime(subId).firstWithTimeout() ?: 0L
             val savedUptime = callSessionRepository.getUptime(subId).firstWithTimeout() ?: 0L
@@ -278,7 +295,7 @@ class CallTracker
 
                 val durationSeconds = (currentUptime - savedUptime) / MILLIS_IN_SECOND
                 if (durationSeconds > 0) {
-                    processCallDuration(durationSeconds.toInt(), subId, savedIdentity)
+                    processCallDuration(durationSeconds.toInt(), subId, savedIdentity, notify)
                 }
             }
         }
@@ -320,6 +337,7 @@ class CallTracker
             durationSeconds: Int,
             subId: Int,
             savedIdentity: String?,
+            notify: Boolean = true,
         ) {
             val durationMinutes = (durationSeconds + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
@@ -334,7 +352,9 @@ class CallTracker
             if (targetIdentity != null) {
                 simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
                 AppLogger.d("Added $durationMinutes min to identity $targetIdentity")
-                dataChangeNotifier.notifyDataChanged()
+                if (notify) {
+                    dataChangeNotifier.notifyDataChanged()
+                }
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed")

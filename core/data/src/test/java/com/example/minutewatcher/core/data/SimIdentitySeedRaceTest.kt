@@ -32,6 +32,7 @@ class SimIdentitySeedRaceTest {
     private val dataStore: DataStore<Preferences> = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
+    private val migrationService: IdentityMigrationService = mock()
 
     @Before
     fun setup() {
@@ -61,6 +62,7 @@ class SimIdentitySeedRaceTest {
                     dataStore,
                     seedRepository,
                     appSettingsRepository,
+                    migrationService,
                     backgroundScope,
                 )
 
@@ -98,6 +100,7 @@ class SimIdentitySeedRaceTest {
                     dataStore,
                     seedRepository,
                     appSettingsRepository,
+                    migrationService,
                     backgroundScope,
                 )
 

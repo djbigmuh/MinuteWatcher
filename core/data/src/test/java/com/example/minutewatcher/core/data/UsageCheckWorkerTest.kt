@@ -26,7 +26,6 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -69,21 +68,21 @@ class UsageCheckWorkerTest {
         Shadows.shadowOf(application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(createEmptySnapshot()))
-        
+
         // Setup default stubs for all suspend methods to prevent hangs on unstubbed calls
-        runBlocking {
+        kotlinx.coroutines.runBlocking {
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(trafficTracker.updateTrafficUsage()).thenReturn(Unit)
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(Unit)
-            
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("default")))
-            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(any())).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(any())).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(any())).thenReturn(flowOf(false))
         }
+
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
+        whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("default")))
+        whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(any())).thenReturn(flowOf(false))
 
         worker =
             TestListenableWorkerBuilder<UsageCheckWorker>(application)

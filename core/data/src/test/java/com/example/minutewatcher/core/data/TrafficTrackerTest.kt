@@ -50,9 +50,8 @@ class TrafficTrackerTest {
     private lateinit var tracker: TrafficTracker
 
     @Before
-    fun setup() =
-        runTest(testDispatcher) {
-            whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
+    fun setup() {
+        whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
@@ -71,11 +70,13 @@ class TrafficTrackerTest {
 
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
-        runTest(testDispatcher) {
+        kotlinx.coroutines.runBlocking {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
         }
+        
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
         whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("sim_0")))

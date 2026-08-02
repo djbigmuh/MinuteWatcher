@@ -7,10 +7,8 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.controller.MainBannerController
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
@@ -34,7 +32,6 @@ class MainViewModel
         private val appSettingsRepository: AppSettingsRepository,
         private val usageStateRepository: UsageStateRepository,
         private val autoResetUseCase: AutoResetUseCase,
-        private val permissionStateNotifier: PermissionStateNotifier,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         // Dialog States
@@ -189,21 +186,14 @@ class MainViewModel
         fun highlightSlot(slot: Int) = simDataController.highlightSlot(slot)
 
         private var lastRefreshAt = 0L
-        private var lastResumeNotifyTime = 0L
 
         fun onActivityResume(
             nowElapsed: Long,
-            currentTimeMillis: Long,
         ) {
             if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
                 lastRefreshAt = nowElapsed
                 refreshSimCards()
                 notifyDataChanged()
-            }
-
-            if (currentTimeMillis - lastResumeNotifyTime > Constants.MILLIS_PER_SECOND) {
-                permissionStateNotifier.notifyChanged()
-                lastResumeNotifyTime = currentTimeMillis
             }
         }
 
