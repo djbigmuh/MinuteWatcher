@@ -7,13 +7,11 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.data.BenchmarkPopulateWorker
-import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Receiver to populate mock data for benchmarking.
  * Usage: adb shell am broadcast -a com.example.minutewatcher.benchmark.POPULATE_DATA --ei sim_count 2
  */
-@AndroidEntryPoint
 class BenchmarkReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,

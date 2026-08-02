@@ -30,8 +30,11 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
+import org.robolectric.annotation.Config
+import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
     @Mock lateinit var simUsageRepository: SimUsageRepository
@@ -52,6 +55,8 @@ class UsageCheckWorkerModuleTest {
 
     @Mock lateinit var usageUseCase: UsageUseCase
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
+    
+    private val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
@@ -68,7 +73,8 @@ class UsageCheckWorkerModuleTest {
                 simSnapshots = emptyList(),
                 capabilities = emptyList(),
             )
-        runTest {
+
+        runBlocking {
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),
@@ -80,7 +86,7 @@ class UsageCheckWorkerModuleTest {
 
     @Test
     fun testDoWork_Success() =
-        runTest {
+        runTest(testDispatcher) {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val worker =
                 TestListenableWorkerBuilder<UsageCheckWorker>(context)
@@ -90,22 +96,27 @@ class UsageCheckWorkerModuleTest {
                                 appContext: Context,
                                 workerClassName: String,
                                 workerParameters: androidx.work.WorkerParameters,
-                            ): ListenableWorker =
-                                UsageCheckWorker(
+                            ): ListenableWorker {
+                                val deps =
+                                    UsageWorkerDependencies(
+                                        simUsageRepository = simUsageRepository,
+                                        simNotificationFlagsRepository = simNotificationFlagsRepository,
+                                        appSettingsRepository = appSettingsRepository,
+                                        autoResetUseCase = autoResetUseCase,
+                                        trafficTracker = trafficTracker,
+                                        notificationHelper = notificationHelper,
+                                        dataChangeNotifier = dataChangeNotifier,
+                                        usageStateRepository = usageStateRepository,
+                                        usageUseCase = usageUseCase,
+                                        timeProvider = timeProvider,
+                                    )
+                                return UsageCheckWorker(
                                     appContext,
                                     workerParameters,
-                                    simUsageRepository,
-                                    simNotificationFlagsRepository,
-                                    appSettingsRepository,
-                                    autoResetUseCase,
-                                    trafficTracker,
-                                    notificationHelper,
-                                    dataChangeNotifier,
-                                    usageStateRepository,
-                                    usageUseCase,
-                                    timeProvider,
-                                    kotlinx.coroutines.test.UnconfinedTestDispatcher(),
+                                    deps,
+                                    testDispatcher,
                                 )
+                            }
                         },
                     ).build()
 

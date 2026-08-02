@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.SimDataStore
+import com.example.minutewatcher.core.model.SimConstants
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,7 +48,9 @@ class IdentityMigrationService
             if (activeIdentities.any { name.endsWith("_$it") }) return false
 
             // Unambiguous legacy markers.
-            if (name.endsWith("_sim_0") || name.endsWith("_sim_1") || name.startsWith("subscription_id_icc_")) {
+            if (SimConstants.SUPPORTED_SLOT_INDICES.any { name.endsWith("_sim_$it") } ||
+                name.startsWith("subscription_id_icc_")
+            ) {
                 return true
             }
 

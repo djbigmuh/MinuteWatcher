@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -41,6 +42,7 @@ class TrafficTrackerTest {
     private val networkStatsManager: NetworkStatsManager = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
+    private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1700000000000L)
@@ -86,6 +88,7 @@ class TrafficTrackerTest {
                 context,
                 simIdentityRepository,
                 simUsageRepository,
+                simUsageResetRepository,
                 callSessionRepository,
                 permissionManager,
                 timeProvider,
@@ -109,11 +112,11 @@ class TrafficTrackerTest {
                 ),
             ).thenReturn(bucket)
 
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
 
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(1)
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
@@ -159,13 +162,13 @@ class TrafficTrackerTest {
                 ),
             ).thenReturn(bucket)
 
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
 
             val deltaMb = 500f / Constants.BYTES_PER_MB
             verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
     @Test
@@ -205,11 +208,11 @@ class TrafficTrackerTest {
             whenever(bucket.rxBytes).thenReturn(1500L)
             whenever(bucket.txBytes).thenReturn(0L)
             whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
 
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
     @Test
@@ -220,11 +223,11 @@ class TrafficTrackerTest {
             whenever(bucket1.rxBytes).thenReturn(1000L)
             whenever(bucket1.txBytes).thenReturn(0L)
             whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
             verify(callSessionRepository).setLastDataSubId(1)
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1000L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1000L))
 
             // SIM swap: SubId 2
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
@@ -236,7 +239,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // Should reset baseline for the new SIM identity
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_1"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(2)
         }
 
@@ -250,7 +253,7 @@ class TrafficTrackerTest {
 
             tracker.resetBaseline("sim_0")
 
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
@@ -269,7 +272,7 @@ class TrafficTrackerTest {
                     anyLong(),
                 ),
             ).thenReturn(bucket)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
 
@@ -286,11 +289,11 @@ class TrafficTrackerTest {
             whenever(bucket.rxBytes).thenReturn(500L)
             whenever(bucket.txBytes).thenReturn(0L)
             whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
 
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(500L))
         }
 
     @Test
@@ -301,7 +304,7 @@ class TrafficTrackerTest {
             whenever(bucket.rxBytes).thenReturn(1500L)
             whenever(bucket.txBytes).thenReturn(0L)
             whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
-            whenever(simUsageRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             // Act
             tracker.recover()
@@ -309,7 +312,7 @@ class TrafficTrackerTest {
 
             // Assert
             assertEquals(TrackingStatus.Active, tracker.status.value)
-            verify(simUsageRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
         }
 
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.

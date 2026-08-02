@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -78,6 +79,7 @@ class CallTrackerRaceTest {
                     }
                 }
             jobs.joinAll()
+            advanceUntilIdle()
 
             // Verification of interaction count
             verify(callSessionRepository, times(10)).getCallStartTime(1)
@@ -92,6 +94,7 @@ class CallTrackerRaceTest {
 
             launch { tracker.onCallStarted(1) }
             launch { tracker.onCallStarted(2) }
+            advanceUntilIdle()
 
             verify(callSessionRepository).setCallStartTime(eq(1), any())
             verify(callSessionRepository).setCallStartTime(eq(2), any())

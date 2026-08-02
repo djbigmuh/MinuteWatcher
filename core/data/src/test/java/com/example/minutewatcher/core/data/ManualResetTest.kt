@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -19,6 +20,7 @@ class ManualResetTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
+    private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val trafficTracker: TrafficTracker = mock()
     private val permissionManager: PermissionManager = mock()
 
@@ -32,6 +34,7 @@ class ManualResetTest {
                 simIdentityRepository,
                 simUsageRepository,
                 simLimitsRepository,
+                simUsageResetRepository,
                 trafficTracker,
                 permissionManager,
             )
@@ -45,7 +48,7 @@ class ManualResetTest {
 
             usageUseCase.resetCounters(0)
 
-            verify(simUsageRepository).resetSimUsageManual(identity)
+            verify(simUsageResetRepository).resetSimUsageManual(identity)
             verify(trafficTracker).resetBaseline(identity)
         }
 }

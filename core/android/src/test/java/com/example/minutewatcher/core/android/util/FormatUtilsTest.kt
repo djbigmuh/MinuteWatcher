@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.android.util
 
+import com.example.minutewatcher.core.common.util.FormatUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale

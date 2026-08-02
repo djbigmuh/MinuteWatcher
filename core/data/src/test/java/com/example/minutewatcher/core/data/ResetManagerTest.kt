@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
@@ -26,12 +27,13 @@ class ResetManagerTest {
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 5000000L)
     private val simUsageRepository: SimUsageRepository = mock()
+    private val simUsageResetRepository: SimUsageResetRepository = mock()
 
     private lateinit var resetManager: ResetManager
 
     @Before
     fun setup() {
-        resetManager = ResetManager(simUsageRepository, trafficTracker, dataChangeNotifier, timeProvider)
+        resetManager = ResetManager(simUsageRepository, simUsageResetRepository, trafficTracker, dataChangeNotifier, timeProvider)
     }
 
     @Test
@@ -50,7 +52,7 @@ class ResetManagerTest {
 
             resetManager.performAutoReset(snapshot)
 
-            verify(simUsageRepository, never()).resetSimUsageIfDue(any(), any(), any())
+            verify(simUsageResetRepository, never()).resetSimUsageIfDue(any(), any(), any())
         }
 
     @Test
@@ -88,11 +90,11 @@ class ResetManagerTest {
                     ),
                 ),
             )
-            whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+            whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
             resetManager.performAutoReset(snapshot)
 
-            verify(simUsageRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(simUsageResetRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
             verify(trafficTracker).resetBaseline(identity)
             verify(dataChangeNotifier).notifyDataChanged()
         }
@@ -132,11 +134,11 @@ class ResetManagerTest {
                     ),
                 ),
             )
-            whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(false)
+            whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(false)
 
             resetManager.performAutoReset(snapshot)
 
-            verify(simUsageRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(simUsageResetRepository).resetSimUsageIfDue(eq(identity), eq(1), any())
             verify(trafficTracker, never()).resetBaseline(any())
             verify(dataChangeNotifier, never()).notifyDataChanged()
         }
@@ -176,7 +178,7 @@ class ResetManagerTest {
                     ),
                 ),
             )
-            whenever(simUsageRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+            whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
 
             // First call should trigger check
             resetManager.performAutoReset(snapshot)
@@ -185,7 +187,7 @@ class ResetManagerTest {
             resetManager.performAutoReset(snapshot)
 
             // Verify only one check happened
-            verify(simUsageRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
 
             // Advance time beyond 1 hour (3600000ms)
             timeProvider.advance(3600001L)
@@ -193,6 +195,6 @@ class ResetManagerTest {
             // Third call after time advance should trigger check again
             resetManager.performAutoReset(snapshot)
 
-            verify(simUsageRepository, times(2)).resetSimUsageIfDue(eq(identity), eq(1), any())
+            verify(simUsageResetRepository, times(2)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }

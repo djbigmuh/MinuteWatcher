@@ -18,6 +18,7 @@ object AppLogger {
     private const val MAX_FILE_SIZE = 1 * 1024 * 1024 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
+    private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
 
     private var logDir: File? = null
     private val executor = Executors.newSingleThreadExecutor()
@@ -30,8 +31,8 @@ object AppLogger {
     fun d(message: String) {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, message)
+            logToFile("D", message)
         }
-        logToFile("D", message)
     }
 
     fun w(message: String) {
@@ -57,6 +58,7 @@ object AppLogger {
         level: String,
         message: String,
     ) {
+        if (!IS_FILE_LOGGING_ENABLED) return
         val dir = logDir ?: return
         executor.execute {
             try {

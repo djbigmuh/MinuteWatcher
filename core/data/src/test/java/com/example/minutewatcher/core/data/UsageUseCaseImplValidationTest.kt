@@ -5,7 +5,9 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -19,6 +21,7 @@ class UsageUseCaseImplValidationTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
+    private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val trafficTracker: TrafficTracker = mock()
     private val permissionManager: PermissionManager = mock()
     private lateinit var usageUseCase: UsageUseCaseImpl
@@ -31,6 +34,7 @@ class UsageUseCaseImplValidationTest {
                 simIdentityRepository,
                 simUsageRepository,
                 simLimitsRepository,
+                simUsageResetRepository,
                 trafficTracker,
                 permissionManager,
             )
@@ -42,7 +46,7 @@ class UsageUseCaseImplValidationTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
-            whenever(simUsageRepository.getMinutesUsed(identity)).thenReturn(flowOf(0))
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
 
             // target = -50 (clamped to 0)
             // formula: (0 - 100) + 0 = -100
@@ -57,7 +61,7 @@ class UsageUseCaseImplValidationTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(0))
-            whenever(simUsageRepository.getMinutesUsed(identity)).thenReturn(flowOf(0))
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
 
             usageUseCase.adjustMinutes(0, Constants.MAX_MINUTES_LIMIT + 1000)
 
@@ -70,7 +74,7 @@ class UsageUseCaseImplValidationTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240)) // 10 GB
-            whenever(simUsageRepository.getTrafficUsed(identity)).thenReturn(flowOf(0f))
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 0f)))
 
             // target = -1f (clamped to 0)
             // limitGb = 10, usedGb = 0
@@ -79,4 +83,25 @@ class UsageUseCaseImplValidationTest {
 
             verify(simUsageRepository).setTrafficAdjustment(identity, -10f)
         }
+
+    private fun createSimUsage(
+        id: String,
+        minutesUsed: Int = 0,
+        trafficUsed: Float = 0f,
+    ) = SimUsage(
+        identity = id,
+        slotIndex = 0,
+        subscriptionId = 1,
+        operator = "MTS",
+        minutesUsed = minutesUsed,
+        minutesLimit = 0,
+        trafficUsed = trafficUsed,
+        trafficLimitMb = 0,
+        manualAdjustment = 0,
+        trafficAdjustment = 0f,
+        autoReset = true,
+        autoResetDay = 1,
+        lastResetDate = 0L,
+        rolloverEnabled = false,
+    )
 }

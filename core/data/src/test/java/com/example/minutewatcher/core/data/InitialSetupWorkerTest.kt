@@ -1,11 +1,10 @@
 package com.example.minutewatcher.core.data
 
 import android.Manifest
+import android.app.Application
 import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import androidx.work.ListenableWorker
-import androidx.work.WorkerParameters
+import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
@@ -16,24 +15,29 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import com.example.minutewatcher.core.model.SimIdentity
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.mockito.kotlin.never
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
+import org.robolectric.annotation.Config
+import androidx.test.core.app.ApplicationProvider
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class InitialSetupWorkerTest {
-    private val context: Context = mock()
-    private val params: WorkerParameters = mock()
     private val callTracker: CallTracker = mock()
     private val trafficTracker: TrafficTracker = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
@@ -45,52 +49,61 @@ class InitialSetupWorkerTest {
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val workScheduler: WorkScheduler = mock()
 
-    private lateinit var worker: InitialSetupWorker
+    private lateinit var deps: InitialSetupWorkerDependencies
+    private lateinit var context: Context
 
     @Before
     fun setup() {
-        whenever(context.applicationContext).thenReturn(context)
+        context = ApplicationProvider.getApplicationContext<Application>()
         whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
         val emptySnapshot =
-            com.example.minutewatcher.core.model.GlobalSnapshot(
-                version =
-                    com.example.minutewatcher.core.model
-                        .SchemaVersion(1, 0, 0),
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
                 timestamp = 0L,
                 simSnapshots = emptyList(),
                 capabilities = emptyList(),
             )
-        runTest {
+            
+        runBlocking {
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),
             )
         }
 
-        worker =
-            InitialSetupWorker(
-                context,
-                params,
-                callTracker,
-                trafficTracker,
-                simIdentityRepository,
-                migrationFlagsRepository,
-                usageStateRepository,
-                autoResetUseCase,
-                usageUseCase,
-                migrationService,
-                dataChangeNotifier,
-                workScheduler,
+        deps =
+            InitialSetupWorkerDependencies(
+                callTracker = callTracker,
+                trafficTracker = trafficTracker,
+                simIdentityRepository = simIdentityRepository,
+                migrationFlagsRepository = migrationFlagsRepository,
+                usageStateRepository = usageStateRepository,
+                autoResetUseCase = autoResetUseCase,
+                usageUseCase = usageUseCase,
+                migrationService = migrationService,
+                dataChangeNotifier = dataChangeNotifier,
+                workScheduler = workScheduler,
             )
+    }
+
+    private fun createWorker(): InitialSetupWorker {
+        return TestListenableWorkerBuilder<InitialSetupWorker>(context)
+            .setWorkerFactory(object : androidx.work.WorkerFactory() {
+                override fun createWorker(
+                    appContext: Context,
+                    workerClassName: String,
+                    workerParameters: androidx.work.WorkerParameters
+                ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+            }).build()
     }
 
     @Test
     fun `doWork performs auto-reset after migration`() =
         runTest {
-            val result = worker.doWork()
+            val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(autoResetUseCase).performAutoReset(any())
@@ -103,7 +116,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-            val result = worker.doWork()
+            val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(usageStateRepository, times(2)).refresh()
@@ -117,20 +130,15 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
 
-            mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext
-                    .`when`<Int> {
-                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                    }.thenReturn(PackageManager.PERMISSION_DENIED)
+            Shadows.shadowOf(context as Application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
 
-                val result = worker.doWork()
+            val result = createWorker().doWork()
 
-                assertEquals(ListenableWorker.Result.success(), result)
-                verify(migrationFlagsRepository).setMigrationV1Completed(true)
-                verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
-                verify(migrationService).markSchemaCurrent()
-            }
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationFlagsRepository).setMigrationV1Completed(true)
+            verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+            verify(migrationService).markSchemaCurrent()
         }
 
     @Test
@@ -138,20 +146,15 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
-            whenever(migrationService.hasLegacyData(any())).thenReturn(true)
+            whenever(migrationService.hasLegacyData()).thenReturn(true)
 
-            mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext
-                    .`when`<Int> {
-                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                    }.thenReturn(PackageManager.PERMISSION_DENIED)
+            Shadows.shadowOf(context as Application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
 
-                val result = worker.doWork()
+            val result = createWorker().doWork()
 
-                assertEquals(ListenableWorker.Result.success(), result)
-                verify(migrationFlagsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
-                verify(migrationService, org.mockito.kotlin.never()).markSchemaCurrent()
-            }
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationFlagsRepository, never()).setMigrationV1Completed(true)
+            verify(migrationService, never()).markSchemaCurrent()
         }
 
     @Test
@@ -162,18 +165,13 @@ class InitialSetupWorkerTest {
             whenever(migrationService.hasLegacyData(any())).thenReturn(true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-            mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext
-                    .`when`<Int> {
-                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                    }.thenReturn(PackageManager.PERMISSION_GRANTED)
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
-                val result = worker.doWork()
+            val result = createWorker().doWork()
 
-                assertEquals(ListenableWorker.Result.success(), result)
-                verify(migrationFlagsRepository, org.mockito.kotlin.never()).setMigrationV1Completed(true)
-                verify(migrationService, org.mockito.kotlin.never()).markSchemaCurrent()
-            }
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationFlagsRepository, never()).setMigrationV1Completed(true)
+            verify(migrationService, never()).markSchemaCurrent()
         }
 
     @Test
@@ -184,19 +182,14 @@ class InitialSetupWorkerTest {
             val activeSim = ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", true, true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
 
-            mockStatic(ContextCompat::class.java).use { mockedContext ->
-                mockedContext
-                    .`when`<Int> {
-                        ContextCompat.checkSelfPermission(any(), org.mockito.kotlin.eq(Manifest.permission.READ_PHONE_STATE))
-                    }.thenReturn(PackageManager.PERMISSION_GRANTED)
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
-                val result = worker.doWork()
+            val result = createWorker().doWork()
 
-                assertEquals(ListenableWorker.Result.success(), result)
-                verify(migrationService).migrateLegacyData(activeSim.identity)
-                verify(migrationFlagsRepository).setMigrationV1Completed(true)
-                verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
-                verify(migrationService).markSchemaCurrent()
-            }
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationService).migrateLegacyData(activeSim.identity)
+            verify(migrationFlagsRepository).setMigrationV1Completed(true)
+            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+            verify(migrationService).markSchemaCurrent()
         }
 }
