@@ -4,7 +4,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.minutewatcher.core.model.AppTheme
 
 @Composable
 fun SimCardScreen(

@@ -136,7 +136,7 @@ class UsageAccessNavigationTest {
             com.example.minutewatcher.feature.main.ui.components.TrackingBanners(
                 state = TrackingBannerState(showUsageAccessBanner = true),
                 callbacks =
-                    com.example.minutewatcher.feature.main.TrackingBannerCallbacks(
+                    TrackingBannerCallbacks(
                         onGrantPhonePermission = {},
                         onShowUsageAccessDialog = { dialogOpened = true },
                         onOpenAppSettings = {},
@@ -145,6 +145,8 @@ class UsageAccessNavigationTest {
                         onRetryShortcuts = {},
                         onRetryTraffic = {},
                         onGrantNotificationPermission = {},
+                        onDismissWidgetError = {},
+                        onDismissInaccurateCalls = {},
                     ),
             )
         }

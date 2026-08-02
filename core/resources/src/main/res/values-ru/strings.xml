@@ -55,6 +55,7 @@
     <string name="tracking_banner_calls_error">Произошла ошибка при обновлении данных о звонках.</string>
     <string name="tracking_banner_appsearch_error">Ошибка индексации AppSearch. Глобальный поиск может быть неактуален.</string>
     <string name="tracking_banner_shortcuts_error">Ошибка обновления быстрых ярлыков.</string>
+    <string name="tracking_banner_notification_permission">Рекомендуется разрешить уведомления для получения предупреждений о расходе.</string>
     <string name="tracking_banner_widget_error">Виджет не может быть обновлён из-за ограничений системы.</string>
     <string name="tracking_banner_inaccurate_calls">Обнаружено несколько активных вызовов. Минуты могут быть распределены неточно.</string>
     <string name="settings_load_error">Ошибка загрузки настроек</string>

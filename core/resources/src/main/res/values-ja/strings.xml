@@ -56,6 +56,9 @@
     <string name="tracking_banner_appsearch_error">AppSearchのインデックス作成に失敗しました。</string>
     <string name="tracking_banner_shortcuts_error">動的ショートカットの更新に失敗しました。</string>
     <string name="tracking_banner_notification_permission">使用状況アラートを受け取るために、通知権限を推奨します。</string>
+    <string name="tracking_banner_widget_error">システムの制限により、ウィジェットを更新できません。</string>
+    <string name="tracking_banner_inaccurate_calls">複数のアクティブな通話が検出されました。分数が不正確に割り当てられる可能性があります。</string>
+    <string name="settings_load_error">設定読み込みエラー</string>
     <string name="notification_permission_permanent_denial">通知が無効です。アラートを受け取るには、アプリ設定で有効にしてください。</string>
     <string name="action_grant">許可</string>
     <string name="action_settings">設定</string>

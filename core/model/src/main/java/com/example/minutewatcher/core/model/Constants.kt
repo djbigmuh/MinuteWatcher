@@ -20,7 +20,6 @@ object Constants {
         const val REFRESH_TIMEOUT_MS = 3000L
 
         const val SIM_ARRANGEMENT_HORIZONTAL = 0
-        const val SIM_ARRANGEMENT_VERTICAL = 1
 
         const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80
 

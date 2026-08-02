@@ -12,7 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -23,14 +22,12 @@ class MainBannerController @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
 ) {
     private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
-    val isPhonePermissionPermanentlyDenied: StateFlow<Boolean> = _isPhonePermissionPermanentlyDenied.asStateFlow()
 
     fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
         _isPhonePermissionPermanentlyDenied.value = denied
     }
 
     private val _isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
-    val isNotificationPermissionPermanentlyDenied: StateFlow<Boolean> = _isNotificationPermissionPermanentlyDenied.asStateFlow()
 
     fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
         _isNotificationPermissionPermanentlyDenied.value = denied

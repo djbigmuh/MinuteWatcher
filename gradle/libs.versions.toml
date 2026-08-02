@@ -103,8 +103,8 @@ androidxMaterialIconsCore = { group = "androidx.compose.material", name = "mater
 androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # Build logic dependencies
-androidGradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
-kotlinGradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

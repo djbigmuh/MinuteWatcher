@@ -56,6 +56,9 @@
     <string name="tracking_banner_appsearch_error">فشل فهرسة AppSearch.</string>
     <string name="tracking_banner_shortcuts_error">فشل تحديث الاختصارات الديناميكية.</string>
     <string name="tracking_banner_notification_permission">يوصى بإذن الإشعارات لتلقي تنبيهات الاستخدام.</string>
+    <string name="tracking_banner_widget_error">لا يمكن تحديث الأداة بسبب قيود النظام.</string>
+    <string name="tracking_banner_inaccurate_calls">تم اكتشاف مكالمات نشطة متعددة. قد يتم تخصيص الدقائق بشكل غير دقيق.</string>
+    <string name="settings_load_error">خطأ في تحميل الإعدادات</string>
     <string name="notification_permission_permanent_denial">الإشعارات معطلة. يرجى تفعيلها في إعدادات التطبيق لتلقي التنبيهات.</string>
     <string name="action_grant">منح</string>
     <string name="action_settings">الإعدادات</string>

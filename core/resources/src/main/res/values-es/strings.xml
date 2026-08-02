@@ -56,6 +56,9 @@
     <string name="tracking_banner_appsearch_error">Falló la indexación de AppSearch.</string>
     <string name="tracking_banner_shortcuts_error">Error al actualizar los accesos directos dinámicos.</string>
     <string name="tracking_banner_notification_permission">Se recomienda el permiso de notificación para recibir alertas de uso.</string>
+    <string name="tracking_banner_widget_error">El widget no se puede actualizar debido a limitaciones del sistema.</string>
+    <string name="tracking_banner_inaccurate_calls">Se detectaron varias llamadas activas. Es posible que los minutos se atribuyan de forma inexacta.</string>
+    <string name="settings_load_error">Error al cargar la configuración</string>
     <string name="notification_permission_permanent_denial">Las notificaciones están desactivadas. Por favor, actívelas en los Ajustes de la aplicación para recibir alertas.</string>
     <string name="action_grant">Otorgar</string>
     <string name="action_settings">Ajustes</string>

@@ -22,7 +22,7 @@ class SimCardScreenTest {
     @Test
     fun emptyState_isDisplayed() {
         composeTestRule.setContent {
-            EmptyState()
+            EmptyState(onGrantPermission = {})
         }
         val context = ApplicationProvider.getApplicationContext<Context>()
         val expectedText = context.getString(R.string.no_sim_found)

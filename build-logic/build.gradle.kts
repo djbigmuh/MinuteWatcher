@@ -8,6 +8,6 @@ group = "com.example.minutewatcher.buildlogic"
 val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 dependencies {
-    compileOnly(libs.findLibrary("androidGradlePlugin").get())
-    compileOnly(libs.findLibrary("kotlinGradlePlugin").get())
+    compileOnly(libs.findLibrary("android-gradle-plugin").get())
+    compileOnly(libs.findLibrary("kotlin-gradle-plugin").get())
 }

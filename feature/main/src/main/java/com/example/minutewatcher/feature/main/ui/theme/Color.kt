@@ -3,27 +3,10 @@ package com.example.minutewatcher.feature.main.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Standard Material 3 color definitions.
-private const val PURPLE_80_HEX = 0xFFD0BCFF
-private const val PURPLE_GREY_80_HEX = 0xFFCCC2DC
-private const val PINK_80_HEX = 0xFFEFB8C8
+val Purple80 = Color(0xFFD0BCFF)
+val PurpleGrey80 = Color(0xFFCCC2DC)
+val Pink80 = Color(0xFFEFB8C8)
 
-private const val PURPLE_40_HEX = 0xFF6650a4
-private const val PURPLE_GREY_40_HEX = 0xFF625b71
-private const val PINK_40_HEX = 0xFF7D5260
-
-// Usage status colors
-private const val GREEN_500_HEX = 0xFF4CAF50
-private const val RED_500_HEX = 0xFFF44336
-private const val ORANGE_500_HEX = 0xFFFFA500
-
-val Purple80 = Color(PURPLE_80_HEX)
-val PurpleGrey80 = Color(PURPLE_GREY_80_HEX)
-val Pink80 = Color(PINK_80_HEX)
-
-val Purple40 = Color(PURPLE_40_HEX)
-val PurpleGrey40 = Color(PURPLE_GREY_40_HEX)
-val Pink40 = Color(PINK_40_HEX)
-
-val UsageGreen = Color(GREEN_500_HEX)
-val UsageRed = Color(RED_500_HEX)
-val UsageOrange = Color(ORANGE_500_HEX)
+val Purple40 = Color(0xFF6650a4)
+val PurpleGrey40 = Color(0xFF625b71)
+val Pink40 = Color(0xFF7D5260)
