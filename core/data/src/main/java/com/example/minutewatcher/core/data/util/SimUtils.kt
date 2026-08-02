@@ -52,6 +52,19 @@ object SimUtils {
                 operatorName.hasToken("claro") -> getStringSafe(localizedContext, R.string.operator_claro, "Claro")
                 operatorName.hasToken("airtel") -> getStringSafe(localizedContext, R.string.operator_airtel, "Airtel")
                 operatorName.hasToken("jio") -> getStringSafe(localizedContext, R.string.operator_jio, "Jio")
+                operatorName.hasToken("kpn") -> getStringSafe(localizedContext, R.string.operator_kpn, "KPN")
+                operatorName.hasToken("proximus") -> getStringSafe(localizedContext, R.string.operator_proximus, "Proximus")
+                operatorName.hasToken("swisscom") -> getStringSafe(localizedContext, R.string.operator_swisscom, "Swisscom")
+                operatorName.hasToken("sunrise") -> getStringSafe(localizedContext, R.string.operator_sunrise, "Sunrise")
+                operatorName.hasToken("salt") -> getStringSafe(localizedContext, R.string.operator_salt, "Salt")
+                operatorName.hasToken("telia") -> getStringSafe(localizedContext, R.string.operator_telia, "Telia")
+                operatorName.hasToken("telenor") -> getStringSafe(localizedContext, R.string.operator_telenor, "Telenor")
+                operatorName.hasToken("elisa") -> getStringSafe(localizedContext, R.string.operator_elisa, "Elisa")
+                operatorName.hasToken("dna") -> getStringSafe(localizedContext, R.string.operator_dna, "DNA")
+                operatorName.hasToken("plus") -> getStringSafe(localizedContext, R.string.operator_plus, "Plus")
+                operatorName.hasToken("play") -> getStringSafe(localizedContext, R.string.operator_play, "Play")
+                operatorName.hasToken("turkcell") -> getStringSafe(localizedContext, R.string.operator_turkcell, "Turkcell")
+                operatorName.hasToken("turk telekom") -> getStringSafe(localizedContext, R.string.operator_turk_telekom, "Türk Telekom")
                 else ->
                     if (operatorName.isNotEmpty()) {
                         if (operatorName.length > MAX_OPERATOR_NAME_LENGTH) {
@@ -78,8 +91,8 @@ object SimUtils {
         }
     }
 
-    private const val MAX_OPERATOR_NAME_LENGTH = 15
-    private const val TRUNCATED_OPERATOR_NAME_LENGTH = 12
+    private const val MAX_OPERATOR_NAME_LENGTH = 20
+    private const val TRUNCATED_OPERATOR_NAME_LENGTH = 17
 
     private fun getStringSafe(
         context: Context,

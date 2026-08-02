@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import android.annotation.SuppressLint
 import android.os.Build
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -167,6 +168,7 @@ class CallTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
         }
 
+        @SuppressLint("MissingPermission")
         private suspend fun handleUnknownSubIdEnd() {
             val activeSubIds = callSessionRepository.getActiveCallSubIds()
             if (activeSubIds.isEmpty()) {
@@ -174,9 +176,17 @@ class CallTracker
                 return
             }
 
-            @Suppress("DEPRECATION") // Use legacy callState for global check as it's sufficient for attribution safety and compatibility.
-            val globalState = telephonyManager.callState
-            if (globalState == TelephonyManager.CALL_STATE_IDLE) {
+            val isDeviceIdle =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    activeSubIds.all { id ->
+                        telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() == TelephonyManager.CALL_STATE_IDLE
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+                }
+
+            if (isDeviceIdle) {
                 AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
                 activeSubIds.forEach { endCall(it) }
                 return
@@ -187,7 +197,7 @@ class CallTracker
             if (target != null) {
                 endCall(target)
             } else {
-                AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using fallback.")
+                AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}")
 
                 // Fallback: end extremely long sessions OR the oldest session
                 val now = timeProvider.now()
@@ -210,6 +220,7 @@ class CallTracker
             }
         }
 
+        @SuppressLint("MissingPermission")
         private suspend fun findTargetSubId(activeSubIds: List<Int>): Int? {
             if (activeSubIds.size == 1) {
                 return activeSubIds.first()
@@ -219,9 +230,7 @@ class CallTracker
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     activeSubIds.filter { id ->
                         val manager = telephonyManager.createForSubscriptionId(id)
-                        // Use legacy callState per-SIM check for better attribution on older dual-SIM devices (fallback logic).
-                        @Suppress("DEPRECATION")
-                        manager.callState == TelephonyManager.CALL_STATE_IDLE
+                        manager.getCallStateForSubscription() == TelephonyManager.CALL_STATE_IDLE
                     }
                 } else {
                     emptyList()
@@ -267,7 +276,9 @@ class CallTracker
         }
 
         private suspend fun refreshStatus(force: Boolean = false) {
-            if (!force && _status.value is TrackingStatus.Error) return
+            if (!force && _status.value is TrackingStatus.Error) {
+                if (!permissionManager.hasPhoneStatePermission()) return
+            }
 
             val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
             _status.value = if (hasActiveCalls) TrackingStatus.Active else TrackingStatus.Idle

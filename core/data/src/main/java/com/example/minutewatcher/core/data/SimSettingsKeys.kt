@@ -27,6 +27,8 @@ object SimSettingsKeys {
 
     fun simOperatorKey(identity: String) = stringPreferencesKey("sim_operator_$identity")
 
+    fun customSimOperatorKey(identity: String) = stringPreferencesKey("custom_sim_operator_$identity")
+
     fun simCodeKey(identity: String) = stringPreferencesKey("sim_code_$identity")
 
     fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")

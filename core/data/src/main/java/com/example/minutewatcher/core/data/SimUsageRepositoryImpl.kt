@@ -30,7 +30,9 @@ class SimUsageRepositoryImpl
                     identity = identity,
                     slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
                     subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
-                    operator = prefs[SimSettingsKeys.simOperatorKey(identity)] ?: "",
+                    operator = prefs[SimSettingsKeys.customSimOperatorKey(identity)]
+                        ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
+                        ?: "",
                     minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
                     minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
                     trafficUsed = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
@@ -186,12 +188,12 @@ class SimUsageRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.lastResetDateKey(identity)] = value }
         }
 
-        override fun getLastTotalBytes(identity: String): Flow<Long> = get(SettingsKeys.lastTotalBytesKey(identity), -1L)
+        override fun getLastTotalBytes(identity: String): Flow<Long> = get(SettingsKeys.Dynamic.lastTotalBytesKey(identity), -1L)
 
         override suspend fun setLastTotalBytes(
             identity: String,
             bytes: Long,
         ) {
-            dataStore.edit { it[SettingsKeys.lastTotalBytesKey(identity)] = bytes }
+            dataStore.edit { it[SettingsKeys.Dynamic.lastTotalBytesKey(identity)] = bytes }
         }
     }

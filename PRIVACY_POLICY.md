@@ -7,7 +7,7 @@ MinuteWatcher ("the App") is committed to protecting your privacy. This policy e
 ## 1. Data Collection and Usage
 MinuteWatcher tracks your mobile carrier's minutes and data usage locally on your device.
 
-*   **Call Data:** The App monitors the "Off-hook" and "Idle" states of your device to calculate the duration of outgoing and incoming calls. It does **not** read your call history, logs, or contact list.
+*   **Call Data:** The App monitors the "Off-hook" and "Idle" states of your device to calculate the duration of outgoing and incoming calls. It does **not** read your call history, logs, or contact list. On older Android versions (API 30 and below) with multiple active SIMs, the App may use heuristic methods to attribute call completion events to the correct SIM due to system limitations.
 *   **Traffic Data:** The App queries system statistics for mobile data consumption. This data is used solely to display remaining balances against your configured limits.
 *   **SIM Identification:** The App uses stable system-provided IDs to distinguish between multiple SIM cards. It does **not** access your phone number.
 

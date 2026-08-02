@@ -15,7 +15,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -46,14 +45,14 @@ class TrafficTrackerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1700000000000L)
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
 
     private lateinit var tracker: TrafficTracker
 
     @Before
-    fun setup() {
-        whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
+    fun setup() =
+        runTest(testDispatcher) {
+            whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
@@ -92,13 +91,13 @@ class TrafficTrackerTest {
                 callSessionRepository,
                 permissionManager,
                 timeProvider,
-                testScope,
+                TestScope(testDispatcher),
             )
     }
 
     @Test
     fun `updateTrafficUsage initializes baseline on first run`() =
-        runTest {
+        runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1000L)
             whenever(bucket.txBytes).thenReturn(500L)
@@ -123,7 +122,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles SecurityException gracefully`() =
-        runTest {
+        runTest(testDispatcher) {
             whenever(networkStatsManager.querySummaryForDevice(anyInt(), anyOrNull(), anyLong(), anyLong()))
                 .thenThrow(SecurityException("No permission"))
 
@@ -136,7 +135,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage reports error when Usage Access is missing`() =
-        runTest {
+        runTest(testDispatcher) {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
 
             tracker.updateTrafficUsage()
@@ -148,7 +147,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage increments usage based on delta`() =
-        runTest {
+        runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1000L)
             whenever(bucket.txBytes).thenReturn(500L)
@@ -173,7 +172,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles network stats unavailable`() =
-        runTest {
+        runTest(testDispatcher) {
             whenever(
                 networkStatsManager.querySummaryForDevice(
                     any(),
@@ -190,7 +189,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `findSingleActiveSimSlot returns slot when only one SIM has valid operator`() =
-        runTest {
+        runTest(testDispatcher) {
             // No default data subId
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
 
@@ -217,7 +216,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles SIM swap by resetting baseline`() =
-        runTest {
+        runTest(testDispatcher) {
             // First run: SubId 1
             val bucket1 = mock<NetworkStats.Bucket>()
             whenever(bucket1.rxBytes).thenReturn(1000L)
@@ -245,7 +244,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `resetBaseline initializes storage correctly`() =
-        runTest {
+        runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)
             whenever(bucket.txBytes).thenReturn(0L)
@@ -259,7 +258,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage respects small deltas`() =
-        runTest {
+        runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1050L)
             whenever(bucket.txBytes).thenReturn(0L)
@@ -283,7 +282,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles reboot or overflow`() =
-        runTest {
+        runTest(testDispatcher) {
             // lastTotalBytes = 1000, current = 500 (reboot)
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(500L)
@@ -298,7 +297,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `test recover updates status`() =
-        runTest {
+        runTest(testDispatcher) {
             // Setup valid bucket for updateTrafficUsage inside recover()
             val bucket = mock<NetworkStats.Bucket>()
             whenever(bucket.rxBytes).thenReturn(1500L)
@@ -308,7 +307,7 @@ class TrafficTrackerTest {
 
             // Act
             tracker.recover()
-            testScope.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Assert
             assertEquals(TrackingStatus.Active, tracker.status.value)

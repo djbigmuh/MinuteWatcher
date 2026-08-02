@@ -28,13 +28,15 @@ object SettingsKeys {
 
     const val CURRENT_DATA_SCHEMA_VERSION = 2
 
-    fun callStartTimeKey(subId: Int) = longPreferencesKey("call_start_time_$subId")
+    object Dynamic {
+        fun callStartTimeKey(subId: Int) = longPreferencesKey("call_start_time_$subId")
 
-    fun bootTimeKey(subId: Int) = longPreferencesKey("boot_time_$subId")
+        fun bootTimeKey(subId: Int) = longPreferencesKey("boot_time_$subId")
 
-    fun uptimeKey(subId: Int) = longPreferencesKey("uptime_$subId")
+        fun uptimeKey(subId: Int) = longPreferencesKey("uptime_$subId")
 
-    fun callIdentityKey(subId: Int) = stringPreferencesKey("call_identity_$subId")
+        fun callIdentityKey(subId: Int) = stringPreferencesKey("call_identity_$subId")
 
-    fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
+        fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
+    }
 }

@@ -38,6 +38,9 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew :app:assembleDebug
 
+    - name: Build Release APK (Check R8 & ProGuard)
+      run: ./gradlew :app:assembleRelease
+
     - name: Check for uncommitted changes
       run: |
         if [[ -n $(git status --porcelain) ]]; then

@@ -100,9 +100,15 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         var snapshot = usageRepository.observeSnapshot().value
         if (snapshot.timestamp == 0L) {
             // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
-            snapshot = withTimeoutOrNull(WIDGET_REFRESH_TIMEOUT) {
-                usageRepository.refresh().snapshot
-            } ?: snapshot
+            snapshot =
+                try {
+                    withTimeoutOrNull(WIDGET_REFRESH_TIMEOUT) {
+                        usageRepository.refresh().snapshot
+                    } ?: snapshot
+                } catch (e: Exception) {
+                    AppLogger.e("Widget refresh failed", e)
+                    snapshot
+                }
         }
 
         val settingsState =
@@ -154,11 +160,23 @@ private fun WidgetContent(
 
     Box(
         modifier =
-            GlanceModifier
-                .fillMaxSize()
-                .background(ColorProvider(day = bgColor, night = bgColor))
-                .appWidgetBackground()
-                .clickable(actionStartActivity(ComponentName(context, navigationProvider.mainActivityClassName))),
+            run {
+                var modifier =
+                    GlanceModifier
+                        .fillMaxSize()
+                        .background(ColorProvider(day = bgColor, night = bgColor))
+                        .appWidgetBackground()
+
+                val className = navigationProvider.mainActivityClassName
+                if (className.isNotEmpty()) {
+                    try {
+                        modifier = modifier.clickable(actionStartActivity(ComponentName(context, className)))
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to attach click action to widget", e)
+                    }
+                }
+                modifier
+            },
         contentAlignment = Alignment.Center,
     ) {
         val simUiStates = uiState.simUiStates.filter { it.showSim }

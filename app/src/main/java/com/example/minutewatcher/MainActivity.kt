@@ -10,7 +10,6 @@ import android.content.LocusId
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -275,16 +274,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openAppSettings() {
-        val intent =
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = android.net.Uri.fromParts("package", packageName, null)
-            }
-        startActivity(intent)
+        startActivity(NavigationIntentFactory.getAppSettingsIntent(this))
     }
 
     private fun openUsageAccessSettings() {
         try {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent())
         } catch (e: ActivityNotFoundException) {
             AppLogger.e("Usage access settings not found, opening app settings", e)
             openAppSettings()
@@ -322,7 +317,6 @@ class MainActivity : AppCompatActivity() {
         viewModel.onActivityResume(
             nowElapsed = SystemClock.elapsedRealtime(),
             currentTimeMillis = System.currentTimeMillis(),
-            permissionStateNotifier = permissionStateNotifier,
         )
 
         if (permissionManager.hasPhoneStatePermission()) {

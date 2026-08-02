@@ -23,7 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -130,10 +129,9 @@ class SimIdentityRepositoryImpl
             combine(
                 physicalActiveSims,
                 appSettingsRepository.observeAppSettings(),
-                seedFlow,
-            ) { physical, settings, seed ->
-                Triple(physical, settings, seed)
-            }.flatMapLatest { (physical, settings, seed) ->
+            ) { physical, settings ->
+                physical to settings
+            }.flatMapLatest { (physical, settings) ->
                 flow {
                     if (settings.benchmarkSimCount > 0) {
                         emit(generateMockActiveSims(settings.benchmarkSimCount))
@@ -147,29 +145,27 @@ class SimIdentityRepositoryImpl
                 initialValue = emptyList(),
             )
 
-        private suspend fun generateMockActiveSims(count: Int): List<ActiveSimInfo> {
+        private fun generateMockActiveSims(count: Int): List<ActiveSimInfo> {
             val safeCount = count.coerceIn(0, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
-            return coroutineScope {
-                (0 until safeCount).map { i ->
-                    val identity =
-                        SimIdentity(
-                            stableId = "sim_$i",
-                            subscriptionId = SimConstants.MOCK_SUB_ID_BASE + i,
-                            slotIndex = i,
-                            source = IdentitySource.SLOT_FALLBACK,
-                        )
-
-                    ActiveSimInfo(
-                        identity = identity,
+            return (0 until safeCount).map { i ->
+                val identity =
+                    SimIdentity(
+                        stableId = "sim_$i",
+                        subscriptionId = SimConstants.MOCK_SUB_ID_BASE + i,
                         slotIndex = i,
-                        subscriptionId = identity.subscriptionId ?: (SimConstants.MOCK_SUB_ID_BASE + i),
-                        displayName = "SIM ${i + 1}",
-                        carrierName = "Mock Carrier ${i + 1}",
-                        mccMnc = "001001",
-                        isDefaultData = i == DEFAULT_SIM_INDEX,
-                        isDefaultVoice = i == DEFAULT_SIM_INDEX,
+                        source = IdentitySource.SLOT_FALLBACK,
                     )
-                }
+
+                ActiveSimInfo(
+                    identity = identity,
+                    slotIndex = i,
+                    subscriptionId = identity.subscriptionId ?: (SimConstants.MOCK_SUB_ID_BASE + i),
+                    displayName = "SIM ${i + 1}",
+                    carrierName = "Mock Carrier ${i + 1}",
+                    mccMnc = "001001",
+                    isDefaultData = i == DEFAULT_SIM_INDEX,
+                    isDefaultVoice = i == DEFAULT_SIM_INDEX,
+                )
             }
         }
 
@@ -214,7 +210,7 @@ class SimIdentityRepositoryImpl
             val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
             val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
 
-            if (currentSlot == slot && currentSub == subId) return
+            if ((currentSlot == slot) && (currentSub == subId)) return
 
             dataStore.edit { prefs ->
                 slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }
@@ -268,13 +264,35 @@ class SimIdentityRepositoryImpl
             defaultValue: T,
         ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-        override fun getSimOperator(identity: String): Flow<String> = get(SimSettingsKeys.simOperatorKey(identity), "")
+        override fun getSimOperator(identity: String): Flow<String> =
+            combine(
+                get(SimSettingsKeys.simOperatorKey(identity), ""),
+                getCustomSimOperator(identity),
+            ) { resolved, custom ->
+                custom ?: resolved
+            }
+
+        override fun getCustomSimOperator(identity: String): Flow<String?> =
+            dataStore.data.map { it[SimSettingsKeys.customSimOperatorKey(identity)] }
 
         override suspend fun setSimOperator(
             identity: String,
             name: String,
         ) {
             dataStore.edit { it[SimSettingsKeys.simOperatorKey(identity)] = name }
+        }
+
+        override suspend fun setCustomSimOperator(
+            identity: String,
+            name: String?,
+        ) {
+            dataStore.edit { prefs ->
+                if (name == null) {
+                    prefs.remove(SimSettingsKeys.customSimOperatorKey(identity))
+                } else {
+                    prefs[SimSettingsKeys.customSimOperatorKey(identity)] = name
+                }
+            }
         }
 
         override fun getSimCode(identity: String): Flow<String> = get(SimSettingsKeys.simCodeKey(identity), "")

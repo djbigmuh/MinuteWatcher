@@ -24,7 +24,9 @@ class WidgetUpdaterImpl
                 try {
                     MinutesGlanceWidget().updateAll(context)
                 } catch (e: IllegalArgumentException) {
-                    AppLogger.e("Widget update failed: invalid arguments (possible PendingIntent issue)", e)
+                    // Narrowed down: IAE during updateAll is often related to RemoteViews size limits 
+                    // or internal PendingIntent issues in older Glance versions.
+                    AppLogger.e("Glance internal error during updateAll", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

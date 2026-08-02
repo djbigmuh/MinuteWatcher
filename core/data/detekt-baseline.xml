@@ -2,15 +2,10 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongParameterList:InitialSetupWorker.kt$InitialSetupWorker$( @Assisted appContext: Context, @Assisted workerParams: WorkerParameters, private val callTracker: CallTracker, private val trafficTracker: TrafficTracker, private val simIdentityRepository: SimIdentityRepository, private val migrationFlagsRepository: MigrationFlagsRepository, private val usageStateRepository: UsageStateRepository, private val autoResetUseCase: AutoResetUseCase, private val usageUseCase: UsageUseCase, private val migrationService: IdentityMigrationService, private val dataChangeNotifier: DataChangeNotifier, private val workScheduler: WorkScheduler, )</ID>
-    <ID>LongParameterList:UsageCheckWorker.kt$UsageCheckWorker$( @Assisted context: Context, @Assisted params: WorkerParameters, private val simIdentityRepository: SimIdentityRepository, private val simUsageRepository: SimUsageRepository, private val simNotificationFlagsRepository: SimNotificationFlagsRepository, private val appSettingsRepository: AppSettingsRepository, private val autoResetUseCase: AutoResetUseCase, private val trafficTracker: TrafficTracker, private val notificationHelper: NotificationHelper, private val dataChangeNotifier: DataChangeNotifier, private val usageStateRepository: UsageStateRepository, private val usageUseCase: UsageUseCase, private val timeProvider: TimeProvider, @IoDispatcher private val ioDispatcher: CoroutineDispatcher, )</ID>
     <ID>MagicNumber:SemanticMapper.kt$SemanticMapper$1024</ID>
     <ID>MagicNumber:SemanticMapper.kt$SemanticMapper$1024L</ID>
     <ID>MagicNumber:TrafficTracker.kt$TrafficTracker$0.0001f</ID>
     <ID>MaxLineLength:IdentityMigrationService.kt$IdentityMigrationService$AppLogger.w("Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}")</ID>
-    <ID>MaxLineLength:SimRepositoryImplTest.kt$SimRepositoryImplTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope, timeProvider)</ID>
-    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$SimRepositoryImpl(context, subscriptionManager, permissionManager, permissionStateNotifier, dataStore, seedRepository, backgroundScope, timeProvider)</ID>
-    <ID>MaxLineLength:SimVisibilityTest.kt$SimVisibilityTest$assertTrue("Should have more than $initialSize emissions, but had ${simsList.size}. List: $simsList", simsList.size &gt; initialSize)</ID>
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$unit = MeasurementUnit.MINUTES</ID>
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))</ID>
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))</ID>
@@ -21,11 +16,8 @@
     <ID>ReturnCount:CallTracker.kt$CallTracker$suspend fun onCallEnded(subId: Int)</ID>
     <ID>ReturnCount:IdentityMigrationService.kt$IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey(activeIdentities: Set&lt;String&gt;): Boolean</ID>
     <ID>ReturnCount:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
-    <ID>ReturnCount:SimRepositoryImpl.kt$SimRepositoryImpl$override suspend fun getSimIdentity(slot: Int): SimIdentity</ID>
+    <ID>ReturnCount:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl$override suspend fun getSimIdentity(slot: Int): SimIdentity</ID>
     <ID>ReturnCount:TrafficTracker.kt$TrafficTracker$private suspend fun getTargetSimInfo(): Pair&lt;Int, Int&gt;?</ID>
     <ID>TooManyFunctions:SettingsKeys.kt$SettingsKeys</ID>
-    <ID>UnusedImports:SimRepositoryImplTest.kt$import kotlinx.coroutines.test.UnconfinedTestDispatcher</ID>
-    <ID>UnusedImports:TrafficTrackerTest.kt$import org.mockito.kotlin.doReturn</ID>
-    <ID>UnusedImports:UsageUseCaseImpl.kt$import android.telephony.SubscriptionInfo</ID>
   </CurrentIssues>
 </SmellBaseline>

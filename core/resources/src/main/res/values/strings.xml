@@ -171,6 +171,19 @@
     <string name="operator_zain" translatable="false">Zain</string>
     <string name="operator_etisalat" translatable="false">Etisalat</string>
     <string name="operator_du" translatable="false">du</string>
+    <string name="operator_kpn" translatable="false">KPN</string>
+    <string name="operator_proximus" translatable="false">Proximus</string>
+    <string name="operator_swisscom" translatable="false">Swisscom</string>
+    <string name="operator_sunrise" translatable="false">Sunrise</string>
+    <string name="operator_salt" translatable="false">Salt</string>
+    <string name="operator_telia" translatable="false">Telia</string>
+    <string name="operator_telenor" translatable="false">Telenor</string>
+    <string name="operator_elisa" translatable="false">Elisa</string>
+    <string name="operator_dna" translatable="false">DNA</string>
+    <string name="operator_plus" translatable="false">Plus</string>
+    <string name="operator_play" translatable="false">Play</string>
+    <string name="operator_turkcell" translatable="false">Turkcell</string>
+    <string name="operator_turk_telekom" translatable="false">Türk Telekom</string>
     <string name="operator_generic" translatable="false">Operator %1$d</string>
     <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
 

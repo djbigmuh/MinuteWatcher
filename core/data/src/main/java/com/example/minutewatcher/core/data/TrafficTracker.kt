@@ -162,8 +162,12 @@ class TrafficTracker
         }
 
         private fun handleStatsUnavailable(targetIdentity: String) {
-            AppLogger.d("Traffic stats unavailable for $targetIdentity")
-            _status.value = TrackingStatus.Idle
+            if (networkStatsManager == null) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "NetworkStatsManager unavailable")
+            } else {
+                AppLogger.d("Traffic stats unavailable for $targetIdentity")
+                _status.value = TrackingStatus.Idle
+            }
         }
 
         private suspend fun handleFirstRunOrReset(
@@ -253,7 +257,7 @@ class TrafficTracker
                 if (fallback != null) {
                     targetSim = fallback.first
                     currentDataSubId = fallback.second
-                    AppLogger.d("No default data SIM found. Using fallback Slot $targetSim")
+                    AppLogger.w("No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.")
                 }
             }
 

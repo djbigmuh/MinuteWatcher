@@ -53,6 +53,19 @@ object OperatorResolver {
             "operator_zain" to R.string.operator_zain,
             "operator_etisalat" to R.string.operator_etisalat,
             "operator_du" to R.string.operator_du,
+            "operator_kpn" to R.string.operator_kpn,
+            "operator_proximus" to R.string.operator_proximus,
+            "operator_swisscom" to R.string.operator_swisscom,
+            "operator_sunrise" to R.string.operator_sunrise,
+            "operator_salt" to R.string.operator_salt,
+            "operator_telia" to R.string.operator_telia,
+            "operator_telenor" to R.string.operator_telenor,
+            "operator_elisa" to R.string.operator_elisa,
+            "operator_dna" to R.string.operator_dna,
+            "operator_plus" to R.string.operator_plus,
+            "operator_play" to R.string.operator_play,
+            "operator_turkcell" to R.string.operator_turkcell,
+            "operator_turk_telekom" to R.string.operator_turk_telekom,
         )
 
     private fun loadDb(context: Context): Map<String, String> {
@@ -103,6 +116,8 @@ object OperatorResolver {
         if (resKey != null) {
             val resolvedFromDb = resolveFromDbKey(context, resKey)
             if (resolvedFromDb != null) return resolvedFromDb
+        } else if (networkOperator.isNotEmpty() && networkOperator != "00000") {
+            AppLogger.w("Unknown MCC/MNC detected: $networkOperator. Consider adding it to mcc_mnc_db.json")
         }
 
         return fallbackResolution(context, networkOperator, simSlot)

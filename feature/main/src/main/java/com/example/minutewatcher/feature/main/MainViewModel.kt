@@ -6,15 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.PermissionRepository
-import com.example.minutewatcher.core.domain.SettingsUseCase
-import com.example.minutewatcher.core.domain.SimIdentityRepository
-import com.example.minutewatcher.core.domain.SimLimitsRepository
-import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.RefreshState
@@ -41,31 +32,23 @@ import kotlin.time.Duration.Companion.seconds
 class MainViewModel
     @Inject
     constructor(
-        private val simIdentityRepository: SimIdentityRepository,
-        private val simLimitsRepository: SimLimitsRepository,
-        private val appSettingsRepository: AppSettingsRepository,
-        private val usageStateRepository: UsageStateRepository,
-        private val autoResetUseCase: AutoResetUseCase,
-        private val usageUseCase: UsageUseCase,
-        private val settingsUseCase: SettingsUseCase,
-        permissionRepository: PermissionRepository,
-        private val dataChangeNotifier: DataChangeNotifier,
+        private val deps: MainViewModelDependencies,
         savedStateHandle: SavedStateHandle,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val dialogStateHolder = MainDialogStateHolder(savedStateHandle)
         private val bannerStateHolder =
             TrackingBannerStateHolder(
-                usageStateRepository = usageStateRepository,
-                permissionRepository = permissionRepository,
-                appSettingsRepository = appSettingsRepository,
+                usageStateRepository = deps.usageStateRepository,
+                permissionRepository = deps.permissionRepository,
+                appSettingsRepository = deps.appSettingsRepository,
                 scope = viewModelScope,
                 stateFlowTimeout = Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS,
             )
         private val refreshStateHolder =
             SimRefreshStateHolder(
-                usageUseCase = usageUseCase,
-                usageStateRepository = usageStateRepository,
+                usageUseCase = deps.usageUseCase,
+                usageStateRepository = deps.usageStateRepository,
                 ioDispatcher = ioDispatcher,
             )
 
@@ -93,20 +76,20 @@ class MainViewModel
 
         fun setNotificationPermissionRequested() {
             viewModelScope.launch {
-                appSettingsRepository.updateAppSettings { it.copy(notificationPermissionRequested = true) }
+                deps.appSettingsRepository.updateAppSettings { it.copy(notificationPermissionRequested = true) }
             }
         }
 
         fun setPhonePermissionRequested() {
             viewModelScope.launch {
-                appSettingsRepository.updateAppSettings { it.copy(phonePermissionRequested = true) }
+                deps.appSettingsRepository.updateAppSettings { it.copy(phonePermissionRequested = true) }
             }
         }
 
         val showOnboardingDialog: StateFlow<Boolean> = dialogStateHolder.showOnboardingDialog
 
         val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> =
-            appSettingsRepository
+            deps.appSettingsRepository
                 .observeAppSettings()
                 .stateIn(
                     scope = viewModelScope,
@@ -119,7 +102,7 @@ class MainViewModel
         fun completeOnboarding() {
             dialogStateHolder.setShowOnboardingDialog(false)
             viewModelScope.launch {
-                appSettingsRepository.updateAppSettings { it.copy(onboardingCompleted = true) }
+                deps.appSettingsRepository.updateAppSettings { it.copy(onboardingCompleted = true) }
             }
         }
 
@@ -127,7 +110,7 @@ class MainViewModel
         val trackingBannerState: StateFlow<TrackingBannerState> = bannerStateHolder.trackingBannerState
 
         val uiState: StateFlow<SimCardListState> =
-            usageStateRepository
+            deps.usageStateRepository
                 .observeSimCardUiModels()
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
@@ -144,7 +127,7 @@ class MainViewModel
         fun consumeRefreshStatus() = refreshStateHolder.consumeRefreshStatus()
 
         val appTheme: StateFlow<AppTheme> =
-            settingsUseCase.appTheme
+            deps.settingsUseCase.appTheme
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
@@ -158,12 +141,12 @@ class MainViewModel
         private fun initializeApp() {
             viewModelScope.launch(ioDispatcher) {
                 try {
-                    val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
+                    val settings = deps.appSettingsRepository.getAppSettings().firstWithTimeout()
                     if (settings?.onboardingCompleted == false) {
                         dialogStateHolder.setShowOnboardingDialog(true)
                     }
-                    val result = usageStateRepository.refresh()
-                    autoResetUseCase.performAutoReset(result.snapshot)
+                    val result = deps.usageStateRepository.refresh()
+                    deps.autoResetUseCase.performAutoReset(result.snapshot)
                     refreshSimCards()
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
@@ -173,7 +156,7 @@ class MainViewModel
 
         fun setTheme(theme: AppTheme) {
             viewModelScope.launch {
-                settingsUseCase.setTheme(theme)
+                deps.settingsUseCase.setTheme(theme)
             }
         }
 
@@ -184,19 +167,19 @@ class MainViewModel
         }
 
         fun retryAppSearch() {
-            usageStateRepository.recoverTracking("appsearch")
+            deps.usageStateRepository.recoverTracking("appsearch")
         }
 
         fun retryCalls() {
-            usageStateRepository.recoverTracking("calls")
+            deps.usageStateRepository.recoverTracking("calls")
         }
 
         fun retryShortcuts() {
-            usageStateRepository.recoverTracking("shortcuts")
+            deps.usageStateRepository.recoverTracking("shortcuts")
         }
 
         fun retryTraffic() {
-            usageStateRepository.recoverTracking("traffic")
+            deps.usageStateRepository.recoverTracking("traffic")
             refreshSimCards()
         }
 
@@ -209,17 +192,17 @@ class MainViewModel
 
         private suspend fun refreshAndNotify(force: Boolean = true) {
             refreshStateHolder.refreshSimCardsInternal()
-            dataChangeNotifier.notifyDataChanged(updateWidget = true, force = force)
+            deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = force)
         }
 
         fun notifyDataChanged(force: Boolean = false) {
             viewModelScope.launch {
-                dataChangeNotifier.notifyDataChanged(force = force)
+                deps.dataChangeNotifier.notifyDataChanged(force = force)
             }
         }
 
         val appLanguage: StateFlow<String?> =
-            settingsUseCase.appLanguage
+            deps.settingsUseCase.appLanguage
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
@@ -228,7 +211,7 @@ class MainViewModel
 
         fun setLanguage(language: String?) {
             viewModelScope.launch {
-                settingsUseCase.setLanguage(language)
+                deps.settingsUseCase.setLanguage(language)
             }
         }
 
@@ -239,15 +222,15 @@ class MainViewModel
             rolloverEnabled: Boolean = false,
         ) {
             viewModelScope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
+                val identity = deps.simIdentityRepository.getIdentity(slot)
+                deps.simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
                 refreshAndNotify()
             }
         }
 
         fun resetUsage(slot: Int) {
             viewModelScope.launch(ioDispatcher) {
-                usageUseCase.resetCounters(slot)
+                deps.usageUseCase.resetCounters(slot)
                 refreshAndNotify()
             }
         }
@@ -257,15 +240,15 @@ class MainViewModel
             enabled: Boolean,
         ) {
             viewModelScope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
+                val identity = deps.simIdentityRepository.getIdentity(slot)
                 val currentState = uiState.value
                 val currentDay =
                     if (currentState is SimCardListState.Success) {
                         currentState.simCards.find { it.slot == slot }?.autoResetDay ?: 1
                     } else {
-                        simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
+                        deps.simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
                     }
-                simLimitsRepository.setAutoReset(identity, currentDay, enabled)
+                deps.simLimitsRepository.setAutoReset(identity, currentDay, enabled)
                 refreshAndNotify()
             }
         }
@@ -275,15 +258,15 @@ class MainViewModel
             day: Int,
         ) {
             viewModelScope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
+                val identity = deps.simIdentityRepository.getIdentity(slot)
                 val currentState = uiState.value
                 val enabled =
                     if (currentState is SimCardListState.Success) {
                         currentState.simCards.find { it.slot == slot }?.autoResetEnabled ?: false
                     } else {
-                        simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
+                        deps.simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
                     }
-                simLimitsRepository.setAutoReset(identity, day, enabled)
+                deps.simLimitsRepository.setAutoReset(identity, day, enabled)
                 refreshAndNotify()
             }
         }
@@ -293,7 +276,7 @@ class MainViewModel
             remainingMinutes: Int,
         ) {
             viewModelScope.launch(ioDispatcher) {
-                usageUseCase.adjustMinutes(slot, remainingMinutes)
+                deps.usageUseCase.adjustMinutes(slot, remainingMinutes)
                 refreshAndNotify()
             }
         }
@@ -303,7 +286,7 @@ class MainViewModel
             remainingGb: Float,
         ) {
             viewModelScope.launch(ioDispatcher) {
-                usageUseCase.adjustTraffic(slot, remainingGb)
+                deps.usageUseCase.adjustTraffic(slot, remainingGb)
                 refreshAndNotify()
             }
         }
@@ -327,7 +310,6 @@ class MainViewModel
         fun onActivityResume(
             nowElapsed: Long,
             currentTimeMillis: Long,
-            permissionStateNotifier: com.example.minutewatcher.core.domain.PermissionStateNotifier,
         ) {
             if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
                 lastRefreshAt = nowElapsed
@@ -336,7 +318,7 @@ class MainViewModel
             }
 
             if (currentTimeMillis - lastResumeNotifyTime > Constants.MILLIS_PER_SECOND) {
-                permissionStateNotifier.notifyChanged()
+                deps.permissionStateNotifier.notifyChanged()
                 lastResumeNotifyTime = currentTimeMillis
             }
         }

@@ -24,6 +24,13 @@ interface SimIdentityRepository {
         name: String,
     )
 
+    fun getCustomSimOperator(identity: String): Flow<String?>
+
+    suspend fun setCustomSimOperator(
+        identity: String,
+        name: String?,
+    )
+
     suspend fun setSimCode(
         identity: String,
         code: String,
