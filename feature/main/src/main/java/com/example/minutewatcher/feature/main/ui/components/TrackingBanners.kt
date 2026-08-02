@@ -62,6 +62,10 @@ private fun ErrorBanners(
         state = state,
         onRetryTraffic = callbacks.onRetryTraffic,
     )
+    TrafficFallbackBanner(
+        state = state,
+        onRetryTraffic = callbacks.onRetryTraffic,
+    )
     CallsErrorBanner(
         state = state,
         onRetryCalls = callbacks.onRetryCalls,
@@ -158,6 +162,22 @@ private fun TrafficErrorBanner(
             onAction = onRetryTraffic,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
+private fun TrafficFallbackBanner(
+    state: TrackingBannerState,
+    onRetryTraffic: () -> Unit,
+) {
+    if (state.showTrafficFallbackBanner) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_traffic_fallback, state.trafficFallbackSlot + 1),
+            actionText = stringResource(id = R.string.action_retry),
+            onAction = onRetryTraffic,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         )
     }
 }

@@ -28,8 +28,10 @@ class BenchmarkPopulateWorker
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
-                if (!com.example.minutewatcher.core.common.BuildConfig.DEBUG) {
-                    AppLogger.w("BenchmarkPopulateWorker blocked: Not in DEBUG mode")
+                val isAllowed = com.example.minutewatcher.core.common.BuildConfig.DEBUG ||
+                    com.example.minutewatcher.core.common.BuildConfig.BUILD_TYPE == "benchmark"
+                if (!isAllowed) {
+                    AppLogger.w("BenchmarkPopulateWorker blocked: Not in DEBUG or BENCHMARK mode")
                     return@withContext Result.failure()
                 }
 

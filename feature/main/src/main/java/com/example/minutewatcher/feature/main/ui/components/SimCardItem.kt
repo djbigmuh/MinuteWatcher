@@ -80,20 +80,43 @@ fun SimCardItem(
                 },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            SimCardHeader(model = model, onSetLimits = onSetLimits)
-            Spacer(modifier = Modifier.height(16.dp))
-            MinutesSection(model = model, onAdjustMinutes = onAdjustMinutes)
-            TrafficSection(model = model, onAdjustTraffic = onAdjustTraffic, onShowTrafficInfo = onShowTrafficInfo)
-            TextButton(onClick = onResetCounters, modifier = Modifier.padding(top = 4.dp)) {
-                Text(text = stringResource(id = R.string.reset_counters))
-            }
-            AutoResetSection(
-                model = model,
-                onToggleAutoReset = onToggleAutoReset,
-                onEditAutoResetDay = onEditAutoResetDay,
-            )
+        SimCardContent(
+            model = model,
+            onSetLimits = onSetLimits,
+            onResetCounters = onResetCounters,
+            onToggleAutoReset = onToggleAutoReset,
+            onEditAutoResetDay = onEditAutoResetDay,
+            onAdjustMinutes = onAdjustMinutes,
+            onAdjustTraffic = onAdjustTraffic,
+            onShowTrafficInfo = onShowTrafficInfo,
+        )
+    }
+}
+
+@Composable
+private fun SimCardContent(
+    model: SimCardUiModel,
+    onSetLimits: () -> Unit,
+    onResetCounters: () -> Unit,
+    onToggleAutoReset: (Boolean) -> Unit,
+    onEditAutoResetDay: () -> Unit,
+    onAdjustMinutes: () -> Unit,
+    onAdjustTraffic: () -> Unit,
+    onShowTrafficInfo: () -> Unit,
+) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        SimCardHeader(model = model, onSetLimits = onSetLimits)
+        Spacer(modifier = Modifier.height(16.dp))
+        MinutesSection(model = model, onAdjustMinutes = onAdjustMinutes)
+        TrafficSection(model = model, onAdjustTraffic = onAdjustTraffic, onShowTrafficInfo = onShowTrafficInfo)
+        TextButton(onClick = onResetCounters, modifier = Modifier.padding(top = 4.dp)) {
+            Text(text = stringResource(id = R.string.reset_counters))
         }
+        AutoResetSection(
+            model = model,
+            onToggleAutoReset = onToggleAutoReset,
+            onEditAutoResetDay = onEditAutoResetDay,
+        )
     }
 }
 

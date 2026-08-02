@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
@@ -124,12 +125,13 @@ open class SemanticSearchManager
                     try {
                         withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                             val documents = convertSnapshotToDocuments(snapshot)
-                            performIndexUpdate(documents, snapshot)
+                            performIndexUpdate(documents)
                             lastSnapshotHash = currentHash
                             _status.value = TrackingStatus.Active
                         }
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch indexing error", e)
+                        lastSnapshotHash = -1
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }
                 }
@@ -150,13 +152,11 @@ open class SemanticSearchManager
 
         private suspend fun performIndexUpdate(
             documents: List<UsageDocument>,
-            snapshot: GlobalSnapshot,
         ) {
             val currentIds = documents.map { it.id }.toSet()
 
             val staleIds = mutableSetOf<String>()
-            snapshot.simSnapshots.forEach { sim ->
-                val slot = sim.slot
+            SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
                 val possibleIds =
                     listOf(
                         SemanticMapper.getDocumentId(slot, PackageType.MINUTES),

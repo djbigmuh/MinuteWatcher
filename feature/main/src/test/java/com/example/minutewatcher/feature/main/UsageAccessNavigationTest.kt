@@ -72,7 +72,7 @@ class UsageAccessNavigationTest {
 
         whenever(usageStateRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
+        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock<com.example.minutewatcher.core.model.GlobalSnapshot>()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
@@ -87,7 +87,7 @@ class UsageAccessNavigationTest {
             simIdentityRepository = simIdentityRepository,
             simLimitsRepository = simLimitsRepository,
             usageUseCase = usageUseCase,
-            dataChangeNotifier = mock(),
+            dataChangeNotifier = mock<com.example.minutewatcher.core.domain.DataChangeNotifier>(),
             ioDispatcher = testDispatcher
         )
 
@@ -101,7 +101,6 @@ class UsageAccessNavigationTest {
                 appSettingsRepository = appSettingsRepository,
                 usageStateRepository = usageStateRepository,
                 autoResetUseCase = autoResetUseCase,
-                permissionStateNotifier = mock(),
                 ioDispatcher = testDispatcher,
             )
     }

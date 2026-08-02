@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,13 +56,14 @@ class MainSimDataController @Inject constructor(
     private val _highlightedSlot = MutableStateFlow<Int?>(null)
     val highlightedSlot: StateFlow<Int?> = _highlightedSlot.asStateFlow()
 
+    private var highlightJob: Job? = null
+
     fun highlightSlot(slot: Int) {
+        highlightJob?.cancel()
         _highlightedSlot.value = slot
-        scope.launch {
+        highlightJob = scope.launch {
             delay(HIGHLIGHT_DELAY_SECONDS.seconds)
-            if (_highlightedSlot.value == slot) {
-                _highlightedSlot.value = null
-            }
+            _highlightedSlot.value = null
         }
     }
 

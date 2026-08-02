@@ -40,4 +40,8 @@ dependencies {
     ksp(libs.daggerHiltCompiler)
     implementation(libs.kotlinxCoroutinesCore)
     implementation(libs.javaxInject)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockingKotlin)
+    testImplementation(libs.mockingCore)
 }

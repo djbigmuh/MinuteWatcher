@@ -54,6 +54,7 @@
     <string name="tracking_banner_phone_permission">Phone permission is required to identify SIM cards. Some features may not work.</string>
     <string name="tracking_banner_usage_access">Usage Access is required to track mobile data usage accurately.</string>
     <string name="tracking_banner_traffic_error">There was an error updating traffic data.</string>
+    <string name="tracking_banner_traffic_fallback">Default Data SIM not identified. Attributing traffic to Slot %1$d. Check SIM settings if this is incorrect.</string>
     <string name="tracking_banner_calls_error">There was an error updating call tracking data.</string>
     <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated.</string>
     <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
@@ -68,6 +69,7 @@
     <string name="action_retry">Retry</string>
     <string name="validation_error_invalid_range">Please enter a value between %1$s and %2$s</string>
     <string name="validation_error_invalid_number">Please enter a valid number</string>
+    <string name="validation_error_field_required">Field cannot be empty</string>
     <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
     <string name="widget_already_added">Widget already added to the home screen</string>
     <string name="widget_added_success">Widget added to the home screen</string>

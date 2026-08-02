@@ -23,12 +23,15 @@ import com.example.minutewatcher.core.model.TrafficModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -41,7 +44,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Singleton
 class UsageStateRepositoryImpl
     @Inject
@@ -74,12 +77,20 @@ class UsageStateRepositoryImpl
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
             simIdentityRepository
-                .observeIdentities()
-                .flatMapLatest { identities ->
-                    if (identities.isEmpty()) {
+                .observeActiveSims()
+                .debounce(300.milliseconds)
+                .distinctUntilChanged()
+                .flatMapLatest { sims ->
+                    if (sims.isEmpty()) {
                         flowOf(emptyList())
                     } else {
-                        combine(identities.map { simUsageRepository.getSimUsage(it) }) { it.toList() }
+                        combine(
+                            sims.map { sim ->
+                                simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
+                                    usage.copy(slotIndex = sim.slotIndex)
+                                }
+                            },
+                        ) { it.toList() }
                     }
                 }
 
@@ -149,6 +160,7 @@ class UsageStateRepositoryImpl
                         identity = usage.identity,
                         operator = operator,
                         isActive = isActive,
+                        autoResetDay = usage.autoResetDay,
                         entities = entities,
                     )
                 }

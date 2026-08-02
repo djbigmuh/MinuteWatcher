@@ -43,8 +43,20 @@ object TrackingBannerMapper {
             showTrafficErrorBanner =
                 (
                     traffic is TrackingStatus.Error &&
-                        traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                        traffic.type != TrackingStatus.ErrorType.PERMISSION_MISSING &&
+                        traffic.type != TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
                 ),
+            showTrafficFallbackBanner =
+                (
+                    traffic is TrackingStatus.Error &&
+                        traffic.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
+                ),
+            trafficFallbackSlot =
+                if (traffic is TrackingStatus.Error && traffic.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION) {
+                    traffic.message?.toIntOrNull() ?: -1
+                } else {
+                    -1
+                },
             showCallsErrorBanner =
                 (
                     calls is TrackingStatus.Error &&

@@ -15,22 +15,17 @@ import javax.inject.Singleton
 class MigrationFlagsRepositoryImpl
     @Inject
     constructor(
-        @AppDataStore private val dataStore: DataStore<Preferences>,
-    ) : MigrationFlagsRepository {
-        @Suppress("SameParameterValue") // Helper method used with different keys in other classes, here used with specific constants.
-        private fun <T> get(
-            key: Preferences.Key<T>,
-            defaultValue: T,
-        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
-
-        override fun isMigrationV1Completed(): Flow<Boolean> = get(SettingsKeys.MIGRATION_V1_COMPLETED, false)
+        @AppDataStore dataStore: DataStore<Preferences>,
+    ) : BaseDataStoreRepository(dataStore),
+        MigrationFlagsRepository {
+        override fun isMigrationV1Completed(): Flow<Boolean> = getData(SettingsKeys.MIGRATION_V1_COMPLETED, false)
 
         override suspend fun setMigrationV1Completed(completed: Boolean) {
             dataStore.edit { it[SettingsKeys.MIGRATION_V1_COMPLETED] = completed }
         }
 
         override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> =
-            get(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
+            getData(SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
 
         override suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean) {
             dataStore.edit { it[SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }

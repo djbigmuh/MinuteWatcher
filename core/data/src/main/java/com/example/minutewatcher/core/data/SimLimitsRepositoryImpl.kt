@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -31,9 +32,13 @@ class SimLimitsRepositoryImpl
             trafficLimitMb: Int,
             rolloverEnabled: Boolean,
         ) {
+            val safeMinutes = minutesLimit.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
+            val maxTrafficMb = (Constants.MAX_TRAFFIC_LIMIT_GB * Constants.MB_PER_GB).toInt()
+            val safeTraffic = trafficLimitMb.coerceIn(0, maxTrafficMb)
+
             dataStore.edit {
-                it[SimSettingsKeys.monthlyLimitKey(identity)] = minutesLimit
-                it[SimSettingsKeys.trafficLimitKey(identity)] = trafficLimitMb
+                it[SimSettingsKeys.monthlyLimitKey(identity)] = safeMinutes
+                it[SimSettingsKeys.trafficLimitKey(identity)] = safeTraffic
                 it[SimSettingsKeys.rolloverEnabledKey(identity)] = rolloverEnabled
             }
         }

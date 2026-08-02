@@ -14,16 +14,11 @@ import javax.inject.Singleton
 class SimNotificationFlagsRepositoryImpl
     @Inject
     constructor(
-        @SimDataStore private val dataStore: DataStore<Preferences>,
-    ) : SimNotificationFlagsRepository {
-        @Suppress("SameParameterValue") // Consistent pattern for DataStore helpers across repositories.
-        private fun <T> get(
-            key: Preferences.Key<T>,
-            defaultValue: T,
-        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
-
+        @SimDataStore dataStore: DataStore<Preferences>,
+    ) : BaseDataStoreRepository(dataStore),
+        SimNotificationFlagsRepository {
         override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> =
-            get(NotificationSettingsKeys.notifiedLowMinutesKey(identity), false)
+            getData(NotificationSettingsKeys.notifiedLowMinutesKey(identity), false)
 
         override suspend fun setNotifiedLowMinutes(
             identity: String,
@@ -33,7 +28,7 @@ class SimNotificationFlagsRepositoryImpl
         }
 
         override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> =
-            get(NotificationSettingsKeys.notifiedLowTrafficKey(identity), false)
+            getData(NotificationSettingsKeys.notifiedLowTrafficKey(identity), false)
 
         override suspend fun setNotifiedLowTraffic(
             identity: String,
@@ -43,7 +38,7 @@ class SimNotificationFlagsRepositoryImpl
         }
 
         override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> =
-            get(NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity), false)
+            getData(NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity), false)
 
         override suspend fun setNotifiedExhaustedMinutes(
             identity: String,
@@ -53,7 +48,7 @@ class SimNotificationFlagsRepositoryImpl
         }
 
         override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> =
-            get(NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity), false)
+            getData(NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity), false)
 
         override suspend fun setNotifiedExhaustedTraffic(
             identity: String,

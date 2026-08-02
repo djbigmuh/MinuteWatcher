@@ -21,10 +21,12 @@ class WidgetUpdaterImpl
         @ApplicationScope private val scope: CoroutineScope,
         private val appSettingsRepository: AppSettingsRepository,
     ) : WidgetUpdater {
+        private val widget = MinutesGlanceWidget()
+
         override fun updateAll() {
             scope.launch {
                 try {
-                    MinutesGlanceWidget().updateAll(context)
+                    widget.updateAll(context)
                     appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                 } catch (e: IllegalArgumentException) {
                     AppLogger.e("Glance internal error during updateAll (possible RemoteViews limit exceeded)", e)

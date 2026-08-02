@@ -41,6 +41,5 @@ object DispatchersModule {
 
     @Provides
     @MainImmediateDispatcher
-    @Suppress("unused") // Used by Hilt but not directly referenced in code.
     fun providesMainImmediateDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
 }

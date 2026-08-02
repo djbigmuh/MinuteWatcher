@@ -50,12 +50,13 @@ class SimIdentityRepositoryImpl
         private val subscriptionManager: SubscriptionManager,
         private val permissionManager: PermissionManager,
         permissionStateNotifier: PermissionStateNotifier,
-        @SimDataStore private val dataStore: DataStore<Preferences>,
+        @SimDataStore dataStore: DataStore<Preferences>,
         seedRepository: SimIdentitySeedRepository,
         appSettingsRepository: AppSettingsRepository,
         private val migrationService: IdentityMigrationService,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : SimIdentityRepository {
+    ) : BaseDataStoreRepository(dataStore),
+        SimIdentityRepository {
         private val seedFlow: Flow<String> =
             seedRepository
                 .getSeed()
@@ -180,28 +181,30 @@ class SimIdentityRepositoryImpl
             }
 
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                return SimIdentity(
-                    stableId = "unsupported_$slot",
-                    subscriptionId = null,
-                    slotIndex = slot,
-                    source = IdentitySource.SLOT_FALLBACK,
-                )
+                return createFallbackIdentity(slot, "unsupported_$slot")
             }
-            val seed = getSeed()
-            val identity =
-                permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                    val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
-                    saveSimIdentityInfo(resolved)
-                    resolved
-                }
 
-            return identity ?: SimIdentity(
-                stableId = "sim_$slot",
-                subscriptionId = null,
-                slotIndex = slot,
-                source = IdentitySource.SLOT_FALLBACK,
-            )
+            return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
         }
+
+        private suspend fun findActiveIdentityInternal(slot: Int): SimIdentity? {
+            val seed = getSeed()
+            return permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
+                saveSimIdentityInfo(resolved)
+                resolved
+            }
+        }
+
+        private fun createFallbackIdentity(
+            slot: Int,
+            stableId: String,
+        ) = SimIdentity(
+            stableId = stableId,
+            subscriptionId = null,
+            slotIndex = slot,
+            source = IdentitySource.SLOT_FALLBACK,
+        )
 
         private suspend fun saveSimIdentityInfo(identity: SimIdentity) {
             val slot = identity.slotIndex
@@ -216,7 +219,9 @@ class SimIdentityRepositoryImpl
             // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
             // it might be a transition from fallback sim_$slot.
             if (identity.source != IdentitySource.SLOT_FALLBACK && currentSlot == null) {
-                migrationService.migrateLegacyData(identity)
+                scope.launch {
+                    migrationService.migrateLegacyData(identity)
+                }
             }
 
             dataStore.edit { prefs ->
@@ -265,15 +270,9 @@ class SimIdentityRepositoryImpl
                 .debounce(300.milliseconds)
                 .distinctUntilChanged()
 
-        @Suppress("SameParameterValue") // Helper method for consistent access to DataStore with defaults.
-        private fun <T> get(
-            key: Preferences.Key<T>,
-            defaultValue: T,
-        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
-
         override fun getSimOperator(identity: String): Flow<String> =
             combine(
-                get(SimSettingsKeys.simOperatorKey(identity), ""),
+                getData(SimSettingsKeys.simOperatorKey(identity), ""),
                 getCustomSimOperator(identity),
             ) { resolved, custom ->
                 custom ?: resolved
@@ -302,7 +301,7 @@ class SimIdentityRepositoryImpl
             }
         }
 
-        override fun getSimCode(identity: String): Flow<String> = get(SimSettingsKeys.simCodeKey(identity), "")
+        override fun getSimCode(identity: String): Flow<String> = getData(SimSettingsKeys.simCodeKey(identity), "")
 
         override suspend fun setSimCode(
             identity: String,

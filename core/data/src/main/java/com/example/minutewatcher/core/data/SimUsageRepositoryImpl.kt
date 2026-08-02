@@ -20,15 +20,21 @@ import javax.inject.Singleton
 class SimUsageRepositoryImpl
     @Inject
     constructor(
-        @SimDataStore private val dataStore: DataStore<Preferences>,
+        @SimDataStore dataStore: DataStore<Preferences>,
         private val timeProvider: TimeProvider,
-    ) : SimUsageRepository,
+    ) : BaseDataStoreRepository(dataStore),
+        SimUsageRepository,
         SimUsageResetRepository {
         override fun getSimUsage(identity: String): Flow<SimUsage> =
             dataStore.data.map { prefs ->
                 SimUsage(
                     identity = identity,
-                    slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
+                    slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)]
+                        ?: if (identity.startsWith("sim_")) {
+                            identity.substringAfter("sim_").toIntOrNull() ?: 0
+                        } else {
+                            0
+                        },
                     subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
                     operator = prefs[SimSettingsKeys.customSimOperatorKey(identity)]
                         ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
@@ -46,10 +52,7 @@ class SimUsageRepositoryImpl
                 )
             }
 
-        private fun <T> get(
-            key: Preferences.Key<T>,
-            defaultValue: T,
-        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
+
 
         override suspend fun setMinutesUsed(
             identity: String,
@@ -180,7 +183,7 @@ class SimUsageRepositoryImpl
             this[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
-        override fun getLastResetDate(identity: String): Flow<Long> = get(SimSettingsKeys.lastResetDateKey(identity), 0L)
+        override fun getLastResetDate(identity: String): Flow<Long> = getData(SimSettingsKeys.lastResetDateKey(identity), 0L)
 
         override suspend fun setLastResetDate(
             identity: String,
@@ -189,7 +192,7 @@ class SimUsageRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.lastResetDateKey(identity)] = value }
         }
 
-        override fun getLastTotalBytes(identity: String): Flow<Long> = get(SettingsKeys.Dynamic.lastTotalBytesKey(identity), -1L)
+        override fun getLastTotalBytes(identity: String): Flow<Long> = getData(SettingsKeys.Dynamic.lastTotalBytesKey(identity), -1L)
 
         override suspend fun setLastTotalBytes(
             identity: String,

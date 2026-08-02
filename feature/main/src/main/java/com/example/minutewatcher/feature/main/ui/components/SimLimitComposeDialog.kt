@@ -40,34 +40,32 @@ fun SimLimitComposeDialog(
 ) {
     val state = rememberSimLimitState(initialMinutes, initialTrafficMb, initialRolloverEnabled)
 
-    val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
-    val minutesRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_MINUTES_LIMIT.toString())
-    val trafficRangeMsg =
-        stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString())
+    val validationMessages =
+        ValidationMessages(
+            required = stringResource(id = R.string.validation_error_field_required),
+            invalidNumber = stringResource(id = R.string.validation_error_invalid_number),
+            minutesRange = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_MINUTES_LIMIT.toString()),
+            trafficRange =
+                stringResource(
+                    id = R.string.validation_error_invalid_range,
+                    "0",
+                    Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString(),
+                ),
+        )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.limits_for_operator, operatorName)) },
-        text = {
-            DialogFields(
-                state = state,
-            )
-        },
+        text = { DialogFields(state = state) },
         confirmButton = {
             DialogButtons(
                 onConfirm = {
-                    val (min, trafGb, minErr, trafErr) =
-                        SimLimitValidator.validate(
-                            state.minutesText,
-                            state.trafficText,
-                            invalidNumberMsg,
-                            minutesRangeMsg,
-                            trafficRangeMsg,
+                    if (state.validate(validationMessages)) {
+                        onConfirm(
+                            state.validatedMinutes!!,
+                            (state.validatedTrafficGb!! * Constants.MB_PER_GB).toInt(),
+                            state.rolloverEnabled,
                         )
-                    state.minutesError = minErr
-                    state.trafficError = trafErr
-                    if (minErr == null && trafErr == null) {
-                        onConfirm(min ?: 0, ((trafGb ?: 0f) * Constants.MB_PER_GB).toInt(), state.rolloverEnabled)
                     }
                 },
                 onReset = onReset,
@@ -78,6 +76,13 @@ fun SimLimitComposeDialog(
     )
 }
 
+private data class ValidationMessages(
+    val required: String,
+    val invalidNumber: String,
+    val minutesRange: String,
+    val trafficRange: String,
+)
+
 @Composable
 private fun rememberSimLimitState(
     initialMinutes: Int,
@@ -86,12 +91,12 @@ private fun rememberSimLimitState(
 ): SimLimitState {
     val initialTrafficText = remember(initialTrafficMb) {
         val gb = initialTrafficMb / Constants.MB_PER_GB
-        if (gb > 0) "%.1f".format(gb).replace(",", ".") else ""
+        "%.1f".format(gb).replace(",", ".")
     }
 
     return remember {
         SimLimitState(
-            initialMinutesText = if (initialMinutes > 0) initialMinutes.toString() else "",
+            initialMinutesText = initialMinutes.toString(),
             initialTrafficText = initialTrafficText,
             initialRolloverEnabled = initialRolloverEnabled,
         )
@@ -108,6 +113,26 @@ private class SimLimitState(
     var rolloverEnabled by mutableStateOf(initialRolloverEnabled)
     var minutesError by mutableStateOf<String?>(null)
     var trafficError by mutableStateOf<String?>(null)
+
+    var validatedMinutes: Int? = null
+    var validatedTrafficGb: Float? = null
+
+    fun validate(msgs: ValidationMessages): Boolean {
+        val result =
+            SimLimitValidator.validate(
+                minutesText,
+                trafficText,
+                msgs.required,
+                msgs.invalidNumber,
+                msgs.minutesRange,
+                msgs.trafficRange,
+            )
+        minutesError = result.minutesError
+        trafficError = result.trafficError
+        validatedMinutes = result.minutes
+        validatedTrafficGb = result.trafficGb
+        return minutesError == null && trafficError == null
+    }
 
     fun onMinutesChange(text: String) {
         minutesText = text

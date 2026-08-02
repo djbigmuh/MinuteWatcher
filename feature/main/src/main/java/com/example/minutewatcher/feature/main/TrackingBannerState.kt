@@ -6,6 +6,8 @@ data class TrackingBannerState(
     val phonePermissionState: PermissionUiState = PermissionUiState.GRANTED,
     val showUsageAccessBanner: Boolean = false,
     val showTrafficErrorBanner: Boolean = false,
+    val showTrafficFallbackBanner: Boolean = false,
+    val trafficFallbackSlot: Int = -1,
     val showCallsErrorBanner: Boolean = false,
     val showAppSearchErrorBanner: Boolean = false,
     val showShortcutsErrorBanner: Boolean = false,

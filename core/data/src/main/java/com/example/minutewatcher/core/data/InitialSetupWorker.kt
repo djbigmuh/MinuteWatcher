@@ -71,9 +71,11 @@ class InitialSetupWorker
         }
 
         private suspend fun checkAndPerformMigrations() {
-            val migrationV1Completed = deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout() ?: true
+            val migrationV1Completed = deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
+                ?: throw java.io.IOException("DataStore timeout reading migrationV1 flag")
             val migrationStabilityCompleted =
-                deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout() ?: true
+                deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
+                ?: throw java.io.IOException("DataStore timeout reading migrationStability flag")
 
             if (migrationV1Completed && migrationStabilityCompleted) return
 

@@ -79,20 +79,32 @@ class MainViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() =
-        MainViewModel(
-            simIdentityRepository,
-            simLimitsRepository,
-            appSettingsRepository,
-            usageStateRepository,
-            autoResetUseCase,
-            usageUseCase,
-            settingsUseCase,
-            permissionRepository,
-            dataChangeNotifier,
-            savedStateHandle,
-            testDispatcher,
+    private fun createViewModel(): MainViewModel {
+        val dialogController = com.example.minutewatcher.feature.main.controller.MainDialogController(savedStateHandle)
+        val bannerController = com.example.minutewatcher.feature.main.controller.MainBannerController(usageStateRepository, permissionRepository, appSettingsRepository)
+        val refreshController = com.example.minutewatcher.feature.main.controller.MainSimRefreshController(usageUseCase, usageStateRepository, testDispatcher)
+        val settingsController = com.example.minutewatcher.feature.main.controller.MainSettingsController(appSettingsRepository, settingsUseCase)
+        val simDataController = com.example.minutewatcher.feature.main.controller.MainSimDataController(
+            usageStateRepository = usageStateRepository,
+            simIdentityRepository = simIdentityRepository,
+            simLimitsRepository = simLimitsRepository,
+            usageUseCase = usageUseCase,
+            dataChangeNotifier = dataChangeNotifier,
+            ioDispatcher = testDispatcher
         )
+
+        return MainViewModel(
+            dialogController = dialogController,
+            bannerController = bannerController,
+            refreshController = refreshController,
+            settingsController = settingsController,
+            simDataController = simDataController,
+            appSettingsRepository = appSettingsRepository,
+            usageStateRepository = usageStateRepository,
+            autoResetUseCase = autoResetUseCase,
+            ioDispatcher = testDispatcher,
+        )
+    }
 
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =

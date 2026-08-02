@@ -28,12 +28,15 @@ class PermissionManager
                 Manifest.permission.READ_PHONE_STATE,
             ) == PackageManager.PERMISSION_GRANTED
 
-        // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
-        // This method provides a safe way to get active subscriptions without crashing if permission is revoked.
-        @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> =
             try {
-                if (hasPhoneStatePermission()) {
+                val hasPermission =
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.READ_PHONE_STATE,
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasPermission) {
                     subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
                 } else {
                     emptyList()
@@ -54,7 +57,7 @@ class PermissionManager
                     -1
                 }
             } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in getDefaultDataSubscriptionId", e)
+                AppLogger.e("SecurityException in getDefaultVoiceSubscriptionId", e)
                 -1
             }
 

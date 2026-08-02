@@ -18,7 +18,7 @@ object SnapshotUtils {
             snapshot.simSnapshots
                 .filter { it.isActive }
                 .map { sim ->
-                    sim.slot to
+                    sim.slot to (sim.autoResetDay to
                         sim.entities.values.map { e ->
                             // Explicitly list fields to exclude lastUpdateTime
                             listOf(
@@ -34,7 +34,7 @@ object SnapshotUtils {
                                 e.periodEnd,
                                 e.sourceType,
                             )
-                        }
+                        })
                 }
 
         result = 31 * result + content.hashCode()

@@ -125,7 +125,7 @@ class TrafficTracker
                     if (target.skipDelta) {
                         _status.value =
                             if (target.isFallback) {
-                                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Fallback SIM attribution")
+                                TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, target.slot.toString())
                             } else {
                                 TrackingStatus.Active
                             }
@@ -185,7 +185,7 @@ class TrafficTracker
 
             _status.value =
                 if (target.isFallback) {
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Fallback SIM attribution")
+                    TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, target.slot.toString())
                 } else {
                     TrackingStatus.Active
                 }
@@ -243,12 +243,16 @@ class TrafficTracker
             if (networkStatsManager == null) return -1L
 
             val now = timeProvider.now()
-            val safeStart =
+            // Limit safeStart to a maximum of 30 days back to avoid performance issues
+            // with NetworkStatsManager on first run or after a long period of inactivity.
+            val thirtyDaysAgo = now - (30 * Constants.MILLIS_PER_SECOND * 60 * 60 * 24)
+            val calculatedStart =
                 if (startTime > 0) {
                     startTime
                 } else {
                     BillingPeriodCalculator.calculate(autoResetDay, now).startDate
                 }
+            val safeStart = maxOf(calculatedStart, thirtyDaysAgo)
 
             return try {
                 // NOTE: subscriberId is null, which means querySummaryForDevice returns aggregate
@@ -270,6 +274,21 @@ class TrafficTracker
         }
 
         private suspend fun getTargetSimInfo(): TargetInfo? {
+            val (targetSim, currentDataSubId, isFallback) = resolveTargetSim() ?: return null
+
+            ensureInMemoryLastDataSubId()
+
+            val savedLastDataSubId = inMemoryLastDataSubId.get()
+            val isSimChanged = savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId
+
+            if (isSimChanged) {
+                handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
+            }
+
+            return TargetInfo(targetSim, currentDataSubId, skipDelta = isSimChanged, isFallback = isFallback)
+        }
+
+        private suspend fun resolveTargetSim(): Triple<Int, Int, Boolean>? {
             var targetSim = -1
             var currentDataSubId = -1
             var isFallback = false
@@ -302,20 +321,14 @@ class TrafficTracker
                 }
             }
 
-            if (targetSim == -1) return null
+            return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
+        }
 
+        private suspend fun ensureInMemoryLastDataSubId() {
             if (inMemoryLastDataSubId.get() == -1) {
                 val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
                 inMemoryLastDataSubId.compareAndSet(-1, savedId)
             }
-
-            val savedLastDataSubId = inMemoryLastDataSubId.get()
-            if (savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId) {
-                handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
-                return TargetInfo(targetSim, currentDataSubId, skipDelta = true, isFallback = isFallback)
-            }
-
-            return TargetInfo(targetSim, currentDataSubId, skipDelta = false, isFallback = isFallback)
         }
 
         private suspend fun handleSimChange(

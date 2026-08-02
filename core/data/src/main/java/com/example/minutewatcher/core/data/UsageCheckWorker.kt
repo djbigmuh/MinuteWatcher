@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
@@ -55,10 +56,19 @@ class UsageCheckWorker
 
             // First refresh to ensure we have a valid snapshot for auto-reset
             val initialRefresh = deps.usageStateRepository.refresh()
+            if (initialRefresh is RefreshResult.Timeout) {
+                AppLogger.w("UsageCheckWorker: Initial refresh timed out. Auto-reset might use stale data.")
+            }
             deps.autoResetUseCase.performAutoReset(initialRefresh.snapshot)
 
             // Final refresh to capture results of auto-reset for notifications
             val refreshResult = deps.usageStateRepository.refresh()
+            if (refreshResult is RefreshResult.Timeout) {
+                AppLogger.w("UsageCheckWorker: Final refresh timed out. Skipping notifications to avoid stale alerts.")
+                deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
+                return
+            }
+
             val finalSnapshot = refreshResult.snapshot
 
             deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)

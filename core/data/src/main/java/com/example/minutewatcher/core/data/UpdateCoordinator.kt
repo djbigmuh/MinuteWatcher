@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -34,6 +35,7 @@ class UpdateCoordinator
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
         private val isObserving = MutableStateFlow(false)
+        private var lastManualUpdateTimestamp = 0L
 
         init {
             scope.launch {
@@ -43,7 +45,14 @@ class UpdateCoordinator
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
-                    }.collect {
+                    }.collect { snapshot ->
+                        if (snapshot.isManualUpdate) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastManualUpdateTimestamp < Constants.Widget.DEBOUNCE_MS * 2) {
+                                AppLogger.d("Skipping debounced widget update after manual refresh")
+                                return@collect
+                            }
+                        }
                         widgetUpdater.updateAll()
                     }
             }
@@ -63,6 +72,9 @@ class UpdateCoordinator
             startObserving()
             dataRefreshNotifier.notifyRefresh(isManual = force)
             if (updateWidget) {
+                if (force) {
+                    lastManualUpdateTimestamp = System.currentTimeMillis()
+                }
                 widgetUpdater.updateAll()
             }
         }

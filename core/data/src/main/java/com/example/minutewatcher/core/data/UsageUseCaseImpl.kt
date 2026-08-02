@@ -14,6 +14,8 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,6 +31,8 @@ class UsageUseCaseImpl
         private val trafficTracker: TrafficTracker,
         private val permissionManager: PermissionManager,
     ) : UsageUseCase {
+        private val adjustmentMutex = Mutex()
+
         override suspend fun refreshOperatorInfo() {
             try {
                 val activeList = permissionManager.getActiveSubscriptions()
@@ -60,14 +64,16 @@ class UsageUseCaseImpl
             remainingMinutes: Int,
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
-            val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
-            val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-            val used = usage?.minutesUsed ?: 0
+            adjustmentMutex.withLock {
+                val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                val used = usage?.minutesUsed ?: 0
 
-            val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
-            val adj = (safeRemaining - limit).toLong() + used.toLong()
-            val safeAdj = adj.coerceIn(-Constants.MAX_MINUTES_LIMIT.toLong(), Constants.MAX_MINUTES_LIMIT.toLong()).toInt()
-            simUsageRepository.setManualAdjustment(identity, safeAdj)
+                val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
+                val adj = (safeRemaining - limit).toLong() + used.toLong()
+                val safeAdj = adj.coerceIn(-Constants.MAX_MINUTES_LIMIT.toLong(), Constants.MAX_MINUTES_LIMIT.toLong()).toInt()
+                simUsageRepository.setManualAdjustment(identity, safeAdj)
+            }
         }
 
         override suspend fun adjustTraffic(
@@ -75,16 +81,18 @@ class UsageUseCaseImpl
             remainingGb: Float,
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
-            val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
-            val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-            val usedMb = usage?.trafficUsed ?: 0f
+            adjustmentMutex.withLock {
+                val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                val usedMb = usage?.trafficUsed ?: 0f
 
-            val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
-            val limitGb = limitMb.toFloat() / Constants.MB_PER_GB
-            val usedGb = usedMb / Constants.MB_PER_GB
-            val adj = safeRemainingGb - (limitGb - usedGb)
-            val safeAdj = adj.coerceIn(-Constants.MAX_TRAFFIC_LIMIT_GB, Constants.MAX_TRAFFIC_LIMIT_GB)
-            simUsageRepository.setTrafficAdjustment(identity, safeAdj)
+                val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
+                val limitGb = limitMb.toFloat() / Constants.MB_PER_GB
+                val usedGb = usedMb / Constants.MB_PER_GB
+                val adj = safeRemainingGb - (limitGb - usedGb)
+                val safeAdj = adj.coerceIn(-Constants.MAX_TRAFFIC_LIMIT_GB, Constants.MAX_TRAFFIC_LIMIT_GB)
+                simUsageRepository.setTrafficAdjustment(identity, safeAdj)
+            }
         }
 
         override suspend fun resetCounters(slot: Int) {

@@ -140,7 +140,6 @@ class IdentityMigrationService
         ): Boolean {
             var anyMigrated = false
             dataStore.edit { prefs ->
-                anyMigrated = false
                 val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
                 for (oldKey in keysToMigrate) {

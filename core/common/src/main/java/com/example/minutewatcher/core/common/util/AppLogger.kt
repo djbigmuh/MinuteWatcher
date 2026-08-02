@@ -54,6 +54,14 @@ object AppLogger {
         logToFile("E", fullMessage)
     }
 
+    /**
+     * Logs the message to a file in the application's internal directory.
+     *
+     * Rotation logic:
+     * When the current log file exceeds [MAX_FILE_SIZE], it is renamed to "logs.old.txt",
+     * replacing any existing "logs.old.txt". This limits the total log storage to
+     * approximately 2 * [MAX_FILE_SIZE].
+     */
     private fun logToFile(
         level: String,
         message: String,

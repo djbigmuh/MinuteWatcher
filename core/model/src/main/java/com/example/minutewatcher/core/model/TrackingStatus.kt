@@ -13,6 +13,7 @@ sealed interface TrackingStatus {
     enum class ErrorType {
         PERMISSION_MISSING,
         DATABASE_ERROR,
+        INACCURATE_ATTRIBUTION,
         UNKNOWN,
     }
 }
