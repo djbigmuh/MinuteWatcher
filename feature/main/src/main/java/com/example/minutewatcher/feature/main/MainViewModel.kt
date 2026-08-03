@@ -80,7 +80,7 @@ class MainViewModel
                     if (settings?.onboardingCompleted == false) {
                         controllers.dialog.setShowOnboardingDialog(true)
                     }
-                    autoResetUseCase.performAutoReset()
+                    autoResetUseCase.performAutoReset(shouldNotify = false)
                     refreshSimCards()
                 } catch (e: CancellationException) {
                     throw e
@@ -175,10 +175,15 @@ class MainViewModel
 
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
+        private var lastRefreshAt: Long
+            get() = savedStateHandle[KEY_LAST_REFRESH_AT] ?: 0L
+            set(value) {
+                savedStateHandle[KEY_LAST_REFRESH_AT] = value
+            }
+
         fun onActivityResume(nowElapsed: Long) {
-            val lastRefreshAt = savedStateHandle.get<Long>(KEY_LAST_REFRESH_AT) ?: 0L
             if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
-                savedStateHandle[KEY_LAST_REFRESH_AT] = nowElapsed
+                lastRefreshAt = nowElapsed
                 viewModelScope.launch { refreshAndNotify(force = false) }
             }
         }

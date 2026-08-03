@@ -42,7 +42,12 @@ object Constants {
     }
 
     object Traffic {
-        const val MIN_DELTA_MB = 0.0001f
+        /**
+         * Minimum change in traffic (in MB) required to trigger a repository update.
+         * Used to filter out small measurement noise (e.g. background keep-alive packets).
+         * 0.01 MB is approximately 10 KB.
+         */
+        const val MIN_DELTA_MB = 0.01f
         const val LOOKBACK_DAYS = 30L
     }
 

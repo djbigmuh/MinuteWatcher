@@ -27,12 +27,18 @@ class WidgetSettingsRepository
                 val settings = appSettingsRepository.getAppSettings().first()
 
                 val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
-                val identities = activeSims.map { it.identity.stableId }
-                val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(identities).first()
+                val realIdentities = activeSims.map { it.identity.stableId }
+                val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
+                val allIdentities = (realIdentities + fallbackIdentities).distinct()
+
+                val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(allIdentities).first()
 
                 val simStates =
                     activeSims.associate { info ->
-                        info.slotIndex to (batchSettings[info.identity.stableId] ?: SimSettingsState())
+                        val identity = info.identity.stableId
+                        val fallbackKey = "sim_${info.slotIndex}"
+                        val settings = batchSettings[identity] ?: batchSettings[fallbackKey] ?: SimSettingsState()
+                        info.slotIndex to settings
                     }
 
                 WidgetSettingsState(
@@ -67,6 +73,12 @@ class WidgetSettingsRepository
             for ((slot, simSettings) in state.simStates) {
                 val identity = simIdentityRepository.getIdentity(slot)
                 simSettingsMap[identity] = simSettings
+
+                // Also save under fallback-key for persistence across SIM changes and when SIM is absent
+                val fallbackKey = "sim_$slot"
+                if (identity != fallbackKey) {
+                    simSettingsMap[fallbackKey] = simSettings
+                }
             }
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
             dataChangeNotifier.notifyDataChanged(updateWidget = true)

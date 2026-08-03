@@ -151,8 +151,8 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage increments usage based on delta`() =
         runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()
-            whenever(bucket.rxBytes).thenReturn(1000L)
-            whenever(bucket.txBytes).thenReturn(500L)
+            whenever(bucket.rxBytes).thenReturn(25000L)
+            whenever(bucket.txBytes).thenReturn(10000L)
 
             whenever(
                 networkStatsManager.querySummaryForDevice(
@@ -167,9 +167,9 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            val deltaMb = (500L.toDouble() / Constants.BYTES_PER_MB).toFloat()
+            val deltaMb = (34000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
             verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(35000L))
         }
 
     @Test
@@ -265,7 +265,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage respects small deltas`() =
         runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()
-            whenever(bucket.rxBytes).thenReturn(1050L)
+            whenever(bucket.rxBytes).thenReturn(2000L) // 1000 bytes delta
             whenever(bucket.txBytes).thenReturn(0L)
 
             whenever(
@@ -280,7 +280,7 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            // 50 bytes is < 0.0001 MB, should not increment usage but status is Active
+            // 1000 bytes is < 0.01 MB (~10KB), should not increment usage but status is Active
             verify(simUsageRepository, never()).incrementTrafficUsed(any(), any())
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }

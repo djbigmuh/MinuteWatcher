@@ -69,30 +69,33 @@ class AppSettingsRepositoryImpl
         }
 
         private fun Preferences.toAppSettings(): AppSettings {
-            val default = AppSettings()
             return AppSettings(
                 theme = AppTheme.fromValue(this[SettingsKeys.APP_THEME] ?: -1),
                 language = this[SettingsKeys.APP_LANGUAGE],
-                notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: default.notifyLowMinutes,
-                notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: default.notifyLowTraffic,
-                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: default.callTrackingEnabled,
-                widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: default.widgetLayoutMode,
-                widgetSimArrangement = this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: default.widgetSimArrangement,
-                widgetTransparency = this[SettingsKeys.WIDGET_TRANSPARENCY] ?: default.widgetTransparency,
-                widgetFontSize = this[SettingsKeys.WIDGET_FONT_SIZE] ?: default.widgetFontSize,
-                widgetBackgroundColor = this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: default.widgetBackgroundColor,
-                migrationV1Completed = this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: default.migrationV1Completed,
-                onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: default.onboardingCompleted,
+                notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: DEFAULT_SETTINGS.notifyLowMinutes,
+                notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: DEFAULT_SETTINGS.notifyLowTraffic,
+                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: DEFAULT_SETTINGS.callTrackingEnabled,
+                widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: DEFAULT_SETTINGS.widgetLayoutMode,
+                widgetSimArrangement = this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: DEFAULT_SETTINGS.widgetSimArrangement,
+                widgetTransparency = this[SettingsKeys.WIDGET_TRANSPARENCY] ?: DEFAULT_SETTINGS.widgetTransparency,
+                widgetFontSize = this[SettingsKeys.WIDGET_FONT_SIZE] ?: DEFAULT_SETTINGS.widgetFontSize,
+                widgetBackgroundColor = this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: DEFAULT_SETTINGS.widgetBackgroundColor,
+                migrationV1Completed = this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: DEFAULT_SETTINGS.migrationV1Completed,
+                onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: DEFAULT_SETTINGS.onboardingCompleted,
                 notificationPermissionRequested =
                     this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED]
-                        ?: default.notificationPermissionRequested,
+                        ?: DEFAULT_SETTINGS.notificationPermissionRequested,
                 phonePermissionRequested =
-                    this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: default.phonePermissionRequested,
-                benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: default.benchmarkSimCount,
-                widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: default.widgetLimitExceeded,
+                    this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: DEFAULT_SETTINGS.phonePermissionRequested,
+                benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: DEFAULT_SETTINGS.benchmarkSimCount,
+                widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: DEFAULT_SETTINGS.widgetLimitExceeded,
                 inaccurateCallAttributionsCount =
                     this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
-                        ?: default.inaccurateCallAttributionsCount,
+                        ?: DEFAULT_SETTINGS.inaccurateCallAttributionsCount,
             )
+        }
+
+        companion object {
+            private val DEFAULT_SETTINGS = AppSettings()
         }
     }

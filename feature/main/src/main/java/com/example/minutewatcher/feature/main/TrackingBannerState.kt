@@ -5,7 +5,7 @@ import com.example.minutewatcher.core.model.PermissionUiState
 
 @Immutable
 data class TrackingBannerState(
-    val phonePermissionState: PermissionUiState = PermissionUiState.GRANTED,
+    val phonePermissionState: PermissionUiState = PermissionUiState.NOT_REQUESTED,
     val showUsageAccessBanner: Boolean = false,
     val showTrafficErrorBanner: Boolean = false,
     val showTrafficFallbackBanner: Boolean = false,
@@ -15,7 +15,7 @@ data class TrackingBannerState(
     val showShortcutsErrorBanner: Boolean = false,
     val showWidgetErrorBanner: Boolean = false,
     val showInaccurateCallsBanner: Boolean = false,
-    val notificationPermissionState: PermissionUiState = PermissionUiState.GRANTED,
+    val notificationPermissionState: PermissionUiState = PermissionUiState.NOT_REQUESTED,
 )
 
 @Immutable

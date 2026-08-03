@@ -22,7 +22,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -137,7 +139,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
@@ -154,7 +156,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState hides phone permission banner when granted is true`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
@@ -172,7 +174,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState reflects permanently denied status`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
@@ -189,7 +191,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows notification banner when alerts enabled but not granted`() =
-        runTest {
+        runTest(testDispatcher) {
             val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = true, notifyLowTraffic = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = false
@@ -208,7 +210,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState hides notification banner when granted even if alerts enabled`() =
-        runTest {
+        runTest(testDispatcher) {
             val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = true
@@ -227,7 +229,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState correctly identifies NOT_REQUESTED vs DENIED states`() =
-        runTest {
+        runTest(testDispatcher) {
             // Case 1: Not requested
             val settingsFlow = MutableStateFlow(AppSettings(phonePermissionRequested = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
@@ -254,7 +256,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState hides notification banner when alerts disabled`() =
-        runTest {
+        runTest(testDispatcher) {
             val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = false, notifyLowTraffic = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = false
@@ -273,7 +275,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows usage access banner when permission missing`() =
-        runTest {
+        runTest(testDispatcher) {
             usageStatsPermissionFlow.value = false
 
             val viewModel = createViewModel(backgroundScope)
@@ -289,7 +291,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows traffic error banner when other tracking error occurs`() =
-        runTest {
+        runTest(testDispatcher) {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
@@ -317,7 +319,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows shortcuts error banner when shortcuts error occurs`() =
-        runTest {
+        runTest(testDispatcher) {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
@@ -344,12 +346,13 @@ class MainViewModelTest {
 
     @Test
     fun `setTheme calls settingsUseCase`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
             val theme = AppTheme.DARK
 
             viewModel.setTheme(theme)
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             org.mockito.kotlin
                 .verify(settingsUseCase)

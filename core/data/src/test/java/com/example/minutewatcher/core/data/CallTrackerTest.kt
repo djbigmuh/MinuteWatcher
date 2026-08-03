@@ -297,7 +297,7 @@ class CallTrackerTest {
             val status = callTracker.status.first()
             assertTrue(status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
-            assertEquals("Attribution failed", status.message)
+            assertEquals("Attribution failed for subId 1", status.message)
         }
 
     @Test

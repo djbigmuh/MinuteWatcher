@@ -10,6 +10,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -69,7 +70,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val navigationProvider = getNavigationProvider(context)
         provideContent {
             GlanceTheme {
-                WidgetContent(context, uiState, navigationProvider)
+                WidgetContent(uiState, navigationProvider)
             }
         }
     }
@@ -131,10 +132,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(
-    context: Context,
     uiState: WidgetUiState,
     navigationProvider: NavigationProvider,
 ) {
+    val context = LocalContext.current
     val alpha = Constants.Widget.ALPHA_FULL - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
     val bgColor =
         androidx.compose.ui.graphics
@@ -214,14 +215,13 @@ private fun WidgetContent(
                     ),
             )
         } else {
-            MultiSimLayout(context, simUiStates, uiState)
+            MultiSimLayout(simUiStates, uiState)
         }
     }
 }
 
 @Composable
 private fun MultiSimLayout(
-    context: Context,
     sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
@@ -232,7 +232,7 @@ private fun MultiSimLayout(
         ) {
             sims.forEachIndexed { index, sim ->
                 Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
-                    SimItem(context, sim, uiState)
+                    SimItem(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
                     val separatorColor =
@@ -262,7 +262,7 @@ private fun MultiSimLayout(
         ) {
             sims.forEachIndexed { index, sim ->
                 Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-                    SimItem(context, sim, uiState)
+                    SimItem(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
                     val separatorColor =
@@ -290,10 +290,10 @@ private fun MultiSimLayout(
 
 @Composable
 private fun SimItem(
-    context: Context,
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
+    val context = LocalContext.current
     val summary =
         context.getString(
             com.example.minutewatcher.core.resources.R.string.sim_status_summary,

@@ -11,7 +11,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
@@ -28,9 +27,9 @@ class ResetManager
         private val timeProvider: TimeProvider,
     ) : AutoResetUseCase {
         private val resetMutex = Mutex()
-        private val lastResetCheck = ConcurrentHashMap<String, Long>()
+        private val lastResetCheck = mutableMapOf<String, Long>()
 
-        override suspend fun performAutoReset() {
+        override suspend fun performAutoReset(shouldNotify: Boolean) {
             resetMutex.withLock {
                 try {
                     val now = timeProvider.now()
@@ -70,7 +69,9 @@ class ResetManager
                         resetIdentities.forEach { identity ->
                             trafficTracker.resetBaseline(identity)
                         }
-                        dataChangeNotifier.notifyDataChanged()
+                        if (shouldNotify) {
+                            dataChangeNotifier.notifyDataChanged()
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e

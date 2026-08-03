@@ -33,9 +33,12 @@ class SimWidgetVisibilityRepositoryImpl
 
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
-                identities.associateWith { identity ->
-                    SimSettingsState(
-                        showSim = prefs[WidgetSettingsKeys.showSimKey(identity)] ?: true,
+                identities.mapNotNull { identity ->
+                    val showSim = prefs[WidgetSettingsKeys.showSimKey(identity)]
+                    if (showSim == null) return@mapNotNull null
+
+                    identity to SimSettingsState(
+                        showSim = showSim,
                         showIcon = prefs[WidgetSettingsKeys.showSimIconKey(identity)] ?: true,
                         showName = prefs[WidgetSettingsKeys.showSimNameKey(identity)] ?: true,
                         showMinutes = prefs[WidgetSettingsKeys.showMinutesKey(identity)] ?: true,
@@ -43,7 +46,7 @@ class SimWidgetVisibilityRepositoryImpl
                         showTraffic = prefs[WidgetSettingsKeys.showTrafficKey(identity)] ?: true,
                         showTrafficLimit = prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] ?: false,
                     )
-                }
+                }.toMap()
             }
 
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
@@ -71,7 +74,12 @@ class SimWidgetVisibilityRepositoryImpl
                             // Extract identity from key name
                             // Examples: widget_show_sim_id, widget_show_sim_icon_id, widget_show_minutes_id
                             val identity = name.substringAfterLast("_")
-                            identity.isNotEmpty() && identity !in activeSet
+
+                            // Protect sim_$slot fallback keys
+                            val isFallbackKey = identity.startsWith("sim_") &&
+                                identity.substringAfter("sim_").toIntOrNull() != null
+
+                            identity.isNotEmpty() && identity !in activeSet && !isFallbackKey
                         } else {
                             false
                         }

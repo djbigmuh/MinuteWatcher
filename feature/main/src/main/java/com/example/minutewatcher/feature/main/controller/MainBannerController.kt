@@ -42,7 +42,7 @@ class MainBannerController
                 .observeTrackingStatus()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    started = SharingStarted.Eagerly,
                     initialValue = emptyMap(),
                 )
 
@@ -52,23 +52,27 @@ class MainBannerController
                 permissionRepository.phoneStatePermissionGranted,
                 permissionRepository.usageStatsPermissionGranted,
                 permissionRepository.notificationPermissionGranted,
-                _isPhonePermissionPermanentlyDenied,
-                _isNotificationPermissionPermanentlyDenied,
-                appSettingsRepository.observeAppSettings(),
-            ) { args ->
-                @Suppress("UNCHECKED_CAST")
+                combine(
+                    _isPhonePermissionPermanentlyDenied,
+                    _isNotificationPermissionPermanentlyDenied,
+                    appSettingsRepository.observeAppSettings(),
+                ) { phoneDenied, notifDenied, settings ->
+                    Triple(phoneDenied, notifDenied, settings)
+                },
+            ) { status, phone, usage, notif, triple ->
+                val (phoneDenied, notifDenied, settings) = triple
                 TrackingBannerMapper.mapToBannerState(
-                    statusMap = args[0] as Map<String, TrackingStatus>,
-                    phoneGranted = args[1] as Boolean,
-                    usageGranted = args[2] as Boolean,
-                    notificationsGranted = args[3] as Boolean,
-                    phonePermanentlyDenied = args[4] as Boolean,
-                    notificationPermanentlyDenied = args[5] as Boolean,
-                    settings = args[6] as AppSettings,
+                    statusMap = status,
+                    phoneGranted = phone,
+                    usageGranted = usage,
+                    notificationsGranted = notif,
+                    phonePermanentlyDenied = phoneDenied,
+                    notificationPermanentlyDenied = notifDenied,
+                    settings = settings,
                 )
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                started = SharingStarted.Eagerly,
                 initialValue = TrackingBannerState(),
             )
     }

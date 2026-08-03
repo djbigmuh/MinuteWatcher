@@ -189,9 +189,11 @@ class WidgetSettingsRepositoryTest {
             verify(settingsRepository).updateAppSettings(any())
             verify(simWidgetVisibilityRepository).setSimSettingsBatch(
                 org.mockito.kotlin.check { map ->
-                    assertEquals(2, map.size)
-                    assertEquals("sim0", map.keys.first { map[it] == state.simStates[0] })
-                    assertEquals("sim1", map.keys.first { map[it] == state.simStates[1] })
+                    assertEquals(4, map.size)
+                    assertEquals("sim0", map.keys.first { it == "sim0" })
+                    assertEquals("sim_0", map.keys.first { it == "sim_0" })
+                    assertEquals("sim1", map.keys.first { it == "sim1" })
+                    assertEquals("sim_1", map.keys.first { it == "sim_1" })
                 },
             )
         }
@@ -212,8 +214,9 @@ class WidgetSettingsRepositoryTest {
 
             verify(simWidgetVisibilityRepository).setSimSettingsBatch(
                 org.mockito.kotlin.check { map ->
-                    assertEquals(1, map.size)
+                    assertEquals(2, map.size)
                     assertEquals(true, map["sim2_inactive"]?.showSim)
+                    assertEquals(true, map["sim_2"]?.showSim)
                 },
             )
         }

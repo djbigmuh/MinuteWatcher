@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.settings.ui
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -33,7 +32,7 @@ import org.robolectric.annotation.Config
 class WidgetSettingsViewModelTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val loader: WidgetSettingsLoader = mock()
-    private val dataChangeNotifier: DataChangeNotifier = mock()
+    private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
 
     private lateinit var viewModel: WidgetSettingsViewModel
@@ -45,8 +44,9 @@ class WidgetSettingsViewModelTest {
             val snapshotFlow: StateFlow<GlobalSnapshot> = MutableStateFlow<GlobalSnapshot>(snapshot)
             whenever<StateFlow<GlobalSnapshot>>(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
+            whenever(saver.save(any())).thenReturn(true)
 
-            viewModel = WidgetSettingsViewModel(context, loader, dataChangeNotifier, usageStateRepository)
+            viewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
         }
 
     @Test
@@ -64,7 +64,7 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
 
             // Initial load in init
-            val initialViewModel = WidgetSettingsViewModel(context, loader, dataChangeNotifier, usageStateRepository)
+            val initialViewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
             advanceUntilIdle()
             assertTrue(initialViewModel.loadError.value)
 
@@ -86,8 +86,7 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
 
             assertTrue(completed)
-            verify(loader).save(any())
-            verify(dataChangeNotifier).notifyDataChanged(updateWidget = true, force = true)
+            verify(saver).save(any())
         }
 
     @Test

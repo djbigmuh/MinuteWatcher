@@ -86,7 +86,7 @@ class SimIdentityRepositoryImpl
                             object : SubscriptionManager.OnSubscriptionsChangedListener() {
                                 override fun onSubscriptionsChanged() {
                                     launch {
-                                        trySend(getActiveSimsInternal(seed))
+                                        send(getActiveSimsInternal(seed))
                                     }
                                 }
                             }
@@ -116,16 +116,20 @@ class SimIdentityRepositoryImpl
                             permissionStateNotifier.changes.collect {
                                 updateListenerRegistration()
                                 if (permissionManager.hasPhoneStatePermission()) {
-                                    trySend(getActiveSimsInternal(seed))
+                                    send(getActiveSimsInternal(seed))
                                 } else {
-                                    trySend(emptyList())
+                                    send(emptyList())
                                 }
                             }
                         }
 
                         // Initial fetch
                         if (permissionManager.hasPhoneStatePermission()) {
-                            trySend(getActiveSimsInternal(seed))
+                            val initialSims = getActiveSimsInternal(seed)
+                            val result = trySend(initialSims)
+                            if (result.isFailure) {
+                                launch { send(initialSims) }
+                            }
                         }
 
                         awaitClose {

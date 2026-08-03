@@ -90,6 +90,8 @@ class WidgetSettingsViewModel
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
             val currentState =
                 _settingsState.value ?: run {
+                    com.example.minutewatcher.core.common.util.AppLogger
+                        .w("saveAndNotify called before settings were loaded")
                     onComplete(false)
                     return
                 }

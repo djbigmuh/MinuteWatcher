@@ -54,8 +54,8 @@ class UsageCheckWorker
         private suspend fun checkUsageAndNotify() {
             deps.trafficTracker.updateTrafficUsage()
 
-            // Perform auto-reset logic. It internally triggers data update notifications if needed.
-            deps.autoResetUseCase.performAutoReset()
+            // Perform auto-reset logic. We skip internal notification here because we do a single unified refresh and notify below.
+            deps.autoResetUseCase.performAutoReset(shouldNotify = false)
 
             // Single refresh to capture all recent changes (traffic update and potential auto-reset)
             val refreshResult = deps.usageStateRepository.refresh()

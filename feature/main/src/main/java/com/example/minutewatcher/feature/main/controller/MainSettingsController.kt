@@ -4,7 +4,6 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +33,7 @@ class MainSettingsController
             settingsUseCase.appTheme
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    started = SharingStarted.Eagerly,
                     initialValue = AppTheme.FOLLOW_SYSTEM,
                 )
 
@@ -42,7 +41,7 @@ class MainSettingsController
             settingsUseCase.appLanguage
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    started = SharingStarted.Eagerly,
                     initialValue = null,
                 )
 

@@ -25,6 +25,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -106,7 +107,7 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(autoResetUseCase).performAutoReset()
+            verify(autoResetUseCase).performAutoReset(eq(false))
         }
 
     @Test

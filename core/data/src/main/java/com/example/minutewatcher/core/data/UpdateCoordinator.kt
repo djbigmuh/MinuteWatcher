@@ -11,11 +11,11 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +39,7 @@ class UpdateCoordinator
         private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private var observationJob: Job? = null
+        private val observationStarted = AtomicBoolean(false)
         private val lastManualUpdateTimestamp = AtomicLong(0L)
 
         /**
@@ -59,12 +59,10 @@ class UpdateCoordinator
             }
         }
 
-        @Synchronized
         private fun startObserving() {
-            if (observationJob != null) return
+            if (!observationStarted.compareAndSet(false, true)) return
 
-            observationJob =
-                scope.launch {
+            scope.launch {
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > 0L }

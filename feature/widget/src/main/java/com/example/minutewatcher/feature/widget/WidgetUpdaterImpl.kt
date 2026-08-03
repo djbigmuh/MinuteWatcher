@@ -54,7 +54,8 @@ class WidgetUpdaterImpl
         fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val msg = e.message ?: ""
             return msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true) ||
+                msg.contains("TransactionTooLarge", ignoreCase = true) ||
                 msg.contains("too large", ignoreCase = true) ||
-                msg.contains("transaction", ignoreCase = true)
+                e.cause is android.os.TransactionTooLargeException
         }
     }

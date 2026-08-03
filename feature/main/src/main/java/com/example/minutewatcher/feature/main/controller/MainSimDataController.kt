@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -48,7 +47,7 @@ class MainSimDataController
                 .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    started = SharingStarted.Eagerly,
                     initialValue = SimCardListState.Loading,
                 )
 
