@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":core:common"))
 
     implementation(libs.javaxInject)
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.mockingCore)

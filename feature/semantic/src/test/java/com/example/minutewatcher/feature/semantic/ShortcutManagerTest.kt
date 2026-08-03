@@ -69,6 +69,7 @@ class ShortcutManagerTest {
                                 mapOf(
                                     PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
                                 ),
+                                1,
                             ),
                         ),
                     ),
@@ -91,6 +92,7 @@ class ShortcutManagerTest {
                                 mapOf(
                                     PackageType.MINUTES to createEntity(0, "Op_$i", PackageType.MINUTES, 100, 10),
                                 ),
+                                1,
                             ),
                         ),
                     )
@@ -108,7 +110,7 @@ class ShortcutManagerTest {
             val remainingMinutes = 90L
             val operator = "MTS"
             val entity = createEntity(0, operator, PackageType.MINUTES, 100, 100 - remainingMinutes)
-            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", operator, true, mapOf(PackageType.MINUTES to entity))))
+            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", operator, true, mapOf(PackageType.MINUTES to entity), 1)))
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
@@ -127,7 +129,7 @@ class ShortcutManagerTest {
     fun `no shortcut is created when limit is 0`() =
         runTest(testDispatcher) {
             val entity = createEntity(0, "MTS", PackageType.MINUTES, 0, 0)
-            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", "MTS", true, mapOf(PackageType.MINUTES to entity))))
+            val snapshot = createSnapshot(listOf(SimSnapshot(0, "sim_0", "MTS", true, mapOf(PackageType.MINUTES to entity), 1)))
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)

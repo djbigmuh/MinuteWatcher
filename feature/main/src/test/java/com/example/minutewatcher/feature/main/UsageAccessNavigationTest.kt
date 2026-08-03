@@ -126,7 +126,6 @@ class UsageAccessNavigationTest {
         return MainViewModel(
             controllers = controllers,
             appSettingsRepository = appSettingsRepository,
-            usageStateRepository = usageStateRepository,
             autoResetUseCase = autoResetUseCase,
             savedStateHandle = savedStateHandle,
             ioDispatcher = testDispatcher,

@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.NetworkCapabilities
+import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager

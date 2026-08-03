@@ -38,7 +38,7 @@ dependencies {
     implementation(libs.androidxAppcompat)
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
-    implementation(libs.kotlinxCoroutinesCore)
+    api(libs.kotlinxCoroutinesCore)
     implementation(libs.javaxInject)
 
     testImplementation(libs.junit)

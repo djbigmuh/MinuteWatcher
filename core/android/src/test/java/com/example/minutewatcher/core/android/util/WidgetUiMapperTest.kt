@@ -56,6 +56,7 @@ class WidgetUiMapperTest {
                                             sourceType = DataSourceType.SYSTEM,
                                         ),
                                 ),
+                            autoResetDay = 1,
                         ),
                     ),
                 capabilities = emptyList(),
@@ -143,6 +144,7 @@ class WidgetUiMapperTest {
                                             sourceType = DataSourceType.MANUAL,
                                         ),
                                 ),
+                            autoResetDay = 1,
                         ),
                     ),
                 capabilities = emptyList(),
@@ -172,7 +174,7 @@ class WidgetUiMapperTest {
                 timestamp = System.currentTimeMillis(),
                 simSnapshots =
                     listOf(
-                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap()),
+                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap(), 1),
                     ),
                 capabilities = emptyList(),
             )
@@ -227,6 +229,7 @@ class WidgetUiMapperTest {
                                             sourceType = DataSourceType.SYSTEM,
                                         ),
                                 ),
+                            autoResetDay = 1,
                         ),
                     ),
                 capabilities = emptyList(),
