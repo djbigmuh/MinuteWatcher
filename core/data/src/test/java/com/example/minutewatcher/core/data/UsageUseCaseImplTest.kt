@@ -5,6 +5,7 @@ import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.SimUsage
@@ -22,6 +23,7 @@ class UsageUseCaseImplTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
+    private val simUsageAdjustmentRepository: SimUsageAdjustmentRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val trafficTracker: TrafficTracker = mock()
@@ -35,6 +37,7 @@ class UsageUseCaseImplTest {
                 context,
                 simIdentityRepository,
                 simUsageRepository,
+                simUsageAdjustmentRepository,
                 simLimitsRepository,
                 simUsageResetRepository,
                 trafficTracker,
@@ -68,7 +71,7 @@ class UsageUseCaseImplTest {
             // formula: (target - limit) + used = (450 - 500) + 100 = 50
             usageUseCase.adjustMinutes(0, 450)
 
-            verify(simUsageRepository).setManualAdjustment(identity, 50)
+            verify(simUsageAdjustmentRepository).setManualAdjustment(identity, 50)
         }
 
     @Test
@@ -85,7 +88,7 @@ class UsageUseCaseImplTest {
             // adj = target - (limit - used) = 5 - (10 - 2) = -3
             usageUseCase.adjustTraffic(0, 5f)
 
-            verify(simUsageRepository).setTrafficAdjustment(identity, -3f)
+            verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, -3f)
         }
 
     private fun createSimUsage(

@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
-import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.resources.R
 
 @Composable

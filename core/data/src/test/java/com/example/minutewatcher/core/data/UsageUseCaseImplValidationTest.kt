@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
@@ -20,6 +21,7 @@ class UsageUseCaseImplValidationTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
+    private val simUsageAdjustmentRepository: SimUsageAdjustmentRepository = mock()
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val trafficTracker: TrafficTracker = mock()
@@ -33,6 +35,7 @@ class UsageUseCaseImplValidationTest {
                 context,
                 simIdentityRepository,
                 simUsageRepository,
+                simUsageAdjustmentRepository,
                 simLimitsRepository,
                 simUsageResetRepository,
                 trafficTracker,
@@ -52,7 +55,7 @@ class UsageUseCaseImplValidationTest {
             // formula: (0 - 100) + 0 = -100
             usageUseCase.adjustMinutes(0, -50)
 
-            verify(simUsageRepository).setManualAdjustment(identity, -100)
+            verify(simUsageAdjustmentRepository).setManualAdjustment(identity, -100)
         }
 
     @Test
@@ -65,7 +68,7 @@ class UsageUseCaseImplValidationTest {
 
             usageUseCase.adjustMinutes(0, Constants.MAX_MINUTES_LIMIT + 1000)
 
-            verify(simUsageRepository).setManualAdjustment(identity, Constants.MAX_MINUTES_LIMIT)
+            verify(simUsageAdjustmentRepository).setManualAdjustment(identity, Constants.MAX_MINUTES_LIMIT)
         }
 
     @Test
@@ -81,7 +84,7 @@ class UsageUseCaseImplValidationTest {
             // adj = 0 - (10 - 0) = -10
             usageUseCase.adjustTraffic(0, -1f)
 
-            verify(simUsageRepository).setTrafficAdjustment(identity, -10f)
+            verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, -10f)
         }
 
     private fun createSimUsage(

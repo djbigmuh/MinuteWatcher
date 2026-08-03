@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.model.SimCardUiModel
-import com.example.minutewatcher.core.model.util.ColorProvider
 import com.example.minutewatcher.core.resources.R
 
 @Composable
@@ -28,7 +27,6 @@ fun MinutesSection(
     statusColor: Color,
     onAdjustMinutes: () -> Unit,
 ) {
-    val status = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(

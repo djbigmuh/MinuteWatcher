@@ -49,7 +49,6 @@ import kotlinx.coroutines.CancellationException
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlin.time.Duration.Companion.milliseconds
 
 private const val SEPARATOR_THICKNESS = 1
 
