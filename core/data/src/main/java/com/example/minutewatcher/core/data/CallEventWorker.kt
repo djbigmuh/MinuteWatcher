@@ -8,6 +8,8 @@ import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
+import java.io.IOException
 
 @HiltWorker
 class CallEventWorker
@@ -31,9 +33,14 @@ class CallEventWorker
             } catch (e: SecurityException) {
                 AppLogger.e("CallEventWorker: Permission error", e)
                 return Result.failure()
-            } catch (e: Exception) {
-                AppLogger.e("CallEventWorker failed", e)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                AppLogger.w("CallEventWorker: IO error, retrying. Attempt: $runAttemptCount. Message: ${e.message}")
                 return Result.retry()
+            } catch (e: Exception) {
+                AppLogger.e("CallEventWorker failed with unexpected error", e)
+                return Result.failure()
             }
         }
     }

@@ -1,10 +1,12 @@
 package com.example.minutewatcher.feature.main.controller
 
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
@@ -27,19 +29,15 @@ import kotlin.time.Duration.Companion.seconds
 
 class MainSimDataController @Inject constructor(
     private val usageStateRepository: UsageStateRepository,
+    private val trackingStatusRepository: TrackingStatusRepository,
     private val simIdentityRepository: SimIdentityRepository,
     private val simLimitsRepository: SimLimitsRepository,
     private val usageUseCase: UsageUseCase,
     private val dataChangeNotifier: DataChangeNotifier,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @ApplicationScope private val scope: CoroutineScope,
 ) {
-    private lateinit var scope: CoroutineScope
-
-    fun initialize(scope: CoroutineScope) {
-        this.scope = scope
-    }
-
-    val uiState: StateFlow<SimCardListState> by lazy {
+    val uiState: StateFlow<SimCardListState> =
         usageStateRepository
             .observeSimCardUiModels()
             .map { models ->
@@ -51,7 +49,7 @@ class MainSimDataController @Inject constructor(
                 started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                 initialValue = SimCardListState.Loading,
             )
-    }
+
 
     private val _highlightedSlot = MutableStateFlow<Int?>(null)
     val highlightedSlot: StateFlow<Int?> = _highlightedSlot.asStateFlow()
@@ -95,13 +93,7 @@ class MainSimDataController @Inject constructor(
     ) {
         scope.launch(ioDispatcher) {
             val identity = simIdentityRepository.getIdentity(slot)
-            val currentState = uiState.value
-            val currentDay =
-                if (currentState is SimCardListState.Success) {
-                    currentState.simCards.find { it.slot == slot }?.autoResetDay ?: 1
-                } else {
-                    simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
-                }
+            val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
             simLimitsRepository.setAutoReset(identity, currentDay, enabled)
             onRefresh()
         }
@@ -114,13 +106,7 @@ class MainSimDataController @Inject constructor(
     ) {
         scope.launch(ioDispatcher) {
             val identity = simIdentityRepository.getIdentity(slot)
-            val currentState = uiState.value
-            val enabled =
-                if (currentState is SimCardListState.Success) {
-                    currentState.simCards.find { it.slot == slot }?.autoResetEnabled ?: false
-                } else {
-                    simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
-                }
+            val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
             simLimitsRepository.setAutoReset(identity, day, enabled)
             onRefresh()
         }
@@ -149,19 +135,19 @@ class MainSimDataController @Inject constructor(
     }
 
     fun retryAppSearch() {
-        usageStateRepository.recoverTracking("appsearch")
+        trackingStatusRepository.recoverTracking("appsearch")
     }
 
     fun retryCalls() {
-        usageStateRepository.recoverTracking("calls")
+        trackingStatusRepository.recoverTracking("calls")
     }
 
     fun retryShortcuts() {
-        usageStateRepository.recoverTracking("shortcuts")
+        trackingStatusRepository.recoverTracking("shortcuts")
     }
 
     fun retryTraffic(onRefresh: suspend () -> Unit) {
-        usageStateRepository.recoverTracking("traffic")
+        trackingStatusRepository.recoverTracking("traffic")
         scope.launch { onRefresh() }
     }
 

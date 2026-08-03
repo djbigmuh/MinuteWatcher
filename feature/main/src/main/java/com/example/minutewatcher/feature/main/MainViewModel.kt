@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
@@ -25,6 +26,7 @@ class MainViewModel
         private val appSettingsRepository: AppSettingsRepository,
         private val usageStateRepository: UsageStateRepository,
         private val autoResetUseCase: AutoResetUseCase,
+        private val savedStateHandle: SavedStateHandle,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         // Dialog States
@@ -69,9 +71,6 @@ class MainViewModel
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
 
         init {
-            controllers.banner.initialize(viewModelScope)
-            controllers.settings.initialize(viewModelScope)
-            controllers.simData.initialize(viewModelScope)
             initializeApp()
         }
 
@@ -82,8 +81,8 @@ class MainViewModel
                     if (settings?.onboardingCompleted == false) {
                         controllers.dialog.setShowOnboardingDialog(true)
                     }
-                    val result = usageStateRepository.refresh()
-                    autoResetUseCase.performAutoReset(result.snapshot)
+                    usageStateRepository.refresh()
+                    autoResetUseCase.performAutoReset()
                     refreshSimCards()
                 } catch (e: CancellationException) {
                     throw e
@@ -180,19 +179,19 @@ class MainViewModel
 
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
-        private var lastRefreshAt = 0L
-
         fun onActivityResume(
             nowElapsed: Long,
         ) {
+            val lastRefreshAt = savedStateHandle.get<Long>(KEY_LAST_REFRESH_AT) ?: 0L
             if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
-                lastRefreshAt = nowElapsed
+                savedStateHandle[KEY_LAST_REFRESH_AT] = nowElapsed
                 refreshSimCards()
                 notifyDataChanged()
             }
         }
 
         companion object {
+            private const val KEY_LAST_REFRESH_AT = "last_refresh_at"
             private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
         }
     }

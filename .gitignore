@@ -36,3 +36,7 @@ Thumbs.db
 MAKE_AUDIT_DUMP.bat
 make_audit_dump.ps1
 audit_dump/
+
+# Generated benchmark config
+app/benchmark-config.txt
+

@@ -55,8 +55,7 @@ class UsageCheckWorker
             deps.trafficTracker.updateTrafficUsage()
 
             // Perform auto-reset logic. It internally triggers data update notifications if needed.
-            // We pass a placeholder snapshot because ResetManager currently uses repository directly.
-            deps.autoResetUseCase.performAutoReset(deps.usageStateRepository.observeSnapshot().value)
+            deps.autoResetUseCase.performAutoReset()
 
             // Single refresh to capture all recent changes (traffic update and potential auto-reset)
             val refreshResult = deps.usageStateRepository.refresh()

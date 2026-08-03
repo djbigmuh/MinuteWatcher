@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,14 +15,9 @@ import javax.inject.Inject
 class MainSettingsController @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
     private val settingsUseCase: SettingsUseCase,
+    @ApplicationScope private val scope: CoroutineScope,
 ) {
-    private lateinit var scope: CoroutineScope
-
-    fun initialize(scope: CoroutineScope) {
-        this.scope = scope
-    }
-
-    val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> by lazy {
+    val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> =
         appSettingsRepository
             .observeAppSettings()
             .stateIn(
@@ -29,25 +25,23 @@ class MainSettingsController @Inject constructor(
                 started = SharingStarted.Eagerly,
                 initialValue = com.example.minutewatcher.core.model.AppSettings(),
             )
-    }
 
-    val appTheme: StateFlow<AppTheme> by lazy {
+    val appTheme: StateFlow<AppTheme> =
         settingsUseCase.appTheme
             .stateIn(
                 scope = scope,
                 started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                 initialValue = AppTheme.FOLLOW_SYSTEM,
             )
-    }
 
-    val appLanguage: StateFlow<String?> by lazy {
+    val appLanguage: StateFlow<String?> =
         settingsUseCase.appLanguage
             .stateIn(
                 scope = scope,
                 started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                 initialValue = null,
             )
-    }
+
 
     fun setTheme(theme: AppTheme) {
         scope.launch {

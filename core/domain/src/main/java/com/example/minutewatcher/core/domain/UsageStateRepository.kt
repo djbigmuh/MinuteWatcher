@@ -6,46 +6,31 @@ import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
+sealed interface RefreshResult {
+    val snapshot: GlobalSnapshot
+
+    data class Success(override val snapshot: GlobalSnapshot) : RefreshResult
+    data class Timeout(override val snapshot: GlobalSnapshot) : RefreshResult
+}
+
 interface UsageStateRepository {
     /**
-     * Observes the current usage stats for all active SIM cards.
+     * Наблюдает за данными всех активных SIM-карт.
      */
     fun observeSimUsages(): Flow<List<SimUsage>>
 
     /**
-     * Observes the UI models for all active SIM cards.
+     * Наблюдает за моделями для UI.
      */
     fun observeSimCardUiModels(): Flow<List<SimCardUiModel>>
 
     /**
-     * Observes the global snapshot of the system state.
+     * Возвращает текущий снимок состояния или наблюдает за ним.
      */
     fun observeSnapshot(): StateFlow<GlobalSnapshot>
 
     /**
-     * Observes the combined tracking status from all background components.
-     */
-    fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>>
-
-    /**
-     * Forces a refresh of the current usage data and returns the updated snapshot.
+     * Принудительно обновляет данные и возвращает результат.
      */
     suspend fun refresh(): RefreshResult
-
-    /**
-     * Attempts to recover a tracking component by its key.
-     */
-    fun recoverTracking(key: String)
-}
-
-sealed interface RefreshResult {
-    val snapshot: GlobalSnapshot
-
-    data class Success(
-        override val snapshot: GlobalSnapshot,
-    ) : RefreshResult
-
-    data class Timeout(
-        override val snapshot: GlobalSnapshot,
-    ) : RefreshResult
 }

@@ -149,11 +149,19 @@ class IdentityMigrationService
 
                     val result = prefs.migrateTypedKey(oldKey, newKeyName, storeName)
                     when (result) {
-                        MigrationResult.SUCCESS -> migratedCount++
-                        MigrationResult.CONFLICT -> conflictCount++
-                        MigrationResult.FAILURE -> {}
+                        MigrationResult.SUCCESS -> {
+                            migratedCount++
+                            prefs.remove(oldKey)
+                        }
+                        MigrationResult.CONFLICT -> {
+                            conflictCount++
+                            prefs.remove(oldKey)
+                        }
+                        MigrationResult.FAILURE -> {
+                            // Do not remove the old key if migration failed (e.g. unknown type),
+                            // to avoid silent data loss.
+                        }
                     }
-                    prefs.remove(oldKey)
                 }
             }
             if (migratedCount > 0 || conflictCount > 0) {

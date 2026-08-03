@@ -206,7 +206,9 @@ class CallTracker
 
         private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
             AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-            activeSubIds.forEach { endCall(it, notify = false) }
+            for (subId in activeSubIds) {
+                endCall(subId, notify = false)
+            }
             dataChangeNotifier.notifyDataChanged()
         }
 
@@ -214,14 +216,19 @@ class CallTracker
             AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}")
 
             val now = timeProvider.now()
-            val staleSessions = activeSubIds.filter { subId ->
+            val staleSessions = mutableListOf<Int>()
+            for (subId in activeSubIds) {
                 val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
-                startTime > 0 && (now - startTime) > Constants.Calls.MAX_CALL_DURATION_MS
+                if (startTime > 0 && (now - startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
+                    staleSessions.add(subId)
+                }
             }
 
             if (staleSessions.isNotEmpty()) {
                 AppLogger.d("Ending ${staleSessions.size} stale sessions")
-                staleSessions.forEach { endCall(it, notify = false) }
+                for (subId in staleSessions) {
+                    endCall(subId, notify = false)
+                }
                 dataChangeNotifier.notifyDataChanged()
             } else {
                 fallbackAttribution(activeSubIds)?.let { oldest ->
@@ -268,9 +275,19 @@ class CallTracker
 
         private suspend fun fallbackAttribution(activeSubIds: List<Int>): Int? {
             val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
-            val chosen =
-                activeSubIds.firstOrNull { it == defaultVoice }
-                    ?: activeSubIds.minByOrNull { callSessionRepository.getCallStartTime(it).firstWithTimeout() ?: 0L }
+
+            val chosen = activeSubIds.firstOrNull { it == defaultVoice } ?: run {
+                var minSubId: Int? = null
+                var minTime = Long.MAX_VALUE
+                for (subId in activeSubIds) {
+                    val t = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
+                    if (t < minTime) {
+                        minTime = t
+                        minSubId = subId
+                    }
+                }
+                minSubId
+            }
 
             AppLogger.d(
                 "Call fallback attribution decision: chosen=$chosen, activeSubIds=$activeSubIds, defaultVoice=$defaultVoice. " +

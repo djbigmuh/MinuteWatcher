@@ -30,10 +30,16 @@ class WidgetUpdaterImpl
                     widget.updateAll(context)
                     appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                 } catch (e: IllegalArgumentException) {
-                    // This is a heuristic to detect when the RemoteViews payload size exceeds the Android system limit.
-                    // The exact exception and message can vary by Android version, but usually contains "RemoteViews".
-                    val isLimitExceeded = e.message?.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true) == true
-                    AppLogger.e("Glance internal error during updateAll. Limit exceeded: $isLimitExceeded", e)
+                    val msg = e.message ?: ""
+                    // Heuristic to detect when the RemoteViews payload size exceeds the Android system limit.
+                    // The exact exception and message can vary by Android version, but usually contains "RemoteViews"
+                    // or mentions transaction size issues.
+                    val isLimitExceeded = msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true) ||
+                                          msg.contains("too large", ignoreCase = true) ||
+                                          msg.contains("transaction", ignoreCase = true)
+
+                    AppLogger.e("Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg", e)
+
                     if (isLimitExceeded) {
                         appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
                     }

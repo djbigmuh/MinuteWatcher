@@ -44,7 +44,10 @@ fun WidgetSettingsScreen(
     val loadError by viewModel.loadError.collectAsStateWithLifecycle()
 
     if (loadError) {
-        ErrorState(onRetry = { viewModel.retryLoad() })
+        ErrorState(
+            onRetry = { viewModel.retryLoad() },
+            onBack = onBack
+        )
         return
     }
 
@@ -71,17 +74,34 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun ErrorState(onRetry: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(id = R.string.error),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.error,
+private fun ErrorState(
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            @OptIn(ExperimentalMaterial3Api::class)
+            TopAppBar(
+                title = { Text(stringResource(id = R.string.settings_widget_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry) {
-                Text(text = stringResource(id = R.string.action_retry))
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(id = R.string.error),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRetry) {
+                    Text(text = stringResource(id = R.string.action_retry))
+                }
             }
         }
     }

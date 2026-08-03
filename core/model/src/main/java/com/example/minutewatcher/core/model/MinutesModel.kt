@@ -6,6 +6,7 @@ data class MinutesModel(
     val manualAdjustment: Int,
     val remaining: Int,
     val effectiveLimit: Int,
+    val isLimitSet: Boolean,
 ) {
     companion object {
         fun calculate(
@@ -14,8 +15,9 @@ data class MinutesModel(
             manualAdjustment: Int,
         ): MinutesModel {
             val effectiveLimit = maxOf(0, limit + manualAdjustment)
-            val remaining = if (limit > 0 || manualAdjustment != 0) maxOf(0, effectiveLimit - used) else 0
-            return MinutesModel(used, limit, manualAdjustment, remaining, effectiveLimit)
+            val isLimitSet = limit > 0 || manualAdjustment != 0
+            val remaining = if (isLimitSet) maxOf(0, effectiveLimit - used) else 0
+            return MinutesModel(used, limit, manualAdjustment, remaining, effectiveLimit, isLimitSet)
         }
     }
 }

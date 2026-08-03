@@ -3,17 +3,19 @@ package com.example.minutewatcher
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
+import com.example.minutewatcher.service.worker.SemanticInitializerWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
+import java.util.concurrent.TimeUnit
 
 @HiltAndroidApp
 class MinuteWatcherApp :
@@ -34,26 +36,18 @@ class MinuteWatcherApp :
         super.onCreate()
         AppLogger.init(this)
 
-        // Defer semantic layer initialization to improve cold start performance
-        applicationScope.launch {
-            delay(5.seconds) // 5 seconds grace period for UI and primary setup
+        // Defer semantic layer initialization to improve cold start performance.
+        // Using WorkManager ensures that initialization is attempted reliably even if the
+        // initial application process is short-lived, while providing a grace period for UI.
+        val initRequest = OneTimeWorkRequestBuilder<SemanticInitializerWorker>()
+            .setInitialDelay(INITIALIZATION_DELAY_SECONDS, TimeUnit.SECONDS)
+            .build()
 
-            val snapshotFlow = usageStateRepository.observeSnapshot()
-
-            try {
-                searchManager.initialize(snapshotFlow)
-            } catch (e: Exception) {
-                AppLogger.e("Failed to initialize AppSearch", e)
-                searchManager.setError(e.message)
-            }
-
-            try {
-                shortcutManager.initialize(snapshotFlow)
-            } catch (e: Exception) {
-                AppLogger.e("Failed to initialize shortcuts", e)
-                shortcutManager.setError(e.message)
-            }
-        }
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            SEMANTIC_INIT_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            initRequest
+        )
 
         if (BuildConfig.DEBUG) {
             android.os.StrictMode.setThreadPolicy(
@@ -79,4 +73,9 @@ class MinuteWatcherApp :
                 .Builder()
                 .setWorkerFactory(workerFactory)
                 .build()
+
+    companion object {
+        private const val SEMANTIC_INIT_WORK_NAME = "semantic_init"
+        private const val INITIALIZATION_DELAY_SECONDS = 5L
+    }
 }

@@ -32,12 +32,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -59,6 +62,8 @@ class SimIdentityRepositoryImpl
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
+        private val saveMutex = Mutex()
+
         private val seedFlow: Flow<String> =
             seedRepository
                 .getSeed()
@@ -129,7 +134,7 @@ class SimIdentityRepositoryImpl
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
-        private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+        private val activeSimsCache: StateFlow<List<ActiveSimInfo>?> =
             combine(
                 physicalActiveSims,
                 appSettingsRepository.observeAppSettings(),
@@ -146,8 +151,8 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = emptyList(),
+                started = SharingStarted.Lazily,
+                initialValue = null,
             )
 
         private suspend fun getSeed(): String = seedFlow.first()
@@ -155,21 +160,16 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            activeSimsCache.value.find { it.slotIndex == slot }?.let {
+            val currentSims: List<ActiveSimInfo> = activeSimsCache.filterNotNull().first()
+            currentSims.find { it.slotIndex == slot }?.let {
                 return it.identity
             }
 
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                val fallback = createFallbackIdentity(slot, "unsupported_$slot")
-                saveSimIdentityInfo(fallback)
-                return fallback
+                return createFallbackIdentity(slot, "unsupported_$slot")
             }
 
-            val identity = findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
-            if (identity.source == IdentitySource.SLOT_FALLBACK) {
-                saveSimIdentityInfo(identity)
-            }
-            return identity
+            return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
         }
 
         private suspend fun findActiveIdentityInternal(slot: Int): SimIdentity? {
@@ -191,7 +191,7 @@ class SimIdentityRepositoryImpl
             source = IdentitySource.SLOT_FALLBACK,
         )
 
-        private suspend fun saveSimIdentityInfo(identity: SimIdentity) {
+        private suspend fun saveSimIdentityInfo(identity: SimIdentity) = saveMutex.withLock {
             val slot = identity.slotIndex
             val subId = identity.subscriptionId
 
@@ -199,13 +199,17 @@ class SimIdentityRepositoryImpl
             val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
             val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
 
-            if ((currentSlot == slot) && (currentSub == subId)) return
+            if ((currentSlot == slot) && (currentSub == subId)) return@withLock
 
             // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
             // it might be a transition from fallback sim_$slot.
             if (identity.source != IdentitySource.SLOT_FALLBACK && currentSlot == null) {
                 scope.launch {
-                    migrationService.migrateLegacyData(identity)
+                    try {
+                        migrationService.migrateLegacyData(identity)
+                    } catch (e: Exception) {
+                        com.example.minutewatcher.core.common.util.AppLogger.e("Failed to migrate legacy data for identity: ${identity.stableId}", e)
+                    }
                 }
             }
 
@@ -215,7 +219,7 @@ class SimIdentityRepositoryImpl
             }
         }
 
-        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache
+        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache.filterNotNull()
 
         private suspend fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
             val infoList =

@@ -120,26 +120,31 @@ class UsageTileService : TileService() {
         val operatorName = SimUtils.getShortOperatorName(this, activeSim.operator)
         val minutes = activeSim.entities[PackageType.MINUTES]
 
-        tile.label = operatorName
         if (minutes != null) {
             val remaining = minutes.remaining.toInt()
+            val remainingText = resources.getQuantityString(R.plurals.minutes_plurals, remaining, remaining)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle =
-                    resources.getQuantityString(
-                        R.plurals.minutes_plurals,
-                        remaining,
-                        remaining,
-                    )
+                tile.label = operatorName
+                tile.subtitle = remainingText
             } else {
-                // For older versions, put info in label or content description
-                tile.label = getString(R.string.tile_operator_value_format, operatorName, remaining.toString())
+                // For older versions (API 26-28), subtitle is not supported.
+                // We use a compact "Name: Value" format in the label.
+                tile.label = "$operatorName: $remaining"
             }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                tile.stateDescription = remainingText
+            }
+            tile.contentDescription = "$operatorName: $remainingText"
             tile.state = Tile.STATE_ACTIVE
         } else {
+            tile.label = operatorName
             tile.state = Tile.STATE_INACTIVE
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.subtitle = getString(R.string.no_data)
             }
+            tile.contentDescription = "$operatorName: ${getString(R.string.no_data)}"
         }
 
         tile.updateTile()

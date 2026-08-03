@@ -8,12 +8,14 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,7 @@ class MainViewModelTest {
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val trackingStatusRepository: TrackingStatusRepository = mock()
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
@@ -66,7 +69,7 @@ class MainViewModelTest {
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
 
-        whenever(usageStateRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
+        whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
@@ -80,18 +83,29 @@ class MainViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): MainViewModel {
+    private fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = com.example.minutewatcher.feature.main.controller.MainDialogController(savedStateHandle)
-        val bannerController = com.example.minutewatcher.feature.main.controller.MainBannerController(usageStateRepository, permissionRepository, appSettingsRepository)
+        val bannerController = com.example.minutewatcher.feature.main.controller.MainBannerController(
+            trackingStatusRepository = trackingStatusRepository,
+            permissionRepository = permissionRepository,
+            appSettingsRepository = appSettingsRepository,
+            scope = scope
+        )
         val refreshController = com.example.minutewatcher.feature.main.controller.MainSimRefreshController(usageUseCase, usageStateRepository, testDispatcher)
-        val settingsController = com.example.minutewatcher.feature.main.controller.MainSettingsController(appSettingsRepository, settingsUseCase)
+        val settingsController = com.example.minutewatcher.feature.main.controller.MainSettingsController(
+            appSettingsRepository = appSettingsRepository,
+            settingsUseCase = settingsUseCase,
+            scope = scope
+        )
         val simDataController = com.example.minutewatcher.feature.main.controller.MainSimDataController(
             usageStateRepository = usageStateRepository,
+            trackingStatusRepository = trackingStatusRepository,
             simIdentityRepository = simIdentityRepository,
             simLimitsRepository = simLimitsRepository,
             usageUseCase = usageUseCase,
             dataChangeNotifier = dataChangeNotifier,
-            ioDispatcher = testDispatcher
+            ioDispatcher = testDispatcher,
+            scope = scope
         )
 
         val controllers = MainViewModelControllers(
@@ -107,6 +121,7 @@ class MainViewModelTest {
             appSettingsRepository = appSettingsRepository,
             usageStateRepository = usageStateRepository,
             autoResetUseCase = autoResetUseCase,
+            savedStateHandle = savedStateHandle,
             ioDispatcher = testDispatcher,
         )
     }
@@ -114,7 +129,7 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =
         runTest {
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             phonePermissionFlow.value = false
 
@@ -125,7 +140,7 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState hides phone permission banner when granted is true`() =
         runTest {
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             phonePermissionFlow.value = true
             usageStatsPermissionFlow.value = true
@@ -137,7 +152,7 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState reflects permanently denied status`() =
         runTest {
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             viewModel.setPhonePermissionPermanentlyDenied(true)
 
@@ -152,7 +167,7 @@ class MainViewModelTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = false
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             val bannerState = viewModel.trackingBannerState.first()
             assertTrue(bannerState.notificationPermissionState != PermissionUiState.GRANTED)
@@ -165,7 +180,7 @@ class MainViewModelTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = true
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             val bannerState = viewModel.trackingBannerState.first()
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
@@ -179,7 +194,7 @@ class MainViewModelTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             phonePermissionFlow.value = false
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
             var bannerState = viewModel.trackingBannerState.first()
             assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
 
@@ -196,7 +211,7 @@ class MainViewModelTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = false
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             val bannerState = viewModel.trackingBannerState.first()
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
@@ -207,7 +222,7 @@ class MainViewModelTest {
         runTest {
             usageStatsPermissionFlow.value = false
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -231,10 +246,10 @@ class MainViewModelTest {
                             ),
                     ),
                 )
-            whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
+            whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(trackingFlow)
             usageStatsPermissionFlow.value = true
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -259,10 +274,10 @@ class MainViewModelTest {
                             ),
                     ),
                 )
-            whenever(usageStateRepository.observeTrackingStatus()).thenReturn(trackingFlow)
+            whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(trackingFlow)
             usageStatsPermissionFlow.value = true
 
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -276,7 +291,7 @@ class MainViewModelTest {
     @Test
     fun `setTheme calls settingsUseCase`() =
         runTest {
-            val viewModel = createViewModel()
+            val viewModel = createViewModel(backgroundScope)
             val theme = AppTheme.DARK
 
             viewModel.setTheme(theme)

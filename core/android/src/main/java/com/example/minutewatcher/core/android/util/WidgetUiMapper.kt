@@ -19,16 +19,21 @@ object WidgetUiMapper {
         val luminance = ColorUtils.calculateLuminance(state.backgroundColor)
         val (textColor, secondaryTextColor) = WidgetColorResolver.resolveTextColors(luminance)
         val fontMultiplier = FontScaleProvider.getMultiplier(state.fontSize)
-        val layoutMode =
-            if (state.widgetLimitExceeded) {
-                WidgetLayoutMode.SIMPLE
-            } else {
-                WidgetLayoutMode.fromValue(state.layoutMode)
-            }
+
+        val activeSims = snapshot.simSnapshots.filter { it.isActive }
+        var currentLayoutMode = WidgetLayoutMode.fromValue(state.layoutMode)
+
+        val isPreemptivelyLimited = activeSims.size >= 3 && currentLayoutMode == WidgetLayoutMode.SIX_LINES
+
+        if (state.widgetLimitExceeded) {
+            currentLayoutMode = WidgetLayoutMode.SIMPLE
+        } else if (isPreemptivelyLimited) {
+            // Pre-emptive limit to avoid RemoteViews size issues on triple SIM setups with high complexity
+            currentLayoutMode = WidgetLayoutMode.THREE_LINES
+        }
 
         val simUiStates =
-            snapshot.simSnapshots
-                .filter { it.isActive }
+            activeSims
                 .sortedBy { it.slot }
                 .map { sim ->
                     val simConfig = state.simStates[sim.slot]
@@ -42,7 +47,7 @@ object WidgetUiMapper {
                             secondaryTextColor,
                             fontMultiplier,
                         )
-                    simUiState.copy(layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, layoutMode))
+                    simUiState.copy(layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, currentLayoutMode))
                 }
 
         return WidgetUiState(
@@ -54,7 +59,7 @@ object WidgetUiMapper {
             isHorizontal = state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
             showSeparator = simUiStates.size >= 2 && !state.widgetLimitExceeded,
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
-            forceSimpleLayout = state.widgetLimitExceeded,
+            forceSimpleLayout = state.widgetLimitExceeded || isPreemptivelyLimited,
             settingsLoadFailed = state.settingsLoadFailed,
             refreshFailed = refreshFailed,
         )

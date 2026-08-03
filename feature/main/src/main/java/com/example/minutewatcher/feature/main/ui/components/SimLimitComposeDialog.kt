@@ -62,8 +62,8 @@ fun SimLimitComposeDialog(
                 onConfirm = {
                     if (state.validate(validationMessages)) {
                         onConfirm(
-                            state.validatedMinutes!!,
-                            (state.validatedTrafficGb!! * Constants.MB_PER_GB).toInt(),
+                            requireNotNull(state.validatedMinutes) { "Validated minutes should not be null after successful validation" },
+                            (requireNotNull(state.validatedTrafficGb) { "Validated traffic should not be null after successful validation" } * Constants.MB_PER_GB).toInt(),
                             state.rolloverEnabled,
                         )
                     }
@@ -156,7 +156,7 @@ private fun DialogFields(
             label = { Text(stringResource(id = R.string.set_minutes_limit)) },
             placeholder = { Text(stringResource(id = R.string.minutes_limit_hint)) },
             isError = state.minutesError != null,
-            supportingText = { if (state.minutesError != null) Text(text = state.minutesError!!) },
+            supportingText = { state.minutesError?.let { Text(text = it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -166,7 +166,7 @@ private fun DialogFields(
             label = { Text(stringResource(id = R.string.set_traffic_limit)) },
             placeholder = { Text(stringResource(id = R.string.traffic_limit_gb_hint_dialog)) },
             isError = state.trafficError != null,
-            supportingText = { if (state.trafficError != null) Text(text = state.trafficError!!) },
+            supportingText = { state.trafficError?.let { Text(text = it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )

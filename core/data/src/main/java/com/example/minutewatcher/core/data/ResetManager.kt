@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
-import com.example.minutewatcher.core.model.GlobalSnapshot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -31,7 +30,7 @@ class ResetManager
         private val resetMutex = Mutex()
         private val lastResetCheck = ConcurrentHashMap<String, Long>()
 
-        override suspend fun performAutoReset(snapshot: GlobalSnapshot) {
+        override suspend fun performAutoReset() {
             resetMutex.withLock {
                 try {
                     val now = timeProvider.now()

@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
-import dagger.Lazy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -36,7 +35,7 @@ class UpdateCoordinator
     constructor(
         private val dataRefreshNotifier: DataRefreshNotifier,
         private val widgetUpdater: WidgetUpdater,
-        private val usageStateRepository: Lazy<UsageStateRepository>,
+        private val usageStateRepository: UsageStateRepository,
         private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
@@ -66,7 +65,7 @@ class UpdateCoordinator
 
             observationJob =
                 scope.launch {
-                    usageStateRepository.get().observeSnapshot()
+                    usageStateRepository.observeSnapshot()
                         .filter { it.timestamp > 0L }
                         .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                         .distinctUntilChanged { old, new ->

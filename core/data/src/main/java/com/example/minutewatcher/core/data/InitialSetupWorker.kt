@@ -33,8 +33,8 @@ class InitialSetupWorker
                 checkAndPerformMigrations()
 
                 // Perform auto-reset immediately after boot/migration
-                val snapshotAfterMigration = deps.usageStateRepository.refresh().snapshot
-                deps.autoResetUseCase.performAutoReset(snapshotAfterMigration)
+                deps.usageStateRepository.refresh()
+                deps.autoResetUseCase.performAutoReset()
 
                 // Reset traffic baseline after reboot for active SIMs
                 val activeSimsForTraffic = deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()

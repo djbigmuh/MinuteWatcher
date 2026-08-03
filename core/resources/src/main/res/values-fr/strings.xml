@@ -119,11 +119,13 @@
     <string name="gb_abbr"> Go</string>
     <string name="auto_reset_day_suffix">jour du mois</string>
 
-    <plurals name="minutes_plurals" tools:ignore="MissingQuantity">
+    <!-- French uses only 'one' and 'other' (or 'many' for some frameworks, but 'one'/'other' is standard for Android). 'many' is not required for this locale. -->
+    <plurals name="minutes_plurals" tools:ignore="ImpliedQuantity,MissingQuantity">
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
     </plurals>
-    <plurals name="days_plurals" tools:ignore="MissingQuantity">
+    <!-- French uses only 'one' and 'other' quantities. -->
+    <plurals name="days_plurals" tools:ignore="ImpliedQuantity,MissingQuantity">
         <item quantity="one">%1$d jour</item>
         <item quantity="other">%1$d jours</item>
     </plurals>

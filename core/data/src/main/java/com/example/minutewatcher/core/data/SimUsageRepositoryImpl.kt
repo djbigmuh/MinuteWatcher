@@ -49,8 +49,6 @@ class SimUsageRepositoryImpl
                 )
             }
 
-
-
         override suspend fun setMinutesUsed(
             identity: String,
             value: Int,

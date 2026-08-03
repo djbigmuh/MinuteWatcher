@@ -56,8 +56,8 @@ fun AdjustmentComposeDialog(
                     },
                     isError = errorText != null,
                     supportingText = {
-                        if (errorText != null) {
-                            Text(text = errorText!!)
+                        errorText?.let {
+                            Text(text = it)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal),

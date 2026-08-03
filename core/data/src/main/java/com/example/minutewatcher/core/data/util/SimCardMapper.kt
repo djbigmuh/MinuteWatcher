@@ -36,7 +36,7 @@ object SimCardMapper {
             manualAdjustment = usage.manualAdjustment,
             minutesRemaining = minutesModel.remaining,
             effectiveMinutesLimit = minutesModel.effectiveLimit,
-            isMinutesLimitSet = (usage.minutesLimit + usage.manualAdjustment) > 0,
+            isMinutesLimitSet = minutesModel.isLimitSet,
             trafficUsedMb = usage.trafficUsed,
             trafficLimitMb = usage.trafficLimitMb,
             trafficRemainingGb = trafficModel.remainingGb,

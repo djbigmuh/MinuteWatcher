@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
-import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -153,7 +152,6 @@ open class SemanticSearchManager
             for (sim in snapshot.simSnapshots) {
                 if (!sim.isActive) continue
                 for (entity in sim.entities.values) {
-                    if (entity.sourceType != DataSourceType.SYSTEM) continue
                     documents.add(UsageDocument.fromSemanticEntity(entity))
                 }
             }
@@ -192,6 +190,6 @@ open class SemanticSearchManager
 
         companion object {
             private const val DATABASE_NAME = "usage"
-            private const val NAMESPACE = "usage"
+            const val NAMESPACE = "usage"
         }
     }

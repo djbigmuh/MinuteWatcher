@@ -1,9 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,18 +10,11 @@ import javax.inject.Singleton
 class PermissionStateNotifierImpl
     @Inject
     constructor() : PermissionStateNotifier {
-        private val _changes =
-            MutableSharedFlow<Unit>(
-                replay = 1,
-                extraBufferCapacity = 1,
-                onBufferOverflow = BufferOverflow.DROP_OLDEST,
-            ).apply {
-                tryEmit(Unit)
-            }
+        private val _changes = MutableStateFlow(Unit)
 
-        override val changes = _changes.asSharedFlow()
+        override val changes = _changes.asStateFlow()
 
         override fun notifyChanged() {
-            _changes.tryEmit(Unit)
+            _changes.value = Unit
         }
     }

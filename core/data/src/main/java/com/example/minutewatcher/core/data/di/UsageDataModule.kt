@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.data.ResetManager
 import com.example.minutewatcher.core.data.SimLimitsRepositoryImpl
 import com.example.minutewatcher.core.data.SimUsageRepositoryImpl
 import com.example.minutewatcher.core.data.TrafficTracker
+import com.example.minutewatcher.core.data.TrackingStatusRepositoryImpl
 import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
 import com.example.minutewatcher.core.data.UsageUseCaseImpl
@@ -17,6 +18,7 @@ import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import dagger.Binds
@@ -49,6 +51,10 @@ abstract class UsageDataModule {
     @Binds
     @Singleton
     abstract fun bindUsageStateRepository(impl: UsageStateRepositoryImpl): UsageStateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTrackingStatusRepository(impl: TrackingStatusRepositoryImpl): TrackingStatusRepository
 
     @Binds
     @Singleton

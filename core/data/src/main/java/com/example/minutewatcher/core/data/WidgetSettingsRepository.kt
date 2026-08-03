@@ -5,11 +5,8 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -28,11 +25,8 @@ class WidgetSettingsRepository
             coroutineScope {
                 val settings = appSettingsRepository.getAppSettings().first()
 
-                val simIdentities =
-                    SimConstants.SUPPORTED_SLOT_INDICES
-                        .map { slot ->
-                            async { simIdentityRepository.getSimIdentity(slot) }
-                        }.awaitAll()
+                val activeSims = simIdentityRepository.observeActiveSims().first()
+                val simIdentities = activeSims.map { it.identity }
                 val identities = simIdentities.map { it.stableId }
                 val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(identities).first()
 
@@ -69,11 +63,13 @@ class WidgetSettingsRepository
                 )
             }
 
+            val activeSims = simIdentityRepository.observeActiveSims().first()
+            val activeIdentities = activeSims.associateBy { it.slotIndex }
+
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             for ((slot, simSettings) in state.simStates) {
-                if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) continue
-                val identity = simIdentityRepository.getIdentity(slot)
-                simSettingsMap[identity] = simSettings
+                val activeSim = activeIdentities[slot] ?: continue
+                simSettingsMap[activeSim.identity.stableId] = simSettings
             }
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
             dataChangeNotifier.notifyDataChanged(updateWidget = true)

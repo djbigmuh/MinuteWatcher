@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.data.util.SimCardMapper
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
-import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -54,26 +53,11 @@ class UsageStateRepositoryImpl
         private val simUsageRepository: SimUsageRepository,
         private val semanticCapabilities: SemanticCapabilities,
         private val semanticVersion: SemanticVersion,
-        private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
         private val dataRefreshNotifier: DataRefreshNotifier,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
     ) : UsageStateRepository {
         private val refreshMutex = Mutex()
-
-        override fun recoverTracking(key: String) {
-            statusProviders.find { it.key == key }?.recover()
-        }
-
-        override fun observeTrackingStatus(): Flow<Map<String, com.example.minutewatcher.core.model.TrackingStatus>> {
-            val flows =
-                statusProviders.map { provider ->
-                    provider.status.map { status -> provider.key to status }
-                }
-            return combine(flows) { pairs ->
-                pairs.toMap()
-            }
-        }
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
             simIdentityRepository

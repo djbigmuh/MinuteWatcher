@@ -42,7 +42,7 @@ data class UsageDocument(
             val usageStatus = ColorProvider.getUsageStatus(entity.remaining.toFloat(), entity.limit.toFloat())
 
             return UsageDocument(
-                namespace = "usage",
+                namespace = SemanticSearchManager.NAMESPACE,
                 id = entity.id,
                 operatorName = entity.operatorName,
                 packageType = entity.packageType.name,

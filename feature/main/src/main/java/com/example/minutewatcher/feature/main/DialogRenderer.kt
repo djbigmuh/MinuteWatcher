@@ -26,7 +26,7 @@ fun DialogRenderer(
     val showTrafficLimitationDialog by viewModel.showTrafficLimitationDialog.collectAsStateWithLifecycle()
 
     showLimitDialog?.let { data ->
-        key(data.slot) {
+        key(data) {
             SimLimitComposeDialog(
                 operatorName = data.name,
                 initialMinutes = data.minutes,
@@ -46,7 +46,7 @@ fun DialogRenderer(
     }
 
     showDayDialog?.let { data ->
-        key(data.slot) {
+        key(data) {
             DayPickerComposeDialog(
                 initialDay = data.day,
                 onDismiss = { viewModel.setDayDialog(null) },
@@ -59,7 +59,7 @@ fun DialogRenderer(
     }
 
     showAdjustDialog?.let { data ->
-        key(data.slot) {
+        key(data) {
             AdjustmentComposeDialog(
                 currentValue = data.currentValue,
                 isMinutes = data.isMinutes,
