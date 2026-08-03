@@ -34,12 +34,12 @@ android {
 
     sourceSets {
         getByName("debug") {
-            java.srcDirs("src/mock/java")
-            kotlin.srcDirs("src/mock/java")
+            java.srcDir("src/mock/java")
+            kotlin.srcDir("src/mock/java")
         }
         getByName("benchmark") {
-            java.srcDirs("src/mock/java")
-            kotlin.srcDirs("src/mock/java")
+            java.srcDir("src/mock/java")
+            kotlin.srcDir("src/mock/java")
         }
     }
 

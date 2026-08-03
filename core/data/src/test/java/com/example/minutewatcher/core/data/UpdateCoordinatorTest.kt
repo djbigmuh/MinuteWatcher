@@ -76,7 +76,7 @@ class UpdateCoordinatorTest {
                 UpdateCoordinator(
                     dataRefreshNotifier,
                     widgetUpdater,
-                    { usageStateRepository },
+                    usageStateRepository,
                     timeProvider,
                     backgroundScope,
                 )

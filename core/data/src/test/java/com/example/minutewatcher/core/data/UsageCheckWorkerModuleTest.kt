@@ -10,8 +10,10 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
@@ -25,6 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -37,21 +40,15 @@ import org.robolectric.annotation.Config
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
     @Mock lateinit var simUsageRepository: SimUsageRepository
-
+    @Mock lateinit var simIdentityRepository: SimIdentityRepository
+    @Mock lateinit var simWidgetVisibilityRepository: SimWidgetVisibilityRepository
     @Mock lateinit var simNotificationFlagsRepository: SimNotificationFlagsRepository
-
     @Mock lateinit var appSettingsRepository: AppSettingsRepository
-
     @Mock lateinit var autoResetUseCase: AutoResetUseCase
-
     @Mock lateinit var trafficTracker: TrafficTracker
-
     @Mock lateinit var notificationHelper: NotificationHelper
-
     @Mock lateinit var dataChangeNotifier: DataChangeNotifier
-
     @Mock lateinit var usageStateRepository: UsageStateRepository
-
     @Mock lateinit var usageUseCase: UsageUseCase
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
@@ -80,6 +77,7 @@ class UsageCheckWorkerModuleTest {
             )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(kotlinx.coroutines.flow.MutableStateFlow(emptySnapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
+            whenever(simWidgetVisibilityRepository.clearOrphanedSettings(any())).thenReturn(Unit)
         }
     }
 
@@ -99,6 +97,7 @@ class UsageCheckWorkerModuleTest {
                                 val deps =
                                     UsageWorkerDependencies(
                                         simUsageRepository = simUsageRepository,
+                                        simIdentityRepository = simIdentityRepository,
                                         simNotificationFlagsRepository = simNotificationFlagsRepository,
                                         appSettingsRepository = appSettingsRepository,
                                         autoResetUseCase = autoResetUseCase,
@@ -107,6 +106,7 @@ class UsageCheckWorkerModuleTest {
                                         dataChangeNotifier = dataChangeNotifier,
                                         usageStateRepository = usageStateRepository,
                                         usageUseCase = usageUseCase,
+                                        simWidgetVisibilityRepository = simWidgetVisibilityRepository,
                                         timeProvider = timeProvider,
                                     )
                                 return UsageCheckWorker(

@@ -10,8 +10,10 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
@@ -56,6 +58,8 @@ class UsageCheckWorkerTest {
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val usageStateRepository: UsageStateRepository = mock()
     private val usageUseCase: UsageUseCase = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     private val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
@@ -75,6 +79,7 @@ class UsageCheckWorkerTest {
             whenever(trafficTracker.updateTrafficUsage()).thenReturn(Unit)
             whenever(autoResetUseCase.performAutoReset()).thenReturn(Unit)
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(Unit)
+            whenever(simWidgetVisibilityRepository.clearOrphanedSettings(any())).thenReturn(Unit)
         }
 
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
@@ -96,6 +101,7 @@ class UsageCheckWorkerTest {
                             val deps =
                                 UsageWorkerDependencies(
                                     simUsageRepository = simUsageRepository,
+                                    simIdentityRepository = simIdentityRepository,
                                     simNotificationFlagsRepository = simNotificationFlagsRepository,
                                     appSettingsRepository = appSettingsRepository,
                                     autoResetUseCase = autoResetUseCase,
@@ -104,6 +110,7 @@ class UsageCheckWorkerTest {
                                     dataChangeNotifier = dataChangeNotifier,
                                     usageStateRepository = usageStateRepository,
                                     usageUseCase = usageUseCase,
+                                    simWidgetVisibilityRepository = simWidgetVisibilityRepository,
                                     timeProvider = timeProvider,
                                 )
                             return UsageCheckWorker(

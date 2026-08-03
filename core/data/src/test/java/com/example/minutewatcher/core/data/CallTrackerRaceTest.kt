@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -53,7 +54,7 @@ class CallTrackerRaceTest {
                 dataChangeNotifier,
                 permissionManager,
                 telephonyManager,
-                kotlinx.coroutines.CoroutineScope(testDispatcher),
+                TestScope(testDispatcher),
                 timeProvider,
             )
 

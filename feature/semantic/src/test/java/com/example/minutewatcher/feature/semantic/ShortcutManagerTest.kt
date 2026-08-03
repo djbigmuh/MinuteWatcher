@@ -138,6 +138,7 @@ class ShortcutManagerTest {
             assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
         }
 
+    @Suppress("SameParameterValue")
     private fun createEntity(
         slot: Int,
         op: String,
