@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -22,8 +21,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,10 +29,9 @@ class WidgetSettingsViewModel
     constructor(
         @ApplicationContext private val context: Context,
         private val loader: WidgetSettingsLoader,
-        private val dataChangeNotifier: DataChangeNotifier,
+        private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
-        private val saveMutex = Mutex()
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()
 
@@ -47,7 +43,11 @@ class WidgetSettingsViewModel
                 .filterNotNull()
                 .combine(usageStateRepository.observeSnapshot()) { state, snapshot ->
                     WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS), null)
+                }.stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    null,
+                )
 
         init {
             loadSettings()
@@ -95,19 +95,8 @@ class WidgetSettingsViewModel
                 }
 
             viewModelScope.launch {
-                try {
-                    saveMutex.withLock {
-                        loader.save(currentState)
-                        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                    }
-                    onComplete(true)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    com.example.minutewatcher.core.common.util.AppLogger
-                        .e("Failed to save widget settings", e)
-                    onComplete(false)
-                }
+                val success = saver.save(currentState)
+                onComplete(success)
             }
         }
     }

@@ -92,12 +92,21 @@ private fun SimCardContent(
         Spacer(modifier = Modifier.height(16.dp))
         MinutesSection(
             model = model,
-            statusColor = getStatusColor(ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())),
+            statusColor =
+                getStatusColor(
+                    ColorProvider.getUsageStatus(
+                        model.minutesRemaining.toFloat(),
+                        model.effectiveMinutesLimit.toFloat(),
+                    ),
+                ),
             onAdjustMinutes = onAdjustMinutes,
         )
         TrafficSection(
             model = model,
-            statusColor = getStatusColor(ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb)),
+            statusColor =
+                getStatusColor(
+                    ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb),
+                ),
             onAdjustTraffic = onAdjustTraffic,
             onShowTrafficInfo = onShowTrafficInfo,
         )
@@ -162,7 +171,12 @@ private fun AutoResetSection(
             contentDescription = stringResource(id = R.string.change_auto_reset_day_content_desc),
         )
         Text(
-            text = stringResource(id = R.string.value_unit_format, "", stringResource(id = R.string.auto_reset_day_suffix)).trim(),
+            text =
+                stringResource(
+                    id = R.string.value_unit_format,
+                    "",
+                    stringResource(id = R.string.auto_reset_day_suffix),
+                ).trim(),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(1f),
         )

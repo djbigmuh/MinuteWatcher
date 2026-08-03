@@ -26,7 +26,8 @@ class IdentityMigrationService
     ) {
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean {
             val appPrefs = appDataStore.data.first()
-            if ((appPrefs[SettingsKeys.DATA_SCHEMA_VERSION] ?: 0) >= SettingsKeys.CURRENT_DATA_SCHEMA_VERSION) {
+            val currentSchema = appPrefs[SettingsKeys.DATA_SCHEMA_VERSION] ?: 0
+            if (currentSchema >= SettingsKeys.CURRENT_DATA_SCHEMA_VERSION) {
                 return false
             }
 
@@ -74,8 +75,22 @@ class IdentityMigrationService
 
             for (legacySuffix in legacySuffixes) {
                 if (legacySuffix == newSuffix) continue
-                migrateDataStore(appDataStore, legacySuffix, newSuffix, "app_settings", slot, identity)
-                migrateDataStore(simDataStore, legacySuffix, newSuffix, "sim_settings", slot, identity)
+                migrateDataStore(
+                    appDataStore,
+                    legacySuffix,
+                    newSuffix,
+                    "app_settings",
+                    slot,
+                    identity,
+                )
+                migrateDataStore(
+                    simDataStore,
+                    legacySuffix,
+                    newSuffix,
+                    "sim_settings",
+                    slot,
+                    identity,
+                )
             }
 
             // Cleanup mapping keys that were used for this identity
@@ -95,7 +110,9 @@ class IdentityMigrationService
             }
         }
 
-        private suspend fun findLegacySuffixes(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): List<String> {
+        private suspend fun findLegacySuffixes(
+            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
+        ): List<String> {
             val suffixes = mutableListOf<String>()
 
             // Always try to migrate from old slot-based keys (V1)
@@ -105,8 +122,8 @@ class IdentityMigrationService
 
             // If current is ICCID, we might have legacy data under sub_N (e.g. from transition sub -> icc)
             if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.ICCID) {
-                activeIdentity.subscriptionId?.let {
-                    suffixes.add("_sub_$it")
+                activeIdentity.subscriptionId?.let { subId ->
+                    suffixes.add("_sub_$subId")
                 }
             }
 
@@ -165,7 +182,10 @@ class IdentityMigrationService
                 }
             }
             if (migratedCount > 0 || conflictCount > 0) {
-                AppLogger.d("Migrated legacy data ($legacySuffix) from $storeName for slot $slot to identity $identity: $migratedCount keys, $conflictCount conflicts")
+                AppLogger.d(
+                    "Migrated legacy data ($legacySuffix) from $storeName for slot $slot " +
+                        "to identity $identity: $migratedCount keys, $conflictCount conflicts",
+                )
             }
             return migratedCount > 0
         }
@@ -185,11 +205,46 @@ class IdentityMigrationService
             val conflictKeyName = "conflict_${oldKey.name}"
 
             return when (value) {
-                is Int -> migrateOrBackup(intPreferencesKey(newKeyName), intPreferencesKey(conflictKeyName), value, storeName)
-                is Float -> migrateOrBackup(floatPreferencesKey(newKeyName), floatPreferencesKey(conflictKeyName), value, storeName)
-                is Long -> migrateOrBackup(longPreferencesKey(newKeyName), longPreferencesKey(conflictKeyName), value, storeName)
-                is Boolean -> migrateOrBackup(booleanPreferencesKey(newKeyName), booleanPreferencesKey(conflictKeyName), value, storeName)
-                is String -> migrateOrBackup(stringPreferencesKey(newKeyName), stringPreferencesKey(conflictKeyName), value, storeName)
+                is Int ->
+                    migrateOrBackup(
+                        intPreferencesKey(newKeyName),
+                        intPreferencesKey(conflictKeyName),
+                        value,
+                        storeName,
+                    )
+
+                is Float ->
+                    migrateOrBackup(
+                        floatPreferencesKey(newKeyName),
+                        floatPreferencesKey(conflictKeyName),
+                        value,
+                        storeName,
+                    )
+
+                is Long ->
+                    migrateOrBackup(
+                        longPreferencesKey(newKeyName),
+                        longPreferencesKey(conflictKeyName),
+                        value,
+                        storeName,
+                    )
+
+                is Boolean ->
+                    migrateOrBackup(
+                        booleanPreferencesKey(newKeyName),
+                        booleanPreferencesKey(conflictKeyName),
+                        value,
+                        storeName,
+                    )
+
+                is String ->
+                    migrateOrBackup(
+                        stringPreferencesKey(newKeyName),
+                        stringPreferencesKey(conflictKeyName),
+                        value,
+                        storeName,
+                    )
+
                 else -> {
                     AppLogger.e("Unknown type for key ${oldKey.name}: ${value::class.simpleName}, skipping migration")
                     MigrationResult.FAILURE
@@ -202,16 +257,16 @@ class IdentityMigrationService
             conflictKey: Preferences.Key<T>,
             value: T,
             storeName: String,
-        ): MigrationResult {
-            return if (this[newKey] == null) {
+        ): MigrationResult =
+            if (this[newKey] == null) {
                 this[newKey] = value
                 MigrationResult.SUCCESS
             } else {
                 this[conflictKey] = value
                 AppLogger.w(
-                    "Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}",
+                    "Migration conflict in $storeName: ${newKey.name} already exists. " +
+                        "Legacy value backed up to ${conflictKey.name}",
                 )
                 MigrationResult.CONFLICT
             }
-        }
     }

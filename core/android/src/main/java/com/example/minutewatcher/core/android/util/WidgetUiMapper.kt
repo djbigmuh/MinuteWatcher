@@ -23,7 +23,9 @@ object WidgetUiMapper {
         val activeSims = snapshot.simSnapshots.filter { it.isActive }
         var currentLayoutMode = WidgetLayoutMode.fromValue(state.layoutMode)
 
-        val isPreemptivelyLimited = activeSims.size >= 3 && currentLayoutMode == WidgetLayoutMode.SIX_LINES
+        val isPreemptivelyLimited =
+            activeSims.size >= Constants.Widget.PREEMPTIVE_LAYOUT_LIMIT_SIMS &&
+                currentLayoutMode == WidgetLayoutMode.SIX_LINES
 
         if (state.widgetLimitExceeded) {
             currentLayoutMode = WidgetLayoutMode.SIMPLE
@@ -47,7 +49,9 @@ object WidgetUiMapper {
                             secondaryTextColor,
                             fontMultiplier,
                         )
-                    simUiState.copy(layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, currentLayoutMode))
+                    simUiState.copy(
+                        layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, currentLayoutMode),
+                    )
                 }
 
         return WidgetUiState(
@@ -57,7 +61,9 @@ object WidgetUiMapper {
             transparency = state.transparency,
             simUiStates = simUiStates,
             isHorizontal = state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
-            showSeparator = simUiStates.size >= 2 && !state.widgetLimitExceeded,
+            showSeparator =
+                simUiStates.size >= Constants.Widget.MIN_SIMS_FOR_SEPARATOR &&
+                    !state.widgetLimitExceeded,
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
             settingsLoadFailed = state.settingsLoadFailed,
             refreshFailed = refreshFailed,

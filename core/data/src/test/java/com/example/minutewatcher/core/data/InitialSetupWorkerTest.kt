@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.Manifest
 import android.app.Application
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.AutoResetUseCase
@@ -12,11 +13,11 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.MigrationSkipReason
-import com.example.minutewatcher.core.model.SimIdentity
-import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -25,14 +26,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.mockito.kotlin.never
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
-import androidx.test.core.app.ApplicationProvider
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -88,16 +88,17 @@ class InitialSetupWorkerTest {
             )
     }
 
-    private fun createWorker(): InitialSetupWorker {
-        return TestListenableWorkerBuilder<InitialSetupWorker>(context)
-            .setWorkerFactory(object : androidx.work.WorkerFactory() {
-                override fun createWorker(
-                    appContext: Context,
-                    workerClassName: String,
-                    workerParameters: androidx.work.WorkerParameters
-                ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
-            }).build()
-    }
+    private fun createWorker(): InitialSetupWorker =
+        TestListenableWorkerBuilder<InitialSetupWorker>(context)
+            .setWorkerFactory(
+                object : androidx.work.WorkerFactory() {
+                    override fun createWorker(
+                        appContext: Context,
+                        workerClassName: String,
+                        workerParameters: androidx.work.WorkerParameters,
+                    ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                },
+            ).build()
 
     @Test
     fun `doWork performs auto-reset after migration`() =

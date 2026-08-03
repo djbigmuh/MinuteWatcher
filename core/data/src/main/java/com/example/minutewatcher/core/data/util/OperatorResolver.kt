@@ -189,14 +189,15 @@ object OperatorResolver {
         val database = loadDb(context)
         val resKey = database[networkOperator]
 
-        val resolved = if (resKey != null) {
-            resolveFromDbKey(context, resKey)
-        } else {
-            if (networkOperator.isNotEmpty() && networkOperator != "00000") {
-                AppLogger.w("Unknown MCC/MNC detected: $networkOperator. Consider adding it to mcc_mnc_db.json")
+        val resolved =
+            if (resKey != null) {
+                resolveFromDbKey(context, resKey)
+            } else {
+                if (networkOperator.isNotEmpty() && networkOperator != "00000") {
+                    AppLogger.w("Unknown MCC/MNC detected: $networkOperator. Consider adding it to mcc_mnc_db.json")
+                }
+                null
             }
-            null
-        }
 
         return resolved ?: fallbackResolution(context, networkOperator, simSlot)
     }

@@ -46,7 +46,7 @@ fun WidgetSettingsScreen(
     if (loadError) {
         ErrorState(
             onRetry = { viewModel.retryLoad() },
-            onBack = onBack
+            onBack = onBack,
         )
         return
     }
@@ -89,7 +89,7 @@ private fun ErrorState(
                     }
                 },
             )
-        }
+        },
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

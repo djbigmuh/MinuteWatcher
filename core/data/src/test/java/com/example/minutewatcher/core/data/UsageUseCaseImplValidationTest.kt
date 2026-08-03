@@ -49,7 +49,9 @@ class UsageUseCaseImplValidationTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
-            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
+            whenever(
+                simUsageRepository.getSimUsage(identity),
+            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
 
             // target = -50 (clamped to 0)
             // formula: (0 - 100) + 0 = -100
@@ -64,7 +66,9 @@ class UsageUseCaseImplValidationTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(0))
-            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
+            whenever(
+                simUsageRepository.getSimUsage(identity),
+            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
 
             usageUseCase.adjustMinutes(0, Constants.MAX_MINUTES_LIMIT + 1000)
 
@@ -77,7 +81,9 @@ class UsageUseCaseImplValidationTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240)) // 10 GB
-            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 0f)))
+            whenever(
+                simUsageRepository.getSimUsage(identity),
+            ).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 0f)))
 
             // target = -1f (clamped to 0)
             // limitGb = 10, usedGb = 0

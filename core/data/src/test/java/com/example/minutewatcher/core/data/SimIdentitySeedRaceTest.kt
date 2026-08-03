@@ -34,9 +34,10 @@ class SimIdentitySeedRaceTest {
     private val seedRepository: SimIdentitySeedRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val migrationService: IdentityMigrationService = mock()
-    private val mockSimProvider: MockSimProvider = mock {
-        on { getMockSims(any()) }.thenReturn(null)
-    }
+    private val mockSimProvider: MockSimProvider =
+        mock {
+            on { getMockSims(any()) }.thenReturn(null)
+        }
 
     @Before
     fun setup() {

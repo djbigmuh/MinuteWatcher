@@ -20,7 +20,10 @@ class PermissionManager
     constructor(
         @param:ApplicationContext private val context: Context,
     ) {
-        private val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
+        private val subscriptionManager =
+            context.getSystemService(
+                Context.TELEPHONY_SUBSCRIPTION_SERVICE,
+            ) as? SubscriptionManager
 
         init {
             if (subscriptionManager == null) {

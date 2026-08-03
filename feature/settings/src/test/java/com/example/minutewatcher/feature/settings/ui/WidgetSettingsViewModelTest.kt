@@ -39,57 +39,62 @@ class WidgetSettingsViewModelTest {
     private lateinit var viewModel: WidgetSettingsViewModel
 
     @Before
-    fun setup() = runTest {
-        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-        val snapshotFlow: StateFlow<GlobalSnapshot> = MutableStateFlow<GlobalSnapshot>(snapshot)
-        whenever<StateFlow<GlobalSnapshot>>(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
-        whenever(loader.load()).thenReturn(WidgetSettingsState())
+    fun setup() =
+        runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
+            val snapshotFlow: StateFlow<GlobalSnapshot> = MutableStateFlow<GlobalSnapshot>(snapshot)
+            whenever<StateFlow<GlobalSnapshot>>(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+            whenever(loader.load()).thenReturn(WidgetSettingsState())
 
-        viewModel = WidgetSettingsViewModel(context, loader, dataChangeNotifier, usageStateRepository)
-    }
-
-    @Test
-    fun `init loads settings`() = runTest {
-        advanceUntilIdle()
-        assertNotNull(viewModel.settingsState.value)
-        assertFalse(viewModel.loadError.value)
-        verify(loader).load()
-    }
-
-    @Test
-    fun `retryLoad re-attempts loading`() = runTest {
-        whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
-
-        // Initial load in init
-        val initialViewModel = WidgetSettingsViewModel(context, loader, dataChangeNotifier, usageStateRepository)
-        advanceUntilIdle()
-        assertTrue(initialViewModel.loadError.value)
-
-        initialViewModel.retryLoad()
-        advanceUntilIdle()
-        assertFalse(initialViewModel.loadError.value)
-        assertNotNull(initialViewModel.settingsState.value)
-    }
-
-    @Test
-    fun `saveAndNotify calls save and notifies`() = runTest {
-        advanceUntilIdle()
-        var completed = false
-        viewModel.saveAndNotify { success ->
-            completed = true
-            assertTrue(success)
+            viewModel = WidgetSettingsViewModel(context, loader, dataChangeNotifier, usageStateRepository)
         }
-        advanceUntilIdle()
-
-        assertTrue(completed)
-        verify(loader).save(any())
-        verify(dataChangeNotifier).notifyDataChanged(updateWidget = true, force = true)
-    }
 
     @Test
-    fun `updateSettings updates state locally`() = runTest {
-        advanceUntilIdle()
-        viewModel.updateSettings { it.copy(fontSize = 10) }
-        assertEquals(10, viewModel.settingsState.value?.fontSize)
-    }
+    fun `init loads settings`() =
+        runTest {
+            advanceUntilIdle()
+            assertNotNull(viewModel.settingsState.value)
+            assertFalse(viewModel.loadError.value)
+            verify(loader).load()
+        }
+
+    @Test
+    fun `retryLoad re-attempts loading`() =
+        runTest {
+            whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
+
+            // Initial load in init
+            val initialViewModel = WidgetSettingsViewModel(context, loader, dataChangeNotifier, usageStateRepository)
+            advanceUntilIdle()
+            assertTrue(initialViewModel.loadError.value)
+
+            initialViewModel.retryLoad()
+            advanceUntilIdle()
+            assertFalse(initialViewModel.loadError.value)
+            assertNotNull(initialViewModel.settingsState.value)
+        }
+
+    @Test
+    fun `saveAndNotify calls save and notifies`() =
+        runTest {
+            advanceUntilIdle()
+            var completed = false
+            viewModel.saveAndNotify { success ->
+                completed = true
+                assertTrue(success)
+            }
+            advanceUntilIdle()
+
+            assertTrue(completed)
+            verify(loader).save(any())
+            verify(dataChangeNotifier).notifyDataChanged(updateWidget = true, force = true)
+        }
+
+    @Test
+    fun `updateSettings updates state locally`() =
+        runTest {
+            advanceUntilIdle()
+            viewModel.updateSettings { it.copy(fontSize = 10) }
+            assertEquals(10, viewModel.settingsState.value?.fontSize)
+        }
 }

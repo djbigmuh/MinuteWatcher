@@ -97,7 +97,10 @@ class SimIdentityRepositoryImpl
                             val hasPermission = permissionManager.hasPhoneStatePermission()
                             if (hasPermission && !isListenerRegistered) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    subscriptionManager.addOnSubscriptionsChangedListener(context.mainExecutor, listener)
+                                    subscriptionManager.addOnSubscriptionsChangedListener(
+                                        context.mainExecutor,
+                                        listener,
+                                    )
                                 } else {
                                     @Suppress("DEPRECATION")
                                     subscriptionManager.addOnSubscriptionsChangedListener(listener)
@@ -191,33 +194,37 @@ class SimIdentityRepositoryImpl
             source = IdentitySource.SLOT_FALLBACK,
         )
 
-        private suspend fun saveSimIdentityInfo(identity: SimIdentity) = saveMutex.withLock {
-            val slot = identity.slotIndex
-            val subId = identity.subscriptionId
+        private suspend fun saveSimIdentityInfo(identity: SimIdentity) =
+            saveMutex.withLock {
+                val slot = identity.slotIndex
+                val subId = identity.subscriptionId
 
-            val currentPrefs = dataStore.data.first()
-            val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-            val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
+                val currentPrefs = dataStore.data.first()
+                val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+                val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
 
-            if ((currentSlot == slot) && (currentSub == subId)) return@withLock
+                if ((currentSlot == slot) && (currentSub == subId)) return@withLock
 
-            // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
-            // it might be a transition from fallback sim_$slot.
-            if (identity.source != IdentitySource.SLOT_FALLBACK && currentSlot == null) {
-                scope.launch {
-                    try {
-                        migrationService.migrateLegacyData(identity)
-                    } catch (e: Exception) {
-                        com.example.minutewatcher.core.common.util.AppLogger.e("Failed to migrate legacy data for identity: ${identity.stableId}", e)
+                // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
+                // it might be a transition from fallback sim_$slot.
+                if (identity.source != IdentitySource.SLOT_FALLBACK && currentSlot == null) {
+                    scope.launch {
+                        try {
+                            migrationService.migrateLegacyData(identity)
+                        } catch (e: Exception) {
+                            com.example.minutewatcher.core.common.util.AppLogger.e(
+                                "Failed to migrate legacy data for identity: ${identity.stableId}",
+                                e,
+                            )
+                        }
                     }
                 }
-            }
 
-            dataStore.edit { prefs ->
-                slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }
-                subId?.let { prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = it }
+                dataStore.edit { prefs ->
+                    slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }
+                    subId?.let { prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = it }
+                }
             }
-        }
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache.filterNotNull()
 

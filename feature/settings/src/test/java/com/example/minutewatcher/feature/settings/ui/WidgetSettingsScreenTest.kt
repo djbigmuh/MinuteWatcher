@@ -62,7 +62,10 @@ class WidgetSettingsScreenTest {
         }
 
         // CircularProgressIndicator has ProgressBarRangeInfo property
-        composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).assertIsDisplayed()
+        composeTestRule
+            .onNode(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo),
+            ).assertIsDisplayed()
     }
 
     @Test

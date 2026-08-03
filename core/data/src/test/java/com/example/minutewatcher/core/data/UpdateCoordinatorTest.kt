@@ -33,7 +33,14 @@ class UpdateCoordinatorTest {
     @Test
     fun `snapshot change triggers widget update with debounce`() =
         runTest {
-            val coordinator = UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, timeProvider, backgroundScope)
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    timeProvider,
+                    backgroundScope,
+                )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
             // 1. First meaningful snapshot
@@ -52,7 +59,14 @@ class UpdateCoordinatorTest {
     @Test
     fun `identical content snapshots do not trigger redundant updates`() =
         runTest {
-            val coordinator = UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, timeProvider, backgroundScope)
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    timeProvider,
+                    backgroundScope,
+                )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
             val s1 = createSnapshot(timestamp = 1000L, content = "A")

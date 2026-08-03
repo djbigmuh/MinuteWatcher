@@ -31,7 +31,10 @@ class MigrationFlagsRepositoryImpl
             dataStore.edit { it[SettingsKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }
         }
 
-        override fun getMigrationV1SkippedReason(): Flow<String?> = dataStore.data.map { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] }
+        override fun getMigrationV1SkippedReason(): Flow<String?> =
+            dataStore.data.map {
+                it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON]
+            }
 
         override suspend fun setMigrationV1Skipped(reason: MigrationSkipReason) {
             dataStore.edit { it[SettingsKeys.MIGRATION_V1_SKIPPED_REASON] = reason.name }

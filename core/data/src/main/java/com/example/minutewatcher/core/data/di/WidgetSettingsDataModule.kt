@@ -15,7 +15,9 @@ import javax.inject.Singleton
 abstract class WidgetSettingsDataModule {
     @Binds
     @Singleton
-    abstract fun bindSimWidgetVisibilityRepository(impl: SimWidgetVisibilityRepositoryImpl): SimWidgetVisibilityRepository
+    abstract fun bindSimWidgetVisibilityRepository(
+        impl: SimWidgetVisibilityRepositoryImpl,
+    ): SimWidgetVisibilityRepository
 
     @Binds
     @Singleton

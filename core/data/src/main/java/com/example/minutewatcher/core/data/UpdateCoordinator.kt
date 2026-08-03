@@ -65,12 +65,13 @@ class UpdateCoordinator
 
             observationJob =
                 scope.launch {
-                    usageStateRepository.observeSnapshot()
+                    usageStateRepository
+                        .observeSnapshot()
                         .filter { it.timestamp > 0L }
-                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                         .distinctUntilChanged { old, new ->
                             SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
-                        }.collect { snapshot ->
+                        }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .collect { snapshot ->
                             if (snapshot.isManualUpdate) {
                                 val now = timeProvider.elapsedRealtime()
                                 if (now - lastManualUpdateTimestamp.get() < Constants.Widget.DEBOUNCE_MS * 2) {

@@ -35,7 +35,15 @@ class ResetManagerTest {
 
     @Before
     fun setup() {
-        resetManager = ResetManager(simIdentityRepository, simUsageRepository, simUsageResetRepository, trafficTracker, dataChangeNotifier, timeProvider)
+        resetManager =
+            ResetManager(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                trafficTracker,
+                dataChangeNotifier,
+                timeProvider,
+            )
     }
 
     @Test

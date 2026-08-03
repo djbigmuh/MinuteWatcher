@@ -44,7 +44,12 @@ fun SimLimitComposeDialog(
         ValidationMessages(
             required = stringResource(id = R.string.validation_error_field_required),
             invalidNumber = stringResource(id = R.string.validation_error_invalid_number),
-            minutesRange = stringResource(id = R.string.validation_error_invalid_range, "0", Constants.MAX_MINUTES_LIMIT.toString()),
+            minutesRange =
+                stringResource(
+                    id = R.string.validation_error_invalid_range,
+                    "0",
+                    Constants.MAX_MINUTES_LIMIT.toString(),
+                ),
             trafficRange =
                 stringResource(
                     id = R.string.validation_error_invalid_range,
@@ -62,8 +67,14 @@ fun SimLimitComposeDialog(
                 onConfirm = {
                     if (state.validate(validationMessages)) {
                         onConfirm(
-                            requireNotNull(state.validatedMinutes) { "Validated minutes should not be null after successful validation" },
-                            (requireNotNull(state.validatedTrafficGb) { "Validated traffic should not be null after successful validation" } * Constants.MB_PER_GB).toInt(),
+                            requireNotNull(
+                                state.validatedMinutes,
+                            ) { "Validated minutes should not be null after successful validation" },
+                            (
+                                requireNotNull(state.validatedTrafficGb) {
+                                    "Validated traffic should not be null after successful validation"
+                                } * Constants.MB_PER_GB
+                            ).toInt(),
                             state.rolloverEnabled,
                         )
                     }
@@ -89,10 +100,11 @@ private fun rememberSimLimitState(
     initialTrafficMb: Int,
     initialRolloverEnabled: Boolean,
 ): SimLimitState {
-    val initialTrafficText = remember(initialTrafficMb) {
-        val gb = initialTrafficMb / Constants.MB_PER_GB
-        "%.1f".format(gb).replace(",", ".")
-    }
+    val initialTrafficText =
+        remember(initialTrafficMb) {
+            val gb = initialTrafficMb / Constants.MB_PER_GB
+            "%.1f".format(gb).replace(",", ".")
+        }
 
     return remember {
         SimLimitState(
@@ -146,9 +158,7 @@ private class SimLimitState(
 }
 
 @Composable
-private fun DialogFields(
-    state: SimLimitState,
-) {
+private fun DialogFields(state: SimLimitState) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = state.minutesText,

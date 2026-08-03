@@ -5,8 +5,8 @@ import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
 import com.example.minutewatcher.core.data.ResetManager
 import com.example.minutewatcher.core.data.SimLimitsRepositoryImpl
 import com.example.minutewatcher.core.data.SimUsageRepositoryImpl
-import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.data.TrackingStatusRepositoryImpl
+import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.core.data.UsageStateRepositoryImpl
 import com.example.minutewatcher.core.data.UsageUseCaseImpl

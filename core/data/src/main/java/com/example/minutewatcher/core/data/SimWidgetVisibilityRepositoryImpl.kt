@@ -64,17 +64,18 @@ class SimWidgetVisibilityRepositoryImpl
             val activeSet = activeIdentities.toSet()
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys
-                val orphanedKeys = allKeys.filter { key ->
-                    val name = key.name
-                    if (name.startsWith("widget_show_")) {
-                        // Extract identity from key name
-                        // Examples: widget_show_sim_id, widget_show_sim_icon_id, widget_show_minutes_id
-                        val identity = name.substringAfterLast("_")
-                        identity.isNotEmpty() && identity !in activeSet
-                    } else {
-                        false
+                val orphanedKeys =
+                    allKeys.filter { key ->
+                        val name = key.name
+                        if (name.startsWith("widget_show_")) {
+                            // Extract identity from key name
+                            // Examples: widget_show_sim_id, widget_show_sim_icon_id, widget_show_minutes_id
+                            val identity = name.substringAfterLast("_")
+                            identity.isNotEmpty() && identity !in activeSet
+                        } else {
+                            false
+                        }
                     }
-                }
                 if (orphanedKeys.isNotEmpty()) {
                     AppLogger.d("Clearing ${orphanedKeys.size} orphaned widget settings keys")
                     orphanedKeys.forEach { prefs.remove(it) }

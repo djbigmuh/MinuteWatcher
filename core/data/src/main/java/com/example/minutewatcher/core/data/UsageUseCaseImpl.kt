@@ -48,7 +48,13 @@ class UsageUseCaseImpl
 
                         val mccMnc = SimIdentityUtils.getMccMnc(info)
 
-                        val opName = OperatorResolver.resolve(context, displayName.ifEmpty { carrierName }, mccMnc, slot)
+                        val opName =
+                            OperatorResolver.resolve(
+                                context,
+                                displayName.ifEmpty { carrierName },
+                                mccMnc,
+                                slot,
+                            )
                         simIdentityRepository.setSimOperator(identity, opName)
                         simIdentityRepository.setSimCode(identity, mccMnc)
                     }
@@ -73,7 +79,12 @@ class UsageUseCaseImpl
 
                 val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
                 val adj = (safeRemaining - limit).toLong() + used.toLong()
-                val safeAdj = adj.coerceIn(-Constants.MAX_MINUTES_LIMIT.toLong(), Constants.MAX_MINUTES_LIMIT.toLong()).toInt()
+                val safeAdj =
+                    adj
+                        .coerceIn(
+                            -Constants.MAX_MINUTES_LIMIT.toLong(),
+                            Constants.MAX_MINUTES_LIMIT.toLong(),
+                        ).toInt()
                 simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
             }
         }

@@ -34,7 +34,10 @@ class WidgetUpdaterImpl
                     val msg = e.message ?: ""
                     val isLimitExceeded = isRemoteViewsLimitException(e)
 
-                    AppLogger.e("Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg", e)
+                    AppLogger.e(
+                        "Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg",
+                        e,
+                    )
 
                     if (isLimitExceeded) {
                         appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }

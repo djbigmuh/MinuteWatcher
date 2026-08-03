@@ -83,13 +83,16 @@ class AppSettingsRepositoryImpl
                 widgetBackgroundColor = this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: default.widgetBackgroundColor,
                 migrationV1Completed = this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: default.migrationV1Completed,
                 onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: default.onboardingCompleted,
-                notificationPermissionRequested = this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED]
-                    ?: default.notificationPermissionRequested,
-                phonePermissionRequested = this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: default.phonePermissionRequested,
+                notificationPermissionRequested =
+                    this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED]
+                        ?: default.notificationPermissionRequested,
+                phonePermissionRequested =
+                    this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: default.phonePermissionRequested,
                 benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: default.benchmarkSimCount,
                 widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: default.widgetLimitExceeded,
-                inaccurateCallAttributionsCount = this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
-                    ?: default.inaccurateCallAttributionsCount,
+                inaccurateCallAttributionsCount =
+                    this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
+                        ?: default.inaccurateCallAttributionsCount,
             )
         }
     }

@@ -60,7 +60,9 @@ class ResetManager
                                 )
                             if (reset) {
                                 resetIdentities.add(identity)
-                                AppLogger.d("Auto reset performed for SIM $slot ($identity), day: ${usage.autoResetDay}")
+                                AppLogger.d(
+                                    "Auto reset performed for SIM $slot ($identity), day: ${usage.autoResetDay}",
+                                )
                             }
                         }
                     }

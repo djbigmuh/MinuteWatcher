@@ -331,7 +331,9 @@ class CallTrackerTest {
     fun `call tracking disabled does not increment minutes`() =
         runTest(testDispatcher) {
             // Arrange
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
+            whenever(
+                appSettingsRepository.getAppSettings(),
+            ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
             // Re-create tracker to pick up new setting state
             callTracker =
                 CallTracker(

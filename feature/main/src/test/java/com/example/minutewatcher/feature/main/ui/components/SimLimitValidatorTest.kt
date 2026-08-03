@@ -6,7 +6,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SimLimitValidatorTest {
-
     private val required = "Required"
     private val invalid = "Invalid"
     private val range = "Range"
@@ -27,7 +26,15 @@ class SimLimitValidatorTest {
 
     @Test
     fun `validate returns errors for out of range numbers`() {
-        val result = SimLimitValidator.validate((Constants.MAX_MINUTES_LIMIT + 1).toString(), "1000000", required, invalid, range, range)
+        val result =
+            SimLimitValidator.validate(
+                (Constants.MAX_MINUTES_LIMIT + 1).toString(),
+                "1000000",
+                required,
+                invalid,
+                range,
+                range,
+            )
         assertEquals(range, result.minutesError)
         assertEquals(range, result.trafficError)
     }

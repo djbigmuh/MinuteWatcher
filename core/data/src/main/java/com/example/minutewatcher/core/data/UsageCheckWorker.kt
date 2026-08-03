@@ -111,7 +111,10 @@ class UsageCheckWorker
             val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
 
-            val notifiedExhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).firstWithTimeout() ?: false
+            val notifiedExhausted =
+                deps.simNotificationFlagsRepository
+                    .getNotifiedExhaustedMinutes(identity)
+                    .firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(
@@ -120,11 +123,20 @@ class UsageCheckWorker
                         entity.simSlot,
                         NOTIFICATION_TYPE_MINUTES,
                     )
-                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, true)
                 }
             } else {
-                if (notifiedExhausted) deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = false)
-                handleLowMinutesAlert(entity, usagePercentage, remainingPercentage, monthProgress, daysRemaining, identity)
+                if (notifiedExhausted) {
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, false)
+                }
+                handleLowMinutesAlert(
+                    entity,
+                    usagePercentage,
+                    remainingPercentage,
+                    monthProgress,
+                    daysRemaining,
+                    identity,
+                )
             }
         }
 
@@ -136,14 +148,29 @@ class UsageCheckWorker
             daysRem: Int,
             identity: String,
         ) {
-            val notifiedLow = deps.simNotificationFlagsRepository.getNotifiedLowMinutes(identity).firstWithTimeout() ?: false
+            val notifiedLow =
+                deps.simNotificationFlagsRepository
+                    .getNotifiedLowMinutes(identity)
+                    .firstWithTimeout() ?: false
             if (usagePct > monthProg && !notifiedLow) {
-                val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
+                val levelRes =
+                    if (remPct < CRITICAL_THRESHOLD) {
+                        R.string.usage_level_critical
+                    } else {
+                        R.string.usage_level_low
+                    }
                 val level = applicationContext.getString(levelRes)
                 val remText = FormatUtils.formatMinutesPlural(applicationContext, entity.remaining.toInt())
                 val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
 
-                val body = applicationContext.getString(R.string.notification_minutes_body, level, remText, remPct, daysText)
+                val body =
+                    applicationContext.getString(
+                        R.string.notification_minutes_body,
+                        level,
+                        remText,
+                        remPct,
+                        daysText,
+                    )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_MINUTES)
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
             } else if (usagePct <= monthProg && notifiedLow) {
@@ -192,7 +219,8 @@ class UsageCheckWorker
             val remainingPercentage = HUNDRED - usagePercentage
             val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
 
-            val notifiedExhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
+            val notifiedExhausted =
+                deps.simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(
@@ -204,8 +232,21 @@ class UsageCheckWorker
                     deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
                 }
             } else {
-                if (notifiedExhausted) deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = false)
-                handleLowTrafficAlert(entity, usagePercentage, remainingPercentage, remainingGb, monthProgress, daysRemaining, identity)
+                if (notifiedExhausted) {
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(
+                        identity,
+                        notified = false,
+                    )
+                }
+                handleLowTrafficAlert(
+                    entity,
+                    usagePercentage,
+                    remainingPercentage,
+                    remainingGb,
+                    monthProgress,
+                    daysRemaining,
+                    identity,
+                )
             }
         }
 
@@ -218,12 +259,27 @@ class UsageCheckWorker
             daysRem: Int,
             identity: String,
         ) {
-            val notifiedLow = deps.simNotificationFlagsRepository.getNotifiedLowTraffic(identity).firstWithTimeout() ?: false
+            val notifiedLow =
+                deps.simNotificationFlagsRepository
+                    .getNotifiedLowTraffic(identity)
+                    .firstWithTimeout() ?: false
             if (usagePct > monthProg && !notifiedLow) {
-                val levelRes = if (remPct < CRITICAL_THRESHOLD) R.string.usage_level_critical else R.string.usage_level_low
+                val levelRes =
+                    if (remPct < CRITICAL_THRESHOLD) {
+                        R.string.usage_level_critical
+                    } else {
+                        R.string.usage_level_low
+                    }
                 val level = applicationContext.getString(levelRes)
                 val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
-                val body = applicationContext.getString(R.string.notification_traffic_body, level, remGb, remPct, daysText)
+                val body =
+                    applicationContext.getString(
+                        R.string.notification_traffic_body,
+                        level,
+                        remGb,
+                        remPct,
+                        daysText,
+                    )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_TRAFFIC)
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
             } else if (usagePct <= monthProg && notifiedLow) {

@@ -371,7 +371,10 @@ class UsageCheckWorkerTest {
 
             worker.doWork()
 
-            val criticalLabel = ApplicationProvider.getApplicationContext<Context>().getString(R.string.usage_level_critical)
+            val criticalLabel =
+                ApplicationProvider.getApplicationContext<Context>().getString(
+                    R.string.usage_level_critical,
+                )
             verify(notificationHelper).sendUsageNotification(
                 title = any(),
                 message = argThat { contains(criticalLabel) },

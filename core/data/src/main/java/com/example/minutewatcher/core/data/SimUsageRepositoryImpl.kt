@@ -33,9 +33,10 @@ class SimUsageRepositoryImpl
                     identity = identity,
                     slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
                     subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
-                    operator = prefs[SimSettingsKeys.customSimOperatorKey(identity)]
-                        ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
-                        ?: "",
+                    operator =
+                        prefs[SimSettingsKeys.customSimOperatorKey(identity)]
+                            ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
+                            ?: "",
                     minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
                     minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
                     trafficUsed = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
@@ -60,7 +61,10 @@ class SimUsageRepositoryImpl
             identity: String,
             delta: Int,
         ) {
-            dataStore.edit { it[SimSettingsKeys.minutesUsedKey(identity)] = (it[SimSettingsKeys.minutesUsedKey(identity)] ?: 0) + delta }
+            dataStore.edit { prefs ->
+                val current = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0
+                prefs[SimSettingsKeys.minutesUsedKey(identity)] = current + delta
+            }
         }
 
         override suspend fun setTrafficUsed(
@@ -74,7 +78,10 @@ class SimUsageRepositoryImpl
             identity: String,
             deltaMb: Float,
         ) {
-            dataStore.edit { it[SimSettingsKeys.trafficUsedKey(identity)] = (it[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f) + deltaMb }
+            dataStore.edit { prefs ->
+                val current = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f
+                prefs[SimSettingsKeys.trafficUsedKey(identity)] = current + deltaMb
+            }
         }
 
         override suspend fun setManualAdjustment(
@@ -149,12 +156,20 @@ class SimUsageRepositoryImpl
                 val minutesLimit = this[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0
                 val minutesUsed = this[SimSettingsKeys.minutesUsedKey(identity)] ?: 0
                 val manualAdj = this[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0
-                val remainingMinutes = maxOf(0L, (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong()).toInt()
+                val remainingMinutes =
+                    maxOf(
+                        0L,
+                        (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong(),
+                    ).toInt()
 
                 val trafficLimitMb = this[SimSettingsKeys.trafficLimitKey(identity)] ?: 0
                 val trafficUsedMb = this[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f
                 val trafficAdjGb = this[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f
-                val remainingMb = maxOf(0f, (trafficLimitMb.toFloat() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb)
+                val remainingMb =
+                    maxOf(
+                        0f,
+                        (trafficLimitMb.toFloat() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
+                    )
                 val remainingTrafficGb = remainingMb / Constants.MB_PER_GB
 
                 this[SimSettingsKeys.manualAdjustmentKey(identity)] = remainingMinutes
@@ -178,7 +193,8 @@ class SimUsageRepositoryImpl
             this[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
-        override fun getLastResetDate(identity: String): Flow<Long> = getData(SimSettingsKeys.lastResetDateKey(identity), 0L)
+        override fun getLastResetDate(identity: String): Flow<Long> =
+            getData(SimSettingsKeys.lastResetDateKey(identity), 0L)
 
         override suspend fun setLastResetDate(
             identity: String,
@@ -187,7 +203,8 @@ class SimUsageRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.lastResetDateKey(identity)] = value }
         }
 
-        override fun getLastTotalBytes(identity: String): Flow<Long> = getData(DynamicSettingsKeys.lastTotalBytesKey(identity), -1L)
+        override fun getLastTotalBytes(identity: String): Flow<Long> =
+            getData(DynamicSettingsKeys.lastTotalBytesKey(identity), -1L)
 
         override suspend fun setLastTotalBytes(
             identity: String,

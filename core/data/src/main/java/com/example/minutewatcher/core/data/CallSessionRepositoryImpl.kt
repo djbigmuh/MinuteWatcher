@@ -55,7 +55,10 @@ class CallSessionRepositoryImpl
             dataStore.edit { it[DynamicSettingsKeys.uptimeKey(subId)] = time }
         }
 
-        override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[DynamicSettingsKeys.callIdentityKey(subId)] }
+        override fun getCallIdentity(subId: Int): Flow<String?> =
+            dataStore.data.map {
+                it[DynamicSettingsKeys.callIdentityKey(subId)]
+            }
 
         override suspend fun setCallIdentity(
             subId: Int,

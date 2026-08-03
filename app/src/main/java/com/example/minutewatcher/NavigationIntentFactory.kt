@@ -11,6 +11,5 @@ object NavigationIntentFactory {
             data = Uri.fromParts("package", context.packageName, null)
         }
 
-    fun getUsageAccessSettingsIntent(): Intent =
-        Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+    fun getUsageAccessSettingsIntent(): Intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
 }

@@ -2,17 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun DualSimLayout( context: Context, sim1: SimUiState, sim2: SimUiState, uiState: WidgetUiState, )</ID>
     <ID>LongMethod:WidgetLayoutTest.kt$WidgetLayoutTest$private fun createWidgetUiState( mode: WidgetLayoutMode, hasMinutes: Boolean = true, hasTraffic: Boolean = true, showMinutesLimit: Boolean = false, showTrafficLimit: Boolean = false, ): WidgetUiState</ID>
     <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic()</ID>
     <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic()</ID>
-    <ID>MagicNumber:MinutesGlanceWidget.kt$0.5f</ID>
-    <ID>MagicNumber:MinutesGlanceWidget.kt$100f</ID>
-    <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$0.5</ID>
-    <ID>MagicNumber:WidgetUiMapper.kt$WidgetUiMapper$0.5f</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$limitFull = "${context.getString(R.string.limit_text)}: ${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}"</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.minutesLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$rows.add(SimLayoutRow(listOf(SimLayoutComponent.Text(sim.trafficLimitFullText, sim.secondaryTextColor, FONT_FULL * sim.fontMultiplier))))</ID>
-    <ID>MaxLineLength:WidgetUiMapper.kt$WidgetUiMapper$usedFull = "${context.getString(R.string.used_text)}: ${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}"</ID>
   </CurrentIssues>
 </SmellBaseline>

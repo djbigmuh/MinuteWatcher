@@ -28,7 +28,9 @@ fun AdjustmentComposeDialog(
 ) {
     val initialValue = maxOf(0f, currentValue)
     var text by remember {
-        mutableStateOf(if (isMinutes) initialValue.toInt().toString() else "%.1f".format(initialValue).replace(",", "."))
+        mutableStateOf(
+            if (isMinutes) initialValue.toInt().toString() else "%.1f".format(initialValue).replace(",", "."),
+        )
     }
 
     var errorText by remember { mutableStateOf<String?>(null) }
@@ -40,7 +42,11 @@ fun AdjustmentComposeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = if (isMinutes) R.string.remaining_text else R.string.traffic_remaining_text)) },
+        title = {
+            Text(
+                stringResource(id = if (isMinutes) R.string.remaining_text else R.string.traffic_remaining_text),
+            )
+        },
         text = {
             Column {
                 OutlinedTextField(
@@ -51,7 +57,9 @@ fun AdjustmentComposeDialog(
                     },
                     label = {
                         Text(
-                            stringResource(id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog),
+                            stringResource(
+                                id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog,
+                            ),
                         )
                     },
                     isError = errorText != null,
@@ -60,7 +68,10 @@ fun AdjustmentComposeDialog(
                             Text(text = it)
                         }
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal,
+                        ),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

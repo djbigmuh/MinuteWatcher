@@ -8,7 +8,14 @@ import com.example.minutewatcher.core.model.util.UsageStatus
 object WidgetColorResolver {
     fun resolveTextColors(backgroundLuminance: Double): Pair<Int, Int> {
         val textColor = if (backgroundLuminance > Constants.UI.LUMINANCE_THRESHOLD) Color.BLACK else Color.WHITE
-        val secondaryTextColor = if (backgroundLuminance > Constants.UI.LUMINANCE_THRESHOLD) Color.DKGRAY else Color.LTGRAY
+        val secondaryTextColor =
+            if (backgroundLuminance >
+                Constants.UI.LUMINANCE_THRESHOLD
+            ) {
+                Color.DKGRAY
+            } else {
+                Color.LTGRAY
+            }
         return textColor to secondaryTextColor
     }
 

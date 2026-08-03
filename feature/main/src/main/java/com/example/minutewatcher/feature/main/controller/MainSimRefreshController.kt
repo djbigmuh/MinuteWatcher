@@ -10,30 +10,32 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class MainSimRefreshController @Inject constructor(
-    private val usageUseCase: UsageUseCase,
-    private val usageStateRepository: UsageStateRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-) {
-    private val simCheckMutex = Mutex()
+class MainSimRefreshController
+    @Inject
+    constructor(
+        private val usageUseCase: UsageUseCase,
+        private val usageStateRepository: UsageStateRepository,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    ) {
+        private val simCheckMutex = Mutex()
 
-    suspend fun refreshSimCardsInternal() =
-        withContext(ioDispatcher) {
-            if (!simCheckMutex.tryLock()) {
-                AppLogger.d("Refresh already in progress, skipping")
-                return@withContext
-            }
-            try {
-                try {
-                    usageUseCase.refreshOperatorInfo()
-                    usageStateRepository.refresh()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Error refreshing SIM cards", e)
+        suspend fun refreshSimCardsInternal() =
+            withContext(ioDispatcher) {
+                if (!simCheckMutex.tryLock()) {
+                    AppLogger.d("Refresh already in progress, skipping")
+                    return@withContext
                 }
-            } finally {
-                simCheckMutex.unlock()
+                try {
+                    try {
+                        usageUseCase.refreshOperatorInfo()
+                        usageStateRepository.refresh()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Error refreshing SIM cards", e)
+                    }
+                } finally {
+                    simCheckMutex.unlock()
+                }
             }
-        }
-}
+    }

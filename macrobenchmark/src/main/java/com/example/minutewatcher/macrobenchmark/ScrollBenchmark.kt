@@ -35,7 +35,10 @@ class ScrollBenchmark {
             startActivityAndWait()
 
             // Wait for mock data to be displayed
-            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), WAIT_TIMEOUT))
+            assertTrue(
+                "Mock data not displayed",
+                device.wait(Until.hasObject(By.textContains("Mock Operator")), WAIT_TIMEOUT),
+            )
 
             // Find the list and scroll
             val list = device.wait(Until.findObject(By.scrollable(true)), WAIT_TIMEOUT)

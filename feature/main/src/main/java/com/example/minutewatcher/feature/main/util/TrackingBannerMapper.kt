@@ -52,7 +52,9 @@ object TrackingBannerMapper {
                         traffic.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
                 ),
             trafficFallbackSlot =
-                if (traffic is TrackingStatus.Error && traffic.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION) {
+                if (traffic is TrackingStatus.Error &&
+                    traffic.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
+                ) {
                     traffic.message?.toIntOrNull() ?: -1
                 } else {
                     -1

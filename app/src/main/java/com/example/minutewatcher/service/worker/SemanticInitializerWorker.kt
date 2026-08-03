@@ -28,34 +28,33 @@ class SemanticInitializerWorker
         private val shortcutManager: ShortcutManager,
         private val usageStateRepository: UsageStateRepository,
     ) : CoroutineWorker(context, params) {
+        override suspend fun doWork(): Result {
+            AppLogger.d("SemanticInitializerWorker: Starting initialization")
+            val snapshotFlow = usageStateRepository.observeSnapshot()
+            val initialSnapshot = snapshotFlow.first()
 
-    override suspend fun doWork(): Result {
-        AppLogger.d("SemanticInitializerWorker: Starting initialization")
-        val snapshotFlow = usageStateRepository.observeSnapshot()
-        val initialSnapshot = snapshotFlow.first()
+            // Perform initial indexing and shortcut update synchronously to catch immediate failures
+            val searchSuccess = searchManager.indexSnapshot(initialSnapshot)
+            val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
 
-        // Perform initial indexing and shortcut update synchronously to catch immediate failures
-        val searchSuccess = searchManager.indexSnapshot(initialSnapshot)
-        val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
+            // Start background observers for continuous updates
+            searchManager.initialize(snapshotFlow)
+            shortcutManager.initialize(snapshotFlow)
 
-        // Start background observers for continuous updates
-        searchManager.initialize(snapshotFlow)
-        shortcutManager.initialize(snapshotFlow)
+            if (!searchSuccess) {
+                val status = searchManager.status.value
+                if (status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.DATABASE_ERROR) {
+                    AppLogger.w("SemanticInitializerWorker: AppSearch database error, requesting retry")
+                    return Result.retry()
+                }
+            }
 
-        if (!searchSuccess) {
-            val status = searchManager.status.value
-            if (status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.DATABASE_ERROR) {
-                AppLogger.w("SemanticInitializerWorker: AppSearch database error, requesting retry")
-                return Result.retry()
+            return if (searchSuccess && shortcutSuccess) {
+                Result.success()
+            } else {
+                // For non-fatal errors, we return success to avoid infinite retries
+                // but the error state is still visible in the UI for manual retry.
+                Result.success()
             }
         }
-
-        return if (searchSuccess && shortcutSuccess) {
-            Result.success()
-        } else {
-            // For non-fatal errors, we return success to avoid infinite retries
-            // but the error state is still visible in the UI for manual retry.
-            Result.success()
-        }
     }
-}

@@ -270,7 +270,9 @@ class WidgetUiMapperTest {
         val trafficRows =
             sim0.layoutSpec.rows.filter { row ->
                 row.components.any { component ->
-                    component is SimLayoutComponent.Text && component.text.contains("Used:") && component.text.contains("GB")
+                    component is SimLayoutComponent.Text &&
+                        component.text.contains("Used:") &&
+                        component.text.contains("GB")
                 }
             }
         assertTrue(trafficRows.isEmpty())

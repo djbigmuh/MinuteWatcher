@@ -39,7 +39,8 @@ class PinWidgetReceiver : BroadcastReceiver() {
                 val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
                 MinutesGlanceWidget().update(context, glanceId)
             } catch (e: Exception) {
-                com.example.minutewatcher.core.common.util.AppLogger.e("Failed to update widget after pinning", e)
+                com.example.minutewatcher.core.common.util.AppLogger
+                    .e("Failed to update widget after pinning", e)
             }
         }
     }

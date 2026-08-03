@@ -10,7 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SemanticMapperTest {
-
     @Test
     fun `getDocumentId returns correct format`() {
         assertEquals("sim_0_minutes", SemanticMapper.getDocumentId(0, PackageType.MINUTES))
@@ -21,7 +20,7 @@ class SemanticMapperTest {
     fun `mapMinutes converts MinutesModel to SemanticEntity correctly`() {
         val model = MinutesModel.calculate(used = 50, limit = 100, manualAdjustment = 0)
         val now = 1627812000000L // 2021-08-01 10:00:00 UTC
-        
+
         val entity = SemanticMapper.mapMinutes(0, "Test Op", model, 1, now)
 
         assertEquals("sim_0_minutes", entity.id)

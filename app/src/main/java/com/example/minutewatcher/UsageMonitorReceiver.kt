@@ -20,7 +20,8 @@ class UsageMonitorReceiver : BroadcastReceiver() {
         val action = intent.action
 
         if (action == TelephonyManager.ACTION_PHONE_STATE_CHANGED ||
-            action == "android.telephony.action.PHONE_STATE_CHANGED") {
+            action == "android.telephony.action.PHONE_STATE_CHANGED"
+        ) {
             val appContext = context.applicationContext
 
             val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)

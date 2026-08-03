@@ -95,8 +95,8 @@ class ShortcutManager
         /**
          * Updates shortcuts synchronously. Returns true if successful.
          */
-        suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean {
-            return try {
+        suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean =
+            try {
                 withContext(ioDispatcher) {
                     val shortcuts = createShortcuts(snapshot)
                     applyShortcuts(shortcuts)
@@ -110,7 +110,6 @@ class ShortcutManager
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 false
             }
-        }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
             val shortcuts = createShortcuts(snapshot)
@@ -136,10 +135,11 @@ class ShortcutManager
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operator)
-            val label = "${entity.remaining}${context.getString(R.string.minutes_abbr)}"
-            val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
+            val label = "${entity.remaining} ${context.getString(R.string.minutes_abbr).trim()}"
+            val longLabel = "$operator: ${context.getString(R.string.remaining_text).trim()} $label"
 
-            return ShortcutInfoCompat.Builder(context, "minutes_shortcut_$slot")
+            return ShortcutInfoCompat
+                .Builder(context, "minutes_shortcut_$slot")
                 .setShortLabel(label)
                 .setLongLabel(longLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
@@ -154,10 +154,17 @@ class ShortcutManager
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operator)
             val trafficGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
-            val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))
-            val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
+            val label =
+                String.format(
+                    Locale.getDefault(),
+                    "%.1f %s",
+                    trafficGb,
+                    context.getString(R.string.gb_abbr).trim(),
+                )
+            val longLabel = "$operator: ${context.getString(R.string.remaining_text).trim()} $label"
 
-            return ShortcutInfoCompat.Builder(context, "traffic_shortcut_$slot")
+            return ShortcutInfoCompat
+                .Builder(context, "traffic_shortcut_$slot")
                 .setShortLabel(label)
                 .setLongLabel(longLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
@@ -166,13 +173,14 @@ class ShortcutManager
         }
 
         private fun createShortcutIntent(slot: Int): Intent =
-            Intent().setClassName(
-                context.packageName,
-                navigationProvider.mainActivityClassName,
-            ).apply {
-                action = Intent.ACTION_VIEW
-                putExtra("sim_slot", slot)
-            }
+            Intent()
+                .setClassName(
+                    context.packageName,
+                    navigationProvider.mainActivityClassName,
+                ).apply {
+                    action = Intent.ACTION_VIEW
+                    putExtra("sim_slot", slot)
+                }
 
         private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
             try {

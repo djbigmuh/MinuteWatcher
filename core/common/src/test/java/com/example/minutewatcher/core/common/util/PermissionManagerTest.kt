@@ -17,7 +17,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class PermissionManagerTest {
-
     private val context: Context = mock()
     private val subscriptionManager: SubscriptionManager = mock()
     private lateinit var permissionManager: PermissionManager
@@ -31,10 +30,11 @@ class PermissionManagerTest {
     @Test
     fun `hasPhoneStatePermission returns true when granted`() {
         mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
-            mockedContextCompat.`when`<Int> {
-                ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
-            }.thenReturn(PackageManager.PERMISSION_GRANTED)
-            
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
             assertTrue(permissionManager.hasPhoneStatePermission())
         }
     }
@@ -42,10 +42,11 @@ class PermissionManagerTest {
     @Test
     fun `hasPhoneStatePermission returns false when denied`() {
         mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
-            mockedContextCompat.`when`<Int> {
-                ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
-            }.thenReturn(PackageManager.PERMISSION_DENIED)
-            
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_DENIED)
+
             assertFalse(permissionManager.hasPhoneStatePermission())
         }
     }
@@ -53,10 +54,11 @@ class PermissionManagerTest {
     @Test
     fun `getActiveSubscriptions returns empty list when permission is missing`() {
         mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
-            mockedContextCompat.`when`<Int> {
-                ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
-            }.thenReturn(PackageManager.PERMISSION_DENIED)
-            
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_DENIED)
+
             assertTrue(permissionManager.getActiveSubscriptions().isEmpty())
         }
     }
@@ -64,10 +66,11 @@ class PermissionManagerTest {
     @Test
     fun `getDefaultVoiceSubscriptionId returns negative one when permission is missing`() {
         mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
-            mockedContextCompat.`when`<Int> {
-                ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
-            }.thenReturn(PackageManager.PERMISSION_DENIED)
-            
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_DENIED)
+
             assertEquals(-1, permissionManager.getDefaultVoiceSubscriptionId())
         }
     }
@@ -75,10 +78,11 @@ class PermissionManagerTest {
     @Test
     fun `getDefaultDataSubscriptionId returns negative one when permission is missing`() {
         mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
-            mockedContextCompat.`when`<Int> {
-                ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
-            }.thenReturn(PackageManager.PERMISSION_DENIED)
-            
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_DENIED)
+
             assertEquals(-1, permissionManager.getDefaultDataSubscriptionId())
         }
     }

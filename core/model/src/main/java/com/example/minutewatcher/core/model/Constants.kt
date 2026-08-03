@@ -22,6 +22,9 @@ object Constants {
 
         const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80
 
+        const val PREEMPTIVE_LAYOUT_LIMIT_SIMS = 3
+        const val MIN_SIMS_FOR_SEPARATOR = 2
+
         const val PERCENT_MAX_FLOAT = 100f
         const val SEPARATOR_ALPHA = 0.5f
 
@@ -30,6 +33,12 @@ object Constants {
          * exceeds the system's maximum allowed size (usually 2MB for the entire transaction).
          */
         const val REMOTE_VIEWS_ERROR_MARKER = "RemoteViews"
+
+        const val PADDING_DEFAULT = 8
+        const val PADDING_SIM_ITEM = 4
+        const val CORNER_RADIUS = 16
+        const val SEPARATOR_THICKNESS = 1
+        const val ALPHA_FULL = 1f
     }
 
     object Traffic {

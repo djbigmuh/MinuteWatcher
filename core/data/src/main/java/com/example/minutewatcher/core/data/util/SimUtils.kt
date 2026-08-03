@@ -6,8 +6,8 @@ import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.CancellationException
 
 object SimUtils {
-    fun getOperatorIconResource(operatorName: String): Int {
-        return when (OperatorResolver.getOperatorResourceId(operatorName)) {
+    fun getOperatorIconResource(operatorName: String): Int =
+        when (OperatorResolver.getOperatorResourceId(operatorName)) {
             R.string.operator_mts -> R.drawable.ic_mts
             R.string.operator_beeline -> R.drawable.ic_beeline
             R.string.operator_megafon -> R.drawable.ic_megafon
@@ -16,7 +16,6 @@ object SimUtils {
             R.string.operator_yota -> R.drawable.ic_yota
             else -> R.drawable.ic_unknown
         }
-    }
 
     fun getShortOperatorName(
         context: Context,
@@ -80,5 +79,6 @@ object SimUtils {
         return context
     }
 
-    fun isInactiveSim(operatorName: String?): Boolean = operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
+    fun isInactiveSim(operatorName: String?): Boolean =
+        operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
 }

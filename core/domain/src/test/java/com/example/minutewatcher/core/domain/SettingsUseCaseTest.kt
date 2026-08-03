@@ -39,7 +39,9 @@ class SettingsUseCaseTest {
     fun `appLanguage flow maps correct value from repository`() =
         runTest {
             val expectedLanguage = "ru"
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(language = expectedLanguage)))
+            whenever(
+                appSettingsRepository.getAppSettings(),
+            ).thenReturn(flowOf(AppSettings(language = expectedLanguage)))
             settingsUseCase = SettingsUseCase(appSettingsRepository)
 
             val actualLanguage = settingsUseCase.appLanguage.first()

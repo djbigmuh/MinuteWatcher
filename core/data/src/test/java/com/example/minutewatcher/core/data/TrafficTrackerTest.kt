@@ -75,7 +75,7 @@ class TrafficTrackerTest {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         }
-        
+
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
@@ -186,7 +186,10 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            assertEquals(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable"), tracker.status.value)
+            assertEquals(
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable"),
+                tracker.status.value,
+            )
         }
 
     @Test

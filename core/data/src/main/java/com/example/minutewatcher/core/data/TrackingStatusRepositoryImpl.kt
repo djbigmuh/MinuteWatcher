@@ -15,18 +15,17 @@ class TrackingStatusRepositoryImpl
     constructor(
         private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
     ) : TrackingStatusRepository {
+        override fun recoverTracking(key: String) {
+            statusProviders.find { it.key == key }?.recover()
+        }
 
-    override fun recoverTracking(key: String) {
-        statusProviders.find { it.key == key }?.recover()
-    }
-
-    override fun observeTrackingStatus(): Flow<Map<String, TrackingStatus>> {
-        val flows =
-            statusProviders.map { provider ->
-                provider.status.map { status -> provider.key to status }
+        override fun observeTrackingStatus(): Flow<Map<String, TrackingStatus>> {
+            val flows =
+                statusProviders.map { provider ->
+                    provider.status.map { status -> provider.key to status }
+                }
+            return combine(flows) { pairs ->
+                pairs.toMap()
             }
-        return combine(flows) { pairs ->
-            pairs.toMap()
         }
     }
-}

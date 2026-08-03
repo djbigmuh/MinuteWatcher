@@ -40,7 +40,7 @@ fun WidgetPreview(
     uiState: WidgetUiState,
     modifier: Modifier = Modifier,
 ) {
-    val alpha = 1f - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
+    val alpha = Constants.Widget.ALPHA_FULL - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
     val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
     val noDataColor = getNoDataColor(uiState)
 
@@ -48,21 +48,29 @@ fun WidgetPreview(
         modifier =
             modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(Constants.Widget.CORNER_RADIUS.dp))
                 .background(bgColor),
         contentAlignment = Alignment.Center,
     ) {
-        val simUiStates = uiState.simUiStates.filter { it.showSim }
+        WidgetPreviewContent(uiState, noDataColor)
+    }
+}
 
-        if (simUiStates.isEmpty()) {
-            Text(
-                text = stringResource(id = R.string.no_data),
-                color = noDataColor,
-                fontSize = 14.sp,
-            )
-        } else {
-            MultiSimPreviewLayout(simUiStates, uiState)
-        }
+@Composable
+private fun WidgetPreviewContent(
+    uiState: WidgetUiState,
+    noDataColor: Color,
+) {
+    val simUiStates = uiState.simUiStates.filter { it.showSim }
+
+    if (simUiStates.isEmpty()) {
+        Text(
+            text = stringResource(id = R.string.no_data),
+            color = noDataColor,
+            fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+        )
+    } else {
+        MultiSimPreviewLayout(simUiStates, uiState)
     }
 }
 
@@ -95,7 +103,7 @@ private fun HorizontalSimPreviewLayout(
     uiState: WidgetUiState,
 ) {
     Row(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
+        modifier = Modifier.fillMaxSize().padding(Constants.Widget.PADDING_DEFAULT.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         sims.forEachIndexed { index, sim ->
@@ -115,7 +123,7 @@ private fun VerticalSimPreviewLayout(
     uiState: WidgetUiState,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
+        modifier = Modifier.fillMaxSize().padding(Constants.Widget.PADDING_DEFAULT.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         sims.forEachIndexed { index, sim ->
@@ -143,9 +151,9 @@ private fun Separator(
         }
     val modifier =
         if (isHorizontal) {
-            Modifier.width(1.dp).fillMaxHeight()
+            Modifier.width(Constants.Widget.SEPARATOR_THICKNESS.dp).fillMaxHeight()
         } else {
-            Modifier.height(1.dp).fillMaxWidth()
+            Modifier.height(Constants.Widget.SEPARATOR_THICKNESS.dp).fillMaxWidth()
         }
     Spacer(modifier = modifier.background(separatorColor))
 }

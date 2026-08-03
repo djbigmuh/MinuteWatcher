@@ -100,9 +100,10 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "A",
                             isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
-                            ),
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
+                                ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -127,9 +128,10 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "A",
                             isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
-                            ),
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
+                                ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -147,9 +149,10 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "A",
                             isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101),
-                            ),
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101),
+                                ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -177,9 +180,10 @@ class SemanticSearchManagerTest {
                             identity = "sim_1",
                             operator = "B",
                             isActive = true,
-                            entities = mapOf(
-                                PackageType.DATA to createEntity(1, PackageType.DATA, 50),
-                            ),
+                            entities =
+                                mapOf(
+                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50),
+                                ),
                             autoResetDay = 1,
                         ),
                     ),

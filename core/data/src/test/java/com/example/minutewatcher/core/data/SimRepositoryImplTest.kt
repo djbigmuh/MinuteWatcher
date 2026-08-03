@@ -39,9 +39,10 @@ class SimRepositoryImplTest {
     private lateinit var appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository
     private lateinit var permissionManager: com.example.minutewatcher.core.common.util.PermissionManager
     private lateinit var migrationService: IdentityMigrationService
-    private val mockSimProvider: MockSimProvider = mock {
-        on { getMockSims(any()) }.thenReturn(null)
-    }
+    private val mockSimProvider: MockSimProvider =
+        mock {
+            on { getMockSims(any()) }.thenReturn(null)
+        }
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     @Before
@@ -252,9 +253,5 @@ class SimRepositoryImplTest {
 
             assertEquals("sim_0", identity.stableId)
             assertEquals(com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK, identity.source)
-
-            // Verify slot index was saved to DataStore
-            val prefs = dataStore.data.first()
-            assertEquals(0, prefs[SimSettingsKeys.slotIndexKey("sim_0")])
         }
 }

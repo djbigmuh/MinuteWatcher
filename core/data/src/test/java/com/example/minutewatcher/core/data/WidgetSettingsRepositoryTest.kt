@@ -4,8 +4,10 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.flow.flowOf
@@ -56,30 +58,62 @@ class WidgetSettingsRepositoryTest {
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
 
             val identity0 =
-                com.example.minutewatcher.core.model.SimIdentity(
+                SimIdentity(
                     "id0",
                     100,
                     0,
                     com.example.minutewatcher.core.model.IdentitySource.ICCID,
                 )
             val identity1 =
-                com.example.minutewatcher.core.model.SimIdentity(
+                SimIdentity(
                     "id1",
                     101,
                     1,
                     com.example.minutewatcher.core.model.IdentitySource.ICCID,
                 )
             val identity2 =
-                com.example.minutewatcher.core.model.SimIdentity(
+                SimIdentity(
                     "id2",
                     null,
                     2,
                     com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK,
                 )
 
-            whenever(simIdentityRepository.getSimIdentity(0)).thenReturn(identity0)
-            whenever(simIdentityRepository.getSimIdentity(1)).thenReturn(identity1)
-            whenever(simIdentityRepository.getSimIdentity(2)).thenReturn(identity2)
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = identity0,
+                        slotIndex = 0,
+                        subscriptionId = 100,
+                        displayName = "MTS",
+                        carrierName = "MTS",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
+                    ActiveSimInfo(
+                        identity = identity1,
+                        slotIndex = 1,
+                        subscriptionId = 101,
+                        displayName = "MegaFon",
+                        carrierName = "MegaFon",
+                        mccMnc = "25002",
+                        isDefaultData = false,
+                        isDefaultVoice = false,
+                    ),
+                    ActiveSimInfo(
+                        identity = identity2,
+                        slotIndex = 2,
+                        subscriptionId = 102,
+                        displayName = "Sim 2",
+                        carrierName = "Carrier 2",
+                        mccMnc = "25003",
+                        isDefaultData = false,
+                        isDefaultVoice = false,
+                    ),
+                )
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
 
             val simSettings =
                 SimSettingsState(

@@ -1,4 +1,5 @@
 @file:Suppress("MagicNumber")
+
 package com.example.minutewatcher.feature.main.ui.theme
 
 import androidx.compose.ui.graphics.Color

@@ -4,15 +4,11 @@ import android.app.NotificationManager
 import android.content.Context
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.NavigationProvider
-import com.example.minutewatcher.core.resources.R
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.anyInt
-import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -20,21 +16,20 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class NotificationHelperTest {
-
-    private val context: Context = mock()
+    private lateinit var context: Context
     private val navigationProvider: NavigationProvider = mock()
     private val permissionManager: PermissionManager = mock()
-    private val notificationManager: NotificationManager = mock()
+    private lateinit var notificationManager: NotificationManager
 
     private lateinit var helper: NotificationHelper
 
     @Before
     fun setup() {
-        whenever(context.getSystemService(Context.NOTIFICATION_SERVICE)).thenReturn(notificationManager)
-        whenever(context.getString(R.string.notification_channel_name)).thenReturn("Usage Monitoring")
-        whenever(context.packageName).thenReturn("com.example.minutewatcher")
+        context =
+            androidx.test.core.app.ApplicationProvider
+                .getApplicationContext()
+        notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
-        whenever(notificationManager.areNotificationsEnabled()).thenReturn(true)
 
         helper = NotificationHelper(context, navigationProvider, permissionManager)
     }
@@ -45,7 +40,8 @@ class NotificationHelperTest {
 
         helper.sendUsageNotification("Title", "Message", 0, 1)
 
-        verify(notificationManager, never()).notify(anyInt(), any())
+        val shadowNotificationManager = org.robolectric.Shadows.shadowOf(notificationManager)
+        assertEquals(0, shadowNotificationManager.allNotifications.size)
     }
 
     @Test
@@ -54,6 +50,10 @@ class NotificationHelperTest {
 
         helper.sendUsageNotification("Title", "Message", 0, 1)
 
-        verify(notificationManager).notify(anyInt(), any())
+        val shadowNotificationManager = org.robolectric.Shadows.shadowOf(notificationManager)
+        assertEquals(1, shadowNotificationManager.allNotifications.size)
+        val notification = shadowNotificationManager.allNotifications[0]
+        assertEquals("Title", notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
+        assertEquals("Message", notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString())
     }
 }

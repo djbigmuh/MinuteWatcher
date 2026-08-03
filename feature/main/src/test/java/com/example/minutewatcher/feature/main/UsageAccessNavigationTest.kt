@@ -67,7 +67,6 @@ class UsageAccessNavigationTest {
     private val usageStatsPermissionFlow = MutableStateFlow(false)
     private val notificationPermissionFlow = MutableStateFlow(true)
 
-
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
@@ -77,8 +76,12 @@ class UsageAccessNavigationTest {
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
-        whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock<com.example.minutewatcher.core.model.GlobalSnapshot>()))
+        whenever(
+            usageStateRepository.observeSimCardUiModels(),
+        ).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
+        whenever(
+            usageStateRepository.observeSnapshot(),
+        ).thenReturn(MutableStateFlow(mock<com.example.minutewatcher.core.model.GlobalSnapshot>()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
@@ -92,36 +95,40 @@ class UsageAccessNavigationTest {
 
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = MainDialogController(savedStateHandle)
-        val bannerController = MainBannerController(
-            trackingStatusRepository = trackingStatusRepository,
-            permissionRepository = permissionRepository,
-            appSettingsRepository = appSettingsRepository,
-            scope = scope
-        )
+        val bannerController =
+            MainBannerController(
+                trackingStatusRepository = trackingStatusRepository,
+                permissionRepository = permissionRepository,
+                appSettingsRepository = appSettingsRepository,
+                scope = scope,
+            )
         val refreshController = MainSimRefreshController(usageUseCase, usageStateRepository, testDispatcher)
-        val settingsController = MainSettingsController(
-            appSettingsRepository = appSettingsRepository,
-            settingsUseCase = settingsUseCase,
-            scope = scope
-        )
-        val simDataController = MainSimDataController(
-            usageStateRepository = usageStateRepository,
-            trackingStatusRepository = trackingStatusRepository,
-            simIdentityRepository = simIdentityRepository,
-            simLimitsRepository = simLimitsRepository,
-            usageUseCase = usageUseCase,
-            dataChangeNotifier = mock<com.example.minutewatcher.core.domain.DataChangeNotifier>(),
-            ioDispatcher = testDispatcher,
-            scope = scope
-        )
+        val settingsController =
+            MainSettingsController(
+                appSettingsRepository = appSettingsRepository,
+                settingsUseCase = settingsUseCase,
+                scope = scope,
+            )
+        val simDataController =
+            MainSimDataController(
+                usageStateRepository = usageStateRepository,
+                trackingStatusRepository = trackingStatusRepository,
+                simIdentityRepository = simIdentityRepository,
+                simLimitsRepository = simLimitsRepository,
+                usageUseCase = usageUseCase,
+                dataChangeNotifier = mock<com.example.minutewatcher.core.domain.DataChangeNotifier>(),
+                ioDispatcher = testDispatcher,
+                scope = scope,
+            )
 
-        val controllers = MainViewModelControllers(
-            dialog = dialogController,
-            banner = bannerController,
-            refresh = refreshController,
-            settings = settingsController,
-            simData = simDataController,
-        )
+        val controllers =
+            MainViewModelControllers(
+                dialog = dialogController,
+                banner = bannerController,
+                refresh = refreshController,
+                settings = settingsController,
+                simData = simDataController,
+            )
 
         return MainViewModel(
             controllers = controllers,
@@ -199,16 +206,17 @@ class UsageAccessNavigationTest {
     }
 
     @Test
-    fun dialogDoesNotOpenRepeatedly() = runTest {
-        // Test ViewModel state consistency
-        val viewModel = createViewModel(backgroundScope)
-        viewModel.setUsageAccessDialog(true)
-        assertTrue(viewModel.showUsageAccessDialog.value)
+    fun dialogDoesNotOpenRepeatedly() =
+        runTest {
+            // Test ViewModel state consistency
+            val viewModel = createViewModel(backgroundScope)
+            viewModel.setUsageAccessDialog(true)
+            assertTrue(viewModel.showUsageAccessDialog.value)
 
-        viewModel.setUsageAccessDialog(true) // Call again
-        assertTrue(viewModel.showUsageAccessDialog.value)
+            viewModel.setUsageAccessDialog(true) // Call again
+            assertTrue(viewModel.showUsageAccessDialog.value)
 
-        viewModel.setUsageAccessDialog(false)
-        assertFalse(viewModel.showUsageAccessDialog.value)
-    }
+            viewModel.setUsageAccessDialog(false)
+            assertFalse(viewModel.showUsageAccessDialog.value)
+        }
 }

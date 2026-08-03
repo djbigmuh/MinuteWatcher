@@ -2,11 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:WidgetPreviewCompose.kt$@Composable fun WidgetPreview( uiState: WidgetUiState, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:WidgetSettingsScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun WidgetSettingsScreen( viewModel: WidgetSettingsViewModel, onSave: () -&gt; Unit, onBack: () -&gt; Unit, )</ID>
-    <ID>MagicNumber:WidgetPreviewCompose.kt$0.5f</ID>
-    <ID>MagicNumber:WidgetPreviewCompose.kt$100f</ID>
     <ID>MagicNumber:WidgetSettingsViewModel.kt$WidgetSettingsViewModel$5000</ID>
-    <ID>TooManyFunctions:WidgetSettingsViewModel.kt$WidgetSettingsViewModel : ViewModel</ID>
+    <ID>LongMethod:WidgetSettingsScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun WidgetSettingsScreen( viewModel: WidgetSettingsViewModel, onSave: () -&gt; Unit, onBack: () -&gt; Unit, )</ID>
   </CurrentIssues>
 </SmellBaseline>

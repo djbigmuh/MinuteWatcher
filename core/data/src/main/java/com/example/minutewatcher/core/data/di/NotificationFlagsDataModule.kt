@@ -13,5 +13,7 @@ import javax.inject.Singleton
 abstract class NotificationFlagsDataModule {
     @Binds
     @Singleton
-    abstract fun bindSimNotificationFlagsRepository(impl: SimNotificationFlagsRepositoryImpl): SimNotificationFlagsRepository
+    abstract fun bindSimNotificationFlagsRepository(
+        impl: SimNotificationFlagsRepositoryImpl,
+    ): SimNotificationFlagsRepository
 }

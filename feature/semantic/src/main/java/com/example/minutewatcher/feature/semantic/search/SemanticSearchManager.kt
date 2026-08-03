@@ -10,9 +10,9 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -130,8 +130,11 @@ open class SemanticSearchManager
             }
         }
 
-        private suspend fun executeIndexing(snapshot: GlobalSnapshot, currentHash: Int): Boolean {
-            return withContext(ioDispatcher) {
+        private suspend fun executeIndexing(
+            snapshot: GlobalSnapshot,
+            currentHash: Int,
+        ): Boolean =
+            withContext(ioDispatcher) {
                 try {
                     withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                         val documents = convertSnapshotToDocuments(snapshot)
@@ -147,7 +150,6 @@ open class SemanticSearchManager
                     false
                 }
             }
-        }
 
         private fun convertSnapshotToDocuments(snapshot: GlobalSnapshot): List<UsageDocument> {
             val documents = mutableListOf<UsageDocument>()
@@ -160,9 +162,7 @@ open class SemanticSearchManager
             return documents
         }
 
-        private suspend fun performIndexUpdate(
-            documents: List<UsageDocument>,
-        ) {
+        private suspend fun performIndexUpdate(documents: List<UsageDocument>) {
             val currentIds = documents.map { it.id }.toSet()
 
             val staleIds = mutableSetOf<String>()

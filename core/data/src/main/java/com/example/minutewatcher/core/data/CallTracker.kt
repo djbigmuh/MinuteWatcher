@@ -75,11 +75,12 @@ class CallTracker
                 try {
                     if (!isCallTrackingEnabled() || !checkPermissions()) return@withLock
 
-                    val effectiveSubId = if (subId == -1) {
-                        permissionManager.getDefaultVoiceSubscriptionId()
-                    } else {
-                        subId
-                    }
+                    val effectiveSubId =
+                        if (subId == -1) {
+                            permissionManager.getDefaultVoiceSubscriptionId()
+                        } else {
+                            subId
+                        }
 
                     if (effectiveSubId == -1) {
                         AppLogger.d("Call started with unknown subId and no default voice subId, ignoring")
@@ -96,7 +97,12 @@ class CallTracker
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    try { refreshStatus() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+                    try {
+                        refreshStatus()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -139,7 +145,12 @@ class CallTracker
                     AppLogger.e("Error in onCallEnded", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    try { refreshStatus() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+                    try {
+                        refreshStatus()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -156,10 +167,13 @@ class CallTracker
 
         private fun checkPermissions(): Boolean {
             if (!permissionManager.isTelephonySupported()) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
+                AppLogger.w("CallTracker: telephony not supported")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
                 return false
             }
             if (!permissionManager.hasPhoneStatePermission()) {
+                AppLogger.w("CallTracker: phone state permission missing")
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Phone State missing")
                 return false
             }
@@ -197,7 +211,8 @@ class CallTracker
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 activeSubIds.all { id ->
-                    telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() == TelephonyManager.CALL_STATE_IDLE
+                    telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() ==
+                        TelephonyManager.CALL_STATE_IDLE
                 }
             } else {
                 @Suppress("DEPRECATION")
@@ -213,7 +228,9 @@ class CallTracker
         }
 
         private suspend fun handleAmbiguousIdle(activeSubIds: List<Int>) {
-            AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}")
+            AppLogger.w(
+                "Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}",
+            )
 
             val now = timeProvider.now()
             val staleSessions = mutableListOf<Int>()
@@ -257,9 +274,11 @@ class CallTracker
             }
 
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val idleSubs = activeSubIds.filter { id ->
-                    telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() == TelephonyManager.CALL_STATE_IDLE
-                }
+                val idleSubs =
+                    activeSubIds.filter { id ->
+                        telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() ==
+                            TelephonyManager.CALL_STATE_IDLE
+                    }
                 if (idleSubs.size == 1) idleSubs.first() else null
             } else {
                 // Fallback for API < 31: Per-subscription state is not available.
@@ -271,18 +290,19 @@ class CallTracker
         private suspend fun fallbackAttribution(activeSubIds: List<Int>): Int? {
             val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
 
-            val chosen = activeSubIds.firstOrNull { it == defaultVoice } ?: run {
-                var minSubId: Int? = null
-                var minTime = Long.MAX_VALUE
-                for (subId in activeSubIds) {
-                    val t = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
-                    if (t < minTime) {
-                        minTime = t
-                        minSubId = subId
+            val chosen =
+                activeSubIds.firstOrNull { it == defaultVoice } ?: run {
+                    var minSubId: Int? = null
+                    var minTime = Long.MAX_VALUE
+                    for (subId in activeSubIds) {
+                        val t = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
+                        if (t < minTime) {
+                            minTime = t
+                            minSubId = subId
+                        }
                     }
+                    minSubId
                 }
-                minSubId
-            }
 
             AppLogger.d(
                 "Call fallback attribution decision: chosen=$chosen, activeSubIds=$activeSubIds, defaultVoice=$defaultVoice. " +
@@ -374,7 +394,8 @@ class CallTracker
                 }
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
             }
         }
 

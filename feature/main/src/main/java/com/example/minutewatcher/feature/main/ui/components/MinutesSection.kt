@@ -30,28 +30,30 @@ fun MinutesSection(
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                text = stringResource(
-                    R.string.label_value_format,
-                    stringResource(R.string.used_text),
+                text =
                     stringResource(
-                        R.string.value_unit_format,
-                        FormatUtils.formatMinutes(model.minutesUsed),
-                        stringResource(R.string.minutes_abbr)
-                    )
-                ),
+                        R.string.label_value_format,
+                        stringResource(R.string.used_text),
+                        stringResource(
+                            R.string.value_unit_format,
+                            FormatUtils.formatMinutes(model.minutesUsed),
+                            stringResource(R.string.minutes_abbr),
+                        ),
+                    ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (model.isMinutesLimitSet) {
                 Text(
-                    text = stringResource(
-                        R.string.label_value_format,
-                        stringResource(R.string.limit_text),
+                    text =
                         stringResource(
-                            R.string.value_unit_format,
-                            FormatUtils.formatMinutes(model.effectiveMinutesLimit),
-                            stringResource(R.string.minutes_abbr)
-                        )
-                    ),
+                            R.string.label_value_format,
+                            stringResource(R.string.limit_text),
+                            stringResource(
+                                R.string.value_unit_format,
+                                FormatUtils.formatMinutes(model.effectiveMinutesLimit),
+                                stringResource(R.string.minutes_abbr),
+                            ),
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }

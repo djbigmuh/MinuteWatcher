@@ -44,7 +44,10 @@ class ExampleStartupBenchmark {
             pressHome()
             startActivityAndWait()
             // Ensure mock data is displayed before concluding the measurement
-            assertTrue("Mock data not displayed", device.wait(Until.hasObject(By.textContains("Mock Operator")), WAIT_TIMEOUT))
+            assertTrue(
+                "Mock data not displayed",
+                device.wait(Until.hasObject(By.textContains("Mock Operator")), WAIT_TIMEOUT),
+            )
         }
 
     companion object {

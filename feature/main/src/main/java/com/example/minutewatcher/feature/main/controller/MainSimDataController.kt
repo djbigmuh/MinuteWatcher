@@ -27,137 +27,142 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
-class MainSimDataController @Inject constructor(
-    usageStateRepository: UsageStateRepository,
-    private val trackingStatusRepository: TrackingStatusRepository,
-    private val simIdentityRepository: SimIdentityRepository,
-    private val simLimitsRepository: SimLimitsRepository,
-    private val usageUseCase: UsageUseCase,
-    private val dataChangeNotifier: DataChangeNotifier,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    @ApplicationScope private val scope: CoroutineScope,
-) {
-    val uiState: StateFlow<SimCardListState> =
-        usageStateRepository
-            .observeSimCardUiModels()
-            .map { models ->
-                if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
-            }.onStart { emit(SimCardListState.Loading) }
-            .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
-                initialValue = SimCardListState.Loading,
-            )
-
-
-    private val _highlightedSlot = MutableStateFlow<Int?>(null)
-    val highlightedSlot: StateFlow<Int?> = _highlightedSlot.asStateFlow()
-
-    private var highlightJob: Job? = null
-
-    fun highlightSlot(slot: Int) {
-        highlightJob?.cancel()
-        _highlightedSlot.value = slot
-        highlightJob = scope.launch {
-            delay(HIGHLIGHT_DELAY_SECONDS.seconds)
-            _highlightedSlot.value = null
-        }
-    }
-
-    fun updateLimits(
-        slot: Int,
-        minutesLimit: Int,
-        trafficLimitMb: Int,
-        rolloverEnabled: Boolean = false,
-        onRefresh: suspend () -> Unit,
+class MainSimDataController
+    @Inject
+    constructor(
+        usageStateRepository: UsageStateRepository,
+        private val trackingStatusRepository: TrackingStatusRepository,
+        private val simIdentityRepository: SimIdentityRepository,
+        private val simLimitsRepository: SimLimitsRepository,
+        private val usageUseCase: UsageUseCase,
+        private val dataChangeNotifier: DataChangeNotifier,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @ApplicationScope private val scope: CoroutineScope,
     ) {
-        scope.launch(ioDispatcher) {
-            val identity = simIdentityRepository.getIdentity(slot)
-            simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
-            onRefresh()
+        val uiState: StateFlow<SimCardListState> =
+            usageStateRepository
+                .observeSimCardUiModels()
+                .map { models ->
+                    if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
+                }.onStart { emit(SimCardListState.Loading) }
+                .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    initialValue = SimCardListState.Loading,
+                )
+
+        private val _highlightedSlot = MutableStateFlow<Int?>(null)
+        val highlightedSlot: StateFlow<Int?> = _highlightedSlot.asStateFlow()
+
+        private var highlightJob: Job? = null
+
+        fun highlightSlot(slot: Int) {
+            highlightJob?.cancel()
+            _highlightedSlot.value = slot
+            highlightJob =
+                scope.launch {
+                    delay(HIGHLIGHT_DELAY_SECONDS.seconds)
+                    _highlightedSlot.value = null
+                }
+        }
+
+        fun updateLimits(
+            slot: Int,
+            minutesLimit: Int,
+            trafficLimitMb: Int,
+            rolloverEnabled: Boolean = false,
+            onRefresh: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
+                onRefresh()
+            }
+        }
+
+        fun resetUsage(
+            slot: Int,
+            onRefresh: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                usageUseCase.resetCounters(slot)
+                onRefresh()
+            }
+        }
+
+        fun toggleAutoReset(
+            slot: Int,
+            enabled: Boolean,
+            onRefresh: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
+                simLimitsRepository.setAutoReset(identity, currentDay, enabled)
+                onRefresh()
+            }
+        }
+
+        fun updateAutoResetDay(
+            slot: Int,
+            day: Int,
+            onRefresh: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
+                simLimitsRepository.setAutoReset(identity, day, enabled)
+                onRefresh()
+            }
+        }
+
+        fun adjustRemainingMinutes(
+            slot: Int,
+            remainingMinutes: Int,
+            onRefresh: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                usageUseCase.adjustMinutes(slot, remainingMinutes)
+                onRefresh()
+            }
+        }
+
+        fun adjustRemainingTraffic(
+            slot: Int,
+            remainingGb: Float,
+            onRefresh: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                usageUseCase.adjustTraffic(slot, remainingGb)
+                onRefresh()
+            }
+        }
+
+        fun retryAppSearch() {
+            trackingStatusRepository.recoverTracking("appsearch")
+        }
+
+        fun retryCalls() {
+            trackingStatusRepository.recoverTracking("calls")
+        }
+
+        fun retryShortcuts() {
+            trackingStatusRepository.recoverTracking("shortcuts")
+        }
+
+        fun retryTraffic(onRefresh: suspend () -> Unit) {
+            trackingStatusRepository.recoverTracking("traffic")
+            scope.launch { onRefresh() }
+        }
+
+        fun notifyDataChanged(force: Boolean = false) {
+            scope.launch {
+                dataChangeNotifier.notifyDataChanged(force = force)
+            }
+        }
+
+        companion object {
+            private const val HIGHLIGHT_DELAY_SECONDS = 3L
         }
     }
-
-    fun resetUsage(slot: Int, onRefresh: suspend () -> Unit) {
-        scope.launch(ioDispatcher) {
-            usageUseCase.resetCounters(slot)
-            onRefresh()
-        }
-    }
-
-    fun toggleAutoReset(
-        slot: Int,
-        enabled: Boolean,
-        onRefresh: suspend () -> Unit,
-    ) {
-        scope.launch(ioDispatcher) {
-            val identity = simIdentityRepository.getIdentity(slot)
-            val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
-            simLimitsRepository.setAutoReset(identity, currentDay, enabled)
-            onRefresh()
-        }
-    }
-
-    fun updateAutoResetDay(
-        slot: Int,
-        day: Int,
-        onRefresh: suspend () -> Unit,
-    ) {
-        scope.launch(ioDispatcher) {
-            val identity = simIdentityRepository.getIdentity(slot)
-            val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
-            simLimitsRepository.setAutoReset(identity, day, enabled)
-            onRefresh()
-        }
-    }
-
-    fun adjustRemainingMinutes(
-        slot: Int,
-        remainingMinutes: Int,
-        onRefresh: suspend () -> Unit,
-    ) {
-        scope.launch(ioDispatcher) {
-            usageUseCase.adjustMinutes(slot, remainingMinutes)
-            onRefresh()
-        }
-    }
-
-    fun adjustRemainingTraffic(
-        slot: Int,
-        remainingGb: Float,
-        onRefresh: suspend () -> Unit,
-    ) {
-        scope.launch(ioDispatcher) {
-            usageUseCase.adjustTraffic(slot, remainingGb)
-            onRefresh()
-        }
-    }
-
-    fun retryAppSearch() {
-        trackingStatusRepository.recoverTracking("appsearch")
-    }
-
-    fun retryCalls() {
-        trackingStatusRepository.recoverTracking("calls")
-    }
-
-    fun retryShortcuts() {
-        trackingStatusRepository.recoverTracking("shortcuts")
-    }
-
-    fun retryTraffic(onRefresh: suspend () -> Unit) {
-        trackingStatusRepository.recoverTracking("traffic")
-        scope.launch { onRefresh() }
-    }
-
-    fun notifyDataChanged(force: Boolean = false) {
-        scope.launch {
-            dataChangeNotifier.notifyDataChanged(force = force)
-        }
-    }
-
-    companion object {
-        private const val HIGHLIGHT_DELAY_SECONDS = 3L
-    }
-}

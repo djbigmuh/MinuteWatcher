@@ -44,7 +44,8 @@ class MainViewModel
 
         fun setUsageAccessDialog(show: Boolean) = controllers.dialog.setUsageAccessDialog(show)
 
-        fun setPhonePermissionPermanentlyDenied(denied: Boolean) = controllers.banner.setPhonePermissionPermanentlyDenied(denied)
+        fun setPhonePermissionPermanentlyDenied(denied: Boolean) =
+            controllers.banner.setPhonePermissionPermanentlyDenied(denied)
 
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) =
             controllers.banner.setNotificationPermissionPermanentlyDenied(denied)
@@ -123,8 +124,6 @@ class MainViewModel
             controllers.simData.notifyDataChanged(force = force)
         }
 
-        fun notifyDataChanged(force: Boolean = false) = controllers.simData.notifyDataChanged(force = force)
-
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
 
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
@@ -176,14 +175,11 @@ class MainViewModel
 
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
-        fun onActivityResume(
-            nowElapsed: Long,
-        ) {
+        fun onActivityResume(nowElapsed: Long) {
             val lastRefreshAt = savedStateHandle.get<Long>(KEY_LAST_REFRESH_AT) ?: 0L
             if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
                 savedStateHandle[KEY_LAST_REFRESH_AT] = nowElapsed
-                refreshSimCards()
-                notifyDataChanged()
+                viewModelScope.launch { refreshAndNotify(force = false) }
             }
         }
 

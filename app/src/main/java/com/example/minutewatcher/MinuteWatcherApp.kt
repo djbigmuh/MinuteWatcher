@@ -14,8 +14,8 @@ import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import com.example.minutewatcher.service.worker.SemanticInitializerWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import javax.inject.Inject
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @HiltAndroidApp
 class MinuteWatcherApp :
@@ -39,14 +39,15 @@ class MinuteWatcherApp :
         // Defer semantic layer initialization to improve cold start performance.
         // Using WorkManager ensures that initialization is attempted reliably even if the
         // initial application process is short-lived, while providing a grace period for UI.
-        val initRequest = OneTimeWorkRequestBuilder<SemanticInitializerWorker>()
-            .setInitialDelay(INITIALIZATION_DELAY_SECONDS, TimeUnit.SECONDS)
-            .build()
+        val initRequest =
+            OneTimeWorkRequestBuilder<SemanticInitializerWorker>()
+                .setInitialDelay(INITIALIZATION_DELAY_SECONDS, TimeUnit.SECONDS)
+                .build()
 
         WorkManager.getInstance(this).enqueueUniqueWork(
             SEMANTIC_INIT_WORK_NAME,
             ExistingWorkPolicy.REPLACE,
-            initRequest
+            initRequest,
         )
 
         if (BuildConfig.DEBUG) {

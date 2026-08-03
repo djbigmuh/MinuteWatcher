@@ -45,12 +45,10 @@ import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import dagger.hilt.EntryPoint
-import kotlinx.coroutines.CancellationException
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-
-private const val SEPARATOR_THICKNESS = 1
+import kotlinx.coroutines.CancellationException
 
 class MinutesGlanceWidget : GlanceAppWidget() {
     @EntryPoint
@@ -137,7 +135,7 @@ private fun WidgetContent(
     uiState: WidgetUiState,
     navigationProvider: NavigationProvider,
 ) {
-    val alpha = 1f - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
+    val alpha = Constants.Widget.ALPHA_FULL - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
     val bgColor =
         androidx.compose.ui.graphics
             .Color(uiState.backgroundColor)
@@ -151,7 +149,14 @@ private fun WidgetContent(
         if (uiState.useSystemColors) {
             GlanceTheme.colors.onSurface
         } else {
-            val colorInt = if (luminance > Constants.UI.LUMINANCE_THRESHOLD) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+            val colorInt =
+                if (luminance >
+                    Constants.UI.LUMINANCE_THRESHOLD
+                ) {
+                    android.graphics.Color.BLACK
+                } else {
+                    android.graphics.Color.WHITE
+                }
             val composeColor =
                 androidx.compose.ui.graphics
                     .Color(colorInt)
@@ -243,7 +248,7 @@ private fun MultiSimLayout(
                     Spacer(
                         modifier =
                             GlanceModifier
-                                .width(SEPARATOR_THICKNESS.dp)
+                                .width(Constants.Widget.SEPARATOR_THICKNESS.dp)
                                 .fillMaxHeight()
                                 .background(separatorColor),
                     )
@@ -273,7 +278,7 @@ private fun MultiSimLayout(
                     Spacer(
                         modifier =
                             GlanceModifier
-                                .height(SEPARATOR_THICKNESS.dp)
+                                .height(Constants.Widget.SEPARATOR_THICKNESS.dp)
                                 .fillMaxWidth()
                                 .background(separatorColor),
                     )
@@ -298,7 +303,7 @@ private fun SimItem(
         )
 
     Column(
-        modifier = GlanceModifier.padding(4.dp).semantics { contentDescription = summary },
+        modifier = GlanceModifier.padding(Constants.Widget.PADDING_SIM_ITEM.dp).semantics { contentDescription = summary },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -1,15 +1,13 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -28,17 +26,13 @@ class WidgetSettingsRepository
             coroutineScope {
                 val settings = appSettingsRepository.getAppSettings().first()
 
-                val simIdentities =
-                    SimConstants.SUPPORTED_SLOT_INDICES.map { slot ->
-                        async { simIdentityRepository.getSimIdentity(slot) }
-                    }.awaitAll()
-
-                val identities = simIdentities.map { it.stableId }
+                val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                val identities = activeSims.map { it.identity.stableId }
                 val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(identities).first()
 
                 val simStates =
-                    simIdentities.associate { identity ->
-                        (identity.slotIndex ?: 0) to (batchSettings[identity.stableId] ?: SimSettingsState())
+                    activeSims.associate { info ->
+                        info.slotIndex to (batchSettings[info.identity.stableId] ?: SimSettingsState())
                     }
 
                 WidgetSettingsState(

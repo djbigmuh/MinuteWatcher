@@ -37,7 +37,8 @@ class InitialSetupWorker
                 deps.autoResetUseCase.performAutoReset()
 
                 // Reset traffic baseline after reboot for active SIMs
-                val activeSimsForTraffic = deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                val activeSimsForTraffic =
+                    deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
                 activeSimsForTraffic.forEach { info ->
                     deps.trafficTracker.resetBaseline(info.identity.stableId)
                 }
@@ -71,11 +72,12 @@ class InitialSetupWorker
         }
 
         private suspend fun checkAndPerformMigrations() {
-            val migrationV1Completed = deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
-                ?: throw java.io.IOException("DataStore timeout reading migrationV1 flag")
+            val migrationV1Completed =
+                deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
+                    ?: throw java.io.IOException("DataStore timeout reading migrationV1 flag")
             val migrationStabilityCompleted =
                 deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
-                ?: throw java.io.IOException("DataStore timeout reading migrationStability flag")
+                    ?: throw java.io.IOException("DataStore timeout reading migrationStability flag")
 
             if (migrationV1Completed && migrationStabilityCompleted) return
 

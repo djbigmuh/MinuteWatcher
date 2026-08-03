@@ -58,7 +58,10 @@ class TrafficTracker
         }
 
         private val trafficMutex = Mutex()
-        private val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
+        private val networkStatsManager =
+            context.getSystemService(
+                Context.NETWORK_STATS_SERVICE,
+            ) as? NetworkStatsManager
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
 
@@ -82,13 +85,18 @@ class TrafficTracker
 
                         // Sync in-memory last data subId if this identity is currently the default data SIM.
                         // This prevents handleSimChange from triggering immediately after a manual reset.
-                        val currentDataSubId = try {
-                            permissionManager.getDefaultDataSubscriptionId()
-                        } catch (_: Exception) {
-                            -1
-                        }
+                        val currentDataSubId =
+                            try {
+                                permissionManager.getDefaultDataSubscriptionId()
+                            } catch (_: Exception) {
+                                -1
+                            }
                         if (currentDataSubId != -1) {
-                            val info = permissionManager.getActiveSubscriptions().find { it.subscriptionId == currentDataSubId }
+                            val info =
+                                permissionManager.getActiveSubscriptions().find {
+                                    it.subscriptionId ==
+                                        currentDataSubId
+                                }
                             if (info != null) {
                                 val currentIdentity = simIdentityRepository.getIdentity(info.simSlotIndex)
                                 if (currentIdentity == identity) {
@@ -125,7 +133,10 @@ class TrafficTracker
                     if (target.skipDelta) {
                         _status.value =
                             if (target.isFallback) {
-                                TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, target.slot.toString())
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                                    target.slot.toString(),
+                                )
                             } else {
                                 TrackingStatus.Active
                             }
@@ -146,14 +157,19 @@ class TrafficTracker
 
         private fun checkPermissions(): Boolean {
             if (!permissionManager.isTelephonySupported()) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
+                AppLogger.w("TrafficTracker: telephony not supported")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
                 return false
             }
             if (!permissionManager.hasUsageStatsPermission()) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Usage Access missing")
+                AppLogger.w("TrafficTracker: usage stats permission missing")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Usage Access missing")
                 return false
             }
             if (!permissionManager.hasPhoneStatePermission()) {
+                AppLogger.w("TrafficTracker: phone state permission missing")
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Phone State missing")
                 return false
             }
@@ -166,6 +182,7 @@ class TrafficTracker
         }
 
         private fun handleNoTarget() {
+            AppLogger.d("TrafficTracker: no active SIM detected for traffic tracking")
             _status.value = TrackingStatus.Idle
         }
 
@@ -197,7 +214,8 @@ class TrafficTracker
 
         private fun handleStatsUnavailable(targetIdentity: String) {
             if (networkStatsManager == null) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "NetworkStatsManager unavailable")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "NetworkStatsManager unavailable")
             } else {
                 AppLogger.d("Traffic stats unavailable for $targetIdentity")
                 _status.value = TrackingStatus.Idle
@@ -283,7 +301,8 @@ class TrafficTracker
             ensureInMemoryLastDataSubId()
 
             val savedLastDataSubId = inMemoryLastDataSubId.get()
-            val isSimChanged = savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId
+            val isSimChanged =
+                savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId
 
             if (isSimChanged) {
                 handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
@@ -319,7 +338,9 @@ class TrafficTracker
                         targetSim = selected.simSlotIndex
                         currentDataSubId = selected.subscriptionId
                         isFallback = true
-                        AppLogger.w("No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.")
+                        AppLogger.w(
+                            "No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.",
+                        )
                     }
                 }
             }
