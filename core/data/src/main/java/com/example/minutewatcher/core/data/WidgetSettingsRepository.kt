@@ -8,6 +8,9 @@ import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,34 +24,36 @@ class WidgetSettingsRepository
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
         private val dataChangeNotifier: DataChangeNotifier,
     ) : WidgetSettingsLoader {
-        override suspend fun load(): WidgetSettingsState {
-            val settings = appSettingsRepository.getAppSettings().first()
+        override suspend fun load(): WidgetSettingsState =
+            coroutineScope {
+                val settings = appSettingsRepository.getAppSettings().first()
 
-            val simIdentities =
-                SimConstants.SUPPORTED_SLOT_INDICES.map { slot ->
-                    simIdentityRepository.getSimIdentity(slot)
-                }
-            val identities = simIdentities.map { it.stableId }
-            val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(identities).first()
+                val simIdentities =
+                    SimConstants.SUPPORTED_SLOT_INDICES
+                        .map { slot ->
+                            async { simIdentityRepository.getSimIdentity(slot) }
+                        }.awaitAll()
+                val identities = simIdentities.map { it.stableId }
+                val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(identities).first()
 
-            val simStates =
-                simIdentities.associate { identity ->
-                    (identity.slotIndex ?: 0) to (batchSettings[identity.stableId] ?: SimSettingsState())
-                }
+                val simStates =
+                    simIdentities.associate { identity ->
+                        (identity.slotIndex ?: 0) to (batchSettings[identity.stableId] ?: SimSettingsState())
+                    }
 
-            return WidgetSettingsState(
-                layoutMode = settings.widgetLayoutMode,
-                simArrangement = settings.widgetSimArrangement,
-                transparency = settings.widgetTransparency,
-                fontSize = settings.widgetFontSize,
-                backgroundColor = settings.widgetBackgroundColor,
-                notifyLowMinutes = settings.notifyLowMinutes,
-                notifyLowTraffic = settings.notifyLowTraffic,
-                callTrackingEnabled = settings.callTrackingEnabled,
-                simStates = simStates,
-                widgetLimitExceeded = settings.widgetLimitExceeded,
-            )
-        }
+                WidgetSettingsState(
+                    layoutMode = settings.widgetLayoutMode,
+                    simArrangement = settings.widgetSimArrangement,
+                    transparency = settings.widgetTransparency,
+                    fontSize = settings.widgetFontSize,
+                    backgroundColor = settings.widgetBackgroundColor,
+                    notifyLowMinutes = settings.notifyLowMinutes,
+                    notifyLowTraffic = settings.notifyLowTraffic,
+                    callTrackingEnabled = settings.callTrackingEnabled,
+                    simStates = simStates,
+                    widgetLimitExceeded = settings.widgetLimitExceeded,
+                )
+            }
 
         override suspend fun save(state: WidgetSettingsState) {
             appSettingsRepository.updateAppSettings { current ->

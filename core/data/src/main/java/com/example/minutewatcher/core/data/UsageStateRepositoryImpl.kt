@@ -78,7 +78,7 @@ class UsageStateRepositoryImpl
         private val simUsagesFlow: Flow<List<SimUsage>> =
             simIdentityRepository
                 .observeActiveSims()
-                .debounce(300.milliseconds)
+                .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                 .distinctUntilChanged()
                 .flatMapLatest { sims ->
                     if (sims.isEmpty()) {

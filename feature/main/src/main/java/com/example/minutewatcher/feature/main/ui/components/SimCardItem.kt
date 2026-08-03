@@ -160,7 +160,6 @@ private fun SimCardHeader(
     }
 }
 
-
 @Composable
 private fun AutoResetSection(
     model: SimCardUiModel,

@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,7 +21,7 @@ import javax.inject.Inject
 class MainViewModel
     @Inject
     constructor(
-        val controllers: MainViewModelControllers,
+        private val controllers: MainViewModelControllers,
         private val appSettingsRepository: AppSettingsRepository,
         private val usageStateRepository: UsageStateRepository,
         private val autoResetUseCase: AutoResetUseCase,
@@ -52,20 +53,20 @@ class MainViewModel
 
         fun setPhonePermissionRequested() = controllers.settings.setPhonePermissionRequested()
 
-        val showOnboardingDialog: StateFlow<Boolean> = controllers.dialog.showOnboardingDialog
+        val showOnboardingDialog: StateFlow<Boolean> get() = controllers.dialog.showOnboardingDialog
 
-        val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> = controllers.settings.appSettings
+        val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> get() = controllers.settings.appSettings
 
         fun completeOnboarding() {
             controllers.dialog.setShowOnboardingDialog(false)
             controllers.settings.completeOnboarding()
         }
 
-        val trackingBannerState: StateFlow<TrackingBannerState> = controllers.banner.trackingBannerState
+        val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
 
-        val uiState: StateFlow<SimCardListState> = controllers.simData.uiState
+        val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
 
-        val appTheme: StateFlow<AppTheme> = controllers.settings.appTheme
+        val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
 
         init {
             controllers.banner.initialize(viewModelScope)
@@ -84,6 +85,8 @@ class MainViewModel
                     val result = usageStateRepository.refresh()
                     autoResetUseCase.performAutoReset(result.snapshot)
                     refreshSimCards()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
                 }
@@ -126,7 +129,7 @@ class MainViewModel
 
         fun notifyDataChanged(force: Boolean = false) = controllers.simData.notifyDataChanged(force = force)
 
-        val appLanguage: StateFlow<String?> = controllers.settings.appLanguage
+        val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
 
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
 

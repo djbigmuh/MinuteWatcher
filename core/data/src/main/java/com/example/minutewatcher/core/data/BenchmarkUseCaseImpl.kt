@@ -5,7 +5,7 @@ import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.model.SimConstants
 import javax.inject.Inject
 
@@ -13,7 +13,7 @@ class BenchmarkUseCaseImpl
     @Inject
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
-        private val simUsageRepository: SimUsageRepository,
+        private val simUsageAdjustmentRepository: SimUsageAdjustmentRepository,
         private val simLimitsRepository: SimLimitsRepository,
         private val appSettingsRepository: AppSettingsRepository,
         private val migrationFlagsRepository: MigrationFlagsRepository,
@@ -37,7 +37,7 @@ class BenchmarkUseCaseImpl
                 )
 
                 // Set mock usage
-                simUsageRepository.updateSimStats(
+                simUsageAdjustmentRepository.updateSimStats(
                     identity = identity,
                     minutesUsed = 100 * (i + 1),
                     trafficUsed = 1024f * (i + 1),

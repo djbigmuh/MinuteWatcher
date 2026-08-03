@@ -28,34 +28,34 @@ class CallSessionRepositoryImpl
             dataStore.edit { it[SettingsKeys.LAST_DATA_SUB_ID] = subId }
         }
 
-        override fun getCallStartTime(subId: Int): Flow<Long> = get(SettingsKeys.Dynamic.callStartTimeKey(subId), 0L)
+        override fun getCallStartTime(subId: Int): Flow<Long> = get(DynamicSettingsKeys.callStartTimeKey(subId), 0L)
 
         override suspend fun setCallStartTime(
             subId: Int,
             time: Long,
         ) {
-            dataStore.edit { it[SettingsKeys.Dynamic.callStartTimeKey(subId)] = time }
+            dataStore.edit { it[DynamicSettingsKeys.callStartTimeKey(subId)] = time }
         }
 
-        override fun getBootTime(subId: Int): Flow<Long> = get(SettingsKeys.Dynamic.bootTimeKey(subId), 0L)
+        override fun getBootTime(subId: Int): Flow<Long> = get(DynamicSettingsKeys.bootTimeKey(subId), 0L)
 
         override suspend fun setBootTime(
             subId: Int,
             time: Long,
         ) {
-            dataStore.edit { it[SettingsKeys.Dynamic.bootTimeKey(subId)] = time }
+            dataStore.edit { it[DynamicSettingsKeys.bootTimeKey(subId)] = time }
         }
 
-        override fun getUptime(subId: Int): Flow<Long> = get(SettingsKeys.Dynamic.uptimeKey(subId), 0L)
+        override fun getUptime(subId: Int): Flow<Long> = get(DynamicSettingsKeys.uptimeKey(subId), 0L)
 
         override suspend fun setUptime(
             subId: Int,
             time: Long,
         ) {
-            dataStore.edit { it[SettingsKeys.Dynamic.uptimeKey(subId)] = time }
+            dataStore.edit { it[DynamicSettingsKeys.uptimeKey(subId)] = time }
         }
 
-        override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[SettingsKeys.Dynamic.callIdentityKey(subId)] }
+        override fun getCallIdentity(subId: Int): Flow<String?> = dataStore.data.map { it[DynamicSettingsKeys.callIdentityKey(subId)] }
 
         override suspend fun setCallIdentity(
             subId: Int,
@@ -63,9 +63,9 @@ class CallSessionRepositoryImpl
         ) {
             dataStore.edit {
                 if (identity == null) {
-                    it.remove(SettingsKeys.Dynamic.callIdentityKey(subId))
+                    it.remove(DynamicSettingsKeys.callIdentityKey(subId))
                 } else {
-                    it[SettingsKeys.Dynamic.callIdentityKey(subId)] = identity
+                    it[DynamicSettingsKeys.callIdentityKey(subId)] = identity
                 }
             }
         }

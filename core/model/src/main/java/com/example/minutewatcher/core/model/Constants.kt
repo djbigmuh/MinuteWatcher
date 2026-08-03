@@ -24,10 +24,17 @@ object Constants {
 
         const val PERCENT_MAX_FLOAT = 100f
         const val SEPARATOR_ALPHA = 0.5f
+
+        /**
+         * Marker string found in IllegalArgumentException message when RemoteViews
+         * exceeds the system's maximum allowed size (usually 2MB for the entire transaction).
+         */
+        const val REMOTE_VIEWS_ERROR_MARKER = "RemoteViews"
     }
 
     object Traffic {
         const val MIN_DELTA_MB = 0.0001f
+        const val LOOKBACK_DAYS = 30L
     }
 
     object Data {
@@ -41,6 +48,16 @@ object Constants {
 
     object Flow {
         const val STATE_FLOW_STOP_TIMEOUT_MS = 5_000L
+        const val DEBOUNCE_MS = 300L
+    }
+
+    object Calls {
+        /**
+         * Heuristic to identify stale call sessions.
+         * If a call session exists for more than 12 hours without an IDLE event,
+         * it is considered stale and can be cleaned up during ambiguous IDLE events.
+         */
+        const val MAX_CALL_DURATION_MS = 12 * 60 * 60 * 1000L
     }
 
     const val MILLIS_PER_SECOND = 1000L

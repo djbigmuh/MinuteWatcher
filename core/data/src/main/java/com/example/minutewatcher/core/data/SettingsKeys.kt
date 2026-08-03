@@ -29,16 +29,4 @@ object SettingsKeys {
     val INACCURATE_CALL_ATTRIBUTIONS_COUNT = intPreferencesKey("inaccurate_call_attributions_count")
 
     const val CURRENT_DATA_SCHEMA_VERSION = 2
-
-    object Dynamic {
-        fun callStartTimeKey(subId: Int) = longPreferencesKey("call_start_time_$subId")
-
-        fun bootTimeKey(subId: Int) = longPreferencesKey("boot_time_$subId")
-
-        fun uptimeKey(subId: Int) = longPreferencesKey("uptime_$subId")
-
-        fun callIdentityKey(subId: Int) = stringPreferencesKey("call_identity_$subId")
-
-        fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
-    }
 }

@@ -1,7 +1,9 @@
 package com.example.minutewatcher.feature.main
 
+import androidx.compose.runtime.Immutable
 import com.example.minutewatcher.core.model.PermissionUiState
 
+@Immutable
 data class TrackingBannerState(
     val phonePermissionState: PermissionUiState = PermissionUiState.GRANTED,
     val showUsageAccessBanner: Boolean = false,
@@ -16,6 +18,7 @@ data class TrackingBannerState(
     val notificationPermissionState: PermissionUiState = PermissionUiState.GRANTED,
 )
 
+@Immutable
 data class TrackingBannerCallbacks(
     val onGrantPhonePermission: () -> Unit,
     val onShowUsageAccessDialog: () -> Unit,

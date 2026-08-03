@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.resources.R
@@ -25,48 +26,54 @@ fun DialogRenderer(
     val showTrafficLimitationDialog by viewModel.showTrafficLimitationDialog.collectAsStateWithLifecycle()
 
     showLimitDialog?.let { data ->
-        SimLimitComposeDialog(
-            operatorName = data.name,
-            initialMinutes = data.minutes,
-            initialTrafficMb = data.traffic,
-            initialRolloverEnabled = data.rolloverEnabled,
-            onDismiss = { viewModel.setLimitDialog(null) },
-            onConfirm = { min, traf, rollover ->
-                viewModel.updateLimits(data.slot, min, traf, rollover)
-                viewModel.setLimitDialog(null)
-            },
-            onReset = {
-                viewModel.updateLimits(data.slot, 0, 0, false)
-                viewModel.setLimitDialog(null)
-            },
-        )
+        key(data.slot) {
+            SimLimitComposeDialog(
+                operatorName = data.name,
+                initialMinutes = data.minutes,
+                initialTrafficMb = data.traffic,
+                initialRolloverEnabled = data.rolloverEnabled,
+                onDismiss = { viewModel.setLimitDialog(null) },
+                onConfirm = { min, traf, rollover ->
+                    viewModel.updateLimits(data.slot, min, traf, rollover)
+                    viewModel.setLimitDialog(null)
+                },
+                onReset = {
+                    viewModel.updateLimits(data.slot, 0, 0, false)
+                    viewModel.setLimitDialog(null)
+                },
+            )
+        }
     }
 
     showDayDialog?.let { data ->
-        DayPickerComposeDialog(
-            initialDay = data.day,
-            onDismiss = { viewModel.setDayDialog(null) },
-            onDaySelected = { day ->
-                viewModel.updateAutoResetDay(data.slot, day)
-                viewModel.setDayDialog(null)
-            },
-        )
+        key(data.slot) {
+            DayPickerComposeDialog(
+                initialDay = data.day,
+                onDismiss = { viewModel.setDayDialog(null) },
+                onDaySelected = { day ->
+                    viewModel.updateAutoResetDay(data.slot, day)
+                    viewModel.setDayDialog(null)
+                },
+            )
+        }
     }
 
     showAdjustDialog?.let { data ->
-        AdjustmentComposeDialog(
-            currentValue = data.currentValue,
-            isMinutes = data.isMinutes,
-            onDismiss = { viewModel.setAdjustDialog(null) },
-            onConfirm = { value ->
-                if (data.isMinutes) {
-                    viewModel.adjustRemainingMinutes(data.slot, value.toInt())
-                } else {
-                    viewModel.adjustRemainingTraffic(data.slot, value)
-                }
-                viewModel.setAdjustDialog(null)
-            },
-        )
+        key(data.slot) {
+            AdjustmentComposeDialog(
+                currentValue = data.currentValue,
+                isMinutes = data.isMinutes,
+                onDismiss = { viewModel.setAdjustDialog(null) },
+                onConfirm = { value ->
+                    if (data.isMinutes) {
+                        viewModel.adjustRemainingMinutes(data.slot, value.toInt())
+                    } else {
+                        viewModel.adjustRemainingTraffic(data.slot, value)
+                    }
+                    viewModel.setAdjustDialog(null)
+                },
+            )
+        }
     }
 
     if (showTrafficLimitationDialog) {

@@ -249,14 +249,14 @@ class TrafficTracker
             val now = timeProvider.now()
             // Limit safeStart to a maximum of 30 days back to avoid performance issues
             // with NetworkStatsManager on first run or after a long period of inactivity.
-            val thirtyDaysAgo = now - (30 * Constants.MILLIS_PER_DAY)
+            val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
             val calculatedStart =
                 if (startTime > 0) {
                     startTime
                 } else {
                     BillingPeriodCalculator.calculate(autoResetDay, now).startDate
                 }
-            val safeStart = maxOf(calculatedStart, thirtyDaysAgo)
+            val safeStart = maxOf(calculatedStart, lookbackStart)
 
             return try {
                 // NOTE: subscriberId is null, which means querySummaryForDevice returns aggregate

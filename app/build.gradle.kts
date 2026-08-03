@@ -101,6 +101,7 @@ dependencies {
     implementation(project(":feature:widget"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:semantic"))
+    implementation(libs.androidxGlanceAppwidget)
 
     baselineProfile(project(":baselineprofile"))
 

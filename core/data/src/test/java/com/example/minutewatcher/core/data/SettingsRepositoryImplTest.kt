@@ -42,12 +42,12 @@ class SettingsRepositoryImplTest {
             val repository = CallSessionRepositoryImpl(dataStore)
 
             dataStore.edit { prefs ->
-                prefs[SettingsKeys.Dynamic.callStartTimeKey(1)] = 1000L
-                prefs[SettingsKeys.Dynamic.bootTimeKey(1)] = 5000L
-                prefs[SettingsKeys.Dynamic.callIdentityKey(1)] = "id1"
+                prefs[DynamicSettingsKeys.callStartTimeKey(1)] = 1000L
+                prefs[DynamicSettingsKeys.bootTimeKey(1)] = 5000L
+                prefs[DynamicSettingsKeys.callIdentityKey(1)] = "id1"
 
-                prefs[SettingsKeys.Dynamic.callStartTimeKey(2)] = 2000L
-                prefs[SettingsKeys.Dynamic.bootTimeKey(2)] = 6000L
+                prefs[DynamicSettingsKeys.callStartTimeKey(2)] = 2000L
+                prefs[DynamicSettingsKeys.bootTimeKey(2)] = 6000L
 
                 prefs[SettingsKeys.APP_THEME] = AppTheme.DARK.value
             }
@@ -55,11 +55,11 @@ class SettingsRepositoryImplTest {
             repository.clearAllCallSessions()
 
             val prefs = dataStore.data.first()
-            assertNull(prefs[SettingsKeys.Dynamic.callStartTimeKey(1)])
-            assertNull(prefs[SettingsKeys.Dynamic.bootTimeKey(1)])
-            assertNull(prefs[SettingsKeys.Dynamic.callIdentityKey(1)])
-            assertNull(prefs[SettingsKeys.Dynamic.callStartTimeKey(2)])
-            assertNull(prefs[SettingsKeys.Dynamic.bootTimeKey(2)])
+            assertNull(prefs[DynamicSettingsKeys.callStartTimeKey(1)])
+            assertNull(prefs[DynamicSettingsKeys.bootTimeKey(1)])
+            assertNull(prefs[DynamicSettingsKeys.callIdentityKey(1)])
+            assertNull(prefs[DynamicSettingsKeys.callStartTimeKey(2)])
+            assertNull(prefs[DynamicSettingsKeys.bootTimeKey(2)])
 
             assertEquals(AppTheme.DARK.value, prefs[SettingsKeys.APP_THEME])
         }
@@ -70,9 +70,9 @@ class SettingsRepositoryImplTest {
             val repository = CallSessionRepositoryImpl(dataStore)
 
             dataStore.edit { prefs ->
-                prefs[SettingsKeys.Dynamic.callStartTimeKey(1)] = 1000L
-                prefs[SettingsKeys.Dynamic.callStartTimeKey(3)] = 3000L
-                prefs[SettingsKeys.Dynamic.callStartTimeKey(5)] = 0L
+                prefs[DynamicSettingsKeys.callStartTimeKey(1)] = 1000L
+                prefs[DynamicSettingsKeys.callStartTimeKey(3)] = 3000L
+                prefs[DynamicSettingsKeys.callStartTimeKey(5)] = 0L
             }
 
             val activeSubIds = repository.getActiveCallSubIds()

@@ -65,12 +65,8 @@ class MainActivity : AppCompatActivity() {
             lastPermissionState = savedInstanceState.getInt(KEY_LAST_PERMISSION_STATE, -1)
         }
 
-        observeAppTheme()
-        observeAppLanguage()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            setLocusContext(LocusId("main_screen"), null)
-        }
+        setupObservers()
+        setupLocusContext()
 
         setContent {
             AppContent()
@@ -78,6 +74,17 @@ class MainActivity : AppCompatActivity() {
 
         permissionHandler.checkPermissionsAndInit()
         handleIntent(intent)
+    }
+
+    private fun setupObservers() {
+        observeAppTheme()
+        observeAppLanguage()
+    }
+
+    private fun setupLocusContext() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            setLocusContext(LocusId("main_screen"), null)
+        }
     }
 
     private fun observeAppTheme() {
@@ -348,9 +355,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkPermissionChanges() {
         val currentState =
-            (if (permissionManager.hasPhoneStatePermission()) 1 else 0) or
-                (if (permissionManager.hasUsageStatsPermission()) 2 else 0) or
-                (if (permissionManager.hasNotificationPermission()) 4 else 0)
+            (if (permissionManager.hasPhoneStatePermission()) STATE_BIT_PHONE else 0) or
+                (if (permissionManager.hasUsageStatsPermission()) STATE_BIT_USAGE else 0) or
+                (if (permissionManager.hasNotificationPermission()) STATE_BIT_NOTIFICATION else 0)
 
         if (lastPermissionState != -1 && currentState != lastPermissionState) {
             permissionStateNotifier.notifyChanged()
@@ -360,5 +367,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val KEY_LAST_PERMISSION_STATE = "last_permission_state"
+        private const val STATE_BIT_PHONE = 1
+        private const val STATE_BIT_USAGE = 2
+        private const val STATE_BIT_NOTIFICATION = 4
     }
 }

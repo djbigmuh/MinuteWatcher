@@ -229,7 +229,7 @@ class SimRepositoryImplTest {
         }
 
     @Test
-    fun testGetSimIdentity_DoesNotSaveFallback_WhenPermissionsMissing() =
+    fun testGetSimIdentity_SavesFallback_WhenPermissionsMissing() =
         runTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
@@ -253,8 +253,8 @@ class SimRepositoryImplTest {
             assertEquals("sim_0", identity.stableId)
             assertEquals(com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK, identity.source)
 
-            // Verify nothing was saved to DataStore
+            // Verify slot index was saved to DataStore
             val prefs = dataStore.data.first()
-            assertEquals(0, prefs.asMap().size)
+            assertEquals(0, prefs[SimSettingsKeys.slotIndexKey("sim_0")])
         }
 }

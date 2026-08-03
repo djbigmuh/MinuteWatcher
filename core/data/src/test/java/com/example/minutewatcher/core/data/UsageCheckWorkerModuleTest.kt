@@ -54,7 +54,7 @@ class UsageCheckWorkerModuleTest {
 
     @Mock lateinit var usageUseCase: UsageUseCase
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
-    
+
     private val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
 
     @Before
@@ -122,7 +122,7 @@ class UsageCheckWorkerModuleTest {
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.success(), result)
 
-            // Verify refresh was called twice as per checkUsageAndNotify logic
-            verify(usageStateRepository, times(2)).refresh()
+            // Verify refresh was called once as per checkUsageAndNotify logic
+            verify(usageStateRepository, times(1)).refresh()
         }
 }

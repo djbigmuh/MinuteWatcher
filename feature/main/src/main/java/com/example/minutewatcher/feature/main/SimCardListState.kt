@@ -2,16 +2,16 @@ package com.example.minutewatcher.feature.main
 
 import com.example.minutewatcher.core.model.SimCardUiModel
 
-sealed class SimCardListState {
-    object Loading : SimCardListState()
+sealed interface SimCardListState {
+    data object Loading : SimCardListState
 
     data class Success(
         val simCards: List<SimCardUiModel>,
-    ) : SimCardListState()
+    ) : SimCardListState
 
     data class Error(
         val message: String,
-    ) : SimCardListState()
+    ) : SimCardListState
 
-    object Empty : SimCardListState()
+    data object Empty : SimCardListState
 }

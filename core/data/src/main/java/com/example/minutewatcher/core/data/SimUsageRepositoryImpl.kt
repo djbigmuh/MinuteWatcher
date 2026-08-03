@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.di.SimDataStore
+import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
@@ -24,17 +25,13 @@ class SimUsageRepositoryImpl
         private val timeProvider: TimeProvider,
     ) : BaseDataStoreRepository(dataStore),
         SimUsageRepository,
+        SimUsageAdjustmentRepository,
         SimUsageResetRepository {
         override fun getSimUsage(identity: String): Flow<SimUsage> =
             dataStore.data.map { prefs ->
                 SimUsage(
                     identity = identity,
-                    slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)]
-                        ?: if (identity.startsWith("sim_")) {
-                            identity.substringAfter("sim_").toIntOrNull() ?: 0
-                        } else {
-                            0
-                        },
+                    slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
                     subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
                     operator = prefs[SimSettingsKeys.customSimOperatorKey(identity)]
                         ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
@@ -192,12 +189,12 @@ class SimUsageRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.lastResetDateKey(identity)] = value }
         }
 
-        override fun getLastTotalBytes(identity: String): Flow<Long> = getData(SettingsKeys.Dynamic.lastTotalBytesKey(identity), -1L)
+        override fun getLastTotalBytes(identity: String): Flow<Long> = getData(DynamicSettingsKeys.lastTotalBytesKey(identity), -1L)
 
         override suspend fun setLastTotalBytes(
             identity: String,
             bytes: Long,
         ) {
-            dataStore.edit { it[SettingsKeys.Dynamic.lastTotalBytesKey(identity)] = bytes }
+            dataStore.edit { it[DynamicSettingsKeys.lastTotalBytesKey(identity)] = bytes }
         }
     }

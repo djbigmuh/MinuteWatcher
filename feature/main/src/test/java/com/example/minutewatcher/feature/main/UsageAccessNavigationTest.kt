@@ -19,6 +19,7 @@ import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
 import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
+import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -91,13 +92,17 @@ class UsageAccessNavigationTest {
             ioDispatcher = testDispatcher
         )
 
+        val controllers = MainViewModelControllers(
+            dialog = dialogController,
+            banner = bannerController,
+            refresh = refreshController,
+            settings = settingsController,
+            simData = simDataController,
+        )
+
         viewModel =
             MainViewModel(
-                dialogController = dialogController,
-                bannerController = bannerController,
-                refreshController = refreshController,
-                settingsController = settingsController,
-                simDataController = simDataController,
+                controllers = controllers,
                 appSettingsRepository = appSettingsRepository,
                 usageStateRepository = usageStateRepository,
                 autoResetUseCase = autoResetUseCase,

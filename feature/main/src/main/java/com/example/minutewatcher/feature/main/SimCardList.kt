@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,10 +41,15 @@ fun SimCardList(
     }
 
     showResetConfirmSlot?.let { slot ->
-        ResetConfirmationDialog(onDismiss = { showResetConfirmSlot = null }, onConfirm = {
-            viewModel.resetUsage(slot)
-            showResetConfirmSlot = null
-        })
+        key(slot) {
+            ResetConfirmationDialog(
+                onDismiss = { showResetConfirmSlot = null },
+                onConfirm = {
+                    viewModel.resetUsage(slot)
+                    showResetConfirmSlot = null
+                },
+            )
+        }
     }
 }
 

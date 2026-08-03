@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,12 +94,16 @@ class MainViewModelTest {
             ioDispatcher = testDispatcher
         )
 
+        val controllers = MainViewModelControllers(
+            dialog = dialogController,
+            banner = bannerController,
+            refresh = refreshController,
+            settings = settingsController,
+            simData = simDataController,
+        )
+
         return MainViewModel(
-            dialogController = dialogController,
-            bannerController = bannerController,
-            refreshController = refreshController,
-            settingsController = settingsController,
-            simDataController = simDataController,
+            controllers = controllers,
             appSettingsRepository = appSettingsRepository,
             usageStateRepository = usageStateRepository,
             autoResetUseCase = autoResetUseCase,

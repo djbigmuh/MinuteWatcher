@@ -12,11 +12,10 @@ import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.Lazy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
@@ -25,6 +24,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Единый механизм обновления.
+ *
+ * Координатор является Singleton и использует ApplicationScope, поэтому цикл наблюдения
+ * за снимками состояния (observeSnapshot) живет в течение всего времени работы приложения
+ * после первого вызова [notifyDataChanged].
  */
 @OptIn(FlowPreview::class)
 @Singleton
@@ -37,33 +40,8 @@ class UpdateCoordinator
         private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val isObserving = MutableStateFlow(false)
+        private var observationJob: Job? = null
         private val lastManualUpdateTimestamp = AtomicLong(0L)
-
-        init {
-            scope.launch {
-                isObserving.first { it }
-                usageStateRepository.get().observeSnapshot()
-                    .filter { it.timestamp > 0L }
-                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                    .distinctUntilChanged { old, new ->
-                        SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
-                    }.collect { snapshot ->
-                        if (snapshot.isManualUpdate) {
-                            val now = timeProvider.elapsedRealtime()
-                            if (now - lastManualUpdateTimestamp.get() < Constants.Widget.DEBOUNCE_MS * 2) {
-                                AppLogger.d("Skipping debounced widget update after manual refresh")
-                                return@collect
-                            }
-                        }
-                        widgetUpdater.updateAll()
-                    }
-            }
-        }
-
-        private fun startObserving() {
-            isObserving.value = true
-        }
 
         /**
          * Уведомляет об изменении данных.
@@ -80,5 +58,29 @@ class UpdateCoordinator
                 }
                 widgetUpdater.updateAll()
             }
+        }
+
+        @Synchronized
+        private fun startObserving() {
+            if (observationJob != null) return
+
+            observationJob =
+                scope.launch {
+                    usageStateRepository.get().observeSnapshot()
+                        .filter { it.timestamp > 0L }
+                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .distinctUntilChanged { old, new ->
+                            SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
+                        }.collect { snapshot ->
+                            if (snapshot.isManualUpdate) {
+                                val now = timeProvider.elapsedRealtime()
+                                if (now - lastManualUpdateTimestamp.get() < Constants.Widget.DEBOUNCE_MS * 2) {
+                                    AppLogger.d("Skipping debounced widget update after manual refresh")
+                                    return@collect
+                                }
+                            }
+                            widgetUpdater.updateAll()
+                        }
+                }
         }
     }

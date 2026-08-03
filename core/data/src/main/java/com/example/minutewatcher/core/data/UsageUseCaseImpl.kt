@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.data.util.OperatorResolver
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -26,6 +27,7 @@ class UsageUseCaseImpl
         @param:ApplicationContext private val context: Context,
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
+        private val simUsageAdjustmentRepository: SimUsageAdjustmentRepository,
         private val simLimitsRepository: SimLimitsRepository,
         private val simUsageResetRepository: SimUsageResetRepository,
         private val trafficTracker: TrafficTracker,
@@ -72,7 +74,7 @@ class UsageUseCaseImpl
                 val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
                 val adj = (safeRemaining - limit).toLong() + used.toLong()
                 val safeAdj = adj.coerceIn(-Constants.MAX_MINUTES_LIMIT.toLong(), Constants.MAX_MINUTES_LIMIT.toLong()).toInt()
-                simUsageRepository.setManualAdjustment(identity, safeAdj)
+                simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
             }
         }
 
@@ -91,7 +93,7 @@ class UsageUseCaseImpl
                 val usedGb = usedMb / Constants.MB_PER_GB
                 val adj = safeRemainingGb - (limitGb - usedGb)
                 val safeAdj = adj.coerceIn(-Constants.MAX_TRAFFIC_LIMIT_GB, Constants.MAX_TRAFFIC_LIMIT_GB)
-                simUsageRepository.setTrafficAdjustment(identity, safeAdj)
+                simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj)
             }
         }
 

@@ -49,9 +49,7 @@ class NotificationHelper
             type: Int,
         ) {
             try {
-                if (!permissionManager.hasNotificationPermission() ||
-                    !NotificationManagerCompat.from(context).areNotificationsEnabled()
-                ) {
+                if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
                     return
                 }
 
@@ -92,6 +90,18 @@ class NotificationHelper
                 AppLogger.e("Failed to send notification", e)
             }
         }
+
+        private fun areNotificationsEnabledSafe(): Boolean =
+            try {
+                NotificationManagerCompat.from(context).areNotificationsEnabled()
+            } catch (e: SecurityException) {
+                AppLogger.w("SecurityException while checking notification status: ${e.message}")
+                false
+            } catch (e: RuntimeException) {
+                // Catches DeadObjectException and other system service issues
+                AppLogger.w("System error while checking notification status: ${e.message}")
+                false
+            }
 
         companion object {
             private const val BASE_REQUEST_CODE = 100

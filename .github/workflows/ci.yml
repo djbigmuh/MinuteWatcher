@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: set up JDK 21
       uses: actions/setup-java@v4
       with:
@@ -28,7 +28,7 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-      
+
     - name: Run Static Analysis (Ktlint, Detekt, Lint)
       run: ./gradlew ktlintCheck detekt lintDebug
 
@@ -40,6 +40,9 @@ jobs:
 
     - name: Build Release APK (Check R8 & ProGuard)
       run: ./gradlew :app:assembleRelease
+
+    - name: Build Benchmark APK (Check R8 & ProGuard)
+      run: ./gradlew :app:assembleBenchmark
 
     - name: Check for uncommitted changes
       run: |
@@ -68,3 +71,9 @@ jobs:
       with:
         name: debug-apk
         path: app/build/outputs/apk/debug/*.apk
+
+    - name: Upload Benchmark Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-apk
+        path: app/build/outputs/apk/benchmark/*.apk

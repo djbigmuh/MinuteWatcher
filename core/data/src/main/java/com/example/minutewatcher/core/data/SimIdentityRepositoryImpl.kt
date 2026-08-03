@@ -15,6 +15,7 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
@@ -159,10 +160,16 @@ class SimIdentityRepositoryImpl
             }
 
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                return createFallbackIdentity(slot, "unsupported_$slot")
+                val fallback = createFallbackIdentity(slot, "unsupported_$slot")
+                saveSimIdentityInfo(fallback)
+                return fallback
             }
 
-            return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
+            val identity = findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
+            if (identity.source == IdentitySource.SLOT_FALLBACK) {
+                saveSimIdentityInfo(identity)
+            }
+            return identity
         }
 
         private suspend fun findActiveIdentityInternal(slot: Int): SimIdentity? {
@@ -245,7 +252,7 @@ class SimIdentityRepositoryImpl
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =
             getActiveIdentities()
-                .debounce(300.milliseconds)
+                .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                 .distinctUntilChanged()
 
         override fun getSimOperator(identity: String): Flow<String> =

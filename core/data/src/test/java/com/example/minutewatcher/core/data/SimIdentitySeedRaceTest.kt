@@ -40,6 +40,7 @@ class SimIdentitySeedRaceTest {
 
     @Before
     fun setup() {
+        whenever(dataStore.data).thenReturn(flowOf(mock()))
         whenever(
             appSettingsRepository.observeAppSettings(),
         ).thenReturn(

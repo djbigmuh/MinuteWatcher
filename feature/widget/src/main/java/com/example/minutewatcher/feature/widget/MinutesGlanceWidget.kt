@@ -45,6 +45,7 @@ import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import dagger.hilt.EntryPoint
+import kotlinx.coroutines.CancellationException
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
@@ -104,6 +105,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                 if (snapshot.timestamp == 0L) {
                     refreshFailed = true
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Widget refresh failed", e)
                 refreshFailed = true
@@ -113,6 +116,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val settingsState =
             try {
                 widgetSettingsLoader.load()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to load widget settings, using defaults", e)
                 WidgetSettingsState(settingsLoadFailed = true)

@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -215,7 +216,7 @@ class CallTracker
             val now = timeProvider.now()
             val staleSessions = activeSubIds.filter { subId ->
                 val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
-                startTime > 0 && (now - startTime) > MAX_CALL_DURATION_MS
+                startTime > 0 && (now - startTime) > Constants.Calls.MAX_CALL_DURATION_MS
             }
 
             if (staleSessions.isNotEmpty()) {
@@ -368,6 +369,5 @@ class CallTracker
         companion object {
             private const val MILLIS_IN_SECOND = 1000L
             private const val SECONDS_IN_MINUTE = 60
-            private const val MAX_CALL_DURATION_MS = 12 * 60 * 60 * 1000L // 12 hours
         }
     }
