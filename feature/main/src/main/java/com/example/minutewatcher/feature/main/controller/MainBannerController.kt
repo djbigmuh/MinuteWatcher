@@ -18,9 +18,9 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 class MainBannerController @Inject constructor(
-    private val trackingStatusRepository: TrackingStatusRepository,
-    private val permissionRepository: PermissionRepository,
-    private val appSettingsRepository: AppSettingsRepository,
+    trackingStatusRepository: TrackingStatusRepository,
+    permissionRepository: PermissionRepository,
+    appSettingsRepository: AppSettingsRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)

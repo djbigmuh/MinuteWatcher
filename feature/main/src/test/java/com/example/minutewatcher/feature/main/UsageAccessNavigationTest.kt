@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
@@ -21,6 +22,7 @@ import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +51,7 @@ class UsageAccessNavigationTest {
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val trackingStatusRepository: TrackingStatusRepository = mock()
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
@@ -61,7 +64,6 @@ class UsageAccessNavigationTest {
     private val usageStatsPermissionFlow = MutableStateFlow(false)
     private val notificationPermissionFlow = MutableStateFlow(true)
 
-    private lateinit var viewModel: MainViewModel
 
     @Before
     fun setup() {
@@ -71,25 +73,38 @@ class UsageAccessNavigationTest {
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
 
-        whenever(usageStateRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
+        whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock<com.example.minutewatcher.core.model.GlobalSnapshot>()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
+    }
 
+    private fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = MainDialogController(savedStateHandle)
-        val bannerController = MainBannerController(usageStateRepository, permissionRepository, appSettingsRepository)
+        val bannerController = MainBannerController(
+            trackingStatusRepository = trackingStatusRepository,
+            permissionRepository = permissionRepository,
+            appSettingsRepository = appSettingsRepository,
+            scope = scope
+        )
         val refreshController = MainSimRefreshController(usageUseCase, usageStateRepository, testDispatcher)
-        val settingsController = MainSettingsController(appSettingsRepository, settingsUseCase)
+        val settingsController = MainSettingsController(
+            appSettingsRepository = appSettingsRepository,
+            settingsUseCase = settingsUseCase,
+            scope = scope
+        )
         val simDataController = MainSimDataController(
             usageStateRepository = usageStateRepository,
+            trackingStatusRepository = trackingStatusRepository,
             simIdentityRepository = simIdentityRepository,
             simLimitsRepository = simLimitsRepository,
             usageUseCase = usageUseCase,
             dataChangeNotifier = mock<com.example.minutewatcher.core.domain.DataChangeNotifier>(),
-            ioDispatcher = testDispatcher
+            ioDispatcher = testDispatcher,
+            scope = scope
         )
 
         val controllers = MainViewModelControllers(
@@ -100,14 +115,14 @@ class UsageAccessNavigationTest {
             simData = simDataController,
         )
 
-        viewModel =
-            MainViewModel(
-                controllers = controllers,
-                appSettingsRepository = appSettingsRepository,
-                usageStateRepository = usageStateRepository,
-                autoResetUseCase = autoResetUseCase,
-                ioDispatcher = testDispatcher,
-            )
+        return MainViewModel(
+            controllers = controllers,
+            appSettingsRepository = appSettingsRepository,
+            usageStateRepository = usageStateRepository,
+            autoResetUseCase = autoResetUseCase,
+            savedStateHandle = savedStateHandle,
+            ioDispatcher = testDispatcher,
+        )
     }
 
     private fun createMockSimCard() =
@@ -179,6 +194,7 @@ class UsageAccessNavigationTest {
     @Test
     fun dialogDoesNotOpenRepeatedly() {
         // Test ViewModel state consistency
+        val viewModel = createViewModel(testDispatcher as CoroutineScope)
         viewModel.setUsageAccessDialog(true)
         assertTrue(viewModel.showUsageAccessDialog.value)
 

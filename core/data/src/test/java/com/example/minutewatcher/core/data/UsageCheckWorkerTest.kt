@@ -73,7 +73,7 @@ class UsageCheckWorkerTest {
         runTest(testDispatcher) {
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(trafficTracker.updateTrafficUsage()).thenReturn(Unit)
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
+            whenever(autoResetUseCase.performAutoReset()).thenReturn(Unit)
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(Unit)
         }
 

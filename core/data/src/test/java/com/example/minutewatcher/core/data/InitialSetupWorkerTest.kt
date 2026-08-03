@@ -65,7 +65,7 @@ class InitialSetupWorkerTest {
                 simSnapshots = emptyList(),
                 capabilities = emptyList(),
             )
-            
+
         runTest {
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
@@ -105,7 +105,7 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(autoResetUseCase).performAutoReset(any())
+            verify(autoResetUseCase).performAutoReset()
         }
 
     @Test

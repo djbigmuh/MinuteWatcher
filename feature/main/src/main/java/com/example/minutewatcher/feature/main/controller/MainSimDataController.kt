@@ -28,7 +28,7 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 class MainSimDataController @Inject constructor(
-    private val usageStateRepository: UsageStateRepository,
+    usageStateRepository: UsageStateRepository,
     private val trackingStatusRepository: TrackingStatusRepository,
     private val simIdentityRepository: SimIdentityRepository,
     private val simLimitsRepository: SimLimitsRepository,
