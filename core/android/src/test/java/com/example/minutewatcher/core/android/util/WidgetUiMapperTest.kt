@@ -262,7 +262,6 @@ class WidgetUiMapperTest {
 
         // Should be hidden because limit and used are 0
         assertFalse(sim0.showTraffic)
-        assertFalse(sim0.hasTrafficData)
 
         // Verify layout spec does not contain traffic rows
         val trafficRows =

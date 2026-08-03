@@ -72,7 +72,7 @@ object Constants {
 }
 
 object SimConstants {
-    const val MAX_SUPPORTED_SIM_SLOTS = 3
+    const val MAX_SUPPORTED_SIM_SLOTS = 10
     const val MOCK_SUB_ID_BASE = 1000
     val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
 }

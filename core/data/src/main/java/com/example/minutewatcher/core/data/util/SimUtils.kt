@@ -4,50 +4,10 @@ import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.CancellationException
-import java.util.Locale
 
 object SimUtils {
-    private val operatorMap = mapOf(
-        "mts" to R.string.operator_mts,
-        "beeline" to R.string.operator_beeline,
-        "megafon" to R.string.operator_megafon,
-        "tele2" to R.string.operator_tele2,
-        "t2" to R.string.operator_tele2,
-        "mgts" to R.string.operator_mgts,
-        "yota" to R.string.operator_yota,
-        "vodafone" to R.string.operator_vodafone,
-        "t-mobile" to R.string.operator_t_mobile,
-        "telekom" to R.string.operator_t_mobile,
-        "orange" to R.string.operator_orange,
-        "o2" to R.string.operator_o2,
-        "at&t" to R.string.operator_att,
-        "verizon" to R.string.operator_verizon,
-        "tim" to R.string.operator_tim,
-        "sfr" to R.string.operator_sfr,
-        "bouygues" to R.string.operator_bouygues,
-        "windtre" to R.string.operator_windtre,
-        "movistar" to R.string.operator_movistar,
-        "claro" to R.string.operator_claro,
-        "airtel" to R.string.operator_airtel,
-        "jio" to R.string.operator_jio,
-        "kpn" to R.string.operator_kpn,
-        "proximus" to R.string.operator_proximus,
-        "swisscom" to R.string.operator_swisscom,
-        "sunrise" to R.string.operator_sunrise,
-        "salt" to R.string.operator_salt,
-        "telia" to R.string.operator_telia,
-        "telenor" to R.string.operator_telenor,
-        "elisa" to R.string.operator_elisa,
-        "dna" to R.string.operator_dna,
-        "plus" to R.string.operator_plus,
-        "play" to R.string.operator_play,
-        "turkcell" to R.string.operator_turkcell,
-        "turk telekom" to R.string.operator_turk_telekom,
-    )
-
     fun getOperatorIconResource(operatorName: String): Int {
-        val entry = operatorMap.entries.find { (token, _) -> operatorName.hasToken(token) }
-        return when (entry?.value) {
+        return when (OperatorResolver.getOperatorResourceId(operatorName)) {
             R.string.operator_mts -> R.drawable.ic_mts
             R.string.operator_beeline -> R.drawable.ic_beeline
             R.string.operator_megafon -> R.drawable.ic_megafon
@@ -64,9 +24,9 @@ object SimUtils {
     ): String {
         val localizedContext = getLocalizedContext(context)
         return try {
-            val entry = operatorMap.entries.find { (token, _) -> operatorName.hasToken(token) }
-            if (entry != null) {
-                getStringSafe(localizedContext, entry.value, entry.key.uppercase(Locale.ROOT))
+            val resId = OperatorResolver.getOperatorResourceId(operatorName)
+            if (resId != null) {
+                getStringSafe(localizedContext, resId, operatorName.uppercase())
             } else if (operatorName.isNotEmpty()) {
                 truncateName(operatorName)
             } else {
@@ -121,18 +81,4 @@ object SimUtils {
     }
 
     fun isInactiveSim(operatorName: String?): Boolean = operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
-
-    private fun String.hasToken(token: String): Boolean {
-        val normalized = lowercase(Locale.ROOT)
-        val targetToken = token.lowercase(Locale.ROOT)
-
-        // 1. Check exact match
-        if (normalized == targetToken) return true
-
-        // 2. Check in tokens split by common delimiters (excluding dash if token has it)
-        val regex = if (targetToken.contains("-")) "[^a-z0-9&-]+" else "[^a-z0-9&]+"
-        val tokens = normalized.split(Regex(regex)).filter { it.isNotEmpty() }
-
-        return tokens.contains(targetToken)
-    }
 }

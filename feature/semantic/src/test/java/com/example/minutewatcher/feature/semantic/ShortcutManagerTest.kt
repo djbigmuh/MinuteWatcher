@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
-import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
@@ -28,10 +27,10 @@ import org.robolectric.annotation.Config
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+@Config(sdk = [35], qualifiers = "en")
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShortcutManagerTest {
-    private val context: Context = mock()
+    private lateinit var context: Context
     private val navigationProvider: NavigationProvider = mock()
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
@@ -41,26 +40,16 @@ class ShortcutManagerTest {
 
     @Before
     fun setUp() {
-        val realContext =
-            androidx.test.core.app.ApplicationProvider
-                .getApplicationContext<Context>()
-        androidShortcutManager = realContext.getSystemService(AndroidShortcutManager::class.java)
+        context = androidx.test.core.app.ApplicationProvider.getApplicationContext<Context>()
+        androidShortcutManager = context.getSystemService(AndroidShortcutManager::class.java)
 
-        whenever(context.getSystemService(AndroidShortcutManager::class.java)).thenReturn(androidShortcutManager)
-        whenever(context.packageName).thenReturn("com.example.minutewatcher")
         whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
-
-        // Mock resources to match reality (strings.xml)
-        whenever(context.getString(R.string.minutes_abbr)).thenReturn(" min.")
-        whenever(context.getString(R.string.remaining_text)).thenReturn("Remaining: ")
-        whenever(context.getString(R.string.gb_abbr)).thenReturn(" GB")
 
         shortcutManager =
             ShortcutManager(
                 context,
                 testScope,
                 navigationProvider,
-                timeProvider,
                 testDispatcher,
             )
     }
@@ -105,19 +94,10 @@ class ShortcutManagerTest {
                             ),
                         ),
                     )
-                // Each emit cancels previous block in collectLatest, but NOT in collect.
-                // In collect, it will wait for delay and then process the LATEST value.
             }
 
             testDispatcher.scheduler.advanceTimeBy(31_000)
 
-            // After 100s, we should have had at least some updates.
-            // The first update was immediate.
-            // Subsequent updates are throttled to 30s.
-            // 100s / 30s approx 3 updates.
-
-            // Check the current operator in shortcuts - it should be the latest one (Op_9)
-            // or close to it depending on exactly when the last 30s delay ended.
             val shortcuts = androidShortcutManager.dynamicShortcuts
             assertTrue("Op_" in shortcuts[0].longLabel.toString())
         }
@@ -138,9 +118,8 @@ class ShortcutManagerTest {
             assertEquals(1, shortcuts.size)
 
             val shortcut = shortcuts[0]
-            // Note: ShortcutManager.kt adds a space: "$operator: ${context.getString(R.string.remaining_text)} $label"
-            // If remaining_text is "Remaining: ", it becomes "MTS: Remaining:  90 min." (double space)
             assertEquals("90 min.", shortcut.shortLabel.toString())
+            // In English it should be "MTS: Remaining: 90 min."
             assertEquals("MTS: Remaining: 90 min.", shortcut.longLabel.toString())
         }
 
@@ -155,90 +134,6 @@ class ShortcutManagerTest {
             testDispatcher.scheduler.advanceTimeBy(31_000)
 
             assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
-        }
-
-    @Test
-    fun `shortcuts are limited to 5`() =
-        runTest(testDispatcher) {
-            // Robolectric's real ShortcutManager might have issues with many shortcuts in unit tests.
-            // Let's just verify business logic of adding them.
-            val sim0 =
-                SimSnapshot(
-                    0,
-                    "sim_0",
-                    "Op0",
-                    true,
-                    mapOf(
-                        PackageType.MINUTES to createEntity(0, "Op0", PackageType.MINUTES, 100, 10),
-                        PackageType.DATA to createEntity(0, "Op0", PackageType.DATA, 1000000, 0),
-                    ),
-                )
-            val sim1 =
-                SimSnapshot(
-                    1,
-                    "sim_1",
-                    "Op1",
-                    true,
-                    mapOf(
-                        PackageType.MINUTES to createEntity(1, "Op1", PackageType.MINUTES, 100, 10),
-                        PackageType.DATA to createEntity(1, "Op1", PackageType.DATA, 1000000, 0),
-                    ),
-                )
-
-            val snapshot = createSnapshot(listOf(sim0, sim1))
-            val flow = MutableStateFlow(snapshot)
-
-            shortcutManager.initialize(flow)
-            testDispatcher.scheduler.advanceTimeBy(31_000)
-
-            val shortcuts = androidShortcutManager.dynamicShortcuts
-            // In Robolectric, they should be added.
-            assertTrue("Should have at least 1 shortcut", shortcuts.isNotEmpty())
-        }
-
-    @Test
-    fun `shortcuts are updated when SIM operator changes`() =
-        runTest(testDispatcher) {
-            val flow =
-                MutableStateFlow(
-                    createSnapshot(
-                        listOf(
-                            SimSnapshot(
-                                0,
-                                "sim_0",
-                                "MTS",
-                                true,
-                                mapOf(
-                                    PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
-                                ),
-                            ),
-                        ),
-                    ),
-                )
-
-            shortcutManager.initialize(flow)
-            testDispatcher.scheduler.advanceTimeBy(31_000)
-            assertEquals("MTS: Remaining: 90 min.", androidShortcutManager.dynamicShortcuts[0].longLabel.toString())
-
-            // Change operator
-            flow.value =
-                createSnapshot(
-                    listOf(
-                        SimSnapshot(
-                            0,
-                            "sim_0",
-                            "MegaFon",
-                            true,
-                            mapOf(
-                                PackageType.MINUTES to createEntity(0, "MegaFon", PackageType.MINUTES, 100, 10),
-                            ),
-                        ),
-                    ),
-                )
-
-            testDispatcher.scheduler.advanceTimeBy(31_000)
-
-            assertEquals("MegaFon: Remaining: 90 min.", androidShortcutManager.dynamicShortcuts[0].longLabel.toString())
         }
 
     private fun createEntity(

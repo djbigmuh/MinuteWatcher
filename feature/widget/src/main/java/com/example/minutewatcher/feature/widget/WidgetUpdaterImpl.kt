@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -31,12 +32,7 @@ class WidgetUpdaterImpl
                     appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                 } catch (e: IllegalArgumentException) {
                     val msg = e.message ?: ""
-                    // Heuristic to detect when the RemoteViews payload size exceeds the Android system limit.
-                    // The exact exception and message can vary by Android version, but usually contains "RemoteViews"
-                    // or mentions transaction size issues.
-                    val isLimitExceeded = msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true) ||
-                                          msg.contains("too large", ignoreCase = true) ||
-                                          msg.contains("transaction", ignoreCase = true)
+                    val isLimitExceeded = isRemoteViewsLimitException(e)
 
                     AppLogger.e("Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg", e)
 
@@ -49,5 +45,13 @@ class WidgetUpdaterImpl
                     AppLogger.e("Unexpected error updating widgets", e)
                 }
             }
+        }
+
+        @VisibleForTesting
+        fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
+            val msg = e.message ?: ""
+            return msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true) ||
+                msg.contains("too large", ignoreCase = true) ||
+                msg.contains("transaction", ignoreCase = true)
         }
     }

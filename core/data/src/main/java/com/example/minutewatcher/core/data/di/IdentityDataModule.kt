@@ -5,10 +5,8 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.data.SimIdentityRepositoryImpl
 import com.example.minutewatcher.core.data.SimIdentitySeedRepositoryImpl
-import com.example.minutewatcher.core.data.SimInfoProviderImpl
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
-import com.example.minutewatcher.core.domain.SimInfoProvider
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -27,10 +25,6 @@ abstract class IdentityDataModule {
     @Binds
     @Singleton
     abstract fun bindSimIdentityRepository(impl: SimIdentityRepositoryImpl): SimIdentityRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindSimInfoProvider(impl: SimInfoProviderImpl): SimInfoProvider
 
     companion object {
         @Provides

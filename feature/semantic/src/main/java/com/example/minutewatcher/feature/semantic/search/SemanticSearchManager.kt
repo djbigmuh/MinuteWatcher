@@ -120,29 +120,31 @@ open class SemanticSearchManager
             return false
         }
 
-        suspend fun indexSnapshot(snapshot: GlobalSnapshot) {
+        suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
             val currentHash = SnapshotUtils.calculateContentHash(snapshot)
-            if (currentHash == lastSnapshotHash) return
+            if (currentHash == lastSnapshotHash) return true
 
-            sessionMutex.withLock {
-                if (!ensureSession()) return@withLock
+            return sessionMutex.withLock {
+                if (!ensureSession()) return@withLock false
                 executeIndexing(snapshot, currentHash)
             }
         }
 
-        private suspend fun executeIndexing(snapshot: GlobalSnapshot, currentHash: Int) {
-            withContext(ioDispatcher) {
+        private suspend fun executeIndexing(snapshot: GlobalSnapshot, currentHash: Int): Boolean {
+            return withContext(ioDispatcher) {
                 try {
                     withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                         val documents = convertSnapshotToDocuments(snapshot)
                         performIndexUpdate(documents)
                         lastSnapshotHash = currentHash
                         _status.value = TrackingStatus.Active
+                        true
                     }
                 } catch (e: Exception) {
                     AppLogger.e("AppSearch indexing error", e)
                     lastSnapshotHash = -1
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    false
                 }
             }
         }

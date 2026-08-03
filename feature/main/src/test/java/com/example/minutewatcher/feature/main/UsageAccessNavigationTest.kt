@@ -28,7 +28,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -80,6 +83,11 @@ class UsageAccessNavigationTest {
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
@@ -192,9 +200,9 @@ class UsageAccessNavigationTest {
     }
 
     @Test
-    fun dialogDoesNotOpenRepeatedly() {
+    fun dialogDoesNotOpenRepeatedly() = runTest {
         // Test ViewModel state consistency
-        val viewModel = createViewModel(testDispatcher as CoroutineScope)
+        val viewModel = createViewModel(backgroundScope)
         viewModel.setUsageAccessDialog(true)
         assertTrue(viewModel.showUsageAccessDialog.value)
 

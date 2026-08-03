@@ -31,21 +31,7 @@ class AppSettingsRepositoryImpl
                 .stateIn(
                     scope,
                     SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
-                    AppSettings(
-                        theme = AppTheme.FOLLOW_SYSTEM,
-                        language = null,
-                        notifyLowMinutes = true,
-                        notifyLowTraffic = true,
-                        callTrackingEnabled = true,
-                        widgetLayoutMode = 2,
-                        widgetSimArrangement = 0,
-                        widgetTransparency = 50,
-                        widgetFontSize = 2,
-                        widgetBackgroundColor = Constants.UI.DEFAULT_BG_COLOR,
-                        migrationV1Completed = false,
-                        onboardingCompleted = false,
-                        benchmarkSimCount = 0,
-                    ),
+                    AppSettings(),
                 )
 
         override fun getAppSettings(): Flow<AppSettings> = dataStore.data.map { prefs -> prefs.toAppSettings() }
@@ -82,24 +68,28 @@ class AppSettingsRepositoryImpl
             }
         }
 
-        private fun Preferences.toAppSettings(): AppSettings =
-            AppSettings(
+        private fun Preferences.toAppSettings(): AppSettings {
+            val default = AppSettings()
+            return AppSettings(
                 theme = AppTheme.fromValue(this[SettingsKeys.APP_THEME] ?: -1),
                 language = this[SettingsKeys.APP_LANGUAGE],
-                notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: true,
-                notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: true,
-                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: true,
-                widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: 2,
-                widgetSimArrangement = this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: 0,
-                widgetTransparency = this[SettingsKeys.WIDGET_TRANSPARENCY] ?: 50,
-                widgetFontSize = this[SettingsKeys.WIDGET_FONT_SIZE] ?: 2,
-                widgetBackgroundColor = this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: Constants.UI.DEFAULT_BG_COLOR,
-                migrationV1Completed = this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: false,
-                onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: false,
-                notificationPermissionRequested = this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: false,
-                phonePermissionRequested = this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: false,
-                benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: 0,
-                widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: false,
-                inaccurateCallAttributionsCount = this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] ?: 0,
+                notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: default.notifyLowMinutes,
+                notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: default.notifyLowTraffic,
+                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: default.callTrackingEnabled,
+                widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: default.widgetLayoutMode,
+                widgetSimArrangement = this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: default.widgetSimArrangement,
+                widgetTransparency = this[SettingsKeys.WIDGET_TRANSPARENCY] ?: default.widgetTransparency,
+                widgetFontSize = this[SettingsKeys.WIDGET_FONT_SIZE] ?: default.widgetFontSize,
+                widgetBackgroundColor = this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: default.widgetBackgroundColor,
+                migrationV1Completed = this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: default.migrationV1Completed,
+                onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: default.onboardingCompleted,
+                notificationPermissionRequested = this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED]
+                    ?: default.notificationPermissionRequested,
+                phonePermissionRequested = this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: default.phonePermissionRequested,
+                benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: default.benchmarkSimCount,
+                widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: default.widgetLimitExceeded,
+                inaccurateCallAttributionsCount = this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
+                    ?: default.inaccurateCallAttributionsCount,
             )
+        }
     }

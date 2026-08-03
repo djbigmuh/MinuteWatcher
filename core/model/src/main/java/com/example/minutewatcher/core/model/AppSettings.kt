@@ -10,7 +10,7 @@ data class AppSettings(
     val widgetSimArrangement: Int = 0,
     val widgetTransparency: Int = 50,
     val widgetFontSize: Int = 2,
-    val widgetBackgroundColor: Int = 0xFF000000.toInt(),
+    val widgetBackgroundColor: Int = Constants.UI.DEFAULT_BG_COLOR,
     val migrationV1Completed: Boolean = false,
     val onboardingCompleted: Boolean = false,
     val notificationPermissionRequested: Boolean = false,

@@ -52,6 +52,24 @@
     <string name="operator_play" translatable="false">Play</string>
     <string name="operator_turkcell" translatable="false">Turkcell</string>
     <string name="operator_turk_telekom" translatable="false">Türk Telekom</string>
+    <string name="operator_rostelecom" translatable="false">Rostelecom</string>
+    <string name="operator_tattelecom" translatable="false">Tattelecom</string>
+    <string name="operator_a1" translatable="false">A1</string>
+    <string name="operator_three" translatable="false">Three</string>
+    <string name="operator_base" translatable="false">BASE</string>
+    <string name="operator_tdc" translatable="false">TDC</string>
+    <string name="operator_ice" translatable="false">ice</string>
+    <string name="operator_maxis" translatable="false">Maxis</string>
+    <string name="operator_celcom" translatable="false">Celcom</string>
+    <string name="operator_digi" translatable="false">Digi</string>
+    <string name="operator_u_mobile" translatable="false">U Mobile</string>
+    <string name="operator_singtel" translatable="false">Singtel</string>
+    <string name="operator_m1" translatable="false">M1</string>
+    <string name="operator_starhub" translatable="false">StarHub</string>
+    <string name="operator_telstra" translatable="false">Telstra</string>
+    <string name="operator_optus" translatable="false">Optus</string>
+    <string name="operator_spark" translatable="false">Spark</string>
+    <string name="operator_2degrees" translatable="false">2degrees</string>
     <string name="operator_generic" translatable="false">Operator %1$d</string>
     <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
 

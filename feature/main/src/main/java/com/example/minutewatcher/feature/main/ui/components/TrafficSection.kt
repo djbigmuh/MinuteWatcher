@@ -64,14 +64,24 @@ fun TrafficSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "${stringResource(R.string.used_text)}: ${FormatUtils.formatMbAsGb(context, model.trafficUsedMb)}",
+                text = stringResource(
+                    R.string.label_value_format,
+                    stringResource(R.string.used_text),
+                    FormatUtils.formatMbAsGb(context, model.trafficUsedMb)
+                ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (model.isTrafficLimitSet) {
                 Text(
-                    text = "${stringResource(
-                        R.string.limit_text,
-                    )}: ${FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb)}${stringResource(R.string.gb_abbr)}",
+                    text = stringResource(
+                        R.string.label_value_format,
+                        stringResource(R.string.limit_text),
+                        stringResource(
+                            R.string.value_unit_format,
+                            FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb),
+                            stringResource(R.string.gb_abbr)
+                        )
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }

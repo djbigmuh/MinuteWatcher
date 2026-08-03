@@ -17,6 +17,26 @@ android {
         minSdk = 26
     }
 
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+        debug { }
+        create("benchmark") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+        }
+    }
+
+    sourceSets {
+        getByName("debug").java.srcDir("src/mock/java")
+        getByName("benchmark").java.srcDir("src/mock/java")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21

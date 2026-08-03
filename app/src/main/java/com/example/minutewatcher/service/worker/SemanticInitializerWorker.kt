@@ -6,10 +6,12 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 
 /**
  * Worker responsible for initializing semantic services (AppSearch and Shortcuts).
@@ -30,23 +32,30 @@ class SemanticInitializerWorker
     override suspend fun doWork(): Result {
         AppLogger.d("SemanticInitializerWorker: Starting initialization")
         val snapshotFlow = usageStateRepository.observeSnapshot()
+        val initialSnapshot = snapshotFlow.first()
 
-        try {
-            searchManager.initialize(snapshotFlow)
-        } catch (e: Exception) {
-            AppLogger.e("Failed to initialize AppSearch in Worker", e)
-            searchManager.setError(e.message)
-            // We don't necessarily want to retry the whole worker if one fails
-            // but for fatal DB issues retry might help.
+        // Perform initial indexing and shortcut update synchronously to catch immediate failures
+        val searchSuccess = searchManager.indexSnapshot(initialSnapshot)
+        val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
+
+        // Start background observers for continuous updates
+        searchManager.initialize(snapshotFlow)
+        shortcutManager.initialize(snapshotFlow)
+
+        if (!searchSuccess) {
+            val status = searchManager.status.value
+            if (status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.DATABASE_ERROR) {
+                AppLogger.w("SemanticInitializerWorker: AppSearch database error, requesting retry")
+                return Result.retry()
+            }
         }
 
-        try {
-            shortcutManager.initialize(snapshotFlow)
-        } catch (e: Exception) {
-            AppLogger.e("Failed to initialize shortcuts in Worker", e)
-            shortcutManager.setError(e.message)
+        return if (searchSuccess && shortcutSuccess) {
+            Result.success()
+        } else {
+            // For non-fatal errors, we return success to avoid infinite retries
+            // but the error state is still visible in the UI for manual retry.
+            Result.success()
         }
-
-        return Result.success()
     }
 }

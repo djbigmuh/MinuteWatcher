@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import java.util.Locale
 
 /**
  * Logic for resolving operator name from MCC/MNC database.
@@ -66,6 +67,83 @@ object OperatorResolver {
             "operator_play" to R.string.operator_play,
             "operator_turkcell" to R.string.operator_turkcell,
             "operator_turk_telekom" to R.string.operator_turk_telekom,
+            "operator_rostelecom" to R.string.operator_rostelecom,
+            "operator_tattelecom" to R.string.operator_tattelecom,
+            "operator_a1" to R.string.operator_a1,
+            "operator_three" to R.string.operator_three,
+            "operator_base" to R.string.operator_base,
+            "operator_tdc" to R.string.operator_tdc,
+            "operator_ice" to R.string.operator_ice,
+            "operator_maxis" to R.string.operator_maxis,
+            "operator_celcom" to R.string.operator_celcom,
+            "operator_digi" to R.string.operator_digi,
+            "operator_u_mobile" to R.string.operator_u_mobile,
+            "operator_singtel" to R.string.operator_singtel,
+            "operator_m1" to R.string.operator_m1,
+            "operator_starhub" to R.string.operator_starhub,
+            "operator_telstra" to R.string.operator_telstra,
+            "operator_optus" to R.string.operator_optus,
+            "operator_spark" to R.string.operator_spark,
+            "operator_2degrees" to R.string.operator_2degrees,
+            "operator_movistar" to R.string.operator_movistar,
+            "operator_claro" to R.string.operator_claro,
+        )
+
+    private val tokenToResKey =
+        mapOf(
+            "mts" to "operator_mts",
+            "beeline" to "operator_beeline",
+            "megafon" to "operator_megafon",
+            "tele2" to "operator_tele2",
+            "t2" to "operator_tele2",
+            "mgts" to "operator_mgts",
+            "yota" to "operator_yota",
+            "vodafone" to "operator_vodafone",
+            "t-mobile" to "operator_t_mobile",
+            "telekom" to "operator_t_mobile",
+            "orange" to "operator_orange",
+            "o2" to "operator_o2",
+            "at&t" to "operator_att",
+            "verizon" to "operator_verizon",
+            "tim" to "operator_tim",
+            "sfr" to "operator_sfr",
+            "bouygues" to "operator_bouygues",
+            "windtre" to "operator_windtre",
+            "movistar" to "operator_movistar",
+            "claro" to "operator_claro",
+            "airtel" to "operator_airtel",
+            "jio" to "operator_jio",
+            "kpn" to "operator_kpn",
+            "proximus" to "operator_proximus",
+            "swisscom" to "operator_swisscom",
+            "sunrise" to "operator_sunrise",
+            "salt" to "operator_salt",
+            "telia" to "operator_telia",
+            "telenor" to "operator_telenor",
+            "elisa" to "operator_elisa",
+            "dna" to "operator_dna",
+            "plus" to "operator_plus",
+            "play" to "operator_play",
+            "turkcell" to "operator_turkcell",
+            "turk telekom" to "operator_turk_telekom",
+            "rostelecom" to "operator_rostelecom",
+            "tattelecom" to "operator_tattelecom",
+            "a1" to "operator_a1",
+            "three" to "operator_three",
+            "base" to "operator_base",
+            "tdc" to "operator_tdc",
+            "ice" to "operator_ice",
+            "maxis" to "operator_maxis",
+            "celcom" to "operator_celcom",
+            "digi" to "operator_digi",
+            "u mobile" to "operator_u_mobile",
+            "singtel" to "operator_singtel",
+            "m1" to "operator_m1",
+            "starhub" to "operator_starhub",
+            "telstra" to "operator_telstra",
+            "optus" to "operator_optus",
+            "spark" to "operator_spark",
+            "2degrees" to "operator_2degrees",
         )
 
     private fun loadDb(context: Context): Map<String, String> {
@@ -168,4 +246,23 @@ object OperatorResolver {
 
     private const val MCC_LENGTH = 3
     private const val MIN_MCC_MNC_LENGTH = 5
+
+    fun getOperatorResourceId(operatorName: String): Int? {
+        val entry = tokenToResKey.entries.find { (token, _) -> operatorName.hasToken(token) }
+        return entry?.let { operatorResourceMap[it.value] }
+    }
+
+    private fun String.hasToken(token: String): Boolean {
+        val normalized = lowercase(Locale.ROOT)
+        val targetToken = token.lowercase(Locale.ROOT)
+
+        // 1. Check exact match
+        if (normalized == targetToken) return true
+
+        // 2. Check in tokens split by common delimiters (excluding dash if token has it)
+        val regex = if (targetToken.contains("-")) "[^a-z0-9&-]+" else "[^a-z0-9&]+"
+        val tokens = normalized.split(Regex(regex)).filter { it.isNotEmpty() }
+
+        return tokens.contains(targetToken)
+    }
 }

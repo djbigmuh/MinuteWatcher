@@ -233,7 +233,11 @@ class CallTracker
             } else {
                 fallbackAttribution(activeSubIds)?.let { oldest ->
                     AppLogger.d("Attributing unknown IDLE event to oldest session: $oldest")
-                    incrementInaccurateAttributions()
+                    // On API < 31, we don't have per-subscription state, so "ambiguity" is expected
+                    // and not necessarily an "inaccuracy" in app logic.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        incrementInaccurateAttributions()
+                    }
                     endCall(oldest)
                 }
             }
@@ -258,18 +262,9 @@ class CallTracker
                 }
                 if (idleSubs.size == 1) idleSubs.first() else null
             } else {
-                // Fallback for API < 31: If the global state is IDLE, then all subs are IDLE.
-                // But this method is usually called when one sub just became IDLE while others might still be active.
-                // Without per-subscription state, we can't reliably pick one from many.
-                @Suppress("DEPRECATION")
-                val isGlobalIdle = telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                if (isGlobalIdle) {
-                    // If everything is idle, we still don't know which one was the LAST to become idle
-                    // unless we use the fallback heuristic.
-                    null
-                } else {
-                    null
-                }
+                // Fallback for API < 31: Per-subscription state is not available.
+                // We return null and let handleAmbiguousIdle use the oldest-call heuristic.
+                null
             }
         }
 

@@ -29,7 +29,7 @@ class ScrollBenchmark {
             iterations = ITERATIONS,
             setupBlock = {
                 grantBenchmarkPermissions()
-                populateBenchmarkData(3)
+                populateBenchmarkData(10)
             },
         ) {
             startActivityAndWait()

@@ -49,8 +49,6 @@ object WidgetSimUiFactory {
             fontMultiplier = fontMultiplier,
             textColor = textColor,
             secondaryTextColor = secondaryTextColor,
-            hasMinutesData = minData.hasData,
-            hasTrafficData = trafData.hasData,
             minutesUsedFullText = minData.usedFull,
             minutesLimitFullText = minData.limitFull,
             trafficUsedFullText = trafData.usedFull,

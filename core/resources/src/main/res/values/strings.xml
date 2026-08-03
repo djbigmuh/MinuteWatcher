@@ -110,14 +110,17 @@
     <string name="usage_level_critical">CRITICAL LOW</string>
 
     <!-- Data & Units -->
-    <string name="remaining_text">Remaining: </string>
+    <string name="remaining_text">Remaining:</string>
     <string name="used_text">Used</string>
     <string name="limit_text">Limit</string>
-    <string name="minutes_abbr"> min.</string>
+    <string name="minutes_abbr">min.</string>
     <string name="traffic_label">Traffic</string>
-    <string name="traffic_remaining_text">Traffic remaining: </string>
-    <string name="gb_abbr"> GB</string>
+    <string name="traffic_remaining_text">Traffic remaining:</string>
+    <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">day of month</string>
+
+    <string name="label_value_format">%1$s: %2$s</string>
+    <string name="value_unit_format">%1$s %2$s</string>
 
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d minute</item>

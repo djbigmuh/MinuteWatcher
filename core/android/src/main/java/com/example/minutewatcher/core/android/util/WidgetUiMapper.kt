@@ -59,7 +59,6 @@ object WidgetUiMapper {
             isHorizontal = state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
             showSeparator = simUiStates.size >= 2 && !state.widgetLimitExceeded,
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
-            forceSimpleLayout = state.widgetLimitExceeded || isPreemptivelyLimited,
             settingsLoadFailed = state.settingsLoadFailed,
             refreshFailed = refreshFailed,
         )

@@ -1,14 +1,18 @@
 package com.example.minutewatcher.core.data.util
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.kotlin.mock
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class SimUtilsTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Test
     fun `getOperatorIconResource returns correct icons for known tokens`() {
@@ -44,14 +48,24 @@ class SimUtilsTest {
 
     @Test
     fun `getShortOperatorName truncates long names`() {
-        val context: Context = mock()
-        // Mocking localized context is tricky, SimUtils has a private method for it.
-        // But the truncate logic is at the end of the 'when' block if no token matches.
-        
         val longName = "This is a very long operator name that should be truncated"
         val result = SimUtils.getShortOperatorName(context, longName)
-        
+
         assertEquals(20, result.length)
         assertTrue(result.endsWith("..."))
+    }
+
+    @Test
+    fun `getOperatorResourceId handles aliases from consolidated map`() {
+        // "t2" is an alias for Tele2
+        val resId = OperatorResolver.getOperatorResourceId("T2")
+        assertEquals(R.string.operator_tele2, resId)
+    }
+
+    @Test
+    fun `getOperatorResourceId works for newly added operators`() {
+        // Rostelecom was recently added to the consolidated map
+        val resId = OperatorResolver.getOperatorResourceId("Rostelecom")
+        assertEquals(R.string.operator_rostelecom, resId)
     }
 }

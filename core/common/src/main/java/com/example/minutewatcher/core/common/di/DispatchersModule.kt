@@ -18,10 +18,6 @@ annotation class DefaultDispatcher
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class MainDispatcher
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
 annotation class MainImmediateDispatcher
 
 @Module
@@ -34,10 +30,6 @@ object DispatchersModule {
     @Provides
     @DefaultDispatcher
     fun providesDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
-
-    @Provides
-    @MainDispatcher
-    fun providesMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 
     @Provides
     @MainImmediateDispatcher

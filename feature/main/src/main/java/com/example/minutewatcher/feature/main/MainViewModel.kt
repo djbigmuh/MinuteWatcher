@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +23,6 @@ class MainViewModel
     constructor(
         private val controllers: MainViewModelControllers,
         private val appSettingsRepository: AppSettingsRepository,
-        private val usageStateRepository: UsageStateRepository,
         private val autoResetUseCase: AutoResetUseCase,
         private val savedStateHandle: SavedStateHandle,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -81,7 +79,6 @@ class MainViewModel
                     if (settings?.onboardingCompleted == false) {
                         controllers.dialog.setShowOnboardingDialog(true)
                     }
-                    usageStateRepository.refresh()
                     autoResetUseCase.performAutoReset()
                     refreshSimCards()
                 } catch (e: CancellationException) {

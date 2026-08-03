@@ -92,6 +92,26 @@ class ShortcutManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
+        /**
+         * Updates shortcuts synchronously. Returns true if successful.
+         */
+        suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean {
+            return try {
+                withContext(ioDispatcher) {
+                    val shortcuts = createShortcuts(snapshot)
+                    applyShortcuts(shortcuts)
+                }
+                _status.value = TrackingStatus.Active
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to update dynamic shortcuts", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                false
+            }
+        }
+
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
             val shortcuts = createShortcuts(snapshot)
             applyShortcuts(shortcuts)

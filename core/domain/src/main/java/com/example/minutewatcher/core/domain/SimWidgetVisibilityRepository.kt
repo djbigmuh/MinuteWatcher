@@ -9,4 +9,6 @@ interface SimWidgetVisibilityRepository {
     fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>>
 
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
+
+    suspend fun clearOrphanedSettings(activeIdentities: List<String>)
 }

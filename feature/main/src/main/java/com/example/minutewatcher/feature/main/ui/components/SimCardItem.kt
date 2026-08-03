@@ -162,7 +162,7 @@ private fun AutoResetSection(
             contentDescription = stringResource(id = R.string.change_auto_reset_day_content_desc),
         )
         Text(
-            text = " " + stringResource(id = R.string.auto_reset_day_suffix),
+            text = stringResource(id = R.string.value_unit_format, "", stringResource(id = R.string.auto_reset_day_suffix)).trim(),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(1f),
         )

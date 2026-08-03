@@ -68,6 +68,10 @@ class UsageCheckWorker
             val finalSnapshot = refreshResult.snapshot
             deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
+            // Cleanup orphaned widget settings for non-existent SIMs
+            val activeIdentities = finalSnapshot.simSnapshots.map { it.identity }
+            deps.simWidgetVisibilityRepository.clearOrphanedSettings(activeIdentities)
+
             val appSettings = deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {

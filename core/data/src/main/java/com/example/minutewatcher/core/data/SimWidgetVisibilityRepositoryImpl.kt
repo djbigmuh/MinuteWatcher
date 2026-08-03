@@ -3,10 +3,12 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,6 +57,28 @@ class SimWidgetVisibilityRepositoryImpl
                     prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] = settings.showMinutesLimit
                     prefs[WidgetSettingsKeys.showTrafficKey(identity)] = settings.showTraffic
                     prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] = settings.showTrafficLimit
+                }
+            }
+        }
+
+        override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
+            val activeSet = activeIdentities.toSet()
+            dataStore.edit { prefs ->
+                val allKeys = prefs.asMap().keys
+                val orphanedKeys = allKeys.filter { key ->
+                    val name = key.name
+                    if (name.startsWith("widget_show_")) {
+                        // Extract identity from key name
+                        // Examples: widget_show_sim_id, widget_show_sim_icon_id, widget_show_minutes_id
+                        val identity = name.substringAfterLast("_")
+                        identity.isNotEmpty() && identity !in activeSet
+                    } else {
+                        false
+                    }
+                }
+                if (orphanedKeys.isNotEmpty()) {
+                    AppLogger.d("Clearing ${orphanedKeys.size} orphaned widget settings keys")
+                    orphanedKeys.forEach { prefs.remove(it) }
                 }
             }
         }

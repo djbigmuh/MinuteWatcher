@@ -2,26 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:SimLimitComposeDialog.kt$@Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, initialRolloverEnabled: Boolean = false, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
     <ID>DestructuringDeclarationWithTooManyEntries:MainViewModel.kt$MainViewModel$val (notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings) = part2</ID>
-    <ID>LongMethod:DayPickerComposeDialog.kt$@Composable fun DayPickerComposeDialog( initialDay: Int, onDismiss: () -&gt; Unit, onDaySelected: (Int) -&gt; Unit, )</ID>
-    <ID>LongMethod:SimLimitComposeDialog.kt$@Composable fun SimLimitComposeDialog( operatorName: String, initialMinutes: Int, initialTrafficMb: Int, initialRolloverEnabled: Boolean = false, onDismiss: () -&gt; Unit, onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -&gt; Unit, onReset: () -&gt; Unit, )</ID>
-    <ID>LongMethod:TrackingBanners.kt$@Composable fun TrackingBanners( state: TrackingBannerState, onGrantPhonePermission: () -&gt; Unit, onShowUsageAccessDialog: () -&gt; Unit, onOpenAppSettings: () -&gt; Unit, onRetryAppSearch: () -&gt; Unit, onRetryTraffic: () -&gt; Unit, onGrantNotificationPermission: () -&gt; Unit, )</ID>
-    <ID>LongParameterList:SimCardScreen.kt$( viewModel: MainViewModel, onOpenSettings: () -&gt; Unit, onAddWidget: () -&gt; Unit, onThemeChange: (AppTheme) -&gt; Unit, onLanguageChange: (String?) -&gt; Unit, onGrantPhonePermission: () -&gt; Unit = {}, onShowUsageAccessDialog: () -&gt; Unit = {}, onOpenUsageAccessSettings: () -&gt; Unit = {}, onOpenAppSettings: () -&gt; Unit = {}, onGrantNotificationPermission: () -&gt; Unit = {}, )</ID>
-    <ID>MagicNumber:Color.kt$0xFF4CAF50</ID>
-    <ID>MagicNumber:Color.kt$0xFF625b71</ID>
-    <ID>MagicNumber:Color.kt$0xFF6650a4</ID>
-    <ID>MagicNumber:Color.kt$0xFF7D5260</ID>
-    <ID>MagicNumber:Color.kt$0xFFCCC2DC</ID>
-    <ID>MagicNumber:Color.kt$0xFFD0BCFF</ID>
-    <ID>MagicNumber:Color.kt$0xFFEFB8C8</ID>
-    <ID>MagicNumber:Color.kt$0xFFF44336</ID>
-    <ID>MagicNumber:Color.kt$0xFFFFA500</ID>
     <ID>MagicNumber:MainViewModel.kt$MainViewModel$5_000</ID>
     <ID>MagicNumber:SimCardItem.kt$0.8f</ID>
-    <ID>MatchingDeclarationName:SimCardStates.kt$TrackingBannerState</ID>
-    <ID>MaxLineLength:SimCardScreen.kt$LimitDialogData(model.slot, model.operatorName, model.minutesLimit, model.trafficLimitMb, model.rolloverEnabled)</ID>
-    <ID>MaxLineLength:SimCardScreen.kt$onAdjustMinutes = { viewModel.openAdjustDialog(AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true)) }</ID>
-    <ID>TooManyFunctions:SimCardScreen.kt$com.example.minutewatcher.feature.main.SimCardScreen.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

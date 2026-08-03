@@ -19,7 +19,8 @@ fun MacrobenchmarkScope.grantBenchmarkPermissions() {
 }
 
 fun MacrobenchmarkScope.populateBenchmarkData(simCount: Int) {
-    // -W waits for the broadcast to finish, which is supported because of runBlocking in BenchmarkReceiver
+    // -W waits for the broadcast receiver to return, but it does NOT wait for
+    // background work (BenchmarkPopulateWorker) to finish.
     device.executeShellCommand(
         "am broadcast -W -a com.example.minutewatcher.benchmark.POPULATE_DATA " +
             "-n com.example.minutewatcher/com.example.minutewatcher.benchmark.BenchmarkReceiver " +

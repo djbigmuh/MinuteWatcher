@@ -45,7 +45,7 @@ style:
   active: true
   MaxLineLength:
     active: true
-    maxLineLength: 140
+    maxLineLength: 120
   UnusedImports:
     active: true
 

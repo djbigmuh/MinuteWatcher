@@ -80,4 +80,24 @@ class UsageMonitorReceiverTest {
 
             assertTrue("Work CALL_EVENT_UNKNOWN should be enqueued", workInfos.isNotEmpty())
         }
+
+    @Test
+    fun testOnReceiveTelephonyActionEnqueuesWork() =
+        runTest {
+            val receiver = UsageMonitorReceiver()
+            // Test the alternative action string
+            val intent =
+                Intent("android.telephony.action.PHONE_STATE_CHANGED").apply {
+                    putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
+                    putExtra("subscription", 2)
+                }
+
+            receiver.onReceive(context, intent)
+
+            ShadowLooper.idleMainLooper()
+
+            val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_2").get()
+
+            assertTrue("Work CALL_EVENT_2 should be enqueued for telephony action", workInfos.isNotEmpty())
+        }
 }

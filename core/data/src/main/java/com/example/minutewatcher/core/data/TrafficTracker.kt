@@ -315,8 +315,7 @@ class TrafficTracker
                     currentDataSubId = defaultDataSim.subscriptionId
                 } else {
                     val activeSubs = permissionManager.getActiveSubscriptions()
-                    if (activeSubs.isNotEmpty()) {
-                        val selected = activeSubs.minByOrNull { it.simSlotIndex }!!
+                    activeSubs.minByOrNull { it.simSlotIndex }?.let { selected ->
                         targetSim = selected.simSlotIndex
                         currentDataSubId = selected.subscriptionId
                         isFallback = true
