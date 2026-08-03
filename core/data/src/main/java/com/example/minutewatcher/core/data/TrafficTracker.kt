@@ -145,6 +145,10 @@ class TrafficTracker
         }
 
         private fun checkPermissions(): Boolean {
+            if (!permissionManager.isTelephonySupported()) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
+                return false
+            }
             if (!permissionManager.hasUsageStatsPermission()) {
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Usage Access missing")
                 return false
@@ -245,7 +249,7 @@ class TrafficTracker
             val now = timeProvider.now()
             // Limit safeStart to a maximum of 30 days back to avoid performance issues
             // with NetworkStatsManager on first run or after a long period of inactivity.
-            val thirtyDaysAgo = now - (30 * Constants.MILLIS_PER_SECOND * 60 * 60 * 24)
+            val thirtyDaysAgo = now - (30 * Constants.MILLIS_PER_DAY)
             val calculatedStart =
                 if (startTime > 0) {
                     startTime
@@ -343,12 +347,17 @@ class TrafficTracker
                 val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
                 if (currentBytes != -1L) {
                     simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+
+                    // Only update subId if baseline was successfully reset.
+                    // This ensures that the next updateTrafficUsage call will still see isSimChanged = true
+                    // and retry handleSimChange if the reset failed this time.
+                    callSessionRepository.setLastDataSubId(currentDataSubId)
+                    inMemoryLastDataSubId.set(currentDataSubId)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to reset baseline on SIM change", e)
-            } finally {
-                callSessionRepository.setLastDataSubId(currentDataSubId)
-                inMemoryLastDataSubId.set(currentDataSubId)
             }
         }
     }

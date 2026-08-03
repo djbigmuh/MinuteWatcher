@@ -97,83 +97,78 @@ class ShortcutManager
         }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
+            val shortcuts = createShortcuts(snapshot)
+            applyShortcuts(shortcuts)
+        }
+
+        private fun createShortcuts(snapshot: GlobalSnapshot): List<ShortcutInfoCompat> {
             val shortcuts = mutableListOf<ShortcutInfoCompat>()
 
-            // limit shortcuts to supported SIMs
             snapshot.simSnapshots
                 .filter { it.isActive && (it.slot in SimConstants.SUPPORTED_SLOT_INDICES) }
                 .forEach { sim ->
-                    val slot = sim.slot
-                    val operator = SimUtils.getShortOperatorName(context, sim.operator)
-                    val minutes = sim.entities[PackageType.MINUTES]
-                    val traffic = sim.entities[PackageType.DATA]
-
-                    minutes?.let {
-                        if (it.limit > 0) { // Only show shortcut if limit is defined
-                            val label = "${it.remaining}${context.getString(R.string.minutes_abbr)}"
-                            val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
-                            val shortcut =
-                                ShortcutInfoCompat
-                                    .Builder(context, "minutes_shortcut_$slot")
-                                    .setShortLabel(label)
-                                    .setLongLabel(longLabel)
-                                    .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
-                                    .setIntent(
-                                        Intent()
-                                            .setClassName(
-                                                context.packageName,
-                                                navigationProvider.mainActivityClassName,
-                                            ).apply {
-                                                action = Intent.ACTION_VIEW
-                                                putExtra("sim_slot", slot)
-                                            },
-                                    ).build()
-                            shortcuts.add(shortcut)
-                        }
-                    }
-
-                    traffic?.let {
-                        if (it.limit > 0) {
-                            val trafficGb =
-                                (it.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
-                            val label =
-                                String.format(
-                                    Locale.getDefault(),
-                                    "%.1f%s",
-                                    trafficGb,
-                                    context.getString(R.string.gb_abbr),
-                                )
-                            val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
-                            val shortcut =
-                                ShortcutInfoCompat
-                                    .Builder(context, "traffic_shortcut_$slot")
-                                    .setShortLabel(label)
-                                    .setLongLabel(longLabel)
-                                    .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
-                                    .setIntent(
-                                        Intent()
-                                            .setClassName(
-                                                context.packageName,
-                                                navigationProvider.mainActivityClassName,
-                                            ).apply {
-                                                action = Intent.ACTION_VIEW
-                                                putExtra("sim_slot", slot)
-                                            },
-                                    ).build()
-                            shortcuts.add(shortcut)
-                        }
-                    }
+                    createMinutesShortcut(sim)?.let { shortcuts.add(it) }
+                    createTrafficShortcut(sim)?.let { shortcuts.add(it) }
                 }
 
+            return shortcuts.take(MAX_DYNAMIC_SHORTCUTS)
+        }
+
+        private fun createMinutesShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat? {
+            val entity = sim.entities[PackageType.MINUTES] ?: return null
+            if (entity.limit <= 0) return null
+
+            val slot = sim.slot
+            val operator = SimUtils.getShortOperatorName(context, sim.operator)
+            val label = "${entity.remaining}${context.getString(R.string.minutes_abbr)}"
+            val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
+
+            return ShortcutInfoCompat.Builder(context, "minutes_shortcut_$slot")
+                .setShortLabel(label)
+                .setLongLabel(longLabel)
+                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
+                .setIntent(createShortcutIntent(slot))
+                .build()
+        }
+
+        private fun createTrafficShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat? {
+            val entity = sim.entities[PackageType.DATA] ?: return null
+            if (entity.limit <= 0) return null
+
+            val slot = sim.slot
+            val operator = SimUtils.getShortOperatorName(context, sim.operator)
+            val trafficGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
+            val label = String.format(Locale.getDefault(), "%.1f%s", trafficGb, context.getString(R.string.gb_abbr))
+            val longLabel = "$operator: ${context.getString(R.string.remaining_text)}$label"
+
+            return ShortcutInfoCompat.Builder(context, "traffic_shortcut_$slot")
+                .setShortLabel(label)
+                .setLongLabel(longLabel)
+                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
+                .setIntent(createShortcutIntent(slot))
+                .build()
+        }
+
+        private fun createShortcutIntent(slot: Int): Intent =
+            Intent().setClassName(
+                context.packageName,
+                navigationProvider.mainActivityClassName,
+            ).apply {
+                action = Intent.ACTION_VIEW
+                putExtra("sim_slot", slot)
+            }
+
+        private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
             try {
                 if (shortcuts.isNotEmpty()) {
-                    // Max 5 dynamic shortcuts are allowed by Android system
-                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts.take(MAX_DYNAMIC_SHORTCUTS))
+                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
                 } else {
                     ShortcutManagerCompat.removeAllDynamicShortcuts(context)
                 }
-            } catch (e: IllegalArgumentException) {
-                AppLogger.e("Failed to set dynamic shortcuts. This might be due to a label being too long.", e)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
             }
         }
 

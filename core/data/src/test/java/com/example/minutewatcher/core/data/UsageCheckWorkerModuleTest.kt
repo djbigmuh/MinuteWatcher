@@ -31,7 +31,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
-import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -74,7 +73,7 @@ class UsageCheckWorkerModuleTest {
                 capabilities = emptyList(),
             )
 
-        runBlocking {
+        runTest(testDispatcher) {
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),

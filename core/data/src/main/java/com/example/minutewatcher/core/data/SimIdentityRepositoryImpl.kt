@@ -54,6 +54,7 @@ class SimIdentityRepositoryImpl
         seedRepository: SimIdentitySeedRepository,
         appSettingsRepository: AppSettingsRepository,
         private val migrationService: IdentityMigrationService,
+        private val mockSimProvider: MockSimProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
@@ -135,8 +136,9 @@ class SimIdentityRepositoryImpl
                 physical to settings
             }.flatMapLatest { (physical, settings) ->
                 flow {
-                    if (settings.benchmarkSimCount > 0) {
-                        emit(generateMockActiveSims(settings.benchmarkSimCount))
+                    val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
+                    if (mocks != null) {
+                        emit(mocks)
                     } else {
                         emit(physical)
                     }
@@ -146,30 +148,6 @@ class SimIdentityRepositoryImpl
                 started = SharingStarted.Eagerly,
                 initialValue = emptyList(),
             )
-
-        private fun generateMockActiveSims(count: Int): List<ActiveSimInfo> {
-            val safeCount = count.coerceIn(0, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
-            return (0 until safeCount).map { i ->
-                val identity =
-                    SimIdentity(
-                        stableId = "sim_$i",
-                        subscriptionId = SimConstants.MOCK_SUB_ID_BASE + i,
-                        slotIndex = i,
-                        source = IdentitySource.SLOT_FALLBACK,
-                    )
-
-                ActiveSimInfo(
-                    identity = identity,
-                    slotIndex = i,
-                    subscriptionId = identity.subscriptionId ?: (SimConstants.MOCK_SUB_ID_BASE + i),
-                    displayName = "SIM ${i + 1}",
-                    carrierName = "Mock Carrier ${i + 1}",
-                    mccMnc = "001001",
-                    isDefaultData = i == DEFAULT_SIM_INDEX,
-                    isDefaultVoice = i == DEFAULT_SIM_INDEX,
-                )
-            }
-        }
 
         private suspend fun getSeed(): String = seedFlow.first()
 
@@ -308,9 +286,5 @@ class SimIdentityRepositoryImpl
             code: String,
         ) {
             dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
-        }
-
-        companion object {
-            private const val DEFAULT_SIM_INDEX = 0
         }
     }

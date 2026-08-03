@@ -88,13 +88,16 @@ open class SemanticSearchManager
             session = null
 
             var shouldForce = forceOverride
-            repeat(2) { attempt ->
+            for (attempt in 0..1) {
+                var newSession: AppSearchSessionWrapper? = null
+                var success = false
                 try {
-                    val newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
+                    newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
                     val request = appSearchWrapper.createSchemaRequest(shouldForce)
                     newSession.setSchema(request)
                     session = newSession
                     _status.value = TrackingStatus.Active
+                    success = true
                     return true
                 } catch (e: AppSearchException) {
                     if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce && attempt == 0) {
@@ -109,6 +112,10 @@ open class SemanticSearchManager
                     AppLogger.e("Failed to initialize AppSearch session", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     return false
+                } finally {
+                    if (!success) {
+                        newSession?.close()
+                    }
                 }
             }
             return false
@@ -120,20 +127,23 @@ open class SemanticSearchManager
 
             sessionMutex.withLock {
                 if (!ensureSession()) return@withLock
+                executeIndexing(snapshot, currentHash)
+            }
+        }
 
-                withContext(ioDispatcher) {
-                    try {
-                        withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
-                            val documents = convertSnapshotToDocuments(snapshot)
-                            performIndexUpdate(documents)
-                            lastSnapshotHash = currentHash
-                            _status.value = TrackingStatus.Active
-                        }
-                    } catch (e: Exception) {
-                        AppLogger.e("AppSearch indexing error", e)
-                        lastSnapshotHash = -1
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+        private suspend fun executeIndexing(snapshot: GlobalSnapshot, currentHash: Int) {
+            withContext(ioDispatcher) {
+                try {
+                    withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
+                        val documents = convertSnapshotToDocuments(snapshot)
+                        performIndexUpdate(documents)
+                        lastSnapshotHash = currentHash
+                        _status.value = TrackingStatus.Active
                     }
+                } catch (e: Exception) {
+                    AppLogger.e("AppSearch indexing error", e)
+                    lastSnapshotHash = -1
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             }
         }

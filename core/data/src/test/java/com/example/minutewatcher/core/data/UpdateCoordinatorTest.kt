@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -20,6 +21,7 @@ class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     private val snapshotFlow = MutableStateFlow(createEmptySnapshot())
 
@@ -31,7 +33,8 @@ class UpdateCoordinatorTest {
     @Test
     fun `snapshot change triggers widget update with debounce`() =
         runTest {
-            UpdateCoordinator(dataRefreshNotifier, widgetUpdater, { usageStateRepository }, backgroundScope)
+            val coordinator = UpdateCoordinator(dataRefreshNotifier, widgetUpdater, { usageStateRepository }, timeProvider, backgroundScope)
+            coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
             // 1. First meaningful snapshot
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
@@ -49,7 +52,8 @@ class UpdateCoordinatorTest {
     @Test
     fun `identical content snapshots do not trigger redundant updates`() =
         runTest {
-            UpdateCoordinator(dataRefreshNotifier, widgetUpdater, { usageStateRepository }, backgroundScope)
+            val coordinator = UpdateCoordinator(dataRefreshNotifier, widgetUpdater, { usageStateRepository }, timeProvider, backgroundScope)
+            coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.value = s1
@@ -73,6 +77,7 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     { usageStateRepository },
+                    timeProvider,
                     backgroundScope,
                 )
 
@@ -103,6 +108,7 @@ class UpdateCoordinatorTest {
                     identity = "sim_0",
                     operator = "MTS",
                     isActive = true,
+                    autoResetDay = 1,
                     entities =
                         mapOf(
                             com.example.minutewatcher.core.model.PackageType.MINUTES to

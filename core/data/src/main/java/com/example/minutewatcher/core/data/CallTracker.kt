@@ -95,7 +95,7 @@ class CallTracker
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    runCatching { refreshStatus() }
+                    try { refreshStatus() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
                 }
             }
         }
@@ -129,13 +129,7 @@ class CallTracker
         suspend fun onCallEnded(subId: Int) {
             callMutex.withLock {
                 try {
-                    if (!isCallTrackingEnabled() || !checkPermissions()) return@withLock
-
-                    if (subId == -1) {
-                        handleUnknownSubIdEnd()
-                    } else {
-                        endCall(subId)
-                    }
+                    executeCallEnded(subId)
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
                 } catch (e: CancellationException) {
@@ -144,12 +138,26 @@ class CallTracker
                     AppLogger.e("Error in onCallEnded", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    runCatching { refreshStatus() }
+                    try { refreshStatus() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
                 }
             }
         }
 
+        private suspend fun executeCallEnded(subId: Int) {
+            if (!isCallTrackingEnabled() || !checkPermissions()) return
+
+            if (subId == -1) {
+                handleUnknownSubIdEnd()
+            } else {
+                endCall(subId)
+            }
+        }
+
         private fun checkPermissions(): Boolean {
+            if (!permissionManager.isTelephonySupported()) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
+                return false
+            }
             if (!permissionManager.hasPhoneStatePermission()) {
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Phone State missing")
                 return false
@@ -164,55 +172,61 @@ class CallTracker
 
         @SuppressLint("MissingPermission")
         private suspend fun handleUnknownSubIdEnd() {
+            if (!permissionManager.hasPhoneStatePermission()) return
             val activeSubIds = callSessionRepository.getActiveCallSubIds()
             if (activeSubIds.isEmpty()) {
                 AppLogger.d("Call ended with unknown subId and no active sessions found")
                 return
             }
 
-            val isDeviceIdle =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    activeSubIds.all { id ->
-                        telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() == TelephonyManager.CALL_STATE_IDLE
-                    }
-                } else {
-                    @Suppress("DEPRECATION")
-                    telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
-                }
-
-            if (isDeviceIdle) {
-                AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-                activeSubIds.forEach { endCall(it, notify = false) }
-                dataChangeNotifier.notifyDataChanged()
+            if (isDeviceIdle(activeSubIds)) {
+                handleGlobalIdle(activeSubIds)
                 return
             }
 
             val target: Int? = findTargetSubId(activeSubIds)
-
             if (target != null) {
                 endCall(target)
             } else {
-                AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}")
+                handleAmbiguousIdle(activeSubIds)
+            }
+        }
 
-                // Fallback: end extremely long sessions OR the oldest session
-                val now = timeProvider.now()
-                val staleSessions =
-                    activeSubIds.filter { subId ->
-                        val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
-                        startTime > 0 && (now - startTime) > MAX_CALL_DURATION_MS
-                    }
+        @SuppressLint("MissingPermission")
+        private fun isDeviceIdle(activeSubIds: List<Int>): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                activeSubIds.all { id ->
+                    telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() == TelephonyManager.CALL_STATE_IDLE
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+            }
 
-                if (staleSessions.isNotEmpty()) {
-                    AppLogger.d("Ending ${staleSessions.size} stale sessions")
-                    staleSessions.forEach { endCall(it, notify = false) }
-                    dataChangeNotifier.notifyDataChanged()
-                } else {
-                    val oldest = fallbackAttribution(activeSubIds)
-                    if (oldest != null) {
-                        AppLogger.d("Attributing unknown IDLE event to oldest session: $oldest")
-                        incrementInaccurateAttributions()
-                        endCall(oldest)
-                    }
+        private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
+            AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
+            activeSubIds.forEach { endCall(it, notify = false) }
+            dataChangeNotifier.notifyDataChanged()
+        }
+
+        private suspend fun handleAmbiguousIdle(activeSubIds: List<Int>) {
+            AppLogger.w("Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}")
+
+            val now = timeProvider.now()
+            val staleSessions = activeSubIds.filter { subId ->
+                val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
+                startTime > 0 && (now - startTime) > MAX_CALL_DURATION_MS
+            }
+
+            if (staleSessions.isNotEmpty()) {
+                AppLogger.d("Ending ${staleSessions.size} stale sessions")
+                staleSessions.forEach { endCall(it, notify = false) }
+                dataChangeNotifier.notifyDataChanged()
+            } else {
+                fallbackAttribution(activeSubIds)?.let { oldest ->
+                    AppLogger.d("Attributing unknown IDLE event to oldest session: $oldest")
+                    incrementInaccurateAttributions()
+                    endCall(oldest)
                 }
             }
         }
@@ -225,6 +239,7 @@ class CallTracker
 
         @SuppressLint("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
+            if (!permissionManager.hasPhoneStatePermission()) return null
             if (activeSubIds.size == 1) {
                 return activeSubIds.first()
             }
@@ -292,11 +307,7 @@ class CallTracker
         }
 
         private suspend fun refreshStatus(force: Boolean = false) {
-            if (!force && _status.value is TrackingStatus.Error) {
-                val err = _status.value as TrackingStatus.Error
-                if (err.type != TrackingStatus.ErrorType.PERMISSION_MISSING) return
-                if (!permissionManager.hasPhoneStatePermission()) return
-            }
+            if (!force && _status.value is TrackingStatus.Error) return
 
             val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
             _status.value = if (hasActiveCalls) TrackingStatus.Active else TrackingStatus.Idle

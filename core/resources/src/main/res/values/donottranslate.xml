@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- Technical/Brand names that should not be translated -->
+    <string name="app_name" translatable="false">MinuteWatcher</string>
+    <string name="sim_card_generic" translatable="false">SIM %1$d</string>
+    <string name="sim_status_summary" translatable="false">%1$s: %2$s, %3$s</string>
+
+    <string name="operator_mts" translatable="false">MTS</string>
+    <string name="operator_megafon" translatable="false">MegaFon</string>
+    <string name="operator_beeline" translatable="false">Beeline</string>
+    <string name="operator_tele2" translatable="false">Tele2</string>
+    <string name="operator_mgts" translatable="false">MGTS</string>
+    <string name="operator_yota" translatable="false">Yota</string>
+    <string name="operator_vodafone" translatable="false">Vodafone</string>
+    <string name="operator_t_mobile" translatable="false">T-Mobile</string>
+    <string name="operator_orange" translatable="false">Orange</string>
+    <string name="operator_o2" translatable="false">O2</string>
+    <string name="operator_att" translatable="false">AT&amp;T</string>
+    <string name="operator_verizon" translatable="false">Verizon</string>
+    <string name="operator_tim" translatable="false">TIM</string>
+    <string name="operator_vodafone_it" translatable="false">Vodafone IT</string>
+    <string name="operator_windtre" translatable="false">WindTre</string>
+    <string name="operator_sfr" translatable="false">SFR</string>
+    <string name="operator_bouygues" translatable="false">Bouygues</string>
+    <string name="operator_telekom" translatable="false">Telekom</string>
+    <string name="operator_ntt_docomo" translatable="false">NTT Docomo</string>
+    <string name="operator_softbank" translatable="false">SoftBank</string>
+    <string name="operator_kddi" translatable="false">KDDI</string>
+    <string name="operator_china_mobile" translatable="false">China Mobile</string>
+    <string name="operator_china_unicom" translatable="false">China Unicom</string>
+    <string name="operator_china_telecom" translatable="false">China Telecom</string>
+    <string name="operator_movistar" translatable="false">Movistar</string>
+    <string name="operator_claro" translatable="false">Claro</string>
+    <string name="operator_airtel" translatable="false">Airtel</string>
+    <string name="operator_jio" translatable="false">Jio</string>
+    <string name="operator_vi" translatable="false">Vi</string>
+    <string name="operator_stc" translatable="false">STC</string>
+    <string name="operator_mobily" translatable="false">Mobily</string>
+    <string name="operator_zain" translatable="false">Zain</string>
+    <string name="operator_etisalat" translatable="false">Etisalat</string>
+    <string name="operator_du" translatable="false">du</string>
+    <string name="operator_kpn" translatable="false">KPN</string>
+    <string name="operator_proximus" translatable="false">Proximus</string>
+    <string name="operator_swisscom" translatable="false">Swisscom</string>
+    <string name="operator_sunrise" translatable="false">Sunrise</string>
+    <string name="operator_salt" translatable="false">Salt</string>
+    <string name="operator_telia" translatable="false">Telia</string>
+    <string name="operator_telenor" translatable="false">Telenor</string>
+    <string name="operator_elisa" translatable="false">Elisa</string>
+    <string name="operator_dna" translatable="false">DNA</string>
+    <string name="operator_plus" translatable="false">Plus</string>
+    <string name="operator_play" translatable="false">Play</string>
+    <string name="operator_turkcell" translatable="false">Turkcell</string>
+    <string name="operator_turk_telekom" translatable="false">Türk Telekom</string>
+    <string name="operator_generic" translatable="false">Operator %1$d</string>
+    <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
+
+    <string name="language_system_icon" translatable="false">🌐</string>
+    <string name="theme_system_icon" translatable="false">🌓</string>
+    <string name="theme_light_icon" translatable="false">☀️</string>
+    <string name="theme_dark_icon" translatable="false">🌙</string>
+    <string name="fraction_format" translatable="false">/%1$s</string>
+    <string name="adjustment_mark" translatable="false">*adj</string>
+    <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>
+</resources>

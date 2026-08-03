@@ -55,6 +55,7 @@ class TrafficTrackerTest {
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+        whenever(permissionManager.isTelephonySupported()).thenReturn(true)
 
         // Match default data subId with an active subscription
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
@@ -70,7 +71,7 @@ class TrafficTrackerTest {
 
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
-        kotlinx.coroutines.runBlocking {
+        runTest(testDispatcher) {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         }

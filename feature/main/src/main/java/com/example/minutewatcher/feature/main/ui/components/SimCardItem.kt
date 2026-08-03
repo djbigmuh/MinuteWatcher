@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.main.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -107,8 +106,17 @@ private fun SimCardContent(
     Column(modifier = Modifier.padding(16.dp)) {
         SimCardHeader(model = model, onSetLimits = onSetLimits)
         Spacer(modifier = Modifier.height(16.dp))
-        MinutesSection(model = model, onAdjustMinutes = onAdjustMinutes)
-        TrafficSection(model = model, onAdjustTraffic = onAdjustTraffic, onShowTrafficInfo = onShowTrafficInfo)
+        MinutesSection(
+            model = model,
+            statusColor = getStatusColor(ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())),
+            onAdjustMinutes = onAdjustMinutes,
+        )
+        TrafficSection(
+            model = model,
+            statusColor = getStatusColor(ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb)),
+            onAdjustTraffic = onAdjustTraffic,
+            onShowTrafficInfo = onShowTrafficInfo,
+        )
         TextButton(onClick = onResetCounters, modifier = Modifier.padding(top = 4.dp)) {
             Text(text = stringResource(id = R.string.reset_counters))
         }
@@ -152,149 +160,6 @@ private fun SimCardHeader(
     }
 }
 
-@Composable
-private fun MinutesSection(
-    model: SimCardUiModel,
-    onAdjustMinutes: () -> Unit,
-) {
-    val status = ColorProvider.getUsageStatus(model.minutesRemaining.toFloat(), model.effectiveMinutesLimit.toFloat())
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                text = "${stringResource(
-                    R.string.used_text,
-                )}: ${FormatUtils.formatMinutes(model.minutesUsed)} ${stringResource(R.string.minutes_abbr)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (model.isMinutesLimitSet) {
-                Text(
-                    text = "${stringResource(
-                        R.string.limit_text,
-                    )}: ${FormatUtils.formatMinutes(model.effectiveMinutesLimit)} ${stringResource(R.string.minutes_abbr)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(id = R.string.remaining_text),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            EditableValueBox(
-                value =
-                    FormatUtils.formatMinutesDisplay(
-                        LocalContext.current,
-                        model.minutesRemaining,
-                        model.minutesLimit,
-                        model.manualAdjustment,
-                        false,
-                    ),
-                color = getStatusColor(status),
-                onClick = onAdjustMinutes,
-                contentDescription = stringResource(id = R.string.adjust_minutes_content_desc),
-            )
-        }
-        if (model.manualAdjustment != 0) {
-            AdjustmentLabel(value = model.manualAdjustment.toString(), unit = stringResource(R.string.minutes_abbr))
-        }
-    }
-}
-
-@Composable
-private fun TrafficSection(
-    model: SimCardUiModel,
-    onAdjustTraffic: () -> Unit,
-    onShowTrafficInfo: () -> Unit,
-) {
-    if (!model.isTrafficLimitSet && model.trafficUsedMb <= 0) return
-    val status = ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb)
-    val context = LocalContext.current
-    val trafficInfoDesc = stringResource(R.string.traffic_info_content_desc)
-
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(id = R.string.traffic_label),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(24.dp)) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = trafficInfoDesc,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "${stringResource(R.string.used_text)}: ${FormatUtils.formatMbAsGb(context, model.trafficUsedMb)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (model.isTrafficLimitSet) {
-                Text(
-                    text = "${stringResource(
-                        R.string.limit_text,
-                    )}: ${FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb)}${stringResource(R.string.gb_abbr)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(id = R.string.traffic_remaining_text),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            EditableValueBox(
-                value =
-                    FormatUtils.formatTrafficDisplay(
-                        context,
-                        model.trafficRemainingGb,
-                        model.trafficLimitMb / Constants.MB_PER_GB,
-                        false,
-                    ),
-                color = getStatusColor(status),
-                onClick = onAdjustTraffic,
-                contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
-            )
-        }
-        if (model.trafficAdjustmentGb != 0f) {
-            AdjustmentLabel(
-                value = FormatUtils.formatTrafficGb(model.trafficAdjustmentGb),
-                unit = stringResource(R.string.gb_abbr),
-                isPositive =
-                    model.trafficAdjustmentGb > 0,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AdjustmentLabel(
-    value: String,
-    unit: String,
-    isPositive: Boolean = true,
-) {
-    Text(
-        text = "${stringResource(R.string.adjustment_mark)}: ${if (isPositive) "+" else ""}$value$unit",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
-    )
-}
 
 @Composable
 private fun AutoResetSection(
@@ -329,40 +194,3 @@ private fun AutoResetSection(
     }
 }
 
-@Composable
-fun EditableValueBox(
-    value: String,
-    color: Color,
-    onClick: () -> Unit,
-    horizontalPadding: Int = 12,
-    contentDescription: String? = null,
-) {
-    val underlineColor = MaterialTheme.colorScheme.primary
-    Box(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .drawBehind {
-                    val strokeWidth = 2.dp.toPx()
-                    val y = size.height - strokeWidth / 2
-                    drawLine(
-                        color = underlineColor,
-                        start = Offset(0f, y),
-                        end = Offset(size.width, y),
-                        strokeWidth = strokeWidth,
-                    )
-                }.semantics {
-                    role = Role.Button
-                    contentDescription?.let { this.contentDescription = it }
-                }.clickable { onClick() }
-                .padding(horizontal = horizontalPadding.dp, vertical = 4.dp),
-    ) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = color,
-        )
-    }
-}

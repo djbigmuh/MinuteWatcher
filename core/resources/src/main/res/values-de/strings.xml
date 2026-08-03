@@ -60,6 +60,7 @@
     <string name="tracking_banner_widget_error">Widget kann aufgrund von Systembeschränkungen nicht aktualisiert werden.</string>
     <string name="tracking_banner_inaccurate_calls">Mehrere aktive Anrufe erkannt. Minuten werden möglicherweise ungenau zugeordnet.</string>
     <string name="settings_load_error">Fehler beim Laden der Einstellungen</string>
+    <string name="refresh_error">Datenaktualisierungsfehler</string>
     <string name="notification_permission_permanent_denial">Benachrichtigungen sind deaktiviert. Bitte aktivieren Sie diese in den App-Einstellungen, um Warnungen zu erhalten.</string>
     <string name="action_grant">Erteilen</string>
     <string name="action_settings">Einstellungen</string>

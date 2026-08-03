@@ -48,7 +48,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val SEPARATOR_THICKNESS = 1
@@ -96,17 +95,19 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val widgetSettingsLoader = entryPoint.widgetSettingsLoader()
 
         var snapshot = usageRepository.observeSnapshot().value
+        var refreshFailed = false
         if (snapshot.timestamp == 0L) {
             // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
-            snapshot =
-                try {
-                    withTimeoutOrNull(WIDGET_REFRESH_TIMEOUT) {
-                        usageRepository.refresh().snapshot
-                    } ?: snapshot
-                } catch (e: Exception) {
-                    AppLogger.e("Widget refresh failed", e)
-                    snapshot
+            try {
+                val result = usageRepository.refresh()
+                snapshot = result.snapshot
+                if (snapshot.timestamp == 0L) {
+                    refreshFailed = true
                 }
+            } catch (e: Exception) {
+                AppLogger.e("Widget refresh failed", e)
+                refreshFailed = true
+            }
         }
 
         val settingsState =
@@ -121,11 +122,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             context,
             snapshot,
             settingsState,
+            refreshFailed = refreshFailed,
         )
-    }
-
-    companion object {
-        private val WIDGET_REFRESH_TIMEOUT = Constants.Widget.REFRESH_TIMEOUT_MS.milliseconds
     }
 }
 
@@ -182,6 +180,15 @@ private fun WidgetContent(
         if (uiState.settingsLoadFailed) {
             Text(
                 text = context.getString(com.example.minutewatcher.core.resources.R.string.settings_load_error),
+                style =
+                    TextStyle(
+                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                        color = noDataColor,
+                    ),
+            )
+        } else if (uiState.refreshFailed) {
+            Text(
+                text = context.getString(com.example.minutewatcher.core.resources.R.string.refresh_error),
                 style =
                     TextStyle(
                         fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,

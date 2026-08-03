@@ -58,6 +58,7 @@ class CallTrackerRaceTest {
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+        whenever(permissionManager.isTelephonySupported()).thenReturn(true)
         whenever(appSettingsRepository.getAppSettings()).thenReturn(
             flowOf(AppSettings(callTrackingEnabled = true)),
         )
@@ -83,9 +84,7 @@ class CallTrackerRaceTest {
             advanceUntilIdle()
 
             // Verification of interaction count
-            val flow = verify(callSessionRepository, times(10)).getCallStartTime(1)
-            @Suppress("SENSELESS_COMPARISON")
-            assert(flow != null)
+            verify(callSessionRepository, times(10)).getCallStartTime(1)
         }
 
     @Test

@@ -2,10 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:SemanticSearchManager.kt$SemanticSearchManager$internal suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
     <ID>EmptyFunctionBlock:SemanticSearchManagerTest.kt$SemanticSearchManagerTest.FakeAppSearchSessionWrapper${}</ID>
-    <ID>LongMethod:SemanticSearchManager.kt$SemanticSearchManager$internal suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
-    <ID>LongMethod:ShortcutManager.kt$ShortcutManager$private fun updateShortcuts(snapshot: GlobalSnapshot)</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$1000L</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$5</ID>
     <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$60</ID>
@@ -14,7 +11,5 @@
     <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s2 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))), isManual = false)</ID>
     <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val snapshot = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))</ID>
     <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val snapshot = createSnapshot(listOf(SimSnapshot(1, "B", true, mapOf(PackageType.MINUTES to createEntity(1, PackageType.MINUTES, 50)))))</ID>
-    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$internal suspend fun indexSnapshot(snapshot: GlobalSnapshot)</ID>
-    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(): Boolean</ID>
   </CurrentIssues>
 </SmellBaseline>

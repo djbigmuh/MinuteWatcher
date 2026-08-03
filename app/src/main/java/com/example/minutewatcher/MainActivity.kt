@@ -61,6 +61,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        if (savedInstanceState != null) {
+            lastPermissionState = savedInstanceState.getInt(KEY_LAST_PERMISSION_STATE, -1)
+        }
+
         observeAppTheme()
         observeAppLanguage()
 
@@ -318,6 +322,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(KEY_LAST_PERMISSION_STATE, lastPermissionState)
+    }
+
     override fun onResume() {
         super.onResume()
 
@@ -347,5 +356,9 @@ class MainActivity : AppCompatActivity() {
             permissionStateNotifier.notifyChanged()
         }
         lastPermissionState = currentState
+    }
+
+    companion object {
+        private const val KEY_LAST_PERMISSION_STATE = "last_permission_state"
     }
 }

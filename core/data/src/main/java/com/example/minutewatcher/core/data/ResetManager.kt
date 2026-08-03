@@ -12,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
@@ -28,7 +29,7 @@ class ResetManager
         private val timeProvider: TimeProvider,
     ) : AutoResetUseCase {
         private val resetMutex = Mutex()
-        private val lastResetCheck = mutableMapOf<String, Long>()
+        private val lastResetCheck = ConcurrentHashMap<String, Long>()
 
         override suspend fun performAutoReset(snapshot: GlobalSnapshot) {
             resetMutex.withLock {

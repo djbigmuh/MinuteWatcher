@@ -39,6 +39,9 @@ class SimRepositoryImplTest {
     private lateinit var appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository
     private lateinit var permissionManager: com.example.minutewatcher.core.common.util.PermissionManager
     private lateinit var migrationService: IdentityMigrationService
+    private val mockSimProvider: MockSimProvider = mock {
+        on { getMockSims(any()) }.thenReturn(null)
+    }
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     @Before
@@ -102,6 +105,7 @@ class SimRepositoryImplTest {
                     seedRepository,
                     appSettingsRepository,
                     migrationService,
+                    mockSimProvider,
                     backgroundScope,
                 )
             val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
@@ -138,6 +142,7 @@ class SimRepositoryImplTest {
                     seedRepository,
                     appSettingsRepository,
                     migrationService,
+                    mockSimProvider,
                     backgroundScope,
                 )
 
@@ -236,6 +241,7 @@ class SimRepositoryImplTest {
                     seedRepository,
                     appSettingsRepository,
                     migrationService,
+                    mockSimProvider,
                     backgroundScope,
                 )
 

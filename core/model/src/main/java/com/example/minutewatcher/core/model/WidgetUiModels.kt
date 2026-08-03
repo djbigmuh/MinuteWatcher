@@ -1,9 +1,5 @@
 package com.example.minutewatcher.core.model
 
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
-
-@Immutable
 data class WidgetUiState(
     val layoutMode: Int,
     val simArrangement: Int,
@@ -15,9 +11,9 @@ data class WidgetUiState(
     val useSystemColors: Boolean = false,
     val forceSimpleLayout: Boolean = false,
     val settingsLoadFailed: Boolean = false,
+    val refreshFailed: Boolean = false,
 )
 
-@Immutable
 data class SimUiState(
     val slot: Int,
     val operatorName: String,
@@ -48,17 +44,14 @@ data class SimUiState(
     val layoutSpec: SimLayoutSpec = SimLayoutSpec(emptyList()),
 )
 
-@Immutable
 data class SimLayoutSpec(
     val rows: List<SimLayoutRow>,
 )
 
-@Immutable
 data class SimLayoutRow(
     val components: List<SimLayoutComponent>,
 )
 
-@Stable
 sealed class SimLayoutComponent {
     data class Icon(
         val iconRes: Int,

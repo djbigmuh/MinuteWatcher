@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -32,10 +34,11 @@ class UpdateCoordinator
         private val dataRefreshNotifier: DataRefreshNotifier,
         private val widgetUpdater: WidgetUpdater,
         private val usageStateRepository: Lazy<UsageStateRepository>,
+        private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
         private val isObserving = MutableStateFlow(false)
-        private var lastManualUpdateTimestamp = 0L
+        private val lastManualUpdateTimestamp = AtomicLong(0L)
 
         init {
             scope.launch {
@@ -47,8 +50,8 @@ class UpdateCoordinator
                         SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
                     }.collect { snapshot ->
                         if (snapshot.isManualUpdate) {
-                            val now = System.currentTimeMillis()
-                            if (now - lastManualUpdateTimestamp < Constants.Widget.DEBOUNCE_MS * 2) {
+                            val now = timeProvider.elapsedRealtime()
+                            if (now - lastManualUpdateTimestamp.get() < Constants.Widget.DEBOUNCE_MS * 2) {
                                 AppLogger.d("Skipping debounced widget update after manual refresh")
                                 return@collect
                             }
@@ -73,7 +76,7 @@ class UpdateCoordinator
             dataRefreshNotifier.notifyRefresh(isManual = force)
             if (updateWidget) {
                 if (force) {
-                    lastManualUpdateTimestamp = System.currentTimeMillis()
+                    lastManualUpdateTimestamp.set(timeProvider.elapsedRealtime())
                 }
                 widgetUpdater.updateAll()
             }

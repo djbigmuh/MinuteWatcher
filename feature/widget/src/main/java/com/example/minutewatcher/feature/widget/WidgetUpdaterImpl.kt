@@ -29,8 +29,11 @@ class WidgetUpdaterImpl
                     widget.updateAll(context)
                     appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                 } catch (e: IllegalArgumentException) {
-                    AppLogger.e("Glance internal error during updateAll (possible RemoteViews limit exceeded)", e)
-                    appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                    val isLimitExceeded = e.message?.contains("RemoteViews", ignoreCase = true) == true
+                    AppLogger.e("Glance internal error during updateAll. Limit exceeded: $isLimitExceeded", e)
+                    if (isLimitExceeded) {
+                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

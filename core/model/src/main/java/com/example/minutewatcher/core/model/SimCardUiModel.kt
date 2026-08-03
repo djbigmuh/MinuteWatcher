@@ -1,11 +1,8 @@
 package com.example.minutewatcher.core.model
 
-import androidx.compose.runtime.Immutable
-
 /**
  * Единая модель состояния SIM-карты для UI (Этап 3, п. 11 и Этап 5, п. 21).
  */
-@Immutable
 data class SimCardUiModel(
     val slot: Int,
     val identity: String,

@@ -70,7 +70,7 @@ class UsageCheckWorkerTest {
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(createEmptySnapshot()))
 
         // Setup default stubs for all suspend methods to prevent hangs on unstubbed calls
-        kotlinx.coroutines.runBlocking {
+        runTest(testDispatcher) {
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(trafficTracker.updateTrafficUsage()).thenReturn(Unit)
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)

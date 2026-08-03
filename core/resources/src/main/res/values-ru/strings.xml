@@ -60,6 +60,7 @@
     <string name="tracking_banner_widget_error">Виджет не может быть обновлён из-за ограничений системы.</string>
     <string name="tracking_banner_inaccurate_calls">Обнаружено несколько активных вызовов. Минуты могут быть распределены неточно.</string>
     <string name="settings_load_error">Ошибка загрузки настроек</string>
+    <string name="refresh_error">Ошибка обновления данных</string>
     <string name="notification_permission_permanent_denial">Уведомления отключены. Пожалуйста, включите их в настройках приложения для получения алертов.</string>
     <string name="action_grant">Предоставить</string>
     <string name="action_settings">Настройки</string>

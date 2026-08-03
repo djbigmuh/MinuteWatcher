@@ -17,7 +17,6 @@ object Constants {
         const val FONT_SIZE_MEDIUM = 14f
 
         const val DEBOUNCE_MS = 300L
-        const val REFRESH_TIMEOUT_MS = 3000L
 
         const val SIM_ARRANGEMENT_HORIZONTAL = 0
 
@@ -45,6 +44,7 @@ object Constants {
     }
 
     const val MILLIS_PER_SECOND = 1000L
+    const val MILLIS_PER_DAY = 24 * 60 * 60 * MILLIS_PER_SECOND
     const val BYTES_PER_MB = 1024L * 1024L
     const val BYTES_PER_GB = 1024L * 1024L * 1024L
     const val MB_PER_GB = 1024.0f

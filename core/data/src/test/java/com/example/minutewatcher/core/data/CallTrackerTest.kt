@@ -52,22 +52,24 @@ class CallTrackerTest {
     private lateinit var callTracker: CallTracker
 
     @Before
-    fun setup() =
-        runTest(testDispatcher) {
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = true)))
+    fun setup() {
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = true)))
         whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getUptime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
 
-        whenever(simIdentityRepository.getIdentity(0)).thenReturn("id_0")
-        whenever(simIdentityRepository.getIdentity(1)).thenReturn("id_1")
+        runTest(testDispatcher) {
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("id_0")
+            whenever(simIdentityRepository.getIdentity(1)).thenReturn("id_1")
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+        }
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
         @Suppress("DEPRECATION")
-        whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
-        whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+        whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+        whenever(permissionManager.isTelephonySupported()).thenReturn(true)
 
         callTracker =
             CallTracker(
@@ -177,8 +179,7 @@ class CallTrackerTest {
             whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
             whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(200L))
 
-            @Suppress("DEPRECATION")
-            whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
+            whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 
             callTracker.onCallEnded(-1)
             advanceUntilIdle()
@@ -221,8 +222,7 @@ class CallTrackerTest {
     fun `onCallEnded sets permission missing status on SecurityException`() =
         runTest(testDispatcher) {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
-            @Suppress("DEPRECATION")
-            whenever(telephonyManager.callState).thenThrow(SecurityException())
+            whenever(telephonyManager.getCallStateForSubscription()).thenThrow(SecurityException())
 
             callTracker.onCallEnded(-1)
             advanceUntilIdle()

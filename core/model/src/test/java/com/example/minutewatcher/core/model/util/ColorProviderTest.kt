@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ColorProviderTest {
-
     @Test
     fun `getUsageStatus returns NORMAL when limit is zero`() {
         assertEquals(UsageStatus.NORMAL, ColorProvider.getUsageStatus(10f, 0f))

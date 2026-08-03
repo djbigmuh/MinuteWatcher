@@ -18,7 +18,6 @@ import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -67,7 +66,7 @@ class InitialSetupWorkerTest {
                 capabilities = emptyList(),
             )
             
-        runBlocking {
+        runTest {
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),

@@ -22,6 +22,17 @@ class PermissionManager
     ) {
         private val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
 
+        init {
+            if (subscriptionManager == null) {
+                AppLogger.e("SubscriptionManager is null. Telephony features will be unavailable.")
+            }
+        }
+
+        /**
+         * Returns true if the device supports telephony services (SIM cards).
+         */
+        fun isTelephonySupported(): Boolean = subscriptionManager != null
+
         fun hasPhoneStatePermission(): Boolean =
             ContextCompat.checkSelfPermission(
                 context,
@@ -33,7 +44,11 @@ class PermissionManager
         @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> =
             try {
-                subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
+                if (hasPhoneStatePermission()) {
+                    subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
+                } else {
+                    emptyList()
+                }
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException in getActiveSubscriptions", e)
                 emptyList()

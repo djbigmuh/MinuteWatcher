@@ -12,8 +12,6 @@
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))</ID>
     <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay, timestamp)</ID>
     <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay, timestamp)</ID>
-    <ID>NestedBlockDepth:CallTracker.kt$CallTracker$suspend fun onCallEnded(subId: Int)</ID>
-    <ID>ReturnCount:CallTracker.kt$CallTracker$suspend fun onCallEnded(subId: Int)</ID>
     <ID>ReturnCount:IdentityMigrationService.kt$IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey(activeIdentities: Set&lt;String&gt;): Boolean</ID>
     <ID>ReturnCount:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
     <ID>ReturnCount:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl$override suspend fun getSimIdentity(slot: Int): SimIdentity</ID>

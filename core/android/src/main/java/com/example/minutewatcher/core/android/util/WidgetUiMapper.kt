@@ -14,6 +14,7 @@ object WidgetUiMapper {
         context: Context,
         snapshot: GlobalSnapshot,
         state: WidgetSettingsState,
+        refreshFailed: Boolean = false,
     ): WidgetUiState {
         val luminance = ColorUtils.calculateLuminance(state.backgroundColor)
         val (textColor, secondaryTextColor) = WidgetColorResolver.resolveTextColors(luminance)
@@ -55,6 +56,7 @@ object WidgetUiMapper {
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
             forceSimpleLayout = state.widgetLimitExceeded,
             settingsLoadFailed = state.settingsLoadFailed,
+            refreshFailed = refreshFailed,
         )
     }
 }

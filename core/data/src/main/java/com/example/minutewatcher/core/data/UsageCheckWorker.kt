@@ -54,23 +54,19 @@ class UsageCheckWorker
         private suspend fun checkUsageAndNotify() {
             deps.trafficTracker.updateTrafficUsage()
 
-            // First refresh to ensure we have a valid snapshot for auto-reset
-            val initialRefresh = deps.usageStateRepository.refresh()
-            if (initialRefresh is RefreshResult.Timeout) {
-                AppLogger.w("UsageCheckWorker: Initial refresh timed out. Auto-reset might use stale data.")
-            }
-            deps.autoResetUseCase.performAutoReset(initialRefresh.snapshot)
+            // Perform auto-reset logic. It internally triggers data update notifications if needed.
+            // We pass a placeholder snapshot because ResetManager currently uses repository directly.
+            deps.autoResetUseCase.performAutoReset(deps.usageStateRepository.observeSnapshot().value)
 
-            // Final refresh to capture results of auto-reset for notifications
+            // Single refresh to capture all recent changes (traffic update and potential auto-reset)
             val refreshResult = deps.usageStateRepository.refresh()
             if (refreshResult is RefreshResult.Timeout) {
-                AppLogger.w("UsageCheckWorker: Final refresh timed out. Skipping notifications to avoid stale alerts.")
+                AppLogger.w("UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.")
                 deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
                 return
             }
 
             val finalSnapshot = refreshResult.snapshot
-
             deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
             val appSettings = deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()

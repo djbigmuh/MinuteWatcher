@@ -138,7 +138,8 @@ class IdentityMigrationService
             slot: Int,
             identity: String,
         ): Boolean {
-            var anyMigrated = false
+            var migratedCount = 0
+            var conflictCount = 0
             dataStore.edit { prefs ->
                 val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
@@ -146,24 +147,33 @@ class IdentityMigrationService
                     val baseName = oldKey.name.substringBefore(legacySuffix)
                     val newKeyName = baseName + newSuffix
 
-                    val keyHandled = prefs.migrateTypedKey(oldKey, newKeyName, storeName)
-
-                    if (keyHandled) anyMigrated = true
+                    val result = prefs.migrateTypedKey(oldKey, newKeyName, storeName)
+                    when (result) {
+                        MigrationResult.SUCCESS -> migratedCount++
+                        MigrationResult.CONFLICT -> conflictCount++
+                        MigrationResult.FAILURE -> {}
+                    }
                     prefs.remove(oldKey)
                 }
             }
-            if (anyMigrated) {
-                AppLogger.d("Migrated legacy data ($legacySuffix) from $storeName for slot $slot to identity $identity")
+            if (migratedCount > 0 || conflictCount > 0) {
+                AppLogger.d("Migrated legacy data ($legacySuffix) from $storeName for slot $slot to identity $identity: $migratedCount keys, $conflictCount conflicts")
             }
-            return anyMigrated
+            return migratedCount > 0
+        }
+
+        private enum class MigrationResult {
+            SUCCESS,
+            CONFLICT,
+            FAILURE,
         }
 
         private fun MutablePreferences.migrateTypedKey(
             oldKey: Preferences.Key<*>,
             newKeyName: String,
             storeName: String,
-        ): Boolean {
-            val value = this[oldKey] ?: return false
+        ): MigrationResult {
+            val value = this[oldKey] ?: return MigrationResult.FAILURE
             val conflictKeyName = "conflict_${oldKey.name}"
 
             return when (value) {
@@ -174,7 +184,7 @@ class IdentityMigrationService
                 is String -> migrateOrBackup(stringPreferencesKey(newKeyName), stringPreferencesKey(conflictKeyName), value, storeName)
                 else -> {
                     AppLogger.e("Unknown type for key ${oldKey.name}: ${value::class.simpleName}, skipping migration")
-                    false
+                    MigrationResult.FAILURE
                 }
             }
         }
@@ -184,16 +194,16 @@ class IdentityMigrationService
             conflictKey: Preferences.Key<T>,
             value: T,
             storeName: String,
-        ): Boolean {
-            if (this[newKey] == null) {
+        ): MigrationResult {
+            return if (this[newKey] == null) {
                 this[newKey] = value
-                return true
+                MigrationResult.SUCCESS
             } else {
                 this[conflictKey] = value
                 AppLogger.w(
                     "Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}",
                 )
-                return false
+                MigrationResult.CONFLICT
             }
         }
     }

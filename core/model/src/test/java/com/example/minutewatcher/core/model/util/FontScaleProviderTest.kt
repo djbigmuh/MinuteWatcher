@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class FontScaleProviderTest {
-
     @Test
     fun `getMultiplier returns correct values for settings`() {
         assertEquals(0.8f, FontScaleProvider.getMultiplier(0))

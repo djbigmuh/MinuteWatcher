@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -33,6 +34,9 @@ class SimIdentitySeedRaceTest {
     private val seedRepository: SimIdentitySeedRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val migrationService: IdentityMigrationService = mock()
+    private val mockSimProvider: MockSimProvider = mock {
+        on { getMockSims(any()) }.thenReturn(null)
+    }
 
     @Before
     fun setup() {
@@ -63,6 +67,7 @@ class SimIdentitySeedRaceTest {
                     seedRepository,
                     appSettingsRepository,
                     migrationService,
+                    mockSimProvider,
                     backgroundScope,
                 )
 
@@ -101,6 +106,7 @@ class SimIdentitySeedRaceTest {
                     seedRepository,
                     appSettingsRepository,
                     migrationService,
+                    mockSimProvider,
                     backgroundScope,
                 )
 
