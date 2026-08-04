@@ -87,7 +87,7 @@ open class SemanticSearchManager
             session = null
 
             var shouldForce = forceOverride
-            repeat(2) { attempt ->
+            repeat(SCHEMA_RETRY_ATTEMPTS) { attempt ->
                 var newSession: AppSearchSessionWrapper? = null
                 try {
                     newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
@@ -189,5 +189,6 @@ open class SemanticSearchManager
         companion object {
             private const val DATABASE_NAME = "usage"
             const val NAMESPACE = "usage"
+            private const val SCHEMA_RETRY_ATTEMPTS = 2
         }
     }

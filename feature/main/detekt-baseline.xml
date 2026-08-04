@@ -3,7 +3,5 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>DestructuringDeclarationWithTooManyEntries:MainViewModel.kt$MainViewModel$val (notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings) = part2</ID>
-    <ID>MagicNumber:MainViewModel.kt$MainViewModel$5_000</ID>
-    <ID>MagicNumber:SimCardItem.kt$0.8f</ID>
   </CurrentIssues>
 </SmellBaseline>

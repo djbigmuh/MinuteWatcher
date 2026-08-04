@@ -1,8 +1,5 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
-  <CurrentIssues>
-    <ID>MagicNumber:WidgetSettingsViewModel.kt$WidgetSettingsViewModel$5000</ID>
-    <ID>LongMethod:WidgetSettingsScreen.kt$@Suppress("ktlint:standard:function-naming") @OptIn(ExperimentalMaterial3Api::class) @Composable fun WidgetSettingsScreen( viewModel: WidgetSettingsViewModel, onSave: () -&gt; Unit, onBack: () -&gt; Unit, )</ID>
-  </CurrentIssues>
+  <CurrentIssues/>
 </SmellBaseline>

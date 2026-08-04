@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -40,7 +41,7 @@ class BenchmarkUseCaseImpl
                 simUsageAdjustmentRepository.updateSimStats(
                     identity = identity,
                     minutesUsed = 100 * (i + 1),
-                    trafficUsed = 1024f * (i + 1),
+                    trafficUsed = Constants.MB_PER_GB * (i + 1),
                     manualAdjustment = 10 * (i + 1),
                 )
             }

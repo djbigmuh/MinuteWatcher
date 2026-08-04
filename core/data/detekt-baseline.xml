@@ -2,9 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MagicNumber:SemanticMapper.kt$SemanticMapper$1024</ID>
-    <ID>MagicNumber:SemanticMapper.kt$SemanticMapper$1024L</ID>
-    <ID>MagicNumber:TrafficTracker.kt$TrafficTracker$0.0001f</ID>
     <ID>MaxLineLength:IdentityMigrationService.kt$IdentityMigrationService$AppLogger.w("Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}")</ID>
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$unit = MeasurementUnit.MINUTES</ID>
     <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))</ID>

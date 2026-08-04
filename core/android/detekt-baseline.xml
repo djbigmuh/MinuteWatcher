@@ -3,9 +3,5 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:OperatorResolver.kt$OperatorResolver$operatorName.isNotEmpty() &amp;&amp; operatorName != "null" &amp;&amp; !operatorName.contains("SIM", ignoreCase = true) &amp;&amp; !SimUtils.isInactiveSim(operatorName)</ID>
-    <ID>MagicNumber:OperatorResolver.kt$OperatorResolver$3</ID>
-    <ID>MagicNumber:OperatorResolver.kt$OperatorResolver$5</ID>
-    <ID>MagicNumber:SimUtils.kt$SimUtils$12</ID>
-    <ID>MagicNumber:SimUtils.kt$SimUtils$15</ID>
   </CurrentIssues>
 </SmellBaseline>
