@@ -60,6 +60,51 @@ class SnapshotUtilsTest {
         assertEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
     }
 
+    @Test
+    fun `hash is stable regardless of simSnapshots order`() {
+        val sim0 = createSimSnapshot(slot = 0, remaining = 100)
+        val sim1 = createSimSnapshot(slot = 1, remaining = 200)
+
+        val s1 =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0,
+                simSnapshots = listOf(sim0, sim1),
+                capabilities = emptyList(),
+            )
+        val s2 =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0,
+                simSnapshots = listOf(sim1, sim0),
+                capabilities = emptyList(),
+            )
+
+        assertEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
+    }
+
+    private fun createSimSnapshot(
+        slot: Int,
+        remaining: Long,
+    ): SimSnapshot {
+        val entity =
+            SemanticEntity(
+                id = "test_$slot",
+                simSlot = slot,
+                operatorName = "ABC",
+                packageType = PackageType.MINUTES,
+                limit = 1000,
+                used = 0,
+                remaining = remaining,
+                unit = MeasurementUnit.MINUTES,
+                periodStart = 0,
+                periodEnd = 0,
+                lastUpdateTime = 0,
+                sourceType = DataSourceType.SYSTEM,
+            )
+        return SimSnapshot(slot, "ABC", "ABC", true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
+    }
+
     private fun createSnapshot(
         remaining: Long,
         limit: Long = 1000,

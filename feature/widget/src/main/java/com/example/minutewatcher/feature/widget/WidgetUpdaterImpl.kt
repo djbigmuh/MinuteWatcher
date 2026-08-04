@@ -25,17 +25,30 @@ class WidgetUpdaterImpl
     ) : WidgetUpdater {
         private val widget = MinutesGlanceWidget()
 
+        private sealed class UpdateResult {
+            object Success : UpdateResult()
+
+            object LimitExceeded : UpdateResult()
+
+            object GenericFailure : UpdateResult()
+        }
+
         override fun updateAll() {
             scope.launch {
                 try {
-                    val success = safeUpdateAll(context)
-                    if (success) {
-                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
-                    } else {
-                        AppLogger.d("Retrying widget update...")
-                        val retrySuccess = safeUpdateAll(context)
-                        if (retrySuccess) {
+                    when (safeUpdateAll(context)) {
+                        is UpdateResult.Success -> {
                             appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+                        }
+                        is UpdateResult.LimitExceeded -> {
+                            AppLogger.w("Widget update failed due to size limit. Skipping retry.")
+                        }
+                        is UpdateResult.GenericFailure -> {
+                            AppLogger.d("Retrying widget update after generic failure...")
+                            val retryResult = safeUpdateAll(context)
+                            if (retryResult is UpdateResult.Success) {
+                                appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+                            }
                         }
                     }
                 } catch (e: CancellationException) {
@@ -46,10 +59,10 @@ class WidgetUpdaterImpl
             }
         }
 
-        private suspend fun safeUpdateAll(context: Context): Boolean =
+        private suspend fun safeUpdateAll(context: Context): UpdateResult =
             try {
                 widget.updateAll(context)
-                true
+                UpdateResult.Success
             } catch (e: IllegalArgumentException) {
                 val isLimit = isRemoteViewsLimitException(e)
                 AppLogger.e(
@@ -64,8 +77,15 @@ class WidgetUpdaterImpl
                     } catch (ex: Exception) {
                         AppLogger.e("Failed to set widget limit exceeded flag", ex)
                     }
+                    UpdateResult.LimitExceeded
+                } else {
+                    UpdateResult.GenericFailure
                 }
-                false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Generic widget update failure", e)
+                UpdateResult.GenericFailure
             }
 
         @VisibleForTesting
@@ -81,8 +101,8 @@ class WidgetUpdaterImpl
                 msg.contains("transaction", ignoreCase = true) &&
                     msg.contains("too large", ignoreCase = true)
 
-            return (mentionsRemoteViews && mentionsSize) ||
+            return ((mentionsRemoteViews && mentionsSize) ||
                 mentionsTransactionSize ||
-                e.cause is android.os.TransactionTooLargeException
+                (e.cause is android.os.TransactionTooLargeException))
         }
     }

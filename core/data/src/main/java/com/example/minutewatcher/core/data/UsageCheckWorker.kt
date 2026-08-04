@@ -13,10 +13,12 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.DateUtils
 import com.example.minutewatcher.core.resources.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -37,7 +39,7 @@ class UsageCheckWorker
 
                     checkUsageAndNotify()
                     Result.success()
-                } catch (e: kotlinx.coroutines.CancellationException) {
+                } catch (e: CancellationException) {
                     throw e
                 } catch (e: java.io.IOException) {
                     AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
@@ -87,7 +89,17 @@ class UsageCheckWorker
             appSettings: AppSettings,
         ) {
             val identity = simSnapshot.identity
-            val simUsage = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
+            var simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout()
+            if (simUsageResult == null) {
+                AppLogger.w("UsageCheckWorker: getSimUsage timed out for $identity, retrying with 10s...")
+                simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout(10000L)
+            }
+
+            val simUsage = simUsageResult ?: run {
+                AppLogger.e("UsageCheckWorker: getSimUsage failed for $identity after retry, skipping notifications")
+                return
+            }
+
             val now = deps.timeProvider.now()
 
             val monthProgress = DateUtils.getMonthProgressPercentage(simUsage.autoResetDay, now)

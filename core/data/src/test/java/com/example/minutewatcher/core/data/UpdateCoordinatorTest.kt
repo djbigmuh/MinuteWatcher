@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -118,6 +119,36 @@ class UpdateCoordinatorTest {
             snapshotFlow.value = s1
             testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater, times(1)).updateAll()
+        }
+
+    @Test
+    fun `manual snapshot is skipped by reactive flow if recently forced`() =
+        runTest {
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // 1. Force update
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Emit manual snapshot (e.g. from the refresh triggered by force)
+            val s1 = createSnapshot(timestamp = 1000L, content = "A").copy(isManualUpdate = true)
+            snapshotFlow.value = s1
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+
+            // Should still be 1 call (the forced one), reactive one skipped
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 3. Emit another snapshot - should be processed because gate is reset
+            val s2 = createSnapshot(timestamp = 2000L, content = "B")
+            snapshotFlow.value = s2
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            verify(widgetUpdater, times(2)).updateAll()
         }
 
     private fun createEmptySnapshot() =

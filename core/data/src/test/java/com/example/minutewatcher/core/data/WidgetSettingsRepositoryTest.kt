@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -216,5 +217,21 @@ class WidgetSettingsRepositoryTest {
                     assertEquals(true, map["sim_2"]?.showSim)
                 },
             )
+        }
+
+    @Test
+    fun `load should retry on observeActiveSims timeout and return empty simStates if both fail`() =
+        runTest {
+            whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
+
+            // observeActiveSims never emits
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(flowOf(emptyMap()))
+
+            val result = repository.load()
+
+            assertEquals(0, result.simStates.size)
+            // Implicitly verified that it didn't hang forever due to runTest
         }
 }

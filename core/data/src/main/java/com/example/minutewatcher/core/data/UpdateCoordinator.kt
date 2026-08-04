@@ -36,7 +36,7 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val lastManualSnapshotTimestamp = AtomicLong(0L)
+        private val lastManualSnapshotTimestamp = AtomicLong(-1L)
 
         init {
             scope.launch {
@@ -47,10 +47,11 @@ class UpdateCoordinator
                         SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
-                        if (snapshot.isManualUpdate && snapshot.timestamp <= lastManualSnapshotTimestamp.get()) {
+                        if (snapshot.isManualUpdate && (snapshot.timestamp <= lastManualSnapshotTimestamp.get())) {
                             AppLogger.d("Skipping debounced widget update after manual refresh")
                             return@collect
                         }
+                        lastManualSnapshotTimestamp.set(-1L)
                         widgetUpdater.updateAll()
                     }
             }
@@ -65,7 +66,7 @@ class UpdateCoordinator
         ) {
             if (force) {
                 if (updateWidget) {
-                    lastManualSnapshotTimestamp.set(usageStateRepository.observeSnapshot().value.timestamp)
+                    lastManualSnapshotTimestamp.set(Long.MAX_VALUE)
                     widgetUpdater.updateAll()
                 }
                 dataRefreshNotifier.notifyRefresh(isManual = true)

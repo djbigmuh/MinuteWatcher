@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -24,7 +25,16 @@ class WidgetSettingsRepository
             coroutineScope {
                 val settings = appSettingsRepository.getAppSettings().first()
 
-                val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                var activeSimsResult = simIdentityRepository.observeActiveSims().firstWithTimeout()
+                if (activeSimsResult == null) {
+                    AppLogger.w("WidgetSettingsRepository: observeActiveSims timed out, retrying with 15s...")
+                    activeSimsResult = simIdentityRepository.observeActiveSims().firstWithTimeout(15_000L)
+                    if (activeSimsResult == null) {
+                        AppLogger.e("WidgetSettingsRepository: failed to load active SIMs after retry")
+                    }
+                }
+                val activeSims = activeSimsResult ?: emptyList()
+
                 val realIdentities = activeSims.map { it.identity.stableId }
                 val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
                 val allIdentities = (realIdentities + fallbackIdentities).distinct()

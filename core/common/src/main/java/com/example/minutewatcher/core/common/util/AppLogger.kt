@@ -5,9 +5,9 @@ import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
 import java.io.File
 import java.io.FileWriter
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.Executors
 
 /**
@@ -22,7 +22,8 @@ object AppLogger {
 
     private var logDir: File? = null
     private val executor = Executors.newSingleThreadExecutor()
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+        .withZone(ZoneId.systemDefault())
 
     fun init(context: Context) {
         logDir = context.filesDir
@@ -77,7 +78,7 @@ object AppLogger {
                     logFile.renameTo(oldFile)
                 }
 
-                val timestamp = dateFormat.format(Date())
+                val timestamp = dateFormat.format(Instant.now())
                 val entry = "$timestamp $level/$TAG: $message\n"
 
                 FileWriter(logFile, true).use { writer ->

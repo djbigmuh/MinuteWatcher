@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -20,6 +21,7 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -71,14 +74,16 @@ class SimIdentityRepositoryImpl
 
         private val seedFlow: Flow<String> =
             flow {
-                val currentSeed = seedRepository.getSeed().first()
+                val currentSeed = seedRepository.getSeed().firstWithTimeout(5000L)
                 val seed =
-                    if (currentSeed.isEmpty()) {
-                        seedRepository.getOrCreateSeed {
-                            java.util.UUID
-                                .randomUUID()
-                                .toString()
-                        }
+                    if (currentSeed.isNullOrEmpty()) {
+                        withTimeoutOrNull(10000L.milliseconds) {
+                            seedRepository.getOrCreateSeed {
+                                java.util.UUID
+                                    .randomUUID()
+                                    .toString()
+                            }
+                        } ?: ""
                     } else {
                         currentSeed
                     }
@@ -180,7 +185,12 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            val currentSims: List<ActiveSimInfo> = activeSimsCache.filterNotNull().first()
+            val currentSims: List<ActiveSimInfo> =
+                activeSimsCache.filterNotNull().firstWithTimeout(10_000L) ?: run {
+                    com.example.minutewatcher.core.common.util.AppLogger
+                        .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
+                    emptyList()
+                }
             currentSims.find { it.slotIndex == slot }?.let {
                 return it.identity
             }
@@ -224,14 +234,14 @@ class SimIdentityRepositoryImpl
 
                 // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
                 // it might be a transition from fallback sim_$slot.
-                if (identity.source != IdentitySource.SLOT_FALLBACK &&
-                    currentSlot == null &&
+                if ((identity.source != IdentitySource.SLOT_FALLBACK) &&
+                    (currentSlot == null) &&
                     migratedIdentities.add(identity.stableId)
                 ) {
                     scope.launch {
                         try {
                             migrationService.migrateLegacyData(identity)
-                        } catch (e: kotlinx.coroutines.CancellationException) {
+                        } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             com.example.minutewatcher.core.common.util.AppLogger.e(
@@ -264,7 +274,7 @@ class SimIdentityRepositoryImpl
                 val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
                 try {
                     saveSimIdentityInfo(identity)
-                } catch (e: kotlinx.coroutines.CancellationException) {
+                } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     com.example.minutewatcher.core.common.util.AppLogger

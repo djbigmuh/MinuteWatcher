@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 @HiltWorker
 class InitialSetupWorker
@@ -56,7 +57,7 @@ class InitialSetupWorker
                 }
 
                 return Result.success()
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: java.io.IOException) {
                 AppLogger.w("InitialSetupWorker: Network or storage error, retrying. ${e.message}")

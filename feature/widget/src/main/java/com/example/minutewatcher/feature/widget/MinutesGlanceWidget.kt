@@ -177,6 +177,8 @@ private fun WidgetContent(
                 if (className.isNotEmpty()) {
                     try {
                         modifier = modifier.clickable(actionStartActivity(ComponentName(context, className)))
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("Failed to attach click action to widget", e)
                     }

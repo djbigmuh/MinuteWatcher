@@ -381,4 +381,21 @@ class MainViewModelTest {
                 .verify(usageStateRepository)
                 .refresh()
         }
+
+    @Test
+    fun `onActivityResume does NOT trigger refresh on first call`() =
+        runTest(testDispatcher) {
+            // lastRefreshAt is 0L by default in SavedStateHandle
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle() // Let initializeApp() finish its refresh
+            org.mockito.kotlin.clearInvocations(usageStateRepository)
+
+            // first call to onActivityResume
+            viewModel.onActivityResume(1000L)
+            testScheduler.advanceUntilIdle()
+
+            // Verify that NO data refresh was triggered
+            org.mockito.kotlin.verify(usageStateRepository, org.mockito.kotlin.never()).refresh()
+        }
 }

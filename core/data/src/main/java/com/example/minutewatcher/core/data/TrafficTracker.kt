@@ -22,12 +22,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Tracks mobile traffic usage for the device.
@@ -200,23 +203,44 @@ class TrafficTracker
 
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-            val usage = simUsageRepository.getSimUsage(targetIdentity).firstWithTimeout() ?: return
+
+            val usageRes = readWithRetry({ simUsageRepository.getSimUsage(targetIdentity) }, "simUsage", targetIdentity)
+            if (usageRes.isFailure) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+                return
+            }
+            val usage = usageRes.getOrThrow()
+
             val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
+
+            if (baselineNeedsRetry[targetIdentity] == true) {
+                if (currentBytes != -1L) {
+                    simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                    baselineNeedsRetry.remove(targetIdentity)
+                    AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
+                } else {
+                    AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
+                }
+            }
 
             if (currentBytes == -1L) {
                 handleStatsUnavailable(targetIdentity)
                 return
             }
 
-            if (baselineNeedsRetry[targetIdentity] == true) {
-                simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                baselineNeedsRetry.remove(targetIdentity)
-                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
+            val lastTotalBytesRes =
+                readWithRetry(
+                    { simUsageResetRepository.getLastTotalBytes(targetIdentity) },
+                    "lastTotalBytes",
+                    targetIdentity,
+                )
+            if (lastTotalBytesRes.isFailure) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading lastTotalBytes")
+                return
             }
+            val lastTotalBytes = lastTotalBytesRes.getOrThrow()
 
-            val lastTotalBytes = simUsageResetRepository.getLastTotalBytes(targetIdentity).firstWithTimeout() ?: -1L
-
-            if (lastTotalBytes == -1L || currentBytes < lastTotalBytes) {
+            if (lastTotalBytes == -1L || (currentBytes < lastTotalBytes)) {
                 handleFirstRunOrReset(targetIdentity, currentBytes, target.dataSubId)
             } else {
                 handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot, target.dataSubId)
@@ -374,6 +398,29 @@ class TrafficTracker
                 val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
                 inMemoryLastDataSubId.compareAndSet(-1, savedId)
             }
+        }
+
+        private suspend fun <T> readWithRetry(
+            flowProvider: () -> kotlinx.coroutines.flow.Flow<T>,
+            fieldName: String,
+            identity: String,
+        ): Result<T> {
+            suspend fun tryRead(timeout: Long): Result<T>? =
+                try {
+                    withTimeoutOrNull(timeout.milliseconds) {
+                        Result.success(flowProvider().first())
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    Result.failure(Exception("Timeout reading $fieldName"))
+                }
+
+            val firstResult = tryRead(5000L)
+            if (firstResult != null) return firstResult
+
+            AppLogger.w("TrafficTracker: Timeout reading $fieldName for $identity, retrying with 10s...")
+            return tryRead(10000L) ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 
         private suspend fun handleSimChange(

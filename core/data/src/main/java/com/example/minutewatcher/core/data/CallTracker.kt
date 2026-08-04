@@ -363,9 +363,14 @@ class CallTracker
             val currentUptime = timeProvider.uptimeMillis()
 
             if (startTime > 0) {
-                if (savedBootTime == 0L || savedBootTime > currentBootTime) {
+                if (savedBootTime == 0L) {
+                    AppLogger.w("Call session for subId $subId has no boot time (possible write failure). Discarding.")
                     clearSession(subId)
-                    AppLogger.d("Stale call session detected (reboot or corrupted)")
+                    return
+                }
+                if (savedBootTime > currentBootTime) {
+                    AppLogger.d("Stale call session detected for subId $subId (reboot). Clearing.")
+                    clearSession(subId)
                     return
                 }
 

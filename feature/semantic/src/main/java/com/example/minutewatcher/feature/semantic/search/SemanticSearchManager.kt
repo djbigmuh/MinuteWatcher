@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -106,6 +107,8 @@ open class SemanticSearchManager
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
                         return false
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     newSession?.close()
                     AppLogger.e("Failed to initialize AppSearch session", e)
@@ -139,6 +142,8 @@ open class SemanticSearchManager
                         _status.value = TrackingStatus.Active
                         true
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("AppSearch indexing error", e)
                     lastSnapshotHash = -1

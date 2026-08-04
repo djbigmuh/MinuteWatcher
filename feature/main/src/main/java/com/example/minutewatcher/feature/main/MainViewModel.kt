@@ -187,7 +187,12 @@ class MainViewModel
             }
 
         fun onActivityResume(nowElapsed: Long) {
-            val elapsed = nowElapsed - lastRefreshAt
+            val last = lastRefreshAt
+            if (last == 0L) {
+                lastRefreshAt = nowElapsed
+                return
+            }
+            val elapsed = nowElapsed - last
             // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt может быть больше
             if (elapsed < 0 || elapsed > RESUME_REFRESH_THRESHOLD_MS) {
                 lastRefreshAt = nowElapsed

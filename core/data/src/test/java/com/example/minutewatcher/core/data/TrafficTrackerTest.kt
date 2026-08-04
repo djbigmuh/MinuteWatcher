@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -120,6 +121,42 @@ class TrafficTrackerTest {
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(1)
             assertEquals(TrackingStatus.Active, tracker.status.value)
+        }
+
+    @Test
+    fun `processTrafficUpdate handles timeout reading lastTotalBytes without resetting baseline`() =
+        runTest(testDispatcher) {
+            val bucket = mock<NetworkStats.Bucket>()
+            whenever(bucket.rxBytes).thenReturn(2000L)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
+
+            // lastTotalBytes never emits
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(MutableSharedFlow())
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("Timeout reading lastTotalBytes", (status as TrackingStatus.Error).message)
+
+            // Should NOT call setLastTotalBytes (which would happen if baseline was reset due to ?: -1L bug)
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+        }
+
+    @Test
+    fun `processTrafficUpdate handles timeout reading simUsage`() =
+        runTest(testDispatcher) {
+            // simUsage never emits
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("Timeout reading simUsage", (status as TrackingStatus.Error).message)
+
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
 
     @Test
@@ -245,6 +282,67 @@ class TrafficTrackerTest {
             // Should reset baseline for the new SIM identity
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(1500L))
             verify(callSessionRepository).setLastDataSubId(2)
+        }
+
+    @Test
+    fun `updateTrafficUsage retries baseline reset when stats become available after SIM swap`() =
+        runTest(testDispatcher) {
+            // 1. Initial state
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+
+            // 2. SIM swap, but stats unavailable
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any()))
+                .thenThrow(RuntimeException("Stats unavailable"))
+
+            tracker.updateTrafficUsage()
+
+            // Verify baseline was NOT set for sim_1 yet
+            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+
+            // 3. Stats become available
+            val bucket = mock<NetworkStats.Bucket>()
+            whenever(bucket.rxBytes).thenReturn(2000L)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
+
+            tracker.updateTrafficUsage()
+
+            // Verify baseline IS set for sim_1 now
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(2000L))
+        }
+
+    @Test
+    fun `updateTrafficUsage continues to retry baseline reset if stats remain unavailable`() =
+        runTest(testDispatcher) {
+            // 1. Initial state
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+
+            // 2. SIM swap, stats unavailable
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any()))
+                .thenThrow(RuntimeException("Stats unavailable"))
+
+            tracker.updateTrafficUsage()
+
+            // 3. Stats still unavailable in next cycle
+            tracker.updateTrafficUsage()
+
+            // Verify baseline still not set
+            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+
+            // 4. Stats finally become available
+            val bucket = mock<NetworkStats.Bucket>()
+            whenever(bucket.rxBytes).thenReturn(3000L)
+            whenever(bucket.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
+
+            tracker.updateTrafficUsage()
+
+            // Verify baseline IS set
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(3000L))
         }
 
     @Test
