@@ -303,7 +303,11 @@ private fun SimItem(
         )
 
     Column(
-        modifier = GlanceModifier.padding(Constants.Widget.PADDING_SIM_ITEM.dp).semantics { contentDescription = summary },
+        modifier =
+            GlanceModifier
+                .padding(
+                    Constants.Widget.PADDING_SIM_ITEM.dp,
+                ).semantics { contentDescription = summary },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {

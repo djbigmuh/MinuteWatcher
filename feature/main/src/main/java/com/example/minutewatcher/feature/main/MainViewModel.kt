@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,7 +57,7 @@ class MainViewModel
 
         val showOnboardingDialog: StateFlow<Boolean> get() = controllers.dialog.showOnboardingDialog
 
-        val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> get() = controllers.settings.appSettings
+        val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
 
         fun completeOnboarding() {
             controllers.dialog.setShowOnboardingDialog(false)

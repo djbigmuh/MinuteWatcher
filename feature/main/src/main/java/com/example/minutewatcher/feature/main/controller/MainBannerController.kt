@@ -23,16 +23,16 @@ class MainBannerController
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-        private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
+        private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
 
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
-            _isPhonePermissionPermanentlyDenied.value = denied
+            isPhonePermissionPermanentlyDenied.value = denied
         }
 
-        private val _isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
+        private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
 
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
-            _isNotificationPermissionPermanentlyDenied.value = denied
+            isNotificationPermissionPermanentlyDenied.value = denied
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -51,8 +51,8 @@ class MainBannerController
                 permissionRepository.usageStatsPermissionGranted,
                 permissionRepository.notificationPermissionGranted,
                 combine(
-                    _isPhonePermissionPermanentlyDenied,
-                    _isNotificationPermissionPermanentlyDenied,
+                    isPhonePermissionPermanentlyDenied,
+                    isNotificationPermissionPermanentlyDenied,
                     appSettingsRepository.observeAppSettings(),
                 ) { phoneDenied, notifDenied, settings ->
                     Triple(phoneDenied, notifDenied, settings)

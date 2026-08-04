@@ -11,24 +11,25 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class WidgetSettingsSaver @Inject constructor(
-    private val loader: WidgetSettingsLoader,
-    private val dataChangeNotifier: DataChangeNotifier,
-) {
-    private val saveMutex = Mutex()
+class WidgetSettingsSaver
+    @Inject
+    constructor(
+        private val loader: WidgetSettingsLoader,
+        private val dataChangeNotifier: DataChangeNotifier,
+    ) {
+        private val saveMutex = Mutex()
 
-    suspend fun save(state: WidgetSettingsState): Boolean {
-        return try {
-            saveMutex.withLock {
-                loader.save(state)
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+        suspend fun save(state: WidgetSettingsState): Boolean =
+            try {
+                saveMutex.withLock {
+                    loader.save(state)
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                }
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save widget settings", e)
+                false
             }
-            true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("Failed to save widget settings", e)
-            false
-        }
     }
-}

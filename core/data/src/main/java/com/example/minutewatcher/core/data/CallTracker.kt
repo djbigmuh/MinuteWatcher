@@ -308,8 +308,8 @@ class CallTracker
                 }
 
             AppLogger.d(
-                "Call fallback attribution decision: chosen=$chosen, activeSubIds=$activeSubIds, defaultVoice=$defaultVoice. " +
-                    "Criteria: defaultVoice match or oldest startTime.",
+                "Call fallback attribution decision: chosen=$chosen, activeSubIds=$activeSubIds, " +
+                    "defaultVoice=$defaultVoice. Criteria: defaultVoice match or oldest startTime.",
             )
             return chosen
         }
