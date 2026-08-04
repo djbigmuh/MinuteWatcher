@@ -70,11 +70,7 @@ class OperatorResolverTest {
 
     @Test
     fun testResolve_Movistar() {
-        // Movistar is in XML and now in map, but not in JSON?
-        // Actually, JSON has "21407" as o2, but XML has movistar.
-        // Let's check JSON for Movistar.
-        // I'll just test one of the ones I explicitly added to JSON if I did.
-        // Wait, I didn't touch JSON because the prompt said "link to keys that are NOT in XML/Map".
-        // So they are ALREADY in JSON.
+        val result = OperatorResolver.resolve(context, "", "21407", 0)
+        assertEquals(context.getString(R.string.operator_movistar), result)
     }
 }
