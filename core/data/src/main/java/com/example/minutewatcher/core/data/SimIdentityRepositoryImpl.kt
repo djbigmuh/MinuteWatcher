@@ -31,12 +31,14 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -65,18 +67,26 @@ class SimIdentityRepositoryImpl
         private val saveMutex = Mutex()
 
         private val seedFlow: Flow<String> =
-            seedRepository
-                .getSeed()
-                .map { seed ->
-                    seed.ifEmpty {
+            flow {
+                val currentSeed = seedRepository.getSeed().first()
+                val seed =
+                    if (currentSeed.isEmpty()) {
                         seedRepository.getOrCreateSeed {
                             java.util.UUID
                                 .randomUUID()
                                 .toString()
                         }
+                    } else {
+                        currentSeed
                     }
-                }.filter { it.isNotEmpty() }
-                .distinctUntilChanged()
+                emit(seed)
+                emitAll(
+                    seedRepository
+                        .getSeed()
+                        .filter { it.isNotEmpty() },
+                )
+            }.distinctUntilChanged()
+                .shareIn(scope, SharingStarted.Lazily, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow

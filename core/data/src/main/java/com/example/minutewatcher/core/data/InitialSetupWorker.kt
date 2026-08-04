@@ -9,6 +9,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -36,8 +37,7 @@ class InitialSetupWorker
                 deps.autoResetUseCase.performAutoReset(shouldNotify = false)
 
                 // Reset traffic baseline after reboot for active SIMs
-                val activeSimsForTraffic =
-                    deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                val activeSimsForTraffic = getActiveSimsWithRetry()
                 activeSimsForTraffic.forEach { info ->
                     deps.trafficTracker.resetBaseline(info.identity.stableId)
                 }
@@ -108,7 +108,7 @@ class InitialSetupWorker
         }
 
         private suspend fun handleMigrationWithPermission(v1Completed: Boolean) {
-            val activeSims = deps.simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+            val activeSims = getActiveSimsWithRetry()
             val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
 
             if (activeSims.isEmpty()) {
@@ -132,5 +132,18 @@ class InitialSetupWorker
                 deps.migrationService.markSchemaCurrent()
                 AppLogger.d("Identity migrations completed in InitialSetupWorker")
             }
+        }
+
+        private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
+            val firstAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout()
+            if (firstAttempt != null) return firstAttempt
+
+            AppLogger.w("InitialSetupWorker: observeActiveSims timed out, retrying with 15s...")
+
+            val secondAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout(15000L)
+            if (secondAttempt == null) {
+                AppLogger.w("InitialSetupWorker: no active SIMs found after retry (timeout)")
+            }
+            return secondAttempt ?: emptyList()
         }
     }

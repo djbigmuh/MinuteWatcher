@@ -21,12 +21,15 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class CallTracker
@@ -92,8 +95,9 @@ class CallTracker
                         return@withLock
                     }
 
-                    handleCallStartInternal(effectiveSubId)
-                    _status.value = TrackingStatus.Active
+                    if (handleCallStartInternal(effectiveSubId)) {
+                        _status.value = TrackingStatus.Active
+                    }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
                 } catch (e: CancellationException) {
@@ -112,9 +116,17 @@ class CallTracker
             }
         }
 
-        private suspend fun handleCallStartInternal(subId: Int) {
-            val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
-            val savedBootTime = callSessionRepository.getBootTime(subId).firstWithTimeout() ?: 0L
+        private suspend fun handleCallStartInternal(subId: Int): Boolean {
+            val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
+            val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
+
+            if (startTimeRes.isFailure || savedBootTimeRes.isFailure) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "DataStore read timeout")
+                return false
+            }
+
+            val startTime = startTimeRes.getOrThrow()
+            val savedBootTime = savedBootTimeRes.getOrThrow()
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 
@@ -133,6 +145,7 @@ class CallTracker
                 callSessionRepository.setCallIdentity(subId, identity)
                 AppLogger.d("Call started for subId $subId")
             }
+            return true
         }
 
         /**
@@ -326,10 +339,22 @@ class CallTracker
             subId: Int,
             notify: Boolean = true,
         ) {
-            val startTime = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
-            val savedBootTime = callSessionRepository.getBootTime(subId).firstWithTimeout() ?: 0L
-            val savedUptime = callSessionRepository.getUptime(subId).firstWithTimeout() ?: 0L
-            val savedIdentity = callSessionRepository.getCallIdentity(subId).firstWithTimeout()
+            val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
+            val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
+            val savedUptimeRes = readWithRetry({ callSessionRepository.getUptime(subId) }, "uptime", subId)
+            val savedIdentityRes = readWithRetry({ callSessionRepository.getCallIdentity(subId) }, "identity", subId)
+
+            if (startTimeRes.isFailure || savedBootTimeRes.isFailure ||
+                savedUptimeRes.isFailure || savedIdentityRes.isFailure
+            ) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "DataStore read timeout")
+                return
+            }
+
+            val startTime = startTimeRes.getOrThrow()
+            val savedBootTime = savedBootTimeRes.getOrThrow()
+            val savedUptime = savedUptimeRes.getOrThrow()
+            val savedIdentity = savedIdentityRes.getOrThrow()
 
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
@@ -410,6 +435,27 @@ class CallTracker
                 _status.value =
                     TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
             }
+        }
+
+        private suspend fun <T> readWithRetry(
+            flowProvider: () -> kotlinx.coroutines.flow.Flow<T>,
+            fieldName: String,
+            subId: Int,
+        ): Result<T> {
+            suspend fun tryRead(timeout: Long): Result<T>? =
+                try {
+                    withTimeoutOrNull(timeout.milliseconds) {
+                        Result.success(flowProvider().first())
+                    }
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+
+            val first = tryRead(5000L)
+            if (first != null) return first
+
+            AppLogger.w("CallTracker: Timeout reading $fieldName for subId $subId, retrying with 10s...")
+            return tryRead(10000L) ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 
         companion object {

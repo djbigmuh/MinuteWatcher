@@ -29,7 +29,13 @@ class WidgetUpdaterImpl
             scope.launch {
                 try {
                     widget.updateAll(context)
-                    appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+                    try {
+                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to reset widget limit exceeded flag", e)
+                    }
                 } catch (e: IllegalArgumentException) {
                     val msg = e.message ?: ""
                     val isLimitExceeded = isRemoteViewsLimitException(e)
@@ -40,7 +46,26 @@ class WidgetUpdaterImpl
                     )
 
                     if (isLimitExceeded) {
-                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                        var flagSaved = false
+                        try {
+                            appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                            flagSaved = true
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to set widget limit exceeded flag", e)
+                        }
+
+                        if (flagSaved) {
+                            try {
+                                AppLogger.d("Retrying widget update after limit exceeded")
+                                widget.updateAll(context)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Retry widget update failed", e)
+                            }
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e

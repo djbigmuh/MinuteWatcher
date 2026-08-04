@@ -143,8 +143,7 @@ class MainSimDataController
 
         fun retryShortcuts() = trackingRecoveryController.retryShortcuts()
 
-        fun retryTraffic(onRefresh: suspend () -> Unit) =
-            trackingRecoveryController.retryTraffic(scope, onRefresh)
+        fun retryTraffic(onRefresh: suspend () -> Unit) = trackingRecoveryController.retryTraffic(scope, onRefresh)
 
         fun notifyDataChanged(force: Boolean = false) {
             scope.launch {

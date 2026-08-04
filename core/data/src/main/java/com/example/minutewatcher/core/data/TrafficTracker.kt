@@ -64,6 +64,7 @@ class TrafficTracker
             ) as? NetworkStatsManager
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
+        private val baselineNeedsRetry = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
         private data class TargetInfo(
             val slot: Int,
@@ -205,6 +206,12 @@ class TrafficTracker
             if (currentBytes == -1L) {
                 handleStatsUnavailable(targetIdentity)
                 return
+            }
+
+            if (baselineNeedsRetry[targetIdentity] == true) {
+                simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                baselineNeedsRetry.remove(targetIdentity)
+                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
             }
 
             val lastTotalBytes = simUsageResetRepository.getLastTotalBytes(targetIdentity).firstWithTimeout() ?: -1L
@@ -381,20 +388,34 @@ class TrafficTracker
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
-                val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
+                val currentBytes =
+                    try {
+                        getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
+                    } catch (e: Exception) {
+                        -1L
+                    }
+
                 if (currentBytes != -1L) {
                     simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
-
-                    // Only update subId if baseline was successfully reset.
-                    // This ensures that the next updateTrafficUsage call will still see isSimChanged = true
-                    // and retry handleSimChange if the reset failed this time.
-                    callSessionRepository.setLastDataSubId(currentDataSubId)
-                    inMemoryLastDataSubId.set(currentDataSubId)
+                    AppLogger.d("Baseline reset successfully for $identity")
+                } else {
+                    AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
+                    baselineNeedsRetry[identity] = true
                 }
+
+                // Break the isSimChanged loop regardless of baseline reset success.
+                // This ensures skipDelta is true only for the very first attempt.
+                callSessionRepository.setLastDataSubId(currentDataSubId)
+                inMemoryLastDataSubId.set(currentDataSubId)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to reset baseline on SIM change", e)
+            } catch (_: Exception) {
+                AppLogger.e("Failed to handle SIM change")
+                // Even on error, we should probably update the subId to avoid infinite looping,
+                // but we didn't get the identity or usage, so we might not be able to set baselineNeedsRetry.
+                // However, updating subId is crucial.
+                callSessionRepository.setLastDataSubId(currentDataSubId)
+                inMemoryLastDataSubId.set(currentDataSubId)
             }
         }
     }

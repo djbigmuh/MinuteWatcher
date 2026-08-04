@@ -44,7 +44,8 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
-        private val bannerExtraData: StateFlow<Triple<Boolean, Boolean, com.example.minutewatcher.core.model.AppSettings>> =
+        private val bannerExtraData:
+            StateFlow<Triple<Boolean, Boolean, com.example.minutewatcher.core.model.AppSettings>> =
             combine(
                 isPhonePermissionPermanentlyDenied,
                 isNotificationPermissionPermanentlyDenied,
@@ -54,7 +55,13 @@ class MainBannerController
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,
-                initialValue = Triple(false, false, com.example.minutewatcher.core.model.AppSettings()),
+                initialValue =
+                    Triple(
+                        false,
+                        false,
+                        com.example.minutewatcher.core.model
+                            .AppSettings(),
+                    ),
             )
 
         val trackingBannerState: StateFlow<TrackingBannerState> =

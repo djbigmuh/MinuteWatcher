@@ -208,6 +208,25 @@ class CallTrackerTest {
         }
 
     @Test
+    fun `handleCallStartInternal sets error status on DataStore timeout`() =
+        runTest(testDispatcher) {
+            // Arrange: Flow that never emits triggers timeout in readWithRetry
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
+
+            // Act
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Assert
+            val status = callTracker.status.first()
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("DataStore read timeout", (status as TrackingStatus.Error).message)
+
+            // Verify session was NOT cleared (setCallStartTime(1, 0) was NOT called)
+            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(0L))
+        }
+
+    @Test
     fun `onCallStarted sets permission missing status on SecurityException`() =
         runTest(testDispatcher) {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenThrow(SecurityException())
