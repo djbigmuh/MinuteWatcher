@@ -65,6 +65,9 @@ class SimIdentityRepositoryImpl
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
         private val saveMutex = Mutex()
+        private val migratedIdentities =
+            java.util.concurrent.ConcurrentHashMap
+                .newKeySet<String>()
 
         private val seedFlow: Flow<String> =
             flow {
@@ -221,10 +224,15 @@ class SimIdentityRepositoryImpl
 
                 // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
                 // it might be a transition from fallback sim_$slot.
-                if (identity.source != IdentitySource.SLOT_FALLBACK && currentSlot == null) {
+                if (identity.source != IdentitySource.SLOT_FALLBACK &&
+                    currentSlot == null &&
+                    migratedIdentities.add(identity.stableId)
+                ) {
                     scope.launch {
                         try {
                             migrationService.migrateLegacyData(identity)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             com.example.minutewatcher.core.common.util.AppLogger.e(
                                 "Failed to migrate legacy data for identity: ${identity.stableId}",

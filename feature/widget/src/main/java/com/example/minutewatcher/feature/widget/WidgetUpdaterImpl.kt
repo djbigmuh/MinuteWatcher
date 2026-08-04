@@ -28,43 +28,14 @@ class WidgetUpdaterImpl
         override fun updateAll() {
             scope.launch {
                 try {
-                    widget.updateAll(context)
-                    try {
+                    val success = safeUpdateAll(context)
+                    if (success) {
                         appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to reset widget limit exceeded flag", e)
-                    }
-                } catch (e: IllegalArgumentException) {
-                    val msg = e.message ?: ""
-                    val isLimitExceeded = isRemoteViewsLimitException(e)
-
-                    AppLogger.e(
-                        "Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg",
-                        e,
-                    )
-
-                    if (isLimitExceeded) {
-                        var flagSaved = false
-                        try {
-                            appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
-                            flagSaved = true
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to set widget limit exceeded flag", e)
-                        }
-
-                        if (flagSaved) {
-                            try {
-                                AppLogger.d("Retrying widget update after limit exceeded")
-                                widget.updateAll(context)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Retry widget update failed", e)
-                            }
+                    } else {
+                        AppLogger.d("Retrying widget update...")
+                        val retrySuccess = safeUpdateAll(context)
+                        if (retrySuccess) {
+                            appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
                         }
                     }
                 } catch (e: CancellationException) {
@@ -75,6 +46,28 @@ class WidgetUpdaterImpl
             }
         }
 
+        private suspend fun safeUpdateAll(context: Context): Boolean =
+            try {
+                widget.updateAll(context)
+                true
+            } catch (e: IllegalArgumentException) {
+                val isLimit = isRemoteViewsLimitException(e)
+                AppLogger.e(
+                    "Widget update failed. isRemoteViewsLimit=$isLimit. Message: ${e.message}",
+                    e,
+                )
+                if (isLimit) {
+                    try {
+                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                    } catch (ce: CancellationException) {
+                        throw ce
+                    } catch (ex: Exception) {
+                        AppLogger.e("Failed to set widget limit exceeded flag", ex)
+                    }
+                }
+                false
+            }
+
         @VisibleForTesting
         fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val msg = e.message ?: ""
@@ -83,7 +76,13 @@ class WidgetUpdaterImpl
                 msg.contains("too large", ignoreCase = true) ||
                     msg.contains("exceeds", ignoreCase = true) ||
                     msg.contains("TransactionTooLarge", ignoreCase = true)
+
+            val mentionsTransactionSize =
+                msg.contains("transaction", ignoreCase = true) &&
+                    msg.contains("too large", ignoreCase = true)
+
             return (mentionsRemoteViews && mentionsSize) ||
+                mentionsTransactionSize ||
                 e.cause is android.os.TransactionTooLargeException
         }
     }

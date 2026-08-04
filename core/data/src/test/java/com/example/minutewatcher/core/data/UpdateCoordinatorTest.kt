@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -21,7 +20,6 @@ class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
-    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
     private val snapshotFlow = MutableStateFlow(createEmptySnapshot())
 
@@ -38,7 +36,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
@@ -64,7 +61,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
@@ -91,7 +87,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
 
@@ -109,7 +104,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
 

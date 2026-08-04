@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
+import kotlin.math.roundToInt
 
 @Composable
 fun SimLimitComposeDialog(
@@ -74,7 +75,7 @@ fun SimLimitComposeDialog(
                                 requireNotNull(state.validatedTrafficGb) {
                                     "Validated traffic should not be null after successful validation"
                                 } * Constants.MB_PER_GB
-                            ).toInt(),
+                            ).roundToInt(),
                             state.rolloverEnabled,
                         )
                     }

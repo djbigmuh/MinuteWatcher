@@ -402,18 +402,13 @@ class TrafficTracker
                     AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
                     baselineNeedsRetry[identity] = true
                 }
-
-                // Break the isSimChanged loop regardless of baseline reset success.
-                // This ensures skipDelta is true only for the very first attempt.
-                callSessionRepository.setLastDataSubId(currentDataSubId)
-                inMemoryLastDataSubId.set(currentDataSubId)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 AppLogger.e("Failed to handle SIM change")
-                // Even on error, we should probably update the subId to avoid infinite looping,
-                // but we didn't get the identity or usage, so we might not be able to set baselineNeedsRetry.
-                // However, updating subId is crucial.
+            } finally {
+                // Break the isSimChanged loop regardless of baseline reset success.
+                // This ensures skipDelta is true only for the very first attempt.
                 callSessionRepository.setLastDataSubId(currentDataSubId)
                 inMemoryLastDataSubId.set(currentDataSubId)
             }
