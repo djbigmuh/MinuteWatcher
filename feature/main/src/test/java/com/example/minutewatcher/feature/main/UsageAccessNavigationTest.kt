@@ -21,6 +21,7 @@ import com.example.minutewatcher.feature.main.controller.MainSettingsController
 import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
+import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,7 @@ class UsageAccessNavigationTest {
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
     private val permissionRepository: PermissionRepository = mock()
+    private val trackingRecoveryController: TrackingRecoveryController = mock()
     private val savedStateHandle = SavedStateHandle()
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -112,7 +114,7 @@ class UsageAccessNavigationTest {
         val simDataController =
             MainSimDataController(
                 usageStateRepository = usageStateRepository,
-                trackingStatusRepository = trackingStatusRepository,
+                trackingRecoveryController = trackingRecoveryController,
                 simIdentityRepository = simIdentityRepository,
                 simLimitsRepository = simLimitsRepository,
                 usageUseCase = usageUseCase,

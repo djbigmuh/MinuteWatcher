@@ -335,6 +335,7 @@ class CallTracker
             return chosen
         }
 
+        @Suppress("ktlint:standard:chain-wrapping", "ktlint:standard:condition-wrapping")
         private suspend fun endCall(
             subId: Int,
             notify: Boolean = true,
@@ -344,8 +345,10 @@ class CallTracker
             val savedUptimeRes = readWithRetry({ callSessionRepository.getUptime(subId) }, "uptime", subId)
             val savedIdentityRes = readWithRetry({ callSessionRepository.getCallIdentity(subId) }, "identity", subId)
 
-            if (startTimeRes.isFailure || savedBootTimeRes.isFailure ||
-                savedUptimeRes.isFailure || savedIdentityRes.isFailure
+            if (startTimeRes.isFailure
+                || savedBootTimeRes.isFailure
+                || savedUptimeRes.isFailure
+                || savedIdentityRes.isFailure
             ) {
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "DataStore read timeout")
                 return

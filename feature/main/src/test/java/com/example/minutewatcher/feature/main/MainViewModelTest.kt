@@ -15,6 +15,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
+import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +51,7 @@ class MainViewModelTest {
     private val settingsUseCase: SettingsUseCase = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionRepository: PermissionRepository = mock()
+    private val trackingRecoveryController: TrackingRecoveryController = mock()
     private val savedStateHandle = SavedStateHandle()
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -110,7 +112,7 @@ class MainViewModelTest {
         val simDataController =
             com.example.minutewatcher.feature.main.controller.MainSimDataController(
                 usageStateRepository = usageStateRepository,
-                trackingStatusRepository = trackingStatusRepository,
+                trackingRecoveryController = trackingRecoveryController,
                 simIdentityRepository = simIdentityRepository,
                 simLimitsRepository = simLimitsRepository,
                 usageUseCase = usageUseCase,
