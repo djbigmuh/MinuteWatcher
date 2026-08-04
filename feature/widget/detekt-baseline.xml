@@ -2,8 +2,9 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:WidgetLayoutTest.kt$WidgetLayoutTest$private fun createWidgetUiState( mode: WidgetLayoutMode, hasMinutes: Boolean = true, hasTraffic: Boolean = true, showMinutesLimit: Boolean = false, showTrafficLimit: Boolean = false, ): WidgetUiState</ID>
-    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic()</ID>
-    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic()</ID>
+    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun MultiSimLayout( sims: List&lt;SimUiState&gt;, uiState: WidgetUiState, )</ID>
+    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun SimItem( sim: SimUiState, uiState: WidgetUiState, )</ID>
+    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun WidgetContent( uiState: WidgetUiState, navigationProvider: NavigationProvider, )</ID>
+    <ID>MaxLineLength:WidgetUpdaterImpl.kt$WidgetUpdaterImpl$"Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg"</ID>
   </CurrentIssues>
 </SmellBaseline>

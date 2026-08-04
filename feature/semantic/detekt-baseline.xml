@@ -2,14 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>EmptyFunctionBlock:SemanticSearchManagerTest.kt$SemanticSearchManagerTest.FakeAppSearchSessionWrapper${}</ID>
-    <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$1000L</ID>
-    <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$5</ID>
-    <ID>MagicNumber:SemanticSearchManager.kt$SemanticSearchManager$60</ID>
-    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))), isManual = true)</ID>
-    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s1 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))), isManual = true)</ID>
-    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val s2 = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101)))), isManual = false)</ID>
-    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val snapshot = createSnapshot(listOf(SimSnapshot(0, "A", true, mapOf(PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100)))))</ID>
-    <ID>MaxLineLength:SemanticSearchManagerTest.kt$SemanticSearchManagerTest$val snapshot = createSnapshot(listOf(SimSnapshot(1, "B", true, mapOf(PackageType.MINUTES to createEntity(1, PackageType.MINUTES, 50)))))</ID>
+    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(forceOverride: Boolean = false): Boolean</ID>
+    <ID>ReturnCount:ShortcutManager.kt$ShortcutManager$private fun createMinutesShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat?</ID>
+    <ID>ReturnCount:ShortcutManager.kt$ShortcutManager$private fun createTrafficShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat?</ID>
   </CurrentIssues>
 </SmellBaseline>

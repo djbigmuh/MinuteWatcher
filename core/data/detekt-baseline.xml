@@ -2,17 +2,34 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MaxLineLength:IdentityMigrationService.kt$IdentityMigrationService$AppLogger.w("Migration conflict in $storeName: ${newKey.name} already exists. Legacy value backed up to ${conflictKey.name}")</ID>
-    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$unit = MeasurementUnit.MINUTES</ID>
-    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))</ID>
-    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))</ID>
-    <ID>MaxLineLength:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))</ID>
-    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.DATA to SemanticMapper.mapTraffic(slot, operator, traffic, usage.autoResetDay, timestamp)</ID>
-    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$PackageType.MINUTES to SemanticMapper.mapMinutes(slot, operator, minutes, usage.autoResetDay, timestamp)</ID>
+    <ID>ComplexCondition:CallTracker.kt$CallTracker$startTimeRes.isFailure || savedBootTimeRes.isFailure || savedUptimeRes.isFailure || savedIdentityRes.isFailure</ID>
+    <ID>CyclomaticComplexMethod:AppSettingsRepositoryImpl.kt$AppSettingsRepositoryImpl$private fun Preferences.toAppSettings(): AppSettings</ID>
+    <ID>LongMethod:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$@Test fun `traffic critical notification uses critical level`()</ID>
+    <ID>LongMethod:WidgetSettingsRepositoryTest.kt$WidgetSettingsRepositoryTest$@Test fun `load should return state populated from app settings`()</ID>
+    <ID>LongParameterList:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl$( @param:ApplicationContext private val context: Context, private val subscriptionManager: SubscriptionManager, private val permissionManager: PermissionManager, permissionStateNotifier: PermissionStateNotifier, @SimDataStore dataStore: DataStore&lt;Preferences&gt;, seedRepository: SimIdentitySeedRepository, appSettingsRepository: AppSettingsRepository, private val migrationService: IdentityMigrationService, private val mockSimProvider: MockSimProvider, @ApplicationScope private val scope: CoroutineScope, )</ID>
+    <ID>MagicNumber:CallTracker.kt$CallTracker$10000L</ID>
+    <ID>MagicNumber:CallTracker.kt$CallTracker$5000L</ID>
+    <ID>MagicNumber:InitialSetupWorker.kt$InitialSetupWorker$15000L</ID>
+    <ID>MaxLineLength:TrafficTracker.kt$TrafficTracker$"No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim."</ID>
+    <ID>MaxLineLength:UsageCheckWorker.kt$UsageCheckWorker$// Perform auto-reset logic. We skip internal notification here because we do a single unified refresh and notify below.</ID>
+    <ID>MaxLineLength:UsageStateRepositoryImpl.kt$UsageStateRepositoryImpl$"UsageStateRepository: Refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s, returning current snapshot"</ID>
+    <ID>ReturnCount:CallEventWorker.kt$CallEventWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:CallTracker.kt$CallTracker$@SuppressLint("MissingPermission") private fun findTargetSubId(activeSubIds: List&lt;Int&gt;): Int?</ID>
     <ID>ReturnCount:IdentityMigrationService.kt$IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey(activeIdentities: Set&lt;String&gt;): Boolean</ID>
     <ID>ReturnCount:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:OperatorResolver.kt$OperatorResolver$private fun loadDb(context: Context): Map&lt;String, String&gt;</ID>
+    <ID>ReturnCount:OperatorResolver.kt$OperatorResolver$private fun resolveFromDbKey( context: Context, resKey: String, ): String?</ID>
     <ID>ReturnCount:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl$override suspend fun getSimIdentity(slot: Int): SimIdentity</ID>
-    <ID>ReturnCount:TrafficTracker.kt$TrafficTracker$private suspend fun getTargetSimInfo(): Pair&lt;Int, Int&gt;?</ID>
-    <ID>TooManyFunctions:SettingsKeys.kt$SettingsKeys</ID>
+    <ID>ReturnCount:TrafficTracker.kt$TrafficTracker$private fun checkPermissions(): Boolean</ID>
+    <ID>SwallowedException:TrafficTracker.kt$TrafficTracker$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:NotificationHelper.kt$NotificationHelper$e: RuntimeException</ID>
+    <ID>TooGenericExceptionThrown:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$throw RuntimeException("Fatal")</ID>
+    <ID>TooManyFunctions:CallSessionRepositoryImpl.kt$CallSessionRepositoryImpl : CallSessionRepository</ID>
+    <ID>TooManyFunctions:CallTracker.kt$CallTracker : TrackingStatusProvider</ID>
+    <ID>TooManyFunctions:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl : BaseDataStoreRepositorySimIdentityRepository</ID>
+    <ID>TooManyFunctions:SimSettingsKeys.kt$SimSettingsKeys</ID>
+    <ID>TooManyFunctions:SimUsageRepositoryImpl.kt$SimUsageRepositoryImpl : BaseDataStoreRepositorySimUsageRepositorySimUsageAdjustmentRepositorySimUsageResetRepository</ID>
+    <ID>TooManyFunctions:TrafficTracker.kt$TrafficTracker : TrackingStatusProvider</ID>
+    <ID>TooManyFunctions:UsageDataModule.kt$UsageDataModule</ID>
   </CurrentIssues>
 </SmellBaseline>

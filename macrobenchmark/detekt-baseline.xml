@@ -2,8 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MagicNumber:ExampleStartupBenchmark.kt$ExampleStartupBenchmark$5000</ID>
+    <ID>MagicNumber:BenchmarkExtensions.kt$33</ID>
+    <ID>MagicNumber:ScrollBenchmark.kt$ScrollBenchmark$10</ID>
     <ID>MagicNumber:ScrollBenchmark.kt$ScrollBenchmark$5</ID>
-    <ID>MagicNumber:ScrollBenchmark.kt$ScrollBenchmark$5000</ID>
   </CurrentIssues>
 </SmellBaseline>

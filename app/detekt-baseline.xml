@@ -2,12 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
-    <ID>MagicNumber:BootReceiver.kt$BootReceiver$30</ID>
-    <ID>MagicNumber:MainActivity.kt$MainActivity$1000</ID>
-    <ID>MagicNumber:MainActivity.kt$MainActivity$20_000L</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)</ID>
-    <ID>SwallowedException:MainActivity.kt$MainActivity$e: ActivityNotFoundException</ID>
+    <ID>MaxLineLength:UsageTileService.kt$UsageTileService$// WrongConstant is suppressed because Intent.FLAG_ACTIVITY_NEW_TASK is the correct flag for starting an activity from a Service,</ID>
     <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivity</ID>
   </CurrentIssues>
 </SmellBaseline>

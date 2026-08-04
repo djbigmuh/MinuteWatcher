@@ -2,6 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>DestructuringDeclarationWithTooManyEntries:MainViewModel.kt$MainViewModel$val (notificationsGranted, phonePermanentlyDenied, notificationPermanentlyDenied, settings) = part2</ID>
+    <ID>TooManyFunctions:MainSimDataController.kt$MainSimDataController</ID>
+    <ID>TooManyFunctions:MainViewModel.kt$MainViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:TrackingBannerComponents.kt$com.example.minutewatcher.feature.main.ui.components.TrackingBannerComponents.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

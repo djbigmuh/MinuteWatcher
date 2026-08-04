@@ -2,6 +2,9 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:OperatorResolver.kt$OperatorResolver$operatorName.isNotEmpty() &amp;&amp; operatorName != "null" &amp;&amp; !operatorName.contains("SIM", ignoreCase = true) &amp;&amp; !SimUtils.isInactiveSim(operatorName)</ID>
+    <ID>LongMethod:WidgetLayoutSpecBuilder.kt$WidgetLayoutSpecBuilder$private fun createThreeLinesRows(sim: SimUiState): List&lt;SimLayoutRow&gt;</ID>
+    <ID>LongMethod:WidgetLayoutTest.kt$WidgetLayoutTest$private fun createWidgetUiState( mode: WidgetLayoutMode, hasMinutes: Boolean = true, hasTraffic: Boolean = true, showMinutesLimit: Boolean = false, showTrafficLimit: Boolean = false, ): WidgetUiState</ID>
+    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic()</ID>
+    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic()</ID>
   </CurrentIssues>
 </SmellBaseline>
