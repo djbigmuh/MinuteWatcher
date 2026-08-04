@@ -44,29 +44,35 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
+        private val bannerExtraData: StateFlow<Triple<Boolean, Boolean, com.example.minutewatcher.core.model.AppSettings>> =
+            combine(
+                isPhonePermissionPermanentlyDenied,
+                isNotificationPermissionPermanentlyDenied,
+                appSettingsRepository.observeAppSettings(),
+            ) { phoneDenied, notifDenied, settings ->
+                Triple(phoneDenied, notifDenied, settings)
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = Triple(false, false, com.example.minutewatcher.core.model.AppSettings()),
+            )
+
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
                 permissionRepository.phoneStatePermissionGranted,
                 permissionRepository.usageStatsPermissionGranted,
                 permissionRepository.notificationPermissionGranted,
-                combine(
-                    isPhonePermissionPermanentlyDenied,
-                    isNotificationPermissionPermanentlyDenied,
-                    appSettingsRepository.observeAppSettings(),
-                ) { phoneDenied, notifDenied, settings ->
-                    Triple(phoneDenied, notifDenied, settings)
-                },
-            ) { status, phone, usage, notif, triple ->
-                val (phoneDenied, notifDenied, settings) = triple
+                bannerExtraData,
+            ) { status, phone, usage, notif, extra ->
                 TrackingBannerMapper.mapToBannerState(
                     statusMap = status,
                     phoneGranted = phone,
                     usageGranted = usage,
                     notificationsGranted = notif,
-                    phonePermanentlyDenied = phoneDenied,
-                    notificationPermanentlyDenied = notifDenied,
-                    settings = settings,
+                    phonePermanentlyDenied = extra.first,
+                    notificationPermanentlyDenied = extra.second,
+                    settings = extra.third,
                 )
             }.stateIn(
                 scope = scope,

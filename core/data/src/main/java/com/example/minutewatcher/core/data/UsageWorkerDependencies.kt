@@ -14,6 +14,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("LongParameterList")
 class UsageWorkerDependencies
     @Inject
     constructor(

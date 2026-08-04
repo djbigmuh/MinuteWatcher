@@ -367,13 +367,16 @@ class MainViewModelTest {
 
             val viewModel = createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle() // Let initializeApp() finish its refresh
-            org.mockito.kotlin.clearInvocations(usageStateRepository)
+            org.mockito.kotlin
+                .clearInvocations(usageStateRepository)
 
             // nowElapsed = 1000L (SystemClock.elapsedRealtime() after reboot)
             viewModel.onActivityResume(1000L)
             testScheduler.advanceUntilIdle()
 
             // Verify that data refresh was triggered via usageStateRepository
-            org.mockito.kotlin.verify(usageStateRepository).refresh()
+            org.mockito.kotlin
+                .verify(usageStateRepository)
+                .refresh()
         }
 }

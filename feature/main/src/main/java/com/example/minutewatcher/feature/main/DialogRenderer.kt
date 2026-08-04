@@ -25,56 +25,9 @@ fun DialogRenderer(
     val showAdjustDialog by viewModel.showAdjustDialog.collectAsStateWithLifecycle()
     val showTrafficLimitationDialog by viewModel.showTrafficLimitationDialog.collectAsStateWithLifecycle()
 
-    showLimitDialog?.let { data ->
-        key(data) {
-            SimLimitComposeDialog(
-                operatorName = data.name,
-                initialMinutes = data.minutes,
-                initialTrafficMb = data.traffic,
-                initialRolloverEnabled = data.rolloverEnabled,
-                onDismiss = { viewModel.setLimitDialog(null) },
-                onConfirm = { min, traf, rollover ->
-                    viewModel.updateLimits(data.slot, min, traf, rollover)
-                    viewModel.setLimitDialog(null)
-                },
-                onReset = {
-                    viewModel.updateLimits(data.slot, 0, 0, false)
-                    viewModel.setLimitDialog(null)
-                },
-            )
-        }
-    }
-
-    showDayDialog?.let { data ->
-        key(data) {
-            DayPickerComposeDialog(
-                initialDay = data.day,
-                onDismiss = { viewModel.setDayDialog(null) },
-                onDaySelected = { day ->
-                    viewModel.updateAutoResetDay(data.slot, day)
-                    viewModel.setDayDialog(null)
-                },
-            )
-        }
-    }
-
-    showAdjustDialog?.let { data ->
-        key(data) {
-            AdjustmentComposeDialog(
-                currentValue = data.currentValue,
-                isMinutes = data.isMinutes,
-                onDismiss = { viewModel.setAdjustDialog(null) },
-                onConfirm = { value ->
-                    if (data.isMinutes) {
-                        viewModel.adjustRemainingMinutes(data.slot, value.toInt())
-                    } else {
-                        viewModel.adjustRemainingTraffic(data.slot, value)
-                    }
-                    viewModel.setAdjustDialog(null)
-                },
-            )
-        }
-    }
+    LimitDialog(showLimitDialog, viewModel)
+    DayDialog(showDayDialog, viewModel)
+    AdjustDialog(showAdjustDialog, viewModel)
 
     if (showTrafficLimitationDialog) {
         SimpleMessageDialog(
@@ -96,5 +49,74 @@ fun DialogRenderer(
 
     if (showOnboardingDialog) {
         OnboardingDialog(onDismiss = { viewModel.completeOnboarding() })
+    }
+}
+
+@Composable
+private fun LimitDialog(
+    data: LimitDialogData?,
+    viewModel: MainViewModel,
+) {
+    data?.let {
+        key(it) {
+            SimLimitComposeDialog(
+                operatorName = it.name,
+                initialMinutes = it.minutes,
+                initialTrafficMb = it.traffic,
+                initialRolloverEnabled = it.rolloverEnabled,
+                onDismiss = { viewModel.setLimitDialog(null) },
+                onConfirm = { min, traf, rollover ->
+                    viewModel.updateLimits(it.slot, min, traf, rollover)
+                    viewModel.setLimitDialog(null)
+                },
+                onReset = {
+                    viewModel.updateLimits(it.slot, 0, 0, false)
+                    viewModel.setLimitDialog(null)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayDialog(
+    data: DayDialogData?,
+    viewModel: MainViewModel,
+) {
+    data?.let {
+        key(it) {
+            DayPickerComposeDialog(
+                initialDay = it.day,
+                onDismiss = { viewModel.setDayDialog(null) },
+                onDaySelected = { day ->
+                    viewModel.updateAutoResetDay(it.slot, day)
+                    viewModel.setDayDialog(null)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdjustDialog(
+    data: AdjustDialogData?,
+    viewModel: MainViewModel,
+) {
+    data?.let {
+        key(it) {
+            AdjustmentComposeDialog(
+                currentValue = it.currentValue,
+                isMinutes = it.isMinutes,
+                onDismiss = { viewModel.setAdjustDialog(null) },
+                onConfirm = { value ->
+                    if (it.isMinutes) {
+                        viewModel.adjustRemainingMinutes(it.slot, value.toInt())
+                    } else {
+                        viewModel.adjustRemainingTraffic(it.slot, value)
+                    }
+                    viewModel.setAdjustDialog(null)
+                },
+            )
+        }
     }
 }

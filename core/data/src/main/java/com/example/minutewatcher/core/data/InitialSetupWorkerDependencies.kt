@@ -10,6 +10,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("LongParameterList")
 class InitialSetupWorkerDependencies
     @Inject
     constructor(

@@ -17,12 +17,14 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -100,11 +102,11 @@ class CallTracker
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    try {
-                        refreshStatus()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
+                    withContext(NonCancellable) {
+                        try {
+                            refreshStatus()
+                        } catch (_: Exception) {
+                        }
                     }
                 }
             }
@@ -148,11 +150,11 @@ class CallTracker
                     AppLogger.e("Error in onCallEnded", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    try {
-                        refreshStatus()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
+                    withContext(NonCancellable) {
+                        try {
+                            refreshStatus()
+                        } catch (_: Exception) {
+                        }
                     }
                 }
             }
@@ -169,18 +171,30 @@ class CallTracker
         }
 
         private fun checkPermissions(): Boolean {
-            if (!permissionManager.isTelephonySupported()) {
-                AppLogger.w("CallTracker: telephony not supported")
-                _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
-                return false
+            val error =
+                when {
+                    !permissionManager.isTelephonySupported() -> {
+                        AppLogger.w("CallTracker: telephony not supported")
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "SubscriptionManager unavailable",
+                        )
+                    }
+                    !permissionManager.hasPhoneStatePermission() -> {
+                        AppLogger.w("CallTracker: phone state permission missing")
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                            "Phone State missing",
+                        )
+                    }
+                    else -> null
+                }
+            return if (error != null) {
+                _status.value = error
+                false
+            } else {
+                true
             }
-            if (!permissionManager.hasPhoneStatePermission()) {
-                AppLogger.w("CallTracker: phone state permission missing")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Phone State missing")
-                return false
-            }
-            return true
         }
 
         private fun handleSecurityException(e: SecurityException) {
@@ -194,19 +208,15 @@ class CallTracker
             val activeSubIds = callSessionRepository.getActiveCallSubIds()
             if (activeSubIds.isEmpty()) {
                 AppLogger.d("Call ended with unknown subId and no active sessions found")
-                return
-            }
-
-            if (isDeviceIdle(activeSubIds)) {
+            } else if (isDeviceIdle(activeSubIds)) {
                 handleGlobalIdle(activeSubIds)
-                return
-            }
-
-            val target: Int? = findTargetSubId(activeSubIds)
-            if (target != null) {
-                endCall(target)
             } else {
-                handleAmbiguousIdle(activeSubIds)
+                val target: Int? = findTargetSubId(activeSubIds)
+                if (target != null) {
+                    endCall(target)
+                } else {
+                    handleAmbiguousIdle(activeSubIds)
+                }
             }
         }
 
@@ -232,7 +242,8 @@ class CallTracker
 
         private suspend fun handleAmbiguousIdle(activeSubIds: List<Int>) {
             AppLogger.w(
-                "Cannot attribute unknown IDLE event for multiple active calls. Using heuristic fallback. Active calls: ${activeSubIds.size}",
+                "Cannot attribute unknown IDLE event for multiple active calls. " +
+                    "Using heuristic fallback. Active calls: ${activeSubIds.size}",
             )
 
             val now = timeProvider.now()
@@ -272,21 +283,18 @@ class CallTracker
         @SuppressLint("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
             if (!permissionManager.hasPhoneStatePermission()) return null
-            if (activeSubIds.size == 1) {
-                return activeSubIds.first()
-            }
+            if (activeSubIds.size == 1) return activeSubIds.first()
 
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val idleSubs =
-                    activeSubIds.filter { id ->
-                        telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() ==
-                            TelephonyManager.CALL_STATE_IDLE
-                    }
-                if (idleSubs.size == 1) idleSubs.first() else null
-            } else {
-                // Fallback for API < 31: Per-subscription state is not available.
-                // We return null and let handleAmbiguousIdle use the oldest-call heuristic.
-                null
+            return when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    val idleSubs =
+                        activeSubIds.filter { id ->
+                            telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() ==
+                                TelephonyManager.CALL_STATE_IDLE
+                        }
+                    if (idleSubs.size == 1) idleSubs.first() else null
+                }
+                else -> null
             }
         }
 

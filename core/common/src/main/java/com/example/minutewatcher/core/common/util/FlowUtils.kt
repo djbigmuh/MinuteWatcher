@@ -10,7 +10,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * Utility for WorkManager workers and ViewModels to safely fetch the first value from a Flow with a timeout.
  * This prevents tasks from hanging indefinitely if a Flow never emits.
  */
-suspend fun <T> Flow<T>.firstWithTimeout(timeoutMillis: Long = com.example.minutewatcher.core.model.Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS): T? =
+suspend fun <T> Flow<T>.firstWithTimeout(
+    timeoutMillis: Long = com.example.minutewatcher.core.model.Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS,
+): T? =
     withTimeoutOrNull(timeoutMillis.milliseconds) {
         this@firstWithTimeout.first()
     }

@@ -31,8 +31,9 @@ object SimUtils {
             } else {
                 localizedContext.getString(R.string.no_sim_found)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
             if (operatorName.isNotEmpty()) truncateName(operatorName) else "SIM"
         }
@@ -55,8 +56,9 @@ object SimUtils {
     ): String =
         try {
             context.getString(resId)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
             AppLogger.w("Resource not found or failed to load: $resId. Using default: $default")
             default
         }

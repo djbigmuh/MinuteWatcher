@@ -6,7 +6,6 @@ import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
-import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.feature.main.SimCardListState
@@ -30,7 +29,7 @@ class MainSimDataController
     @Inject
     constructor(
         usageStateRepository: UsageStateRepository,
-        private val trackingStatusRepository: TrackingStatusRepository,
+        private val trackingRecoveryController: TrackingRecoveryController,
         private val simIdentityRepository: SimIdentityRepository,
         private val simLimitsRepository: SimLimitsRepository,
         private val usageUseCase: UsageUseCase,
@@ -138,22 +137,14 @@ class MainSimDataController
             }
         }
 
-        fun retryAppSearch() {
-            trackingStatusRepository.recoverTracking("appsearch")
-        }
+        fun retryAppSearch() = trackingRecoveryController.retryAppSearch()
 
-        fun retryCalls() {
-            trackingStatusRepository.recoverTracking("calls")
-        }
+        fun retryCalls() = trackingRecoveryController.retryCalls()
 
-        fun retryShortcuts() {
-            trackingStatusRepository.recoverTracking("shortcuts")
-        }
+        fun retryShortcuts() = trackingRecoveryController.retryShortcuts()
 
-        fun retryTraffic(onRefresh: suspend () -> Unit) {
-            trackingStatusRepository.recoverTracking("traffic")
-            scope.launch { onRefresh() }
-        }
+        fun retryTraffic(onRefresh: suspend () -> Unit) =
+            trackingRecoveryController.retryTraffic(scope, onRefresh)
 
         fun notifyDataChanged(force: Boolean = false) {
             scope.launch {

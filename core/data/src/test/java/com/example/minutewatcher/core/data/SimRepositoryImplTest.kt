@@ -5,6 +5,7 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -259,8 +260,10 @@ class SimRepositoryImplTest {
     fun testObserveActiveSims_HandlesSaveIdentityError() =
         runTest {
             val mockDataStore: DataStore<Preferences> = mock()
-            whenever(mockDataStore.data).thenReturn(flowOf(androidx.datastore.preferences.core.emptyPreferences()))
-            whenever(mockDataStore.updateData(any())).thenThrow(RuntimeException("Test disk full"))
+            whenever(mockDataStore.data)
+                .thenReturn(flowOf(emptyPreferences()))
+            whenever(mockDataStore.updateData(any()))
+                .thenThrow(RuntimeException("Test disk full"))
 
             val identityRepo =
                 SimIdentityRepositoryImpl(

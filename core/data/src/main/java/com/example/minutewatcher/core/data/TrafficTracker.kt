@@ -160,18 +160,28 @@ class TrafficTracker
             if (!permissionManager.isTelephonySupported()) {
                 AppLogger.w("TrafficTracker: telephony not supported")
                 _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "SubscriptionManager unavailable")
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "SubscriptionManager unavailable",
+                    )
                 return false
             }
             if (!permissionManager.hasUsageStatsPermission()) {
                 AppLogger.w("TrafficTracker: usage stats permission missing")
                 _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Usage Access missing")
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.PERMISSION_MISSING,
+                        "Usage Access missing",
+                    )
                 return false
             }
             if (!permissionManager.hasPhoneStatePermission()) {
                 AppLogger.w("TrafficTracker: phone state permission missing")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, "Phone State missing")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.PERMISSION_MISSING,
+                        "Phone State missing",
+                    )
                 return false
             }
             return true
@@ -364,7 +374,10 @@ class TrafficTracker
             currentDataSubId: Int,
             savedLastDataSubId: Int,
         ) {
-            AppLogger.d("Default data SIM changed from $savedLastDataSubId to $currentDataSubId. Resetting baseline.")
+            AppLogger.d(
+                "Default data SIM changed from $savedLastDataSubId to $currentDataSubId. " +
+                    "Resetting baseline.",
+            )
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return

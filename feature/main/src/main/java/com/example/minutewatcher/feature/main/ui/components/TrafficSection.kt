@@ -38,84 +38,110 @@ fun TrafficSection(
 ) {
     if (!model.isTrafficLimitSet && model.trafficUsedMb <= 0) return
     val context = LocalContext.current
-    val trafficInfoDesc = stringResource(R.string.traffic_info_content_desc)
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(id = R.string.traffic_label),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+        TrafficHeader(onShowTrafficInfo)
+        TrafficUsageRow(context, model)
+        Spacer(modifier = Modifier.height(8.dp))
+        TrafficRemainingRow(context, model, statusColor, onAdjustTraffic)
+        TrafficAdjustment(model)
+    }
+}
+
+@Composable
+private fun TrafficHeader(onShowTrafficInfo: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(id = R.string.traffic_label),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(24.dp)) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = stringResource(R.string.traffic_info_content_desc),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                modifier = Modifier.size(16.dp),
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(24.dp)) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = trafficInfoDesc,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(16.dp),
-                )
-            }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    }
+}
+
+@Composable
+private fun TrafficUsageRow(
+    context: android.content.Context,
+    model: SimCardUiModel,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text =
+                stringResource(
+                    R.string.label_value_format,
+                    stringResource(R.string.used_text),
+                    FormatUtils.formatMbAsGb(context, model.trafficUsedMb),
+                ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (model.isTrafficLimitSet) {
             Text(
                 text =
                     stringResource(
                         R.string.label_value_format,
-                        stringResource(R.string.used_text),
-                        FormatUtils.formatMbAsGb(context, model.trafficUsedMb),
+                        stringResource(R.string.limit_text),
+                        stringResource(
+                            R.string.value_unit_format,
+                            FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb),
+                            stringResource(R.string.gb_abbr),
+                        ),
                     ),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            if (model.isTrafficLimitSet) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.label_value_format,
-                            stringResource(R.string.limit_text),
-                            stringResource(
-                                R.string.value_unit_format,
-                                FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb),
-                                stringResource(R.string.gb_abbr),
-                            ),
-                        ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(id = R.string.traffic_remaining_text),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            EditableValueBox(
-                value =
-                    FormatUtils.formatTrafficDisplay(
-                        context,
-                        model.trafficRemainingGb,
-                        model.trafficLimitMb / Constants.MB_PER_GB,
-                        false,
-                    ),
-                color = statusColor,
-                onClick = onAdjustTraffic,
-                contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
-            )
-        }
-        if (model.trafficAdjustmentGb != 0f) {
-            AdjustmentLabel(
-                value = FormatUtils.formatTrafficGb(model.trafficAdjustmentGb),
-                unit = stringResource(R.string.gb_abbr),
-                isPositive =
-                    model.trafficAdjustmentGb > 0,
-            )
-        }
+    }
+}
+
+@Composable
+private fun TrafficRemainingRow(
+    context: android.content.Context,
+    model: SimCardUiModel,
+    statusColor: Color,
+    onAdjustTraffic: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(id = R.string.traffic_remaining_text),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        EditableValueBox(
+            value =
+                FormatUtils.formatTrafficDisplay(
+                    context,
+                    model.trafficRemainingGb,
+                    model.trafficLimitMb / Constants.MB_PER_GB,
+                    false,
+                ),
+            color = statusColor,
+            onClick = onAdjustTraffic,
+            contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
+        )
+    }
+}
+
+@Composable
+private fun TrafficAdjustment(model: SimCardUiModel) {
+    if (model.trafficAdjustmentGb != 0f) {
+        AdjustmentLabel(
+            value = FormatUtils.formatTrafficGb(model.trafficAdjustmentGb),
+            unit = stringResource(R.string.gb_abbr),
+            isPositive = model.trafficAdjustmentGb > 0,
+        )
     }
 }

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
@@ -43,29 +44,57 @@ class AppSettingsRepositoryImpl
                 val current = prefs.toAppSettings()
                 val updated = transform(current)
 
-                prefs[SettingsKeys.APP_THEME] = updated.theme.value
-                val language = updated.language
-                if (language == null) {
-                    prefs.remove(SettingsKeys.APP_LANGUAGE)
-                } else {
-                    prefs[SettingsKeys.APP_LANGUAGE] = language
-                }
-                prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
-                prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
-                prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
-                prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
-                prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
-                prefs[SettingsKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
-                prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
-                prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
-                prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
-                prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
-                prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
-                prefs[SettingsKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
-                prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
-                prefs[SettingsKeys.WIDGET_LIMIT_EXCEEDED] = updated.widgetLimitExceeded
-                prefs[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
+                updateBasicSettings(prefs, updated)
+                updateWidgetSettings(prefs, updated)
+                updateSystemSettings(prefs, updated)
+                updateTrackingSettings(prefs, updated)
             }
+        }
+
+        private fun updateBasicSettings(
+            prefs: MutablePreferences,
+            updated: AppSettings,
+        ) {
+            prefs[SettingsKeys.APP_THEME] = updated.theme.value
+            val language = updated.language
+            if (language == null) {
+                prefs.remove(SettingsKeys.APP_LANGUAGE)
+            } else {
+                prefs[SettingsKeys.APP_LANGUAGE] = language
+            }
+        }
+
+        private fun updateWidgetSettings(
+            prefs: MutablePreferences,
+            updated: AppSettings,
+        ) {
+            prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
+            prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
+            prefs[SettingsKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
+            prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
+            prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
+            prefs[SettingsKeys.WIDGET_LIMIT_EXCEEDED] = updated.widgetLimitExceeded
+        }
+
+        private fun updateSystemSettings(
+            prefs: MutablePreferences,
+            updated: AppSettings,
+        ) {
+            prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
+            prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
+            prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
+            prefs[SettingsKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
+            prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
+        }
+
+        private fun updateTrackingSettings(
+            prefs: MutablePreferences,
+            updated: AppSettings,
+        ) {
+            prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
+            prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
+            prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
+            prefs[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
         }
 
         private fun Preferences.toAppSettings(): AppSettings =

@@ -1,12 +1,12 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import javax.inject.Inject
 

@@ -29,7 +29,11 @@ fun AdjustmentComposeDialog(
     val initialValue = maxOf(0f, currentValue)
     var text by remember {
         mutableStateOf(
-            if (isMinutes) initialValue.toInt().toString() else "%.1f".format(initialValue).replace(",", "."),
+            if (isMinutes) {
+                initialValue.toInt().toString()
+            } else {
+                "%.1f".format(initialValue).replace(",", ".")
+            },
         )
     }
 
@@ -38,7 +42,12 @@ fun AdjustmentComposeDialog(
     val maxLimit = if (isMinutes) Constants.MAX_MINUTES_LIMIT.toFloat() else Constants.MAX_TRAFFIC_LIMIT_GB
 
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
-    val invalidRangeMsg = stringResource(id = R.string.validation_error_invalid_range, "0", maxLimit.toInt().toString())
+    val invalidRangeMsg =
+        stringResource(
+            id = R.string.validation_error_invalid_range,
+            "0",
+            maxLimit.toInt().toString(),
+        )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -48,33 +57,15 @@ fun AdjustmentComposeDialog(
             )
         },
         text = {
-            Column {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = {
-                        text = it.replace(",", ".")
-                        errorText = null
-                    },
-                    label = {
-                        Text(
-                            stringResource(
-                                id = if (isMinutes) R.string.minutes_limit_hint else R.string.traffic_limit_gb_hint_dialog,
-                            ),
-                        )
-                    },
-                    isError = errorText != null,
-                    supportingText = {
-                        errorText?.let {
-                            Text(text = it)
-                        }
-                    },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal,
-                        ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            AdjustmentDialogContent(
+                text = text,
+                onTextChange = {
+                    text = it
+                    errorText = null
+                },
+                isMinutes = isMinutes,
+                errorText = errorText,
+            )
         },
         confirmButton = {
             Button(onClick = {
@@ -96,4 +87,42 @@ fun AdjustmentComposeDialog(
             }
         },
     )
+}
+
+@Composable
+private fun AdjustmentDialogContent(
+    text: String,
+    onTextChange: (String) -> Unit,
+    isMinutes: Boolean,
+    errorText: String?,
+) {
+    Column {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { onTextChange(it.replace(",", ".")) },
+            label = {
+                Text(
+                    stringResource(
+                        id =
+                            if (isMinutes) {
+                                R.string.minutes_limit_hint
+                            } else {
+                                R.string.traffic_limit_gb_hint_dialog
+                            },
+                    ),
+                )
+            },
+            isError = errorText != null,
+            supportingText = {
+                errorText?.let {
+                    Text(text = it)
+                }
+            },
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal,
+                ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
