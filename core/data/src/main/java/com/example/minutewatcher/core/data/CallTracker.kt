@@ -450,6 +450,8 @@ class CallTracker
                     withTimeoutOrNull(timeout.milliseconds) {
                         Result.success(flowProvider().first())
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Result.failure(e)
                 }
