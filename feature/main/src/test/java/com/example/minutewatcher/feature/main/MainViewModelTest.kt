@@ -358,4 +358,22 @@ class MainViewModelTest {
                 .verify(settingsUseCase)
                 .setTheme(theme)
         }
+
+    @Test
+    fun `onActivityResume triggers refresh on reboot (negative elapsed)`() =
+        runTest(testDispatcher) {
+            // Set lastRefreshAt to a large value in SavedStateHandle (simulating before reboot)
+            savedStateHandle["last_refresh_at"] = 500_000L
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle() // Let initializeApp() finish its refresh
+            org.mockito.kotlin.clearInvocations(usageStateRepository)
+
+            // nowElapsed = 1000L (SystemClock.elapsedRealtime() after reboot)
+            viewModel.onActivityResume(1000L)
+            testScheduler.advanceUntilIdle()
+
+            // Verify that data refresh was triggered via usageStateRepository
+            org.mockito.kotlin.verify(usageStateRepository).refresh()
+        }
 }

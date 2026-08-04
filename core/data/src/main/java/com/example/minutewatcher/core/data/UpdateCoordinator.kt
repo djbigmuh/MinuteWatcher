@@ -68,12 +68,16 @@ class UpdateCoordinator
             updateWidget: Boolean,
             force: Boolean,
         ) {
-            dataRefreshNotifier.notifyRefresh(isManual = force)
-            if (updateWidget) {
-                if (force) {
+            if (force) {
+                if (updateWidget) {
                     lastManualUpdateTimestamp.set(timeProvider.elapsedRealtime())
+                    widgetUpdater.updateAll()
                 }
-                widgetUpdater.updateAll()
+                dataRefreshNotifier.notifyRefresh(isManual = true)
+            } else {
+                dataRefreshNotifier.notifyRefresh(isManual = false)
+                // When force = false, we rely on the reactive flow (observeSnapshot)
+                // to trigger widgetUpdater.updateAll() after debounce if content changes.
             }
         }
     }

@@ -254,4 +254,40 @@ class SimRepositoryImplTest {
             assertEquals("sim_0", identity.stableId)
             assertEquals(com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK, identity.source)
         }
+
+    @Test
+    fun testObserveActiveSims_HandlesSaveIdentityError() =
+        runTest {
+            val mockDataStore: DataStore<Preferences> = mock()
+            whenever(mockDataStore.data).thenReturn(flowOf(androidx.datastore.preferences.core.emptyPreferences()))
+            whenever(mockDataStore.updateData(any())).thenThrow(RuntimeException("Test disk full"))
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    mockDataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    migrationService,
+                    mockSimProvider,
+                    backgroundScope,
+                )
+
+            val mockInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(mockInfo.simSlotIndex).thenReturn(0)
+            whenever(mockInfo.subscriptionId).thenReturn(1)
+            whenever(mockInfo.iccId).thenReturn("test_iccid")
+
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockInfo))
+
+            // This should NOT throw exception because of the new try-catch
+            val sims = identityRepo.observeActiveSims().first { it.isNotEmpty() }
+
+            assertEquals(1, sims.size)
+            assertEquals(0, sims.first().slotIndex)
+        }
 }

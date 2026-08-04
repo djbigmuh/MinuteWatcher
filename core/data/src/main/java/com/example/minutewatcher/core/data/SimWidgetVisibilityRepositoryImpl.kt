@@ -67,22 +67,39 @@ class SimWidgetVisibilityRepositoryImpl
 
         override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
             val activeSet = activeIdentities.toSet()
+            val prefixes =
+                listOf(
+                    "widget_show_sim_icon_",
+                    "widget_show_sim_name_",
+                    "widget_show_sim_",
+                    "widget_show_minutes_limit_",
+                    "widget_show_minutes_",
+                    "widget_show_traffic_limit_",
+                    "widget_show_traffic_",
+                ).sortedByDescending { it.length }
+
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys
                 val orphanedKeys =
                     allKeys.filter { key ->
                         val name = key.name
                         if (name.startsWith("widget_show_")) {
-                            // Extract identity from key name
-                            // Examples: widget_show_sim_id, widget_show_sim_icon_id, widget_show_minutes_id
-                            val identity = name.substringAfterLast("_")
+                            var identity = ""
+                            for (prefix in prefixes) {
+                                if (name.startsWith(prefix)) {
+                                    identity = name.substring(prefix.length)
+                                    break
+                                }
+                            }
+
+                            if (identity.isEmpty()) return@filter false
 
                             // Protect sim_$slot fallback keys
                             val isFallbackKey =
                                 identity.startsWith("sim_") &&
                                     identity.substringAfter("sim_").toIntOrNull() != null
 
-                            identity.isNotEmpty() && identity !in activeSet && !isFallbackKey
+                            identity !in activeSet && !isFallbackKey
                         } else {
                             false
                         }

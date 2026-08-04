@@ -57,7 +57,7 @@ class CallTracker
         }
 
         private suspend fun isCallTrackingEnabled(): Boolean =
-            appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled ?: true
+            appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled ?: false
 
         /**
          * Called on device boot to clean up any stale state.

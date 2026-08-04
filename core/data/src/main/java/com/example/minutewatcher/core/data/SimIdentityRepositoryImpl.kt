@@ -244,7 +244,13 @@ class SimIdentityRepositoryImpl
 
             return infoList.map { info ->
                 val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
-                saveSimIdentityInfo(identity)
+                try {
+                    saveSimIdentityInfo(identity)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    com.example.minutewatcher.core.common.util.AppLogger
+                        .e("Failed to save identity info for slot ${info.simSlotIndex}", e)
+                }
 
                 ActiveSimInfo(
                     identity = identity,

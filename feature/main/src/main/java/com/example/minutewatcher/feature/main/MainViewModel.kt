@@ -187,7 +187,9 @@ class MainViewModel
             }
 
         fun onActivityResume(nowElapsed: Long) {
-            if (nowElapsed - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS) {
+            val elapsed = nowElapsed - lastRefreshAt
+            // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt может быть больше
+            if (elapsed < 0 || elapsed > RESUME_REFRESH_THRESHOLD_MS) {
                 lastRefreshAt = nowElapsed
                 viewModelScope.launch { refreshAndNotify(force = false) }
             }

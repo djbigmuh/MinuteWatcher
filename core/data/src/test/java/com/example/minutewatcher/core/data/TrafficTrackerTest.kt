@@ -262,6 +262,20 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `resetBaseline sets error status on unexpected exception`() =
+        runTest(testDispatcher) {
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any()))
+                .thenThrow(RuntimeException("Unexpected error"))
+
+            tracker.resetBaseline("sim_0")
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+            assertEquals("Unexpected error", status.message)
+        }
+
+    @Test
     fun `updateTrafficUsage respects small deltas`() =
         runTest(testDispatcher) {
             val bucket = mock<NetworkStats.Bucket>()

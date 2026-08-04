@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
@@ -406,5 +407,36 @@ class CallTrackerTest {
 
             // Duration should be 60 seconds (1 minute), not 100 seconds
             verify(simUsageRepository).incrementMinutesUsed(eq("id_0"), eq(1))
+        }
+
+    @Test
+    fun `call tracking defaults to disabled on settings timeout`() =
+        runTest(testDispatcher) {
+            // Arrange: flow that never emits triggers firstWithTimeout to return null (on real timeout)
+            // Note: firstWithTimeout uses withTimeoutOrNull under the hood.
+            // In unit tests, we can just return an empty flow or a flow that doesn't emit.
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
+
+            // Re-create tracker to pick up the new mocked repository behavior if needed
+            // Actually, CallTracker calls getAppSettings() every time it checks if tracking is enabled.
+            callTracker =
+                CallTracker(
+                    simIdentityRepository,
+                    simUsageRepository,
+                    appSettingsRepository,
+                    callSessionRepository,
+                    dataChangeNotifier,
+                    permissionManager,
+                    telephonyManager,
+                    TestScope(testDispatcher),
+                    timeProvider,
+                )
+
+            // Act
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Assert: verify that call start state was NOT saved because isCallTrackingEnabled returned false
+            verify(callSessionRepository, never()).setCallStartTime(any(), any())
         }
 }

@@ -115,6 +115,7 @@ class TrafficTracker
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in resetBaseline", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             }
         }

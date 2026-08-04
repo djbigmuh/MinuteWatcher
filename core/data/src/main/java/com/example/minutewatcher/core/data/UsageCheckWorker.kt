@@ -72,7 +72,8 @@ class UsageCheckWorker
             val activeIdentities = finalSnapshot.simSnapshots.map { it.identity }
             deps.simWidgetVisibilityRepository.clearOrphanedSettings(activeIdentities)
 
-            val appSettings = deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: AppSettings()
+            val appSettings = deps.appSettingsRepository.getAppSettings().firstWithTimeout()
+                ?: AppSettings(notifyLowMinutes = false, notifyLowTraffic = false, callTrackingEnabled = false)
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
                     processSimSnapshot(simSnapshot, appSettings)

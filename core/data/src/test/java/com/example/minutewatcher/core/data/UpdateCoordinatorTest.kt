@@ -101,6 +101,31 @@ class UpdateCoordinatorTest {
             verify(dataRefreshNotifier).notifyRefresh(isManual = true)
         }
 
+    @Test
+    fun `notifyDataChanged without force does NOT trigger immediate widget update`() =
+        runTest {
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    timeProvider,
+                    backgroundScope,
+                )
+
+            coordinator.notifyDataChanged(updateWidget = true, force = false)
+
+            // Should NOT call updateAll immediately
+            verify(widgetUpdater, times(0)).updateAll()
+            verify(dataRefreshNotifier).notifyRefresh(isManual = false)
+
+            // Should call updateAll after snapshot change and debounce
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.value = s1
+            testScheduler.advanceTimeBy(1000)
+            verify(widgetUpdater, times(1)).updateAll()
+        }
+
     private fun createEmptySnapshot() =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
