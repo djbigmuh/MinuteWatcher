@@ -121,7 +121,11 @@ class MainViewModel
 
         private suspend fun refreshAndNotify(force: Boolean = true) {
             controllers.refresh.refreshSimCardsInternal()
-            controllers.simData.notifyDataChanged(force = force)
+            // Уведомляем только если force — для немедленного обновления виджета.
+            // Реактивный UpdateCoordinator сам обновит виджет при изменении snapshot.
+            if (force) {
+                controllers.simData.notifyDataChanged(force = true)
+            }
         }
 
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage

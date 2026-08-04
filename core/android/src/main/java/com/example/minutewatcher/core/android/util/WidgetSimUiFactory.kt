@@ -93,10 +93,12 @@ object WidgetSimUiFactory {
             showLimit = (config?.showMinutesLimit ?: false) && limit > 0,
             limitText = context.getString(R.string.fraction_format, limit.toString()),
             hasData = hasData,
-            usedFull = "${context.getString(R.string.used_text)}: " +
-                "$used${context.getString(R.string.minutes_abbr)}",
-            limitFull = "${context.getString(R.string.limit_text)}: " +
-                "$limit${context.getString(R.string.minutes_abbr)}",
+            usedFull =
+                "${context.getString(R.string.used_text)}: " +
+                    "$used${context.getString(R.string.minutes_abbr)}",
+            limitFull =
+                "${context.getString(R.string.limit_text)}: " +
+                    "$limit${context.getString(R.string.minutes_abbr)}",
         )
     }
 
@@ -127,10 +129,12 @@ object WidgetSimUiFactory {
             showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f,
             limitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(limitGb)),
             hasData = hasData,
-            usedFull = "${context.getString(R.string.used_text)}: " +
-                "${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",
-            limitFull = "${context.getString(R.string.limit_text)}: " +
-                "${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}",
+            usedFull =
+                "${context.getString(R.string.used_text)}: " +
+                    "${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",
+            limitFull =
+                "${context.getString(R.string.limit_text)}: " +
+                    "${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}",
         )
     }
 }

@@ -4,8 +4,6 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
-import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper

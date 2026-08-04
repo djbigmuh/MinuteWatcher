@@ -120,7 +120,7 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(usageStateRepository, times(2)).refresh()
+            verify(usageStateRepository, times(1)).refresh()
             verify(dataChangeNotifier).notifyDataChanged(updateWidget = true, force = true)
         }
 

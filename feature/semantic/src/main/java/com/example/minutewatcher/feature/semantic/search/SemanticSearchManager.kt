@@ -87,18 +87,17 @@ open class SemanticSearchManager
             session = null
 
             var shouldForce = forceOverride
-            for (attempt in 0..1) {
+            repeat(2) { attempt ->
                 var newSession: AppSearchSessionWrapper? = null
-                var success = false
                 try {
                     newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
                     val request = appSearchWrapper.createSchemaRequest(shouldForce)
                     newSession.setSchema(request)
                     session = newSession
                     _status.value = TrackingStatus.Active
-                    success = true
                     return true
                 } catch (e: AppSearchException) {
+                    newSession?.close()
                     if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce && attempt == 0) {
                         AppLogger.w("AppSearch schema mismatch, retrying with force override")
                         shouldForce = true
@@ -108,13 +107,10 @@ open class SemanticSearchManager
                         return false
                     }
                 } catch (e: Exception) {
+                    newSession?.close()
                     AppLogger.e("Failed to initialize AppSearch session", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     return false
-                } finally {
-                    if (!success) {
-                        newSession?.close()
-                    }
                 }
             }
             return false

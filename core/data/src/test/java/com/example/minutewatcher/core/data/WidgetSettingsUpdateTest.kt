@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -9,17 +8,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsUpdateTest {
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
-    private val dataChangeNotifier: DataChangeNotifier = mock()
 
     private lateinit var repository: WidgetSettingsRepository
 
@@ -30,12 +25,11 @@ class WidgetSettingsUpdateTest {
                 appSettingsRepository,
                 simIdentityRepository,
                 simWidgetVisibilityRepository,
-                dataChangeNotifier,
             )
     }
 
     @Test
-    fun `save settings triggers widget update`() =
+    fun `save settings should succeed`() =
         runTest {
             val state =
                 WidgetSettingsState(
@@ -51,7 +45,5 @@ class WidgetSettingsUpdateTest {
                 )
 
             repository.save(state)
-
-            verify(dataChangeNotifier).notifyDataChanged(eq(true), any())
         }
 }

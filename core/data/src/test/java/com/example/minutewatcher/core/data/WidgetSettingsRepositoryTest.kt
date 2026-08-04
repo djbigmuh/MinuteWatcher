@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -25,7 +24,6 @@ class WidgetSettingsRepositoryTest {
     private val settingsRepository: AppSettingsRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
-    private val dataChangeNotifier: DataChangeNotifier = mock()
 
     @Before
     fun setup() {
@@ -34,7 +32,6 @@ class WidgetSettingsRepositoryTest {
                 settingsRepository,
                 simIdentityRepository,
                 simWidgetVisibilityRepository,
-                dataChangeNotifier,
             )
     }
 

@@ -33,20 +33,22 @@ class SimWidgetVisibilityRepositoryImpl
 
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
-                identities.mapNotNull { identity ->
-                    val showSim = prefs[WidgetSettingsKeys.showSimKey(identity)]
-                    if (showSim == null) return@mapNotNull null
+                identities
+                    .mapNotNull { identity ->
+                        val showSim = prefs[WidgetSettingsKeys.showSimKey(identity)]
+                        if (showSim == null) return@mapNotNull null
 
-                    identity to SimSettingsState(
-                        showSim = showSim,
-                        showIcon = prefs[WidgetSettingsKeys.showSimIconKey(identity)] ?: true,
-                        showName = prefs[WidgetSettingsKeys.showSimNameKey(identity)] ?: true,
-                        showMinutes = prefs[WidgetSettingsKeys.showMinutesKey(identity)] ?: true,
-                        showMinutesLimit = prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] ?: false,
-                        showTraffic = prefs[WidgetSettingsKeys.showTrafficKey(identity)] ?: true,
-                        showTrafficLimit = prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] ?: false,
-                    )
-                }.toMap()
+                        identity to
+                            SimSettingsState(
+                                showSim = showSim,
+                                showIcon = prefs[WidgetSettingsKeys.showSimIconKey(identity)] ?: true,
+                                showName = prefs[WidgetSettingsKeys.showSimNameKey(identity)] ?: true,
+                                showMinutes = prefs[WidgetSettingsKeys.showMinutesKey(identity)] ?: true,
+                                showMinutesLimit = prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] ?: false,
+                                showTraffic = prefs[WidgetSettingsKeys.showTrafficKey(identity)] ?: true,
+                                showTrafficLimit = prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] ?: false,
+                            )
+                    }.toMap()
             }
 
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
@@ -76,8 +78,9 @@ class SimWidgetVisibilityRepositoryImpl
                             val identity = name.substringAfterLast("_")
 
                             // Protect sim_$slot fallback keys
-                            val isFallbackKey = identity.startsWith("sim_") &&
-                                identity.substringAfter("sim_").toIntOrNull() != null
+                            val isFallbackKey =
+                                identity.startsWith("sim_") &&
+                                    identity.substringAfter("sim_").toIntOrNull() != null
 
                             identity.isNotEmpty() && identity !in activeSet && !isFallbackKey
                         } else {

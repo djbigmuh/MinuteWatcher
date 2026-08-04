@@ -49,7 +49,10 @@ class CallTracker
 
         override fun recover() {
             scope.launch {
-                refreshStatus(force = true)
+                if (checkPermissions()) {
+                    _status.value = TrackingStatus.Idle
+                    refreshStatus(force = true)
+                }
             }
         }
 
@@ -340,7 +343,9 @@ class CallTracker
         }
 
         private suspend fun refreshStatus(force: Boolean = false) {
-            if (!force && _status.value is TrackingStatus.Error) return
+            val current = _status.value
+            if (!force && current is TrackingStatus.Error) return
+            if (current is TrackingStatus.Error && current.type == TrackingStatus.ErrorType.PERMISSION_MISSING) return
 
             val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
             _status.value = if (hasActiveCalls) TrackingStatus.Active else TrackingStatus.Idle

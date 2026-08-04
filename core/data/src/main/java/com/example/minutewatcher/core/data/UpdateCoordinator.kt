@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,8 +38,28 @@ class UpdateCoordinator
         private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val observationStarted = AtomicBoolean(false)
         private val lastManualUpdateTimestamp = AtomicLong(0L)
+
+        init {
+            scope.launch {
+                usageStateRepository
+                    .observeSnapshot()
+                    .filter { it.timestamp > 0L }
+                    .distinctUntilChanged { old, new ->
+                        SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
+                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    .collect { snapshot ->
+                        if (snapshot.isManualUpdate) {
+                            val now = timeProvider.elapsedRealtime()
+                            if (now - lastManualUpdateTimestamp.get() < Constants.Widget.DEBOUNCE_MS * 2) {
+                                AppLogger.d("Skipping debounced widget update after manual refresh")
+                                return@collect
+                            }
+                        }
+                        widgetUpdater.updateAll()
+                    }
+            }
+        }
 
         /**
          * Уведомляет об изменении данных.
@@ -49,7 +68,6 @@ class UpdateCoordinator
             updateWidget: Boolean,
             force: Boolean,
         ) {
-            startObserving()
             dataRefreshNotifier.notifyRefresh(isManual = force)
             if (updateWidget) {
                 if (force) {
@@ -57,28 +75,5 @@ class UpdateCoordinator
                 }
                 widgetUpdater.updateAll()
             }
-        }
-
-        private fun startObserving() {
-            if (!observationStarted.compareAndSet(false, true)) return
-
-            scope.launch {
-                    usageStateRepository
-                        .observeSnapshot()
-                        .filter { it.timestamp > 0L }
-                        .distinctUntilChanged { old, new ->
-                            SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
-                        }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                        .collect { snapshot ->
-                            if (snapshot.isManualUpdate) {
-                                val now = timeProvider.elapsedRealtime()
-                                if (now - lastManualUpdateTimestamp.get() < Constants.Widget.DEBOUNCE_MS * 2) {
-                                    AppLogger.d("Skipping debounced widget update after manual refresh")
-                                    return@collect
-                                }
-                            }
-                            widgetUpdater.updateAll()
-                        }
-                }
         }
     }

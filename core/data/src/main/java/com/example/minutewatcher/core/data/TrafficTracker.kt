@@ -306,6 +306,9 @@ class TrafficTracker
 
             if (isSimChanged) {
                 handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
+                if (isFallback) {
+                    AppLogger.w("SIM change detected with fallback attribution to slot $targetSim")
+                }
             }
 
             return TargetInfo(targetSim, currentDataSubId, skipDelta = isSimChanged, isFallback = isFallback)
