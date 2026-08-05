@@ -45,6 +45,7 @@ object Constants {
         const val ALPHA_FULL = 1f
 
         const val MANUAL_UPDATE_BLOCK_MS = 5000L
+        const val RETRY_BACKOFF_MS = 500L
     }
 
     object Traffic {

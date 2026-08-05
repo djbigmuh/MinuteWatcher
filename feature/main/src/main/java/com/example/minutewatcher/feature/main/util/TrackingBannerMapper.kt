@@ -20,6 +20,10 @@ object TrackingBannerMapper {
         val shortcuts = statusMap["shortcuts"]
         val calls = statusMap["calls"]
 
+        if (!settings.onboardingCompleted) {
+            return TrackingBannerState()
+        }
+
         return TrackingBannerState(
             phonePermissionState =
                 determinePhonePermissionState(

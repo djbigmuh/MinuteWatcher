@@ -198,6 +198,7 @@ class CallTracker
                             "SubscriptionManager unavailable",
                         )
                     }
+
                     !permissionManager.hasPhoneStatePermission() -> {
                         AppLogger.w("CallTracker: phone state permission missing")
                         TrackingStatus.Error(
@@ -205,14 +206,15 @@ class CallTracker
                             "Phone State missing",
                         )
                     }
+
                     else -> null
                 }
-            return if (error != null) {
+
+            if (error != null) {
                 _status.value = error
-                false
-            } else {
-                true
             }
+
+            return error == null
         }
 
         private fun handleSecurityException(e: SecurityException) {
@@ -341,11 +343,37 @@ class CallTracker
             return chosen
         }
 
-        @Suppress("ktlint:standard:chain-wrapping", "ktlint:standard:condition-wrapping", "ReturnCount")
         private suspend fun endCall(
             subId: Int,
             notify: Boolean = true,
         ) {
+            val sessionData = loadCallSessionData(subId) ?: return
+
+            val currentBootTime = timeProvider.elapsedRealtime()
+            val currentUptime = timeProvider.uptimeMillis()
+
+            if (sessionData.startTime > 0) {
+                if (!validateSession(subId, sessionData, currentBootTime)) {
+                    return
+                }
+
+                val durationSeconds = (currentUptime - sessionData.savedUptime) / MILLIS_IN_SECOND
+                clearSession(subId)
+
+                if (durationSeconds > 0) {
+                    processCallDuration(durationSeconds.toInt(), subId, sessionData.savedIdentity, notify)
+                }
+            }
+        }
+
+        private data class CallSessionData(
+            val startTime: Long,
+            val savedBootTime: Long,
+            val savedUptime: Long,
+            val savedIdentity: String?,
+        )
+
+        private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
             val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
             val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
             val savedUptimeRes = readWithRetry({ callSessionRepository.getUptime(subId) }, "uptime", subId)
@@ -362,36 +390,33 @@ class CallTracker
                     TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
                 // Очищаем сессию, чтобы избежать stale-данных
                 clearSession(subId)
-                return
+                return null
             }
 
-            val startTime = startTimeRes.getOrThrow()
-            val savedBootTime = savedBootTimeRes.getOrThrow()
-            val savedUptime = savedUptimeRes.getOrThrow()
-            val savedIdentity = savedIdentityRes.getOrThrow()
+            return CallSessionData(
+                startTime = startTimeRes.getOrThrow(),
+                savedBootTime = savedBootTimeRes.getOrThrow(),
+                savedUptime = savedUptimeRes.getOrThrow(),
+                savedIdentity = savedIdentityRes.getOrThrow(),
+            )
+        }
 
-            val currentBootTime = timeProvider.elapsedRealtime()
-            val currentUptime = timeProvider.uptimeMillis()
-
-            if (startTime > 0) {
-                if (savedBootTime == 0L) {
-                    AppLogger.w("Call session for subId $subId has no boot time (possible write failure). Discarding.")
-                    clearSession(subId)
-                    return
-                }
-                if (savedBootTime > currentBootTime) {
-                    AppLogger.d("Stale call session detected for subId $subId (reboot). Clearing.")
-                    clearSession(subId)
-                    return
-                }
-
-                val durationSeconds = (currentUptime - savedUptime) / MILLIS_IN_SECOND
+        private suspend fun validateSession(
+            subId: Int,
+            data: CallSessionData,
+            currentBootTime: Long,
+        ): Boolean {
+            if (data.savedBootTime == 0L) {
+                AppLogger.w("Call session for subId $subId has no boot time (possible write failure). Discarding.")
                 clearSession(subId)
-
-                if (durationSeconds > 0) {
-                    processCallDuration(durationSeconds.toInt(), subId, savedIdentity, notify)
-                }
+                return false
             }
+            if (data.savedBootTime > currentBootTime) {
+                AppLogger.d("Stale call session detected for subId $subId (reboot). Clearing.")
+                clearSession(subId)
+                return false
+            }
+            return true
         }
 
         private suspend fun refreshStatus(force: Boolean = false) {

@@ -28,7 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
+import com.example.minutewatcher.core.android.ui.SimLayoutRender
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
@@ -172,7 +172,7 @@ private fun SimItemPreview(
             },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        SimLayoutRenderer.Render(
+        SimLayoutRender(
             spec = sim.layoutSpec,
             rowContainer = { content ->
                 Row(verticalAlignment = Alignment.CenterVertically) {

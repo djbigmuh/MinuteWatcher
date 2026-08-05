@@ -163,36 +163,41 @@ class TrafficTracker
             }
         }
 
-        @Suppress("ReturnCount")
         private fun checkPermissions(): Boolean {
-            if (!permissionManager.isTelephonySupported()) {
-                AppLogger.w("TrafficTracker: telephony not supported")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "SubscriptionManager unavailable",
-                    )
-                return false
+            val error =
+                when {
+                    !permissionManager.isTelephonySupported() -> {
+                        AppLogger.w("TrafficTracker: telephony not supported")
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "SubscriptionManager unavailable",
+                        )
+                    }
+
+                    !permissionManager.hasUsageStatsPermission() -> {
+                        AppLogger.w("TrafficTracker: usage stats permission missing")
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                            "Usage Access missing",
+                        )
+                    }
+
+                    !permissionManager.hasPhoneStatePermission() -> {
+                        AppLogger.w("TrafficTracker: phone state permission missing")
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                            "Phone State missing",
+                        )
+                    }
+
+                    else -> null
+                }
+
+            if (error != null) {
+                _status.value = error
             }
-            if (!permissionManager.hasUsageStatsPermission()) {
-                AppLogger.w("TrafficTracker: usage stats permission missing")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.PERMISSION_MISSING,
-                        "Usage Access missing",
-                    )
-                return false
-            }
-            if (!permissionManager.hasPhoneStatePermission()) {
-                AppLogger.w("TrafficTracker: phone state permission missing")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.PERMISSION_MISSING,
-                        "Phone State missing",
-                    )
-                return false
-            }
-            return true
+
+            return error == null
         }
 
         private fun handleSecurityException(e: SecurityException) {
@@ -205,16 +210,15 @@ class TrafficTracker
             _status.value = TrackingStatus.Idle
         }
 
-        @Suppress("ReturnCount")
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
-            val usageRes = readWithRetry({ simUsageRepository.getSimUsage(targetIdentity) }, "simUsage", targetIdentity)
-            if (usageRes.isFailure) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
-                return
-            }
-            val usage = usageRes.getOrThrow()
+            val usage =
+                readWithRetry({ simUsageRepository.getSimUsage(targetIdentity) }, "simUsage", targetIdentity)
+                    .getOrElse {
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, it.message)
+                        return
+                    }
 
             val statsResult = getCurrentMobileBytes(usage.lastResetDate)
 
@@ -226,23 +230,17 @@ class TrafficTracker
             }
             val currentBytes = statsResult.bytes
 
-            val lastTotalBytesRes =
+            val lastTotalBytes =
                 readWithRetry(
                     { simUsageResetRepository.getLastTotalBytes(targetIdentity) },
                     "lastTotalBytes",
                     targetIdentity,
-                )
-            if (lastTotalBytesRes.isFailure) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading lastTotalBytes")
-                return
-            }
-            val lastTotalBytes = lastTotalBytesRes.getOrThrow()
+                ).getOrElse {
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, it.message)
+                    return
+                }
 
-            if (lastTotalBytes == -1L || (currentBytes < lastTotalBytes)) {
-                handleFirstRunOrReset(targetIdentity, currentBytes)
-            } else {
-                handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
-            }
+            updateTrafficBaselineAndUsage(targetIdentity, currentBytes, lastTotalBytes, target)
 
             updateLastDataSubId(target.dataSubId)
 
@@ -257,12 +255,25 @@ class TrafficTracker
                 }
         }
 
-        @Suppress("ReturnCount")
+        private suspend fun updateTrafficBaselineAndUsage(
+            targetIdentity: String,
+            currentBytes: Long,
+            lastTotalBytes: Long,
+            target: TargetInfo,
+        ) {
+            if (lastTotalBytes == -1L || (currentBytes < lastTotalBytes)) {
+                handleFirstRunOrReset(targetIdentity, currentBytes)
+            } else {
+                handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
+            }
+        }
+
         private suspend fun handleBaselineRetry(
             target: TargetInfo,
             targetIdentity: String,
             statsResult: StatsResult,
         ): Boolean {
+            var handled = false
             if (statsResult is StatsResult.Success) {
                 val currentBytes = statsResult.bytes
                 if (baselineNeedsRetry.remove(targetIdentity) == true) {
@@ -283,14 +294,14 @@ class TrafficTracker
                         } else {
                             TrackingStatus.Active
                         }
-                    return true
+                    handled = true
                 }
             } else if (baselineNeedsRetry[targetIdentity] == true) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
                 _status.value = TrackingStatus.Idle
-                return true
+                handled = true
             }
-            return false
+            return handled
         }
 
         private fun handleStatsResultError(
@@ -383,7 +394,6 @@ class TrafficTracker
             return TargetInfo(targetSim, currentDataSubId, skipDelta = isSimChanged, isFallback = isFallback)
         }
 
-        @Suppress("ReturnCount")
         private suspend fun resolveTargetSim(): Triple<Int, Int, Boolean>? {
             var targetSim = -1
             var currentDataSubId = -1
@@ -399,27 +409,33 @@ class TrafficTracker
             }
 
             if (targetSim == -1) {
-                val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
-                val defaultDataSim = activeSims.find { it.isDefaultData }
-
-                if (defaultDataSim != null) {
-                    targetSim = defaultDataSim.slotIndex
-                    currentDataSubId = defaultDataSim.subscriptionId
-                } else {
-                    val activeSubs = permissionManager.getActiveSubscriptions()
-                    activeSubs.minByOrNull { it.simSlotIndex }?.let { selected ->
-                        targetSim = selected.simSlotIndex
-                        currentDataSubId = selected.subscriptionId
-                        isFallback = true
-                        AppLogger.w(
-                            "No default data SIM identified for traffic tracking. " +
-                                "Using fallback heuristic: attributing all traffic to Slot $targetSim.",
-                        )
-                    }
+                val resolveResult = resolveTargetSimFromActiveSims()
+                if (resolveResult != null) {
+                    targetSim = resolveResult.first
+                    currentDataSubId = resolveResult.second
+                    isFallback = resolveResult.third
                 }
             }
 
             return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
+        }
+
+        private suspend fun resolveTargetSimFromActiveSims(): Triple<Int, Int, Boolean>? {
+            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+            val defaultDataSim = activeSims.find { it.isDefaultData }
+
+            return if (defaultDataSim != null) {
+                Triple(defaultDataSim.slotIndex, defaultDataSim.subscriptionId, false)
+            } else {
+                val activeSubs = permissionManager.getActiveSubscriptions()
+                activeSubs.minByOrNull { it.simSlotIndex }?.let { selected ->
+                    AppLogger.w(
+                        "No default data SIM identified for traffic tracking. " +
+                            "Using fallback heuristic: attributing all traffic to Slot ${selected.simSlotIndex}.",
+                    )
+                    Triple(selected.simSlotIndex, selected.subscriptionId, true)
+                }
+            }
         }
 
         private suspend fun ensureInMemoryLastDataSubId() {

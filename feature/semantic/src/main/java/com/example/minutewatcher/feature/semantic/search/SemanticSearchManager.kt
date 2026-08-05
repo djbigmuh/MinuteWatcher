@@ -121,6 +121,10 @@ open class SemanticSearchManager
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
+            if (snapshot.simSnapshots.none { it.isActive }) {
+                return true
+            }
+
             val currentHash = SnapshotUtils.calculateContentHash(snapshot)
             if (currentHash == lastSnapshotHash) return true
 

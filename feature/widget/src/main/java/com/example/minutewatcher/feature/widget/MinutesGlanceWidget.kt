@@ -17,7 +17,8 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.color.ColorProvider
+import androidx.glance.color.ColorProvider as GlanceColorProvider
+import androidx.glance.unit.ColorProvider as IColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -35,7 +36,7 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.example.minutewatcher.core.android.ui.SimLayoutRenderer
+import com.example.minutewatcher.core.android.ui.SimLayoutRender
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
@@ -178,84 +179,104 @@ private fun WidgetContent(
             .Color(uiState.backgroundColor)
             .copy(alpha = alpha)
 
+    val noDataColor = getNoDataColor(uiState)
+
+    Box(
+        modifier = getWidgetModifier(context, navigationProvider, bgColor),
+        contentAlignment = Alignment.Center,
+    ) {
+        WidgetMainContent(uiState, noDataColor)
+    }
+}
+
+@Composable
+private fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
+    if (uiState.useSystemColors) {
+        return GlanceTheme.colors.onSurface
+    }
+
     val luminance =
         androidx.core.graphics.ColorUtils
             .calculateLuminance(uiState.backgroundColor)
 
-    val noDataColor =
-        if (uiState.useSystemColors) {
-            GlanceTheme.colors.onSurface
+    val colorInt =
+        if (luminance >
+            Constants.UI.LUMINANCE_THRESHOLD
+        ) {
+            android.graphics.Color.BLACK
         } else {
-            val colorInt =
-                if (luminance >
-                    Constants.UI.LUMINANCE_THRESHOLD
-                ) {
-                    android.graphics.Color.BLACK
-                } else {
-                    android.graphics.Color.WHITE
-                }
-            val composeColor =
-                androidx.compose.ui.graphics
-                    .Color(colorInt)
-            ColorProvider(day = composeColor, night = composeColor)
+            android.graphics.Color.WHITE
         }
+    val composeColor =
+        androidx.compose.ui.graphics
+            .Color(colorInt)
+    return GlanceColorProvider(day = composeColor, night = composeColor)
+}
 
-    Box(
-        modifier =
-            run {
-                var modifier =
-                    GlanceModifier
-                        .fillMaxSize()
-                        .background(ColorProvider(day = bgColor, night = bgColor))
-                        .appWidgetBackground()
+private fun getWidgetModifier(
+    context: Context,
+    navigationProvider: NavigationProvider,
+    bgColor: androidx.compose.ui.graphics.Color,
+): GlanceModifier {
+    var modifier =
+        GlanceModifier
+            .fillMaxSize()
+            .background(GlanceColorProvider(day = bgColor, night = bgColor))
+            .appWidgetBackground()
 
-                val className = navigationProvider.mainActivityClassName
-                if (className.isNotEmpty()) {
-                    try {
-                        modifier = modifier.clickable(actionStartActivity(ComponentName(context, className)))
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to attach click action to widget", e)
-                    }
-                }
-                modifier
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        val simUiStates = uiState.simUiStates.filter { it.showSim }
-
-        if (uiState.settingsLoadFailed) {
-            Text(
-                text = context.getString(R.string.settings_load_error),
-                style =
-                    TextStyle(
-                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                        color = noDataColor,
-                    ),
-            )
-        } else if (simUiStates.isNotEmpty()) {
-            MultiSimLayout(simUiStates, uiState)
-        } else if (uiState.refreshFailed) {
-            Text(
-                text = context.getString(R.string.refresh_error),
-                style =
-                    TextStyle(
-                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                        color = noDataColor,
-                    ),
-            )
-        } else {
-            Text(
-                text = context.getString(R.string.no_sim_found),
-                style =
-                    TextStyle(
-                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                        color = noDataColor,
-                    ),
-            )
+    val className = navigationProvider.mainActivityClassName
+    if (className.isNotEmpty()) {
+        try {
+            modifier = modifier.clickable(actionStartActivity(ComponentName(context, className)))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Failed to attach click action to widget", e)
         }
     }
+    return modifier
+}
+
+@Composable
+private fun WidgetMainContent(
+    uiState: WidgetUiState,
+    noDataColor: IColorProvider,
+) {
+    val context = LocalContext.current
+    val simUiStates = uiState.simUiStates.filter { it.showSim }
+
+    when {
+        uiState.settingsLoadFailed -> {
+            WidgetMessage(context.getString(R.string.settings_load_error), noDataColor)
+        }
+
+        simUiStates.isNotEmpty() -> {
+            MultiSimLayout(simUiStates, uiState)
+        }
+
+        uiState.refreshFailed -> {
+            WidgetMessage(context.getString(R.string.refresh_error), noDataColor)
+        }
+
+        else -> {
+            WidgetMessage(context.getString(R.string.no_sim_found), noDataColor)
+        }
+    }
+}
+
+@Composable
+private fun WidgetMessage(
+    text: String,
+    color: IColorProvider,
+) {
+    Text(
+        text = text,
+        style =
+            TextStyle(
+                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                color = color,
+            ),
+    )
 }
 
 @Composable
@@ -264,73 +285,88 @@ private fun MultiSimLayout(
     uiState: WidgetUiState,
 ) {
     if (uiState.isHorizontal) {
-        Row(
-            modifier = GlanceModifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            sims.forEachIndexed { index, sim ->
-                Box(
-                    modifier = GlanceModifier.fillMaxHeight().defaultWeight(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SimItem(sim, uiState)
-                }
-                if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor =
-                        if (uiState.useSystemColors) {
-                            GlanceTheme.colors.outline
-                        } else {
-                            val color =
-                                androidx.compose.ui.graphics
-                                    .Color(sims[0].secondaryTextColor)
-                                    .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
-                            ColorProvider(day = color, night = color)
-                        }
-                    Spacer(
-                        modifier =
-                            GlanceModifier
-                                .width(Constants.Widget.SEPARATOR_THICKNESS.dp)
-                                .fillMaxHeight()
-                                .background(separatorColor),
-                    )
-                }
-            }
-        }
+        HorizontalSimLayout(sims, uiState)
     } else {
-        Column(
-            modifier = GlanceModifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            sims.forEachIndexed { index, sim ->
-                Box(
-                    modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SimItem(sim, uiState)
-                }
-                if (uiState.showSeparator && index < sims.size - 1) {
-                    val separatorColor =
-                        if (uiState.useSystemColors) {
-                            GlanceTheme.colors.outline
-                        } else {
-                            val color =
-                                androidx.compose.ui.graphics
-                                    .Color(sims[0].secondaryTextColor)
-                                    .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
-                            ColorProvider(day = color, night = color)
-                        }
-                    Spacer(
-                        modifier =
-                            GlanceModifier
-                                .height(Constants.Widget.SEPARATOR_THICKNESS.dp)
-                                .fillMaxWidth()
-                                .background(separatorColor),
-                    )
-                }
+        VerticalSimLayout(sims, uiState)
+    }
+}
+
+@Composable
+private fun HorizontalSimLayout(
+    sims: List<SimUiState>,
+    uiState: WidgetUiState,
+) {
+    Row(
+        modifier = GlanceModifier.fillMaxSize(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        sims.forEachIndexed { index, sim ->
+            Box(
+                modifier = GlanceModifier.fillMaxHeight().defaultWeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                SimItem(sim, uiState)
+            }
+            if (uiState.showSeparator && index < sims.size - 1) {
+                SimSeparator(uiState, isHorizontal = true)
             }
         }
     }
 }
+
+@Composable
+private fun VerticalSimLayout(
+    sims: List<SimUiState>,
+    uiState: WidgetUiState,
+) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        sims.forEachIndexed { index, sim ->
+            Box(
+                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                SimItem(sim, uiState)
+            }
+            if (uiState.showSeparator && index < sims.size - 1) {
+                SimSeparator(uiState, isHorizontal = false)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimSeparator(
+    uiState: WidgetUiState,
+    isHorizontal: Boolean,
+) {
+    val separatorColor =
+        if (uiState.useSystemColors) {
+            GlanceTheme.colors.outline
+        } else {
+            val color =
+                androidx.compose.ui.graphics
+                    .Color(uiState.simUiStates.firstOrNull()?.secondaryTextColor ?: android.graphics.Color.GRAY)
+                    .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
+            GlanceColorProvider(day = color, night = color)
+        }
+
+    val modifier =
+        if (isHorizontal) {
+            GlanceModifier
+                .width(Constants.Widget.SEPARATOR_THICKNESS.dp)
+                .fillMaxHeight()
+        } else {
+            GlanceModifier
+                .height(Constants.Widget.SEPARATOR_THICKNESS.dp)
+                .fillMaxWidth()
+        }
+
+    Spacer(modifier = modifier.background(separatorColor))
+}
+
 
 @Composable
 private fun SimItem(
@@ -355,7 +391,7 @@ private fun SimItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SimLayoutRenderer.Render(
+        SimLayoutRender(
             spec = sim.layoutSpec,
             rowContainer = { content ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -379,7 +415,7 @@ private fun SimItem(
                         val composeColor =
                             androidx.compose.ui.graphics
                                 .Color(component.color)
-                        ColorProvider(day = composeColor, night = composeColor)
+                        GlanceColorProvider(day = composeColor, night = composeColor)
                     }
 
                 Text(

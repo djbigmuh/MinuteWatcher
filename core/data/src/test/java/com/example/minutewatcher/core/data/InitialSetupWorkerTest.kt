@@ -48,6 +48,7 @@ class InitialSetupWorkerTest {
     private val migrationService: IdentityMigrationService = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val workScheduler: WorkScheduler = mock()
+    private val permissionManager: com.example.minutewatcher.core.common.util.PermissionManager = mock()
 
     private lateinit var deps: InitialSetupWorkerDependencies
     private lateinit var context: Context
@@ -55,6 +56,7 @@ class InitialSetupWorkerTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext<Application>()
+        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
@@ -86,6 +88,7 @@ class InitialSetupWorkerTest {
                 migrationService = migrationService,
                 dataChangeNotifier = dataChangeNotifier,
                 workScheduler = workScheduler,
+                permissionManager = permissionManager,
             )
     }
 

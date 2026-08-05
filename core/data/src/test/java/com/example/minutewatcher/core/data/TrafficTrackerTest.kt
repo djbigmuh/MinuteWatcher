@@ -330,7 +330,8 @@ class TrafficTrackerTest {
     @Test
     fun `updateTrafficUsage respects small deltas`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L)) // 1000 bytes delta
+            whenever(networkStatsProvider.queryMobileBytes(any(), any()))
+                .thenReturn(StatsResult.Success(2000L)) // 1000 bytes delta
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()

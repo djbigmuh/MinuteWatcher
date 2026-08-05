@@ -47,7 +47,7 @@ class WidgetUpdaterImpl
                         }
                         is UpdateResult.GenericFailure -> {
                             AppLogger.d("Retrying widget update after generic failure...")
-                            delay(500.milliseconds) // 500ms backoff before retry
+                            delay(Constants.Widget.RETRY_BACKOFF_MS.milliseconds) // Backoff before retry
                             when (safeUpdateAll(context)) {
                                 is UpdateResult.Success -> setWidgetLimitExceeded(false)
                                 is UpdateResult.LimitExceeded -> AppLogger.w("Retry also hit size limit")
