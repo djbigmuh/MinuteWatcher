@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,7 +30,9 @@ class AppSettingsRepositoryImpl
                 .map { prefs -> prefs.toAppSettings() }
                 .stateIn(
                     scope,
-                    SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    // Use Eagerly to ensure settings are always available and consistent for background tracking
+                    // components (CallTracker, TrafficTracker) and UI components without cold start delays.
+                    SharingStarted.Eagerly,
                     AppSettings(),
                 )
 

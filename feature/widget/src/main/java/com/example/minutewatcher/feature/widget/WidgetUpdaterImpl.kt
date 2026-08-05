@@ -81,14 +81,12 @@ class WidgetUpdaterImpl
                 UpdateResult.Success
             } catch (e: IllegalArgumentException) {
                 val isLimit = isRemoteViewsLimitException(e)
-                AppLogger.e(
-                    "Widget update failed. isRemoteViewsLimit=$isLimit. Message: ${e.message}",
-                    e,
-                )
                 if (isLimit) {
+                    AppLogger.e("Widget update failed due to size limit. Detection confirmed.", e)
                     setWidgetLimitExceeded(true)
                     UpdateResult.LimitExceeded
                 } else {
+                    AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
                     UpdateResult.GenericFailure
                 }
             } catch (e: CancellationException) {
@@ -100,6 +98,18 @@ class WidgetUpdaterImpl
 
         @VisibleForTesting
         fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
+            // 1. Reliable check: TransactionTooLargeException as cause.
+            if (e.cause is android.os.TransactionTooLargeException) return true
+
+            // 2. Stack trace analysis for RemoteViews/IPC limits.
+            val stackTrace = e.stackTraceToString()
+            if (stackTrace.contains("RemoteViews", ignoreCase = true) &&
+                stackTrace.contains("TransactionTooLarge", ignoreCase = true)
+            ) {
+                return true
+            }
+
+            // 3. Fragile heuristic fallback, may break on future Android versions.
             val msg = e.message ?: ""
             val mentionsRemoteViews = msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true)
             val mentionsSize =
@@ -111,10 +121,6 @@ class WidgetUpdaterImpl
                 msg.contains("transaction", ignoreCase = true) &&
                     msg.contains("too large", ignoreCase = true)
 
-            return (
-                (mentionsRemoteViews && mentionsSize) ||
-                    mentionsTransactionSize ||
-                    (e.cause is android.os.TransactionTooLargeException)
-            )
+            return (mentionsRemoteViews && mentionsSize) || mentionsTransactionSize
         }
     }

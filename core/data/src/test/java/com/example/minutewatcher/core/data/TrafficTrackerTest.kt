@@ -93,7 +93,7 @@ class TrafficTrackerTest {
     @Test
     fun `updateTrafficUsage initializes baseline on first run`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1500L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
 
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
@@ -107,7 +107,7 @@ class TrafficTrackerTest {
     @Test
     fun `processTrafficUpdate handles timeout reading lastTotalBytes without resetting baseline`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(2000L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
 
             // lastTotalBytes never emits
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(MutableSharedFlow())
@@ -165,7 +165,7 @@ class TrafficTrackerTest {
     @Test
     fun `updateTrafficUsage increments usage based on delta`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(35000L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
 
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
@@ -179,7 +179,7 @@ class TrafficTrackerTest {
     @Test
     fun `updateTrafficUsage handles network stats unavailable`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(-1L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
 
             tracker.updateTrafficUsage()
 
@@ -205,7 +205,7 @@ class TrafficTrackerTest {
 
             whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
 
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1500L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
@@ -217,7 +217,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage handles SIM swap by resetting baseline`() =
         runTest(testDispatcher) {
             // First run: SubId 1
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1000L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()
@@ -226,7 +226,7 @@ class TrafficTrackerTest {
 
             // SIM swap: SubId 2
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1500L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
 
             tracker.updateTrafficUsage()
 
@@ -239,7 +239,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage retries baseline reset when stats become available after SIM swap`() =
         runTest(testDispatcher) {
             // 1. Initial state
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1000L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
 
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
             tracker.updateTrafficUsage()
@@ -250,7 +250,7 @@ class TrafficTrackerTest {
             var callCount = 0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
                 callCount++
-                if (callCount == 1) -1L else 2000L
+                if (callCount == 1) StatsResult.Unavailable else StatsResult.Success(2000L)
             }
 
             // Attempt 1: Stats unavailable
@@ -271,7 +271,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage continues to retry baseline reset if stats remain unavailable`() =
         runTest(testDispatcher) {
             // 1. Initial state
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1000L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
 
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
             tracker.updateTrafficUsage()
@@ -282,7 +282,7 @@ class TrafficTrackerTest {
             var callCount = 0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
                 callCount++
-                if (callCount <= 2) -1L else 3000L
+                if (callCount <= 2) StatsResult.Unavailable else StatsResult.Success(3000L)
             }
 
             // Attempt 1: Stats unavailable
@@ -306,7 +306,7 @@ class TrafficTrackerTest {
     @Test
     fun `resetBaseline initializes storage correctly`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1500L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
 
             tracker.resetBaseline("sim_0")
 
@@ -317,7 +317,7 @@ class TrafficTrackerTest {
     @Test
     fun `resetBaseline sets error status on unexpected exception`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(-1L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
 
             tracker.resetBaseline("sim_0")
 
@@ -330,7 +330,7 @@ class TrafficTrackerTest {
     @Test
     fun `updateTrafficUsage respects small deltas`() =
         runTest(testDispatcher) {
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(2000L) // 1000 bytes delta
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L)) // 1000 bytes delta
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
@@ -344,7 +344,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage handles reboot or overflow`() =
         runTest(testDispatcher) {
             // lastTotalBytes = 1000, current = 500 (reboot)
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(500L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(500L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
             tracker.updateTrafficUsage()
@@ -356,7 +356,7 @@ class TrafficTrackerTest {
     fun `test recover updates status`() =
         runTest(testDispatcher) {
             // Setup valid bucket for updateTrafficUsage inside recover()
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(1500L)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
 
             // Act
@@ -366,6 +366,55 @@ class TrafficTrackerTest {
             // Assert
             assertEquals(TrackingStatus.Active, tracker.status.value)
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(1500L))
+        }
+
+    @Test
+    fun `handleSimChange does not update lastDataSubId if stats are unavailable`() =
+        runTest(testDispatcher) {
+            // 1. Initial state: SubId 1
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+            verify(callSessionRepository).setLastDataSubId(1)
+
+            // 2. SIM swap to SubId 2, but stats are unavailable
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
+
+            // Act: First attempt at SIM change
+            tracker.updateTrafficUsage()
+
+            // Assert: baseline not set, lastDataSubId NOT updated to 2
+            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+            verify(callSessionRepository, times(0)).setLastDataSubId(2)
+
+            // 3. Stats become available
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
+
+            // Act: Second attempt at updateTrafficUsage
+            tracker.updateTrafficUsage()
+
+            // Assert: SIM change is still detected (isSimChanged=true) because lastDataSubId was not updated
+            // Baseline is finally set for sim_1
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(2000L))
+            verify(callSessionRepository).setLastDataSubId(2)
+        }
+
+    @Test
+    fun `getCurrentMobileBytes uses lookback window on first run`() =
+        runTest(testDispatcher) {
+            val now = timeProvider.now()
+            val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
+
+            // Usage with lastResetDate = 0
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", lastResetDate = 0L)))
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(-1L))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(100L))
+
+            tracker.updateTrafficUsage()
+
+            // Verify query was called with lookbackStart
+            verify(networkStatsProvider).queryMobileBytes(eq(lookbackStart), eq(now))
         }
 
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.

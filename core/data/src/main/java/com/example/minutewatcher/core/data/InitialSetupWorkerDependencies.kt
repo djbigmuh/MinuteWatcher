@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
@@ -24,4 +25,5 @@ class InitialSetupWorkerDependencies
         val migrationService: IdentityMigrationService,
         val dataChangeNotifier: DataChangeNotifier,
         val workScheduler: WorkScheduler,
+        val permissionManager: PermissionManager,
     )

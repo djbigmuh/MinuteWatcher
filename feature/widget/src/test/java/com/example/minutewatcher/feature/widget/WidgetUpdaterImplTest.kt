@@ -45,4 +45,10 @@ class WidgetUpdaterImplTest {
         val e = IllegalArgumentException("Failure sending RemoteViews", cause)
         assertTrue(updater.isRemoteViewsLimitException(e))
     }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true for exceeds message fallback`() {
+        val e = IllegalArgumentException("RemoteViews exceeds maximum size")
+        assertTrue(updater.isRemoteViewsLimitException(e))
+    }
 }

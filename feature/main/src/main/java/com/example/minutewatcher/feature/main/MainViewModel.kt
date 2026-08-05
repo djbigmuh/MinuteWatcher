@@ -130,10 +130,12 @@ class MainViewModel
         private suspend fun refreshAndNotify(force: Boolean = false) {
             controllers.refresh.refreshSimCardsInternal()
             lastRefreshAt = SystemClock.elapsedRealtime()
-            // force=true для немедленного обновления виджета, force=false для реактивного через UpdateCoordinator.
-            if (force) {
-                controllers.simData.notifyDataChanged(force = true)
-            }
+            /*
+             * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).
+             * force=false уведомляет систему об изменениях, позволяя UpdateCoordinator обновить виджет реактивно.
+             * Мы вызываем notifyDataChanged всегда, чтобы гарантировать доставку события обновления.
+             */
+            controllers.simData.notifyDataChanged(force = force)
         }
 
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage

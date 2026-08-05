@@ -88,8 +88,8 @@ class SimIdentityRepositoryImpl
                             }
                         } ?: run {
                             AppLogger
-                                .e("Failed to generate identity seed within timeout, using fallback")
-                            "fallback_seed"
+                                .w("Failed to generate identity seed within timeout, using temporary non-persistent seed")
+                            UUID.randomUUID().toString()
                         }
                     } else {
                         currentSeed
@@ -274,17 +274,15 @@ class SimIdentityRepositoryImpl
                     (currentSlot == null) &&
                     migratedIdentities.add(identity.stableId)
                 ) {
-                    scope.launch {
-                        try {
-                            migrationService.migrateLegacyData(identity)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e(
-                                "Failed to migrate legacy data for identity: ${identity.stableId}",
-                                e,
-                            )
-                        }
+                    try {
+                        migrationService.migrateLegacyData(identity)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e(
+                            "Failed to migrate legacy data for identity: ${identity.stableId}",
+                            e,
+                        )
                     }
                 }
 

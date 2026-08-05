@@ -8,6 +8,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+sealed interface StatsResult {
+    data class Success(val bytes: Long) : StatsResult
+    data class Error(val exception: Exception) : StatsResult
+    object Unavailable : StatsResult
+}
+
 /**
  * Interface for querying network statistics.
  */
@@ -15,12 +21,11 @@ interface NetworkStatsProvider {
     /**
      * Queries the total mobile bytes (RX + TX) for the given time range.
      * Throws SecurityException if permissions are missing.
-     * Returns -1 if an error occurs during the query.
      */
     fun queryMobileBytes(
         startTime: Long,
         endTime: Long,
-    ): Long
+    ): StatsResult
 }
 
 @Singleton
@@ -35,23 +40,23 @@ class RealNetworkStatsProvider
         override fun queryMobileBytes(
             startTime: Long,
             endTime: Long,
-        ): Long {
-            if (networkStatsManager == null) return -1L
+        ): StatsResult {
+            val manager = networkStatsManager ?: return StatsResult.Unavailable
 
             return try {
                 val bucket =
-                    networkStatsManager.querySummaryForDevice(
+                    manager.querySummaryForDevice(
                         NetworkCapabilities.TRANSPORT_CELLULAR,
                         null,
                         startTime,
                         endTime,
                     )
-                bucket.rxBytes + bucket.txBytes
+                StatsResult.Success(bucket.rxBytes + bucket.txBytes)
             } catch (e: SecurityException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Error querying NetworkStatsManager", e)
-                -1L
+                StatsResult.Error(e)
             }
         }
     }

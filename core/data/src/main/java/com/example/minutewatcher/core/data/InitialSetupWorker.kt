@@ -1,9 +1,6 @@
 package com.example.minutewatcher.core.data
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -50,9 +47,7 @@ class InitialSetupWorker
                 deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
 
                 // Schedule periodic monitoring if permissions are granted
-                if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.READ_PHONE_STATE) ==
-                    PackageManager.PERMISSION_GRANTED
-                ) {
+                if (deps.permissionManager.hasPhoneStatePermission()) {
                     deps.workScheduler.schedulePeriodicUsageCheck()
                 }
 
@@ -81,11 +76,7 @@ class InitialSetupWorker
 
             if (migrationV1Completed && migrationStabilityCompleted) return
 
-            val hasPermission =
-                ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
+            val hasPermission = deps.permissionManager.hasPhoneStatePermission()
 
             if (!hasPermission) {
                 handleMigrationWithoutPermission(migrationV1Completed)

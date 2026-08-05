@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -299,5 +300,29 @@ class WidgetUiMapperTest {
         val settingsOpaque = settings.copy(transparency = 80)
         val uiStateOpaque = WidgetUiMapper.mapFromSnapshot(context, snapshot, settingsOpaque)
         assertFalse("useSystemColors should be false for transparency <= 80", uiStateOpaque.useSystemColors)
+    }
+
+    @Test
+    fun testWidgetLimitExceeded_OverridesLayoutToSimple() {
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        val settings =
+            WidgetSettingsState(
+                layoutMode = 3, // SIX_LINES
+                widgetLimitExceeded = true,
+                simStates = emptyMap(),
+            )
+
+        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        assertEquals(WidgetLayoutMode.SIMPLE, WidgetLayoutMode.fromValue(uiState.layoutMode))
     }
 }

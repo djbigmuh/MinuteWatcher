@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -203,5 +204,57 @@ class ResetManagerTest {
             resetManager.performAutoReset()
 
             verify(simUsageResetRepository, times(2)).resetSimUsageIfDue(eq(identity), eq(1), any())
+        }
+
+    @Test
+    fun `performAutoReset handles concurrent calls correctly`() =
+        runTest {
+            val identity = "sim_0"
+            val mockActiveSim =
+                com.example.minutewatcher.core.model.ActiveSimInfo(
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    displayName = "MTS",
+                    carrierName = "MTS",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(mockActiveSim)))
+
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(
+                flowOf(
+                    SimUsage(
+                        identity,
+                        0,
+                        1,
+                        "MTS",
+                        100,
+                        200,
+                        1.0f,
+                        1024,
+                        0,
+                        0f,
+                        true,
+                        1,
+                        0L,
+                        false,
+                    ),
+                ),
+            )
+            whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+
+            // Launch two concurrent calls.
+            // Even though performAutoReset uses a Mutex internally, this verifies that the atomic
+            // lastResetCheck map properly skips the second check after the first one completes.
+            val d1 = async { resetManager.performAutoReset() }
+            val d2 = async { resetManager.performAutoReset() }
+
+            d1.await()
+            d2.await()
+
+            // Verify only one repository call happened despite concurrent high-level calls
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
 }

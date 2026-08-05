@@ -485,4 +485,23 @@ class CallTrackerTest {
             // Assert: verify that call start state was NOT saved because isCallTrackingEnabled returned false
             verify(callSessionRepository, never()).setCallStartTime(any(), any())
         }
+
+    @Test
+    fun `handleCallStartInternal timeout keeps Error status after onCallStarted even if active calls exist`() =
+        runTest(testDispatcher) {
+            // Arrange: flow that never emits causes timeout in readWithRetry
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
+            // Simulate that there are active calls in the repository
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(2))
+
+            // Act
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Assert
+            val status = callTracker.status.first()
+            assertTrue("Expected Error status, but got $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+            assertTrue(status.message?.contains("Timeout") == true)
+        }
 }

@@ -80,13 +80,19 @@ class UsageCheckWorker
             val activeIdentities = finalSnapshot.simSnapshots.map { it.identity }
             deps.simWidgetVisibilityRepository.clearOrphanedSettings(activeIdentities)
 
+            val appSettingsResult =
+                deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: run {
+                    AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with 10s...")
+                    deps.appSettingsRepository
+                        .getAppSettings()
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                }
+
             val appSettings =
-                deps.appSettingsRepository.getAppSettings().firstWithTimeout()
-                    ?: AppSettings(
-                        notifyLowMinutes = false,
-                        notifyLowTraffic = false,
-                        callTrackingEnabled = false,
-                    )
+                appSettingsResult ?: run {
+                    AppLogger.w("UsageCheckWorker: AppSettings read failed after retry, using defaults")
+                    AppSettings()
+                }
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
                     processSimSnapshot(simSnapshot, appSettings)

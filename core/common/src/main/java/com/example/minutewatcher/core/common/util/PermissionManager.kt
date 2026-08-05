@@ -100,22 +100,33 @@ class PermissionManager
         fun hasUsageStatsPermission(): Boolean {
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
             val mode =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // unsafeCheckOpNoThrow is preferred on Q+ for better security/accuracy in some contexts.
-                    // It is deprecated in API 33 but remains the standard way to check without "noting" the op.
-                    @Suppress("DEPRECATION")
-                    appOps.unsafeCheckOpNoThrow(
-                        AppOpsManager.OPSTR_GET_USAGE_STATS,
-                        Process.myUid(),
-                        context.packageName,
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    appOps.checkOpNoThrow(
-                        AppOpsManager.OPSTR_GET_USAGE_STATS,
-                        Process.myUid(),
-                        context.packageName,
-                    )
+                when {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+                        // On API 34+, checkOpNoThrow is recommended again and is not deprecated.
+                        appOps.checkOpNoThrow(
+                            AppOpsManager.OPSTR_GET_USAGE_STATS,
+                            Process.myUid(),
+                            context.packageName,
+                        )
+                    }
+                    else -> {
+                        // On API < 34, we use unsafeCheckOpNoThrow (29-33) or checkOpNoThrow (< 29).
+                        // Both are marked as deprecated in the latest SDK (34+), so suppression is required.
+                        @Suppress("DEPRECATION")
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            appOps.unsafeCheckOpNoThrow(
+                                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                                Process.myUid(),
+                                context.packageName,
+                            )
+                        } else {
+                            appOps.checkOpNoThrow(
+                                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                                Process.myUid(),
+                                context.packageName,
+                            )
+                        }
+                    }
                 }
             return mode == AppOpsManager.MODE_ALLOWED
         }

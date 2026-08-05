@@ -178,6 +178,30 @@ class UpdateCoordinatorTest {
             verify(widgetUpdater, times(2)).updateAll()
         }
 
+    @Test
+    fun `two consecutive forced updates both trigger widget update`() =
+        runTest {
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    timeProvider,
+                    backgroundScope,
+                )
+
+            // First force
+            whenever(timeProvider.now()).thenReturn(10000L)
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+
+            // Second force within 5s
+            whenever(timeProvider.now()).thenReturn(12000L)
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+
+            // Should be 2 calls
+            verify(widgetUpdater, times(2)).updateAll()
+        }
+
     private fun createEmptySnapshot() =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),

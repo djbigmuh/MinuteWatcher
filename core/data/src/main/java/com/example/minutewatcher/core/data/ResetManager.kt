@@ -49,11 +49,18 @@ class ResetManager
                         val identity = simInfo.identity.stableId
 
                         // Skip if we checked this identity recently (e.g. within the last hour)
-                        val lastCheck = lastResetCheck[identity] ?: 0L
-                        if (now - lastCheck < CHECK_INTERVAL_MS) continue
+                        // Using compute to make check-and-update atomic.
+                        var wasUpdated = false
+                        lastResetCheck.compute(identity) { _, lastCheck ->
+                            if (lastCheck == null || now - lastCheck >= CHECK_INTERVAL_MS) {
+                                wasUpdated = true
+                                now
+                            } else {
+                                lastCheck
+                            }
+                        }
 
-                        // Update last check time early to avoid redundant checks even if not due or disabled
-                        lastResetCheck[identity] = now
+                        if (!wasUpdated) continue
 
                         val usage = simUsageRepository.getSimUsage(identity).first()
                         if (usage.autoReset) {

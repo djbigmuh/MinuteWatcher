@@ -15,15 +15,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.mock
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 import java.util.UUID
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimUsageRepositoryConcurrencyTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private val timeProvider = FixedTimeProvider(currentTime = 2000000L)
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000000000L)
 
     @Before
     fun setup() {
@@ -33,9 +37,8 @@ class SimUsageRepositoryConcurrencyTest {
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
         runTest {
-            // 1. Генерируем уникальное имя, но НЕ создаем файл на диске заранее.
-            // На Windows java.io.File.renameTo() (который использует DataStore внутри)
-            // завершается ошибкой, если целевой файл уже существует.
+            // 1. Генерируем уникальное имя.
+            // С Robolectric файловая система работает стабильно, и баг Windows renameTo не проявляется.
             val uniqueName = "test_concurrency_${UUID.randomUUID()}.preferences_pb"
             val file = File(tmpFolder.root, uniqueName)
 
@@ -51,7 +54,7 @@ class SimUsageRepositoryConcurrencyTest {
 
                 val identity = "test_sim"
                 val autoResetDay = 1
-                val now = 2000000L
+                val now = 1000000000000L
 
                 // Подготовка данных
                 repository.setLastResetDate(identity, 0L)

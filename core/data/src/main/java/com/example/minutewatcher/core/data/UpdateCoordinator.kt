@@ -51,19 +51,21 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
-                        val lastManual = lastManualSnapshotTimestamp.get()
+                        val lastManual = lastManualSnapshotTimestamp.getAndSet(-1L)
                         if (snapshot.isManualUpdate && lastManual != -1L) {
                             val isWithinWindow =
                                 (timeProvider.now() - lastManual) <
                                     Constants.Widget.MANUAL_UPDATE_BLOCK_MS
                             if (snapshot.timestamp <= lastManual && isWithinWindow) {
                                 AppLogger.d("Skipping debounced widget update after recent manual refresh")
-                                lastManualSnapshotTimestamp.compareAndSet(lastManual, -1L)
                                 return@collect
                             }
                         }
-                        lastManualSnapshotTimestamp.compareAndSet(lastManual, -1L)
-                        widgetUpdater.updateAll()
+                        try {
+                            widgetUpdater.updateAll()
+                        } catch (e: Exception) {
+                            AppLogger.e("Widget update failed in coordinator", e)
+                        }
                     }
             }
         }
@@ -78,9 +80,8 @@ class UpdateCoordinator
             if (force) {
                 if (updateWidget) {
                     val now = timeProvider.now()
-                    if (lastManualSnapshotTimestamp.getAndSet(now) == -1L) {
-                        widgetUpdater.updateAll()
-                    }
+                    lastManualSnapshotTimestamp.set(now)
+                    widgetUpdater.updateAll()
                 }
                 dataRefreshNotifier.notifyRefresh(isManual = true)
             } else {

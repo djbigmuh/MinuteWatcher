@@ -42,7 +42,6 @@ import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
@@ -119,7 +118,9 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val usageRepository = entryPoint.usageStateRepository()
         val widgetSettingsLoader = entryPoint.widgetSettingsLoader()
 
-        val (snapshot, refreshFailed) = getSnapshot(usageRepository)
+        val refreshResult = getSnapshot(usageRepository)
+        val snapshot = refreshResult.snapshot
+        val refreshFailed = refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout && snapshot.timestamp == 0L
 
         val settingsState =
             try {
@@ -139,28 +140,22 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         )
     }
 
-    private suspend fun getSnapshot(usageRepository: UsageStateRepository): Pair<GlobalSnapshot, Boolean> {
+    private suspend fun getSnapshot(usageRepository: UsageStateRepository): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         if (initialSnapshot.timestamp != 0L) {
-            return initialSnapshot to false
+            return com.example.minutewatcher.core.domain.RefreshResult.Success(initialSnapshot)
         }
 
         // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
         return try {
-            val result =
-                withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                    usageRepository.refresh()
-                }
-            if (result != null && result.snapshot.timestamp != 0L) {
-                result.snapshot to false
-            } else {
-                initialSnapshot to true
-            }
+            withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
+                usageRepository.refresh()
+            } ?: com.example.minutewatcher.core.domain.RefreshResult.Timeout(initialSnapshot)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             AppLogger.e("Widget refresh failed", e)
-            initialSnapshot to true
+            com.example.minutewatcher.core.domain.RefreshResult.Timeout(initialSnapshot)
         }
     }
 }
@@ -233,6 +228,8 @@ private fun WidgetContent(
                         color = noDataColor,
                     ),
             )
+        } else if (simUiStates.isNotEmpty()) {
+            MultiSimLayout(simUiStates, uiState)
         } else if (uiState.refreshFailed) {
             Text(
                 text = context.getString(R.string.refresh_error),
@@ -242,17 +239,15 @@ private fun WidgetContent(
                         color = noDataColor,
                     ),
             )
-        } else if (simUiStates.isEmpty()) {
+        } else {
             Text(
-                text = context.getString(R.string.no_data),
+                text = context.getString(R.string.no_sim_found),
                 style =
                     TextStyle(
                         fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
                         color = noDataColor,
                     ),
             )
-        } else {
-            MultiSimLayout(simUiStates, uiState)
         }
     }
 }

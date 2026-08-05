@@ -55,7 +55,7 @@ object WidgetUiMapper {
                 }
 
         return WidgetUiState(
-            layoutMode = state.layoutMode,
+            layoutMode = currentLayoutMode.value,
             simArrangement = state.simArrangement,
             backgroundColor = state.backgroundColor,
             transparency = state.transparency,

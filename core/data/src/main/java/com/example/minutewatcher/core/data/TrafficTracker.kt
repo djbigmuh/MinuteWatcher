@@ -13,7 +13,6 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,8 +74,9 @@ class TrafficTracker
                     if (!checkPermissions()) return@withLock
 
                     val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return@withLock
-                    val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
-                    if (currentBytes != -1L) {
+                    val statsResult = getCurrentMobileBytes(usage.lastResetDate)
+                    if (statsResult is StatsResult.Success) {
+                        val currentBytes = statsResult.bytes
                         simUsageResetRepository.setLastTotalBytes(
                             identity,
                             currentBytes,
@@ -108,7 +108,12 @@ class TrafficTracker
 
                         _status.value = TrackingStatus.Active
                     } else {
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable")
+                        val message = if (statsResult is StatsResult.Error) {
+                            statsResult.exception.message ?: "Stats error"
+                        } else {
+                            "Stats unavailable"
+                        }
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                     }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
@@ -210,14 +215,15 @@ class TrafficTracker
             }
             val usage = usageRes.getOrThrow()
 
-            val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
+            val statsResult = getCurrentMobileBytes(usage.lastResetDate)
 
-            if (handleBaselineRetry(target, targetIdentity, currentBytes)) return
+            if (handleBaselineRetry(target, targetIdentity, statsResult)) return
 
-            if (currentBytes == -1L) {
-                handleStatsUnavailable(targetIdentity)
+            if (statsResult !is StatsResult.Success) {
+                handleStatsResultError(targetIdentity, statsResult)
                 return
             }
+            val currentBytes = statsResult.bytes
 
             val lastTotalBytesRes =
                 readWithRetry(
@@ -254,9 +260,10 @@ class TrafficTracker
         private suspend fun handleBaselineRetry(
             target: TargetInfo,
             targetIdentity: String,
-            currentBytes: Long,
+            statsResult: StatsResult,
         ): Boolean {
-            if (currentBytes != -1L) {
+            if (statsResult is StatsResult.Success) {
+                val currentBytes = statsResult.bytes
                 if (baselineNeedsRetry.remove(targetIdentity) == true) {
                     simUsageResetRepository.setLastTotalBytes(
                         targetIdentity,
@@ -285,9 +292,17 @@ class TrafficTracker
             return false
         }
 
-        private fun handleStatsUnavailable(targetIdentity: String) {
-            AppLogger.w("Traffic stats unavailable for $targetIdentity")
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable")
+        private fun handleStatsResultError(
+            targetIdentity: String,
+            statsResult: StatsResult,
+        ) {
+            val message = if (statsResult is StatsResult.Error) {
+                statsResult.exception.message ?: "Stats error"
+            } else {
+                "Stats unavailable"
+            }
+            AppLogger.w("Traffic stats unavailable for $targetIdentity: $message")
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
         private suspend fun handleFirstRunOrReset(
@@ -330,21 +345,21 @@ class TrafficTracker
 
         private fun getCurrentMobileBytes(
             startTime: Long,
-            autoResetDay: Int,
-        ): Long {
+        ): StatsResult {
             val now = timeProvider.now()
-            // Limit safeStart to a maximum of 30 days back to avoid performance issues
-            // with NetworkStatsManager on first run or after a long period of inactivity.
             val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
-            val calculatedStart =
-                if (startTime > 0) {
-                    startTime
-                } else {
-                    BillingPeriodCalculator.calculate(autoResetDay, now).startDate
-                }
-            val safeStart = maxOf(calculatedStart, lookbackStart)
 
-            return networkStatsProvider.queryMobileBytes(safeStart, now)
+            if (startTime == 0L) {
+                AppLogger.d("First run: using 30-day lookback window")
+                return networkStatsProvider.queryMobileBytes(lookbackStart, now)
+            }
+
+            if (startTime < lookbackStart) {
+                AppLogger.w("Billing period start is older than 30 days, clamping to lookback window. Some traffic data may be missed.")
+                return networkStatsProvider.queryMobileBytes(lookbackStart, now)
+            }
+
+            return networkStatsProvider.queryMobileBytes(startTime, now)
         }
 
         private suspend fun getTargetSimInfo(): TargetInfo? {
@@ -447,25 +462,35 @@ class TrafficTracker
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val currentBytes =
+                val statsResult =
                     if (usage != null) {
                         try {
-                            getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
+                            getCurrentMobileBytes(usage.lastResetDate)
                         } catch (e: Exception) {
-                            -1L
+                            StatsResult.Error(e)
                         }
                     } else {
-                        -1L
+                        StatsResult.Unavailable
                     }
 
-                if (currentBytes != -1L) {
+                if (statsResult is StatsResult.Success) {
+                    val currentBytes = statsResult.bytes
                     simUsageResetRepository.setLastTotalBytes(
                         identity,
                         currentBytes,
                     )
                     AppLogger.d("Baseline reset successfully for $identity")
+
+                    // Successfully reset baseline, now we can consume the SIM change
+                    callSessionRepository.setLastDataSubId(currentDataSubId)
+                    inMemoryLastDataSubId.set(currentDataSubId)
                 } else {
-                    AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
+                    val reason = if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message ?: "Stats error"
+                    } else {
+                        "Stats unavailable"
+                    }
+                    AppLogger.w("Stats unavailable on SIM change for $identity: $reason. Baseline reset will be retried.")
                     if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
                         val activeIdentities =
                             simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
@@ -477,11 +502,6 @@ class TrafficTracker
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to handle SIM change", e)
-            } finally {
-                // Break the isSimChanged loop regardless of baseline reset success.
-                // This ensures skipDelta is true only for the very first attempt.
-                callSessionRepository.setLastDataSubId(currentDataSubId)
-                inMemoryLastDataSubId.set(currentDataSubId)
             }
         }
     }

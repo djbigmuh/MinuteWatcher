@@ -79,10 +79,10 @@ class CallSessionRepositoryImpl
                     .asMap()
                     .keys
                     .filter { key ->
-                        key.name.startsWith("call_start_time_") ||
-                            key.name.startsWith("boot_time_") ||
-                            key.name.startsWith("uptime_") ||
-                            key.name.startsWith("call_identity_")
+                        key.name.startsWith(DynamicSettingsKeys.CALL_START_TIME_PREFIX) ||
+                            key.name.startsWith(DynamicSettingsKeys.BOOT_TIME_PREFIX) ||
+                            key.name.startsWith(DynamicSettingsKeys.UPTIME_PREFIX) ||
+                            key.name.startsWith(DynamicSettingsKeys.CALL_IDENTITY_PREFIX)
                     }.forEach { key ->
                         prefs.remove(key)
                     }
@@ -91,8 +91,8 @@ class CallSessionRepositoryImpl
 
         override suspend fun getActiveCallSubIds(): List<Int> =
             dataStore.data.first().asMap().entries.mapNotNull { (key, value) ->
-                if (key.name.startsWith("call_start_time_") && (value as? Long ?: 0L) > 0L) {
-                    key.name.substringAfterLast('_').toIntOrNull()
+                if (key.name.startsWith(DynamicSettingsKeys.CALL_START_TIME_PREFIX) && (value as? Long ?: 0L) > 0L) {
+                    key.name.removePrefix(DynamicSettingsKeys.CALL_START_TIME_PREFIX).toIntOrNull()
                 } else {
                     null
                 }

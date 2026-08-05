@@ -396,8 +396,11 @@ class CallTracker
 
         private suspend fun refreshStatus(force: Boolean = false) {
             val current = _status.value
-            if (!force && current is TrackingStatus.Error) return
-            if (current is TrackingStatus.Error && current.type == TrackingStatus.ErrorType.PERMISSION_MISSING) return
+            if (current is TrackingStatus.Error) {
+                if (!force && current.type == TrackingStatus.ErrorType.UNKNOWN) return
+                if (current.type == TrackingStatus.ErrorType.PERMISSION_MISSING) return
+                if (!force) return
+            }
 
             val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
             _status.value = if (hasActiveCalls) TrackingStatus.Active else TrackingStatus.Idle

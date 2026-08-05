@@ -147,11 +147,8 @@ class MainSimDataController
         fun retryTraffic(onRefresh: suspend () -> Unit) = trackingRecoveryController.retryTraffic(scope, onRefresh)
 
         fun notifyDataChanged(force: Boolean = false) {
-            if (force) {
-                scope.launch {
-                    dataChangeNotifier.notifyDataChanged(force = true)
-                }
+            scope.launch {
+                dataChangeNotifier.notifyDataChanged(force = force)
             }
-            // Non-force updates are handled reactively by UpdateCoordinator through snapshot observation.
         }
     }

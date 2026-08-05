@@ -125,6 +125,10 @@ open class SemanticSearchManager
             if (currentHash == lastSnapshotHash) return true
 
             return sessionMutex.withLock {
+                // Re-check after acquiring lock to avoid redundant indexing if another thread
+                // just finished indexing the same content.
+                if (currentHash == lastSnapshotHash) return@withLock true
+
                 if (!ensureSession()) return@withLock false
                 executeIndexing(snapshot, currentHash)
             }

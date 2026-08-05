@@ -409,6 +409,66 @@ class UsageCheckWorkerTest {
             verify(usageUseCase, atLeastOnce()).refreshOperatorInfo()
         }
 
+    @Test
+    fun `doWork uses default settings when AppSettings read times out`() =
+        runTest(testDispatcher) {
+            val identity = "sim_0"
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = timeProvider.now(),
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "MTS",
+                                isActive = true,
+                                entities =
+                                    mapOf(
+                                        PackageType.MINUTES to
+                                            SemanticEntity(
+                                                id = "e1",
+                                                simSlot = 0,
+                                                operatorName = "MTS",
+                                                packageType = PackageType.MINUTES,
+                                                limit = 100,
+                                                used = 90,
+                                                remaining = 10,
+                                                unit = MeasurementUnit.MINUTES,
+                                                periodStart = 0,
+                                                periodEnd = 0,
+                                                lastUpdateTime = 0,
+                                                sourceType = DataSourceType.SYSTEM,
+                                            ),
+                                    ),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult
+                    .Success(snapshot),
+            )
+
+            // Mock timeout: a flow that never emits
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(kotlinx.coroutines.flow.MutableSharedFlow())
+
+            whenever(
+                simUsageRepository.getSimUsage(identity),
+            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            // By default AppSettings has notifyLowMinutes = true, so notification SHOULD be sent
+            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+        }
+
     @Suppress("SameParameterValue")
     private fun createUtcMillis(
         year: Int,

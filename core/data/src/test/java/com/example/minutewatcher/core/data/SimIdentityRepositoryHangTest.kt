@@ -99,8 +99,37 @@ class SimIdentityRepositoryHangTest {
             // Act
             val identity = identityRepo.getSimIdentity(0)
 
-            // Assert: It should return fallback after 10s timeout instead of hanging forever
+            // Assert: It should return fallback after timeout instead of hanging forever
             assertEquals("sim_0", identity.stableId)
             assertEquals(IdentitySource.SLOT_FALLBACK, identity.source)
+        }
+
+    @Test
+    fun `seedFlow uses temporary seed when seed generation timeouts`() =
+        runTest {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+            // Mock seedRepository.getSeed() to return empty/null
+            whenever(seedRepository.getSeed()).thenReturn(flowOf(""))
+            // Mock getOrCreateSeed to hang
+            whenever(seedRepository.getOrCreateSeed(any())).thenReturn(null)
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    migrationService,
+                    mockSimProvider,
+                    backgroundScope,
+                )
+
+            val identity = identityRepo.getSimIdentity(0)
+            assertEquals("sim_0", identity.stableId)
         }
 }
