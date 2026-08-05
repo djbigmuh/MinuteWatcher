@@ -142,9 +142,6 @@ class InitialSetupWorker
             AppLogger.w("InitialSetupWorker: observeActiveSims timed out, retrying with 15s...")
 
             val secondAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout(15000L)
-            if (secondAttempt == null) {
-                AppLogger.w("InitialSetupWorker: no active SIMs found after retry (timeout)")
-            }
-            return secondAttempt ?: emptyList()
+            return secondAttempt ?: throw java.io.IOException("Timeout observing active SIMs")
         }
     }

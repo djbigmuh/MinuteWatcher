@@ -50,6 +50,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 class MinutesGlanceWidget : GlanceAppWidget() {
     @EntryPoint
@@ -98,9 +100,15 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         if (snapshot.timestamp == 0L) {
             // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
             try {
-                val result = usageRepository.refresh()
-                snapshot = result.snapshot
-                if (snapshot.timestamp == 0L) {
+                val result = withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
+                    usageRepository.refresh()
+                }
+                if (result != null) {
+                    snapshot = result.snapshot
+                    if (snapshot.timestamp == 0L) {
+                        refreshFailed = true
+                    }
+                } else {
                     refreshFailed = true
                 }
             } catch (e: CancellationException) {

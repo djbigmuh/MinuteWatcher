@@ -220,10 +220,28 @@ class CallTrackerTest {
             // Assert
             val status = callTracker.status.first()
             assertTrue(status is TrackingStatus.Error)
-            assertEquals("DataStore read timeout", (status as TrackingStatus.Error).message)
+            assertEquals("Timeout reading startTime", (status as TrackingStatus.Error).message)
 
             // Verify session was NOT cleared (setCallStartTime(1, 0) was NOT called)
             verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(0L))
+        }
+
+    @Test
+    fun `handleCallStartInternal sets error status on DataStore IOException`() =
+        runTest(testDispatcher) {
+            // Arrange
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(kotlinx.coroutines.flow.flow {
+                throw java.io.IOException("Disk full")
+            })
+
+            // Act
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Assert
+            val status = callTracker.status.first()
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("Disk full", (status as TrackingStatus.Error).message)
         }
 
     @Test

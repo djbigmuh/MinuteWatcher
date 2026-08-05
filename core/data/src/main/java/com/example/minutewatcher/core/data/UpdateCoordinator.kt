@@ -58,10 +58,11 @@ class UpdateCoordinator
                                     Constants.Widget.MANUAL_UPDATE_BLOCK_MS
                             if (snapshot.timestamp <= lastManual && isWithinWindow) {
                                 AppLogger.d("Skipping debounced widget update after recent manual refresh")
+                                lastManualSnapshotTimestamp.compareAndSet(lastManual, -1L)
                                 return@collect
                             }
                         }
-                        lastManualSnapshotTimestamp.set(-1L)
+                        lastManualSnapshotTimestamp.compareAndSet(lastManual, -1L)
                         widgetUpdater.updateAll()
                     }
             }
@@ -76,8 +77,10 @@ class UpdateCoordinator
         ) {
             if (force) {
                 if (updateWidget) {
-                    lastManualSnapshotTimestamp.set(timeProvider.now())
-                    widgetUpdater.updateAll()
+                    val now = timeProvider.now()
+                    if (lastManualSnapshotTimestamp.getAndSet(now) == -1L) {
+                        widgetUpdater.updateAll()
+                    }
                 }
                 dataRefreshNotifier.notifyRefresh(isManual = true)
             } else {

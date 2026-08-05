@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main
 
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -83,7 +84,8 @@ class MainViewModel
                         controllers.dialog.setShowOnboardingDialog(true)
                     }
                     autoResetUseCase.performAutoReset(shouldNotify = false)
-                    refreshSimCards()
+                    controllers.refresh.refreshSimCardsInternal()
+                    lastRefreshAt = SystemClock.elapsedRealtime()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -97,6 +99,7 @@ class MainViewModel
         fun refreshSimCards() {
             viewModelScope.launch {
                 controllers.refresh.refreshSimCardsInternal()
+                lastRefreshAt = SystemClock.elapsedRealtime()
             }
         }
 
@@ -117,14 +120,15 @@ class MainViewModel
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
                 controllers.refresh.refreshSimCardsInternal()
+                lastRefreshAt = SystemClock.elapsedRealtime()
                 onComplete()
             }
         }
 
-        private suspend fun refreshAndNotify(force: Boolean = true) {
+        private suspend fun refreshAndNotify(force: Boolean = false) {
             controllers.refresh.refreshSimCardsInternal()
-            // Уведомляем только если force — для немедленного обновления виджета.
-            // Реактивный UpdateCoordinator сам обновит виджет при изменении snapshot.
+            lastRefreshAt = SystemClock.elapsedRealtime()
+            // force=true для немедленного обновления виджета, force=false для реактивного через UpdateCoordinator.
             if (force) {
                 controllers.simData.notifyDataChanged(force = true)
             }
@@ -146,7 +150,7 @@ class MainViewModel
         }
 
         fun resetUsage(slot: Int) {
-            controllers.simData.resetUsage(slot) { refreshAndNotify() }
+            controllers.simData.resetUsage(slot) { refreshAndNotify(force = true) }
         }
 
         fun toggleAutoReset(
@@ -167,14 +171,18 @@ class MainViewModel
             slot: Int,
             remainingMinutes: Int,
         ) {
-            controllers.simData.adjustRemainingMinutes(slot, remainingMinutes) { refreshAndNotify() }
+            controllers.simData.adjustRemainingMinutes(slot, remainingMinutes) {
+                refreshAndNotify(force = true)
+            }
         }
 
         fun adjustRemainingTraffic(
             slot: Int,
             remainingGb: Float,
         ) {
-            controllers.simData.adjustRemainingTraffic(slot, remainingGb) { refreshAndNotify() }
+            controllers.simData.adjustRemainingTraffic(slot, remainingGb) {
+                refreshAndNotify(force = true)
+            }
         }
 
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot

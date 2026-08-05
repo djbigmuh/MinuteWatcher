@@ -101,8 +101,8 @@ class SimIdentityRepositoryImpl
                         .filter { it.isNotEmpty() },
                 )
             }.distinctUntilChanged()
-                .shareIn(scope, SharingStarted.Lazily, replay = 1)
                 .filter { it.isNotEmpty() }
+                .shareIn(scope, SharingStarted.Lazily, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
@@ -112,7 +112,14 @@ class SimIdentityRepositoryImpl
                             object : SubscriptionManager.OnSubscriptionsChangedListener() {
                                 override fun onSubscriptionsChanged() {
                                     launch {
-                                        send(getActiveSimsInternal(seed))
+                                        try {
+                                            send(getActiveSimsInternal(seed))
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            AppLogger.e("Failed to fetch active SIMs on change", e)
+                                            send(emptyList())
+                                        }
                                     }
                                 }
                             }
@@ -141,9 +148,16 @@ class SimIdentityRepositoryImpl
                         launch {
                             permissionStateNotifier.changes.collect {
                                 updateListenerRegistration()
-                                if (permissionManager.hasPhoneStatePermission()) {
-                                    send(getActiveSimsInternal(seed))
-                                } else {
+                                try {
+                                    if (permissionManager.hasPhoneStatePermission()) {
+                                        send(getActiveSimsInternal(seed))
+                                    } else {
+                                        send(emptyList())
+                                    }
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.e("Failed to fetch active SIMs on permission change", e)
                                     send(emptyList())
                                 }
                             }
@@ -151,10 +165,17 @@ class SimIdentityRepositoryImpl
 
                         // Initial fetch
                         if (permissionManager.hasPhoneStatePermission()) {
-                            val initialSims = getActiveSimsInternal(seed)
-                            val result = trySend(initialSims)
-                            if (result.isFailure) {
-                                launch { send(initialSims) }
+                            try {
+                                val initialSims = getActiveSimsInternal(seed)
+                                val result = trySend(initialSims)
+                                if (result.isFailure) {
+                                    launch { send(initialSims) }
+                                }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to fetch initial active SIMs", e)
+                                trySend(emptyList())
                             }
                         }
 
@@ -280,6 +301,11 @@ class SimIdentityRepositoryImpl
                 permissionManager
                     .getActiveSubscriptions()
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
+
+            // Clean up in-memory migration guard for removed SIMs
+            val currentIdentities = infoList.map { SimIdentityUtils.createIdentityFromInfo(it, seed).stableId }.toSet()
+            migratedIdentities.retainAll(currentIdentities)
+
             if (infoList.isEmpty()) return emptyList()
 
             val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()

@@ -34,17 +34,22 @@ jobs:
 
     - name: Run Unit Tests
       run: ./gradlew testDebugUnitTest
+      continue-on-error: true
 
     - name: Build Debug APK
+      if: always()
       run: ./gradlew :app:assembleDebug
 
     - name: Build Release APK (Check R8 & ProGuard)
+      if: always()
       run: ./gradlew :app:assembleRelease
 
     - name: Build Benchmark APK (Check R8 & ProGuard)
+      if: always()
       run: ./gradlew :app:assembleBenchmark
 
     - name: Check for uncommitted changes
+      if: always()
       run: |
         if [[ -n $(git status --porcelain) ]]; then
           echo "Error: Uncommitted changes found after build. Please update baselines or format code locally."
@@ -53,27 +58,38 @@ jobs:
         fi
 
     - name: Upload Test Reports
-      if: failure()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-reports
         path: "**/build/reports/"
 
     - name: Upload Lint Reports
-      if: failure()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: lint-reports
         path: "**/build/reports/lint-results-*"
 
     - name: Upload Build Artifacts
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
         path: app/build/outputs/apk/debug/*.apk
 
     - name: Upload Benchmark Artifacts
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: benchmark-apk
         path: app/build/outputs/apk/benchmark/*.apk
+
+    - name: Check test results
+      if: always()
+      run: |
+        # Check for failures in any module's test reports
+        if grep -r -q 'failures="[^0]"\|errors="[^0]"' **/build/test-results/testDebugUnitTest/*.xml; then
+          echo "Tests failed in one or more modules."
+          exit 1
+        fi

@@ -73,24 +73,33 @@ class IdentityMigrationService
             val legacySuffixes = findLegacySuffixes(activeIdentity)
             val newSuffix = "_$identity"
 
+            val results = mutableListOf<Boolean>()
             for (legacySuffix in legacySuffixes) {
                 if (legacySuffix == newSuffix) continue
-                migrateDataStore(
-                    appDataStore,
-                    legacySuffix,
-                    newSuffix,
-                    "app_settings",
-                    slot,
-                    identity,
+                results.add(
+                    migrateDataStore(
+                        appDataStore,
+                        legacySuffix,
+                        newSuffix,
+                        "app_settings",
+                        slot,
+                        identity,
+                    ),
                 )
-                migrateDataStore(
-                    simDataStore,
-                    legacySuffix,
-                    newSuffix,
-                    "sim_settings",
-                    slot,
-                    identity,
+                results.add(
+                    migrateDataStore(
+                        simDataStore,
+                        legacySuffix,
+                        newSuffix,
+                        "sim_settings",
+                        slot,
+                        identity,
+                    ),
                 )
+            }
+
+            if (results.any { it }) {
+                AppLogger.d("Migration completed for identity $identity: ${results.count { it }} stores migrated")
             }
 
             // Cleanup mapping keys that were used for this identity

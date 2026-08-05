@@ -14,8 +14,6 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +27,6 @@ class SimUsageRepositoryImpl
         SimUsageRepository,
         SimUsageAdjustmentRepository,
         SimUsageResetRepository {
-        private val resetMutex = Mutex()
 
         override fun getSimUsage(identity: String): Flow<SimUsage> =
             dataStore.data.map { prefs ->
@@ -137,19 +134,18 @@ class SimUsageRepositoryImpl
             identity: String,
             autoResetDay: Int,
             nowMillis: Long,
-        ): Boolean =
-            resetMutex.withLock {
-                var didReset = false
-                dataStore.edit { prefs ->
-                    val lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L
-                    val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
-                    if (lastResetDate < periodStart) {
-                        prefs.applyResetWithRollover(identity, nowMillis)
-                        didReset = true
-                    }
+        ): Boolean {
+            var didReset = false
+            dataStore.edit { prefs ->
+                val lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L
+                val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
+                if (lastResetDate < periodStart) {
+                    prefs.applyResetWithRollover(identity, nowMillis)
+                    didReset = true
                 }
-                didReset
             }
+            return didReset
+        }
 
         private fun MutablePreferences.applyResetWithRollover(
             identity: String,

@@ -27,6 +27,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -120,8 +121,9 @@ class CallTracker
             val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
             val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
 
-            if (startTimeRes.isFailure || savedBootTimeRes.isFailure) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "DataStore read timeout")
+            val failure = startTimeRes.exceptionOrNull() ?: savedBootTimeRes.exceptionOrNull()
+            if (failure != null) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
                 return false
             }
 
@@ -282,7 +284,8 @@ class CallTracker
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         incrementInaccurateAttributions()
                     }
-                    endCall(oldest)
+                    endCall(oldest, notify = false)
+                    dataChangeNotifier.notifyDataChanged()
                 }
             }
         }
@@ -345,12 +348,14 @@ class CallTracker
             val savedUptimeRes = readWithRetry({ callSessionRepository.getUptime(subId) }, "uptime", subId)
             val savedIdentityRes = readWithRetry({ callSessionRepository.getCallIdentity(subId) }, "identity", subId)
 
-            if (startTimeRes.isFailure
-                || savedBootTimeRes.isFailure
-                || savedUptimeRes.isFailure
-                || savedIdentityRes.isFailure
-            ) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "DataStore read timeout")
+            val failure =
+                startTimeRes.exceptionOrNull()
+                    ?: savedBootTimeRes.exceptionOrNull()
+                    ?: savedUptimeRes.exceptionOrNull()
+                    ?: savedIdentityRes.exceptionOrNull()
+
+            if (failure != null) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
                 // Очищаем сессию, чтобы избежать stale-данных
                 clearSession(subId)
                 return
@@ -469,7 +474,8 @@ class CallTracker
             val reason = if (firstResult == null) "Timeout" else "Error (${firstResult.exceptionOrNull()?.message})"
             AppLogger.w("CallTracker: $reason reading $fieldName for subId $subId, retrying with 10s...")
 
-            return tryRead(10000L) ?: Result.failure(Exception("Timeout reading $fieldName"))
+            val secondResult = tryRead(10000L)
+            return secondResult ?: Result.failure(TimeoutException("Timeout reading $fieldName"))
         }
 
         companion object {

@@ -38,20 +38,17 @@ class WidgetUpdaterImpl
                 try {
                     when (safeUpdateAll(context)) {
                         is UpdateResult.Success -> {
-                            appSettingsRepository.updateAppSettings {
-                                it.copy(widgetLimitExceeded = false)
-                            }
+                            setWidgetLimitExceeded(false)
                         }
                         is UpdateResult.LimitExceeded -> {
                             AppLogger.w("Widget update failed due to size limit. Skipping retry.")
                         }
                         is UpdateResult.GenericFailure -> {
                             AppLogger.d("Retrying widget update after generic failure...")
-                            val retryResult = safeUpdateAll(context)
-                            if (retryResult is UpdateResult.Success) {
-                                appSettingsRepository.updateAppSettings {
-                                    it.copy(widgetLimitExceeded = false)
-                                }
+                            when (safeUpdateAll(context)) {
+                                is UpdateResult.Success -> setWidgetLimitExceeded(false)
+                                is UpdateResult.LimitExceeded -> AppLogger.w("Retry also hit size limit")
+                                is UpdateResult.GenericFailure -> AppLogger.e("Widget update retry also failed")
                             }
                         }
                     }
@@ -60,6 +57,18 @@ class WidgetUpdaterImpl
                 } catch (e: Exception) {
                     AppLogger.e("Unexpected error updating widgets", e)
                 }
+            }
+        }
+
+        private suspend fun setWidgetLimitExceeded(value: Boolean) {
+            try {
+                appSettingsRepository.updateAppSettings {
+                    it.copy(widgetLimitExceeded = value)
+                }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (ex: Exception) {
+                AppLogger.e("Failed to set widget limit exceeded flag to $value", ex)
             }
         }
 
@@ -74,15 +83,7 @@ class WidgetUpdaterImpl
                     e,
                 )
                 if (isLimit) {
-                    try {
-                        appSettingsRepository.updateAppSettings {
-                            it.copy(widgetLimitExceeded = true)
-                        }
-                    } catch (ce: CancellationException) {
-                        throw ce
-                    } catch (ex: Exception) {
-                        AppLogger.e("Failed to set widget limit exceeded flag", ex)
-                    }
+                    setWidgetLimitExceeded(true)
                     UpdateResult.LimitExceeded
                 } else {
                     UpdateResult.GenericFailure

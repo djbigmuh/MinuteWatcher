@@ -57,7 +57,13 @@ class UsageCheckWorker
             deps.trafficTracker.updateTrafficUsage()
 
             // Perform auto-reset logic. We skip internal notification here because we do a single unified refresh and notify below.
-            deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+            try {
+                deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Auto-reset failed in UsageCheckWorker", e)
+            }
 
             // Single refresh to capture all recent changes (traffic update and potential auto-reset)
             val refreshResult = deps.usageStateRepository.refresh()

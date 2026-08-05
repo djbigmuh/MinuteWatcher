@@ -67,16 +67,7 @@ class SimWidgetVisibilityRepositoryImpl
 
         override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
             val activeSet = activeIdentities.toSet()
-            val prefixes =
-                listOf(
-                    "widget_show_sim_icon_",
-                    "widget_show_sim_name_",
-                    "widget_show_sim_",
-                    "widget_show_minutes_limit_",
-                    "widget_show_minutes_",
-                    "widget_show_traffic_limit_",
-                    "widget_show_traffic_",
-                ).sortedByDescending { it.length }
+            val prefixes = WidgetSettingsKeys.ALL_PREFIXES
 
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys
@@ -87,7 +78,7 @@ class SimWidgetVisibilityRepositoryImpl
                             var identity = ""
                             for (prefix in prefixes) {
                                 if (name.startsWith(prefix)) {
-                                    identity = name.substring(prefix.length)
+                                    identity = name.removePrefix(prefix)
                                     break
                                 }
                             }

@@ -55,6 +55,7 @@ class WidgetSettingsRepository
                 }
                 val activeSims = activeSimsResult
 
+                // Use the fresh activeSims to load settings in one atomic-like operation to minimize inconsistency.
                 val realIdentities = activeSims.map { it.identity.stableId }
                 val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
                 val allIdentities = (realIdentities + fallbackIdentities).distinct()

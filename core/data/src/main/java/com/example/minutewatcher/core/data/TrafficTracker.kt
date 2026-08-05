@@ -104,6 +104,7 @@ class TrafficTracker
                                 }
                             }
                         }
+                        baselineNeedsRetry.remove(identity)
 
                         _status.value = TrackingStatus.Active
                     } else {
@@ -231,9 +232,9 @@ class TrafficTracker
             val lastTotalBytes = lastTotalBytesRes.getOrThrow()
 
             if (lastTotalBytes == -1L || (currentBytes < lastTotalBytes)) {
-                handleFirstRunOrReset(targetIdentity, currentBytes, target.dataSubId)
+                handleFirstRunOrReset(targetIdentity, currentBytes)
             } else {
-                handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot, target.dataSubId)
+                handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
             }
 
             updateLastDataSubId(target.dataSubId)
@@ -292,14 +293,12 @@ class TrafficTracker
         private suspend fun handleFirstRunOrReset(
             identity: String,
             currentBytes: Long,
-            dataSubId: Int,
         ) {
             simUsageResetRepository.setLastTotalBytes(
                 identity,
                 currentBytes,
             )
             AppLogger.d("Traffic baseline initialized/reset for $identity to $currentBytes")
-            updateLastDataSubId(dataSubId)
         }
 
         private suspend fun handleTrafficDelta(
@@ -307,7 +306,6 @@ class TrafficTracker
             currentBytes: Long,
             lastTotalBytes: Long,
             slot: Int,
-            dataSubId: Int,
         ) {
             val deltaBytes = currentBytes - lastTotalBytes
             if (deltaBytes > 0L) {
@@ -319,7 +317,6 @@ class TrafficTracker
                     )
                     simUsageRepository.incrementTrafficUsed(identity, deltaMB)
                     AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
-                    updateLastDataSubId(dataSubId)
                 }
             }
         }
@@ -468,11 +465,9 @@ class TrafficTracker
                     AppLogger.d("Baseline reset successfully for $identity")
                 } else {
                     AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
-                    if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2) {
-                        AppLogger.w(
-                            "TrafficTracker: baselineNeedsRetry map limit exceeded. Clearing all stale entries.",
-                        )
-                        baselineNeedsRetry.clear()
+                    if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
+                        val activeIdentities = simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
+                        baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
                     }
                     baselineNeedsRetry[identity] = true
                 }

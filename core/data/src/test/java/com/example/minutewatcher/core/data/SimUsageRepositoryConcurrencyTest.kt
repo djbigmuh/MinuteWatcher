@@ -4,11 +4,17 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.NoOpLogger
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -22,18 +28,29 @@ class SimUsageRepositoryConcurrencyTest {
     val tmpFolder = TemporaryFolder()
 
     private val timeProvider = FixedTimeProvider(currentTime = 2000000L)
+    private var dsScope: CoroutineScope? = null
 
     @Before
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
     }
 
+    @After
+    fun tearDown() {
+        dsScope?.cancel()
+    }
+
     @Test
-    fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
-        runTest(UnconfinedTestDispatcher()) {
+    fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() {
+        val scheduler = TestCoroutineScheduler()
+        val dispatcher = UnconfinedTestDispatcher(scheduler)
+        val scope = CoroutineScope(SupervisorJob() + dispatcher)
+        dsScope = scope
+
+        runTest(scheduler) {
             val dataStore =
                 PreferenceDataStoreFactory.create(
-                    scope = backgroundScope,
+                    scope = scope,
                     produceFile = {
                         tmpFolder.newFile("test_concurrency.preferences_pb")
                     },
@@ -60,6 +77,9 @@ class SimUsageRepositoryConcurrencyTest {
 
             val results = resetResults.map { it.await() }
 
+            // Ensure all DataStore operations are completed
+            advanceUntilIdle()
+
             // Assert: only one call should have returned true (did reset)
             val resetCount = results.count { it }
             assertEquals("Should only perform reset once", 1, resetCount)
@@ -69,4 +89,5 @@ class SimUsageRepositoryConcurrencyTest {
             assertEquals(0, usage.minutesUsed)
             assertEquals(now, usage.lastResetDate)
         }
+    }
 }
