@@ -6,7 +6,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
-import com.example.minutewatcher.core.data.util.SimCardMapper
+import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository

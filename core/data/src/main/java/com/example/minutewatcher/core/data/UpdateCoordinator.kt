@@ -47,9 +47,13 @@ class UpdateCoordinator
                         SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
-                        if (snapshot.isManualUpdate && (snapshot.timestamp <= lastManualSnapshotTimestamp.get())) {
-                            AppLogger.d("Skipping debounced widget update after manual refresh")
-                            return@collect
+                        val lastManual = lastManualSnapshotTimestamp.get()
+                        if (snapshot.isManualUpdate && lastManual != -1L) {
+                            val isWithinWindow = (System.currentTimeMillis() - lastManual) < Constants.Widget.MANUAL_UPDATE_BLOCK_MS
+                            if (snapshot.timestamp <= lastManual && isWithinWindow) {
+                                AppLogger.d("Skipping debounced widget update after recent manual refresh")
+                                return@collect
+                            }
                         }
                         lastManualSnapshotTimestamp.set(-1L)
                         widgetUpdater.updateAll()
@@ -66,7 +70,7 @@ class UpdateCoordinator
         ) {
             if (force) {
                 if (updateWidget) {
-                    lastManualSnapshotTimestamp.set(Long.MAX_VALUE)
+                    lastManualSnapshotTimestamp.set(System.currentTimeMillis())
                     widgetUpdater.updateAll()
                 }
                 dataRefreshNotifier.notifyRefresh(isManual = true)

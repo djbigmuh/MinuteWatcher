@@ -7,7 +7,10 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -15,6 +18,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UpdateCoordinatorTest {
@@ -22,16 +27,20 @@ class UpdateCoordinatorTest {
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
 
-    private val snapshotFlow = MutableStateFlow(createEmptySnapshot())
+    private val snapshotFlow = MutableSharedFlow<GlobalSnapshot>(replay = 1, extraBufferCapacity = 10)
 
     @Before
     fun setup() {
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+        AppLogger.init(mock(), NoOpLogger())
+        snapshotFlow.tryEmit(createEmptySnapshot())
     }
 
     @Test
     fun `snapshot change triggers widget update with debounce`() =
         runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
@@ -43,13 +52,13 @@ class UpdateCoordinatorTest {
 
             // 1. First meaningful snapshot
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.value = s1
+            snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater).updateAll()
 
             // 2. Second change
             val s2 = createSnapshot(timestamp = 2000L, content = "B")
-            snapshotFlow.value = s2
+            snapshotFlow.tryEmit(s2)
             testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater, times(2)).updateAll()
         }
@@ -57,6 +66,9 @@ class UpdateCoordinatorTest {
     @Test
     fun `identical content snapshots do not trigger redundant updates`() =
         runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
@@ -67,13 +79,13 @@ class UpdateCoordinatorTest {
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.value = s1
+            snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater, times(1)).updateAll()
 
             // Same content, different timestamp
             val s2 = createSnapshot(timestamp = 2000L, content = "A")
-            snapshotFlow.value = s2
+            snapshotFlow.tryEmit(s2)
             testScheduler.advanceTimeBy(1000)
 
             // Still only 1 call
@@ -100,6 +112,9 @@ class UpdateCoordinatorTest {
     @Test
     fun `notifyDataChanged without force does NOT trigger immediate widget update`() =
         runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
@@ -116,7 +131,7 @@ class UpdateCoordinatorTest {
 
             // Should call updateAll after snapshot change and debounce
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.value = s1
+            snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(1000)
             verify(widgetUpdater, times(1)).updateAll()
         }
@@ -124,6 +139,9 @@ class UpdateCoordinatorTest {
     @Test
     fun `manual snapshot is skipped by reactive flow if recently forced`() =
         runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
@@ -138,7 +156,7 @@ class UpdateCoordinatorTest {
 
             // 2. Emit manual snapshot (e.g. from the refresh triggered by force)
             val s1 = createSnapshot(timestamp = 1000L, content = "A").copy(isManualUpdate = true)
-            snapshotFlow.value = s1
+            snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
 
             // Should still be 1 call (the forced one), reactive one skipped
@@ -146,7 +164,7 @@ class UpdateCoordinatorTest {
 
             // 3. Emit another snapshot - should be processed because gate is reset
             val s2 = createSnapshot(timestamp = 2000L, content = "B")
-            snapshotFlow.value = s2
+            snapshotFlow.tryEmit(s2)
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
             verify(widgetUpdater, times(2)).updateAll()
         }

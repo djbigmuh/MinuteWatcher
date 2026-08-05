@@ -42,9 +42,10 @@ class SimIdentityRepositoryHangTest {
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var permissionManager: PermissionManager
     private lateinit var migrationService: IdentityMigrationService
-    private val mockSimProvider: MockSimProvider = mock {
-        on { getMockSims(any()) }.thenReturn(null)
-    }
+    private val mockSimProvider: MockSimProvider =
+        mock {
+            on { getMockSims(any()) }.thenReturn(null)
+        }
 
     @Before
     fun setup() {
@@ -53,48 +54,53 @@ class SimIdentityRepositoryHangTest {
         permissionStateNotifier = mock()
         permissionManager = mock()
         migrationService = mock()
-        appSettingsRepository = mock {
-            on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
-        }
+        appSettingsRepository =
+            mock {
+                on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
+            }
 
-        seedRepository = mock {
-            on { getSeed() } doReturn flowOf("test_seed")
-            on { getOrCreateSeed(any()) } doReturn "test_seed"
-        }
+        seedRepository =
+            mock {
+                on { getSeed() } doReturn flowOf("test_seed")
+                on { getOrCreateSeed(any()) } doReturn "test_seed"
+            }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
 
-        dataStore = PreferenceDataStoreFactory.create(
-            produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") }
-        )
+        dataStore =
+            PreferenceDataStoreFactory.create(
+                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
+            )
     }
 
     @Test
-    fun `getSimIdentity returns fallback when activeSimsCache hangs`() = runTest {
-        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+    fun `getSimIdentity returns fallback when activeSimsCache hangs`() =
+        runTest {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
-        val identityRepo = SimIdentityRepositoryImpl(
-            context,
-            subscriptionManager,
-            permissionManager,
-            permissionStateNotifier,
-            dataStore,
-            seedRepository,
-            appSettingsRepository,
-            migrationService,
-            mockSimProvider,
-            backgroundScope
-        )
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    seedRepository,
+                    appSettingsRepository,
+                    migrationService,
+                    mockSimProvider,
+                    backgroundScope,
+                )
 
-        // Mock seedRepository.getSeed() to return a flow that never emits,
-        // which will cause activeSimsCache to wait indefinitely.
-        whenever(seedRepository.getSeed()).thenReturn(MutableSharedFlow())
+            // Mock seedRepository.getSeed() to return a flow that never emits,
+            // which will cause activeSimsCache to wait indefinitely.
+            whenever(seedRepository.getSeed()).thenReturn(MutableSharedFlow())
 
-        // Act
-        val identity = identityRepo.getSimIdentity(0)
+            // Act
+            val identity = identityRepo.getSimIdentity(0)
 
-        // Assert: It should return fallback after 10s timeout instead of hanging forever
-        assertEquals("sim_0", identity.stableId)
-        assertEquals(IdentitySource.SLOT_FALLBACK, identity.source)
-    }
+            // Assert: It should return fallback after 10s timeout instead of hanging forever
+            assertEquals("sim_0", identity.stableId)
+            assertEquals(IdentitySource.SLOT_FALLBACK, identity.source)
+        }
 }

@@ -59,6 +59,8 @@ class AppSearchWrapperImpl
 private class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,
 ) : AppSearchSessionWrapper {
+    private var isClosed = false
+
     override suspend fun setSchema(request: SetSchemaRequest) {
         session.setSchemaAsync(request).await()
     }
@@ -80,6 +82,9 @@ private class AppSearchSessionWrapperImpl(
     }
 
     override fun close() {
-        session.close()
+        if (!isClosed) {
+            session.close()
+            isClosed = true
+        }
     }
 }

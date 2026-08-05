@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import com.example.minutewatcher.core.common.util.FormatUtils
-import com.example.minutewatcher.core.data.util.SimUtils
+import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.PackageType

@@ -11,6 +11,10 @@ object Constants {
         const val DEFAULT_BG_COLOR: Int = 0xFF000000.toInt()
         const val LUMINANCE_THRESHOLD = 0.5f
         const val SWITCH_SCALE = 0.8f
+        const val HIGHLIGHT_DELAY_MS = 3000L
+
+        const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
+        const val MAX_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24 hours
     }
 
     object Widget {
@@ -39,6 +43,8 @@ object Constants {
         const val CORNER_RADIUS = 16
         const val SEPARATOR_THICKNESS = 1
         const val ALPHA_FULL = 1f
+
+        const val MANUAL_UPDATE_BLOCK_MS = 5000L
     }
 
     object Traffic {
@@ -63,6 +69,9 @@ object Constants {
     object Flow {
         const val STATE_FLOW_STOP_TIMEOUT_MS = 5_000L
         const val DEBOUNCE_MS = 300L
+        const val RETRY_TIMEOUT_MS = 15_000L
+        const val SHORT_TIMEOUT_MS = 5_000L
+        const val LONG_TIMEOUT_MS = 10_000L
     }
 
     object Calls {

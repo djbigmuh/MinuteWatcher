@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -201,6 +202,7 @@ class TrafficTracker
             _status.value = TrackingStatus.Idle
         }
 
+        @Suppress("ReturnCount")
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
@@ -213,14 +215,13 @@ class TrafficTracker
 
             val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
 
-            if (baselineNeedsRetry[targetIdentity] == true) {
-                if (currentBytes != -1L) {
+            if (currentBytes != -1L) {
+                if (baselineNeedsRetry.remove(targetIdentity) == true) {
                     simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                    baselineNeedsRetry.remove(targetIdentity)
                     AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
-                } else {
-                    AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
                 }
+            } else if (baselineNeedsRetry[targetIdentity] == true) {
+                AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
             }
 
             if (currentBytes == -1L) {
@@ -333,7 +334,7 @@ class TrafficTracker
                 bucket.rxBytes + bucket.txBytes
             } catch (e: Exception) {
                 AppLogger.e("Error querying NetworkStatsManager", e)
-                throw e
+                -1L
             }
         }
 
@@ -416,11 +417,11 @@ class TrafficTracker
                     Result.failure(Exception("Timeout reading $fieldName"))
                 }
 
-            val firstResult = tryRead(5000L)
+            val firstResult = tryRead(Constants.Flow.SHORT_TIMEOUT_MS)
             if (firstResult != null) return firstResult
 
             AppLogger.w("TrafficTracker: Timeout reading $fieldName for $identity, retrying with 10s...")
-            return tryRead(10000L) ?: Result.failure(Exception("Timeout reading $fieldName"))
+            return tryRead(Constants.Flow.LONG_TIMEOUT_MS) ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 
         private suspend fun handleSimChange(
@@ -447,6 +448,10 @@ class TrafficTracker
                     AppLogger.d("Baseline reset successfully for $identity")
                 } else {
                     AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
+                    if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2) {
+                        AppLogger.w("TrafficTracker: baselineNeedsRetry map limit exceeded. Clearing all stale entries.")
+                        baselineNeedsRetry.clear()
+                    }
                     baselineNeedsRetry[identity] = true
                 }
             } catch (e: CancellationException) {

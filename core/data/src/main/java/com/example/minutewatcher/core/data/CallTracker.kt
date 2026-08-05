@@ -335,7 +335,7 @@ class CallTracker
             return chosen
         }
 
-        @Suppress("ktlint:standard:chain-wrapping", "ktlint:standard:condition-wrapping")
+        @Suppress("ktlint:standard:chain-wrapping", "ktlint:standard:condition-wrapping", "ReturnCount")
         private suspend fun endCall(
             subId: Int,
             notify: Boolean = true,
@@ -461,10 +461,12 @@ class CallTracker
                     Result.failure(e)
                 }
 
-            val first = tryRead(5000L)
-            if (first != null) return first
+            val firstResult = tryRead(5000L)
+            if (firstResult != null && firstResult.isSuccess) return firstResult
 
-            AppLogger.w("CallTracker: Timeout reading $fieldName for subId $subId, retrying with 10s...")
+            val reason = if (firstResult == null) "Timeout" else "Error (${firstResult.exceptionOrNull()?.message})"
+            AppLogger.w("CallTracker: $reason reading $fieldName for subId $subId, retrying with 10s...")
+
             return tryRead(10000L) ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 

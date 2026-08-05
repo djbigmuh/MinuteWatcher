@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.coroutineScope
@@ -28,12 +29,26 @@ class WidgetSettingsRepository
                 var activeSimsResult = simIdentityRepository.observeActiveSims().firstWithTimeout()
                 if (activeSimsResult == null) {
                     AppLogger.w("WidgetSettingsRepository: observeActiveSims timed out, retrying with 15s...")
-                    activeSimsResult = simIdentityRepository.observeActiveSims().firstWithTimeout(15_000L)
+                    activeSimsResult =
+                        simIdentityRepository.observeActiveSims().firstWithTimeout(Constants.Flow.RETRY_TIMEOUT_MS)
                     if (activeSimsResult == null) {
                         AppLogger.e("WidgetSettingsRepository: failed to load active SIMs after retry")
+                        return@coroutineScope WidgetSettingsState(
+                            layoutMode = settings.widgetLayoutMode,
+                            simArrangement = settings.widgetSimArrangement,
+                            transparency = settings.widgetTransparency,
+                            fontSize = settings.widgetFontSize,
+                            backgroundColor = settings.widgetBackgroundColor,
+                            notifyLowMinutes = settings.notifyLowMinutes,
+                            notifyLowTraffic = settings.notifyLowTraffic,
+                            callTrackingEnabled = settings.callTrackingEnabled,
+                            simStates = emptyMap(),
+                            widgetLimitExceeded = settings.widgetLimitExceeded,
+                            settingsLoadFailed = true,
+                        )
                     }
                 }
-                val activeSims = activeSimsResult ?: emptyList()
+                val activeSims = activeSimsResult
 
                 val realIdentities = activeSims.map { it.identity.stableId }
                 val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }

@@ -8,7 +8,7 @@ import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.util.SimUtils
+import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants

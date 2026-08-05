@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -193,8 +194,12 @@ class MainViewModel
                 return
             }
             val elapsed = nowElapsed - last
-            // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt может быть больше
-            if (elapsed < 0 || elapsed > RESUME_REFRESH_THRESHOLD_MS) {
+            // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt может быть больше.
+            // Проверяем превышение порога обновления (обычно 20с).
+            // Любое превышение более долгого интервала (например, 24ч) также попадает под это условие.
+            val isStale = elapsed < 0 || elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS
+
+            if (isStale) {
                 lastRefreshAt = nowElapsed
                 viewModelScope.launch { refreshAndNotify(force = false) }
             }
@@ -202,6 +207,5 @@ class MainViewModel
 
         companion object {
             private const val KEY_LAST_REFRESH_AT = "last_refresh_at"
-            private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
         }
     }

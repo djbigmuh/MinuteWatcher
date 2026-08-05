@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +24,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainSimDataController
     @Inject
@@ -60,7 +61,7 @@ class MainSimDataController
             _highlightedSlot.value = slot
             highlightJob =
                 scope.launch {
-                    delay(HIGHLIGHT_DELAY_SECONDS.seconds)
+                    delay(Constants.UI.HIGHLIGHT_DELAY_MS.milliseconds)
                     _highlightedSlot.value = null
                 }
         }
@@ -146,12 +147,12 @@ class MainSimDataController
         fun retryTraffic(onRefresh: suspend () -> Unit) = trackingRecoveryController.retryTraffic(scope, onRefresh)
 
         fun notifyDataChanged(force: Boolean = false) {
-            scope.launch {
-                dataChangeNotifier.notifyDataChanged(force = force)
+            if (force) {
+                scope.launch {
+                    dataChangeNotifier.notifyDataChanged(force = true)
+                }
             }
+            // Non-force updates are handled reactively by UpdateCoordinator through snapshot observation.
         }
 
-        companion object {
-            private const val HIGHLIGHT_DELAY_SECONDS = 3L
-        }
     }

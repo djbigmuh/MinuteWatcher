@@ -74,10 +74,10 @@ class SimIdentityRepositoryImpl
 
         private val seedFlow: Flow<String> =
             flow {
-                val currentSeed = seedRepository.getSeed().firstWithTimeout(5000L)
+                val currentSeed = seedRepository.getSeed().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                 val seed =
                     if (currentSeed.isNullOrEmpty()) {
-                        withTimeoutOrNull(10000L.milliseconds) {
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                             seedRepository.getOrCreateSeed {
                                 java.util.UUID
                                     .randomUUID()
@@ -176,7 +176,10 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.Lazily,
+                // Use WhileSubscribed to allow the cache to be cleared when not in use,
+                // but keep it active during UI interaction or background tracking.
+                // This is safer than Lazily as it ensures fresh data on re-subscription.
+                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                 initialValue = null,
             )
 
@@ -185,8 +188,12 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
+            // Warm up the seed flow first to ensure that physicalActiveSims (which depends on it)
+            // can start emitting immediately when we subscribe to activeSimsCache.
+            getSeed()
+
             val currentSims: List<ActiveSimInfo> =
-                activeSimsCache.filterNotNull().firstWithTimeout(10_000L) ?: run {
+                activeSimsCache.filterNotNull().firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
                     com.example.minutewatcher.core.common.util.AppLogger
                         .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
                     emptyList()

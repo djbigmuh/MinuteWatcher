@@ -38,7 +38,9 @@ class WidgetUpdaterImpl
                 try {
                     when (safeUpdateAll(context)) {
                         is UpdateResult.Success -> {
-                            appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+                            appSettingsRepository.updateAppSettings {
+                                it.copy(widgetLimitExceeded = false)
+                            }
                         }
                         is UpdateResult.LimitExceeded -> {
                             AppLogger.w("Widget update failed due to size limit. Skipping retry.")
@@ -47,7 +49,9 @@ class WidgetUpdaterImpl
                             AppLogger.d("Retrying widget update after generic failure...")
                             val retryResult = safeUpdateAll(context)
                             if (retryResult is UpdateResult.Success) {
-                                appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
+                                appSettingsRepository.updateAppSettings {
+                                    it.copy(widgetLimitExceeded = false)
+                                }
                             }
                         }
                     }
@@ -71,7 +75,9 @@ class WidgetUpdaterImpl
                 )
                 if (isLimit) {
                     try {
-                        appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = true) }
+                        appSettingsRepository.updateAppSettings {
+                            it.copy(widgetLimitExceeded = true)
+                        }
                     } catch (ce: CancellationException) {
                         throw ce
                     } catch (ex: Exception) {
@@ -101,8 +107,10 @@ class WidgetUpdaterImpl
                 msg.contains("transaction", ignoreCase = true) &&
                     msg.contains("too large", ignoreCase = true)
 
-            return ((mentionsRemoteViews && mentionsSize) ||
-                mentionsTransactionSize ||
-                (e.cause is android.os.TransactionTooLargeException))
+            return (
+                (mentionsRemoteViews && mentionsSize) ||
+                    mentionsTransactionSize ||
+                    (e.cause is android.os.TransactionTooLargeException)
+            )
         }
     }

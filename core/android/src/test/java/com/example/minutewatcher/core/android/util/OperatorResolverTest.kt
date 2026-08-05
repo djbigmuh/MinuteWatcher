@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.minutewatcher.core.data.util.OperatorResolver
+
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Test

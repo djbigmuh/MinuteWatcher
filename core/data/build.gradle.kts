@@ -76,6 +76,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))
     implementation(project(":core:resources"))
+    implementation(project(":core:android"))
 
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)

@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.common.util
 
 import android.content.Context
-import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
 import java.io.File
 import java.io.FileWriter
@@ -21,23 +20,28 @@ object AppLogger {
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG // Disabled in release for privacy and security
 
     private var logDir: File? = null
+    private var logger: Logger = AndroidLogger()
     private val executor = Executors.newSingleThreadExecutor()
-    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
-        .withZone(ZoneId.systemDefault())
+    private val dateFormat =
+        DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            .withZone(ZoneId.systemDefault())
 
-    fun init(context: Context) {
+    fun init(
+        context: Context,
+        customLogger: Logger = AndroidLogger(),
+    ) {
         logDir = context.filesDir
+        logger = customLogger
     }
 
     fun d(message: String) {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, message)
-            logToFile("D", message)
-        }
+        logger.d(TAG, message)
+        logToFile("D", message)
     }
 
     fun w(message: String) {
-        Log.w(TAG, message)
+        logger.w(TAG, message)
         logToFile("W", message)
     }
 
@@ -45,10 +49,10 @@ object AppLogger {
         message: String,
         throwable: Throwable? = null,
     ) {
-        Log.e(TAG, message, throwable)
+        logger.e(TAG, message, throwable)
         val fullMessage =
             if (throwable != null) {
-                "$message\n${Log.getStackTraceString(throwable)}"
+                "$message\n${throwable.stackTraceToString()}"
             } else {
                 message
             }

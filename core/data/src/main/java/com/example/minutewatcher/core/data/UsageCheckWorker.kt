@@ -13,7 +13,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
-import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.util.DateUtils
 import com.example.minutewatcher.core.resources.R
 import dagger.assisted.Assisted
@@ -85,20 +85,23 @@ class UsageCheckWorker
         }
 
         private suspend fun processSimSnapshot(
-            simSnapshot: com.example.minutewatcher.core.model.SimSnapshot,
+            simSnapshot: SimSnapshot,
             appSettings: AppSettings,
         ) {
             val identity = simSnapshot.identity
             var simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout()
             if (simUsageResult == null) {
                 AppLogger.w("UsageCheckWorker: getSimUsage timed out for $identity, retrying with 10s...")
-                simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout(10000L)
+                simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
             }
 
-            val simUsage = simUsageResult ?: run {
-                AppLogger.e("UsageCheckWorker: getSimUsage failed for $identity after retry, skipping notifications")
-                return
-            }
+            val simUsage =
+                simUsageResult ?: run {
+                    AppLogger.e(
+                        "UsageCheckWorker: getSimUsage failed for $identity after retry, skipping notifications",
+                    )
+                    return
+                }
 
             val now = deps.timeProvider.now()
 
@@ -120,7 +123,7 @@ class UsageCheckWorker
             identity: String,
             appSettings: AppSettings,
         ) {
-            if (entity.limit <= 0 || !appSettings.notifyLowMinutes) return
+            if ((entity.limit <= 0) || !appSettings.notifyLowMinutes) return
 
             val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
@@ -137,7 +140,7 @@ class UsageCheckWorker
                         entity.simSlot,
                         NOTIFICATION_TYPE_MINUTES,
                     )
-                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, true)
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
                 }
             } else {
                 if (notifiedExhausted) {
@@ -209,9 +212,7 @@ class UsageCheckWorker
             type: Int,
         ) {
             val titleRes =
-                if (type ==
-                    NOTIFICATION_TYPE_MINUTES
-                ) {
+                if (type == NOTIFICATION_TYPE_MINUTES) {
                     R.string.notification_minutes_title
                 } else {
                     R.string.notification_traffic_title
@@ -227,7 +228,7 @@ class UsageCheckWorker
             identity: String,
             appSettings: AppSettings,
         ) {
-            if (entity.limit <= 0 || !appSettings.notifyLowTraffic) return
+            if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) return
 
             val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage

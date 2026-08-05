@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.data.util
+package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger

@@ -22,7 +22,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.isNull
@@ -31,11 +30,12 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerTest {
     private val context: Context = mock()
@@ -52,6 +52,7 @@ class TrafficTrackerTest {
 
     @Before
     fun setup() {
+        AppLogger.init(mock(), NoOpLogger())
         whenever(context.getSystemService(Context.NETWORK_STATS_SERVICE)).thenReturn(networkStatsManager)
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -288,61 +289,84 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage retries baseline reset when stats become available after SIM swap`() =
         runTest(testDispatcher) {
             // 1. Initial state
+            val bucket1 = mock<NetworkStats.Bucket>()
+            whenever(bucket1.rxBytes).thenReturn(1000L)
+            whenever(bucket1.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
+
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
             tracker.updateTrafficUsage()
 
-            // 2. SIM swap, but stats unavailable
+            // 2. SIM swap. Setup sequence: 1st call fails, 2nd call succeeds.
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any()))
-                .thenThrow(RuntimeException("Stats unavailable"))
 
+            val bucket2 = mock<NetworkStats.Bucket>()
+            whenever(bucket2.rxBytes).thenReturn(2000L)
+            whenever(bucket2.txBytes).thenReturn(0L)
+
+            var callCount = 0
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenAnswer {
+                callCount++
+                if (callCount == 1) throw RuntimeException("Stats unavailable")
+                bucket2
+            }
+
+            // Attempt 1: Stats unavailable
             tracker.updateTrafficUsage()
-
-            // Verify baseline was NOT set for sim_1 yet
             verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
 
-            // 3. Stats become available
-            val bucket = mock<NetworkStats.Bucket>()
-            whenever(bucket.rxBytes).thenReturn(2000L)
-            whenever(bucket.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
-
+            // Attempt 2: Stats finally available
             tracker.updateTrafficUsage()
 
             // Verify baseline IS set for sim_1 now
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(2000L))
+
+            // Total calls: 1 (initial) + 2 (swap retry) = 3
+            verify(networkStatsManager, times(3)).querySummaryForDevice(any(), anyOrNull(), any(), any())
         }
 
     @Test
     fun `updateTrafficUsage continues to retry baseline reset if stats remain unavailable`() =
         runTest(testDispatcher) {
             // 1. Initial state
+            val bucket1 = mock<NetworkStats.Bucket>()
+            whenever(bucket1.rxBytes).thenReturn(1000L)
+            whenever(bucket1.txBytes).thenReturn(0L)
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket1)
+
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
             tracker.updateTrafficUsage()
 
-            // 2. SIM swap, stats unavailable
+            // 2. SIM swap. Setup sequence: 1st and 2nd calls fail, 3rd call succeeds.
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any()))
-                .thenThrow(RuntimeException("Stats unavailable"))
 
+            val bucket3 = mock<NetworkStats.Bucket>()
+            whenever(bucket3.rxBytes).thenReturn(3000L)
+            whenever(bucket3.txBytes).thenReturn(0L)
+
+            var callCount = 0
+            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenAnswer {
+                callCount++
+                if (callCount <= 2) throw RuntimeException("Stats unavailable")
+                bucket3
+            }
+
+            // Attempt 1: Stats unavailable
             tracker.updateTrafficUsage()
-
-            // 3. Stats still unavailable in next cycle
-            tracker.updateTrafficUsage()
-
-            // Verify baseline still not set
             verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
 
-            // 4. Stats finally become available
-            val bucket = mock<NetworkStats.Bucket>()
-            whenever(bucket.rxBytes).thenReturn(3000L)
-            whenever(bucket.txBytes).thenReturn(0L)
-            whenever(networkStatsManager.querySummaryForDevice(any(), anyOrNull(), any(), any())).thenReturn(bucket)
+            // Attempt 2: Stats still unavailable
+            tracker.updateTrafficUsage()
+            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
 
+            // Attempt 3: Stats finally become available
             tracker.updateTrafficUsage()
 
             // Verify baseline IS set
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(3000L))
+
+            // Total calls: 1 (initial) + 3 (swap retries) = 4
+            verify(networkStatsManager, times(4)).querySummaryForDevice(any(), anyOrNull(), any(), any())
         }
 
     @Test

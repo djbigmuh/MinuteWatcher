@@ -108,6 +108,7 @@ open class SemanticSearchManager
                         return false
                     }
                 } catch (e: CancellationException) {
+                    newSession?.close()
                     throw e
                 } catch (e: Exception) {
                     newSession?.close()

@@ -13,12 +13,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 
 class WidgetSettingsRepositoryTest {
     private lateinit var repository: WidgetSettingsRepository
@@ -28,6 +31,7 @@ class WidgetSettingsRepositoryTest {
 
     @Before
     fun setup() {
+        AppLogger.init(mock(), NoOpLogger())
         repository =
             WidgetSettingsRepository(
                 settingsRepository,
@@ -232,6 +236,6 @@ class WidgetSettingsRepositoryTest {
             val result = repository.load()
 
             assertEquals(0, result.simStates.size)
-            // Implicitly verified that it didn't hang forever due to runTest
+            assertTrue(result.settingsLoadFailed)
         }
 }
