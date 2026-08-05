@@ -395,7 +395,8 @@ class TrafficTracker
                         currentDataSubId = selected.subscriptionId
                         isFallback = true
                         AppLogger.w(
-                            "No default data SIM identified for traffic tracking. Using fallback heuristic: attributing all traffic to Slot $targetSim.",
+                            "No default data SIM identified for traffic tracking. " +
+                                "Using fallback heuristic: attributing all traffic to Slot $targetSim.",
                         )
                     }
                 }
@@ -466,7 +467,8 @@ class TrafficTracker
                 } else {
                     AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
                     if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
-                        val activeIdentities = simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
+                        val activeIdentities =
+                            simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
                         baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
                     }
                     baselineNeedsRetry[identity] = true

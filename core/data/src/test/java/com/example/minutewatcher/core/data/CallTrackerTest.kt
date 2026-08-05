@@ -230,9 +230,12 @@ class CallTrackerTest {
     fun `handleCallStartInternal sets error status on DataStore IOException`() =
         runTest(testDispatcher) {
             // Arrange
-            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(kotlinx.coroutines.flow.flow {
-                throw java.io.IOException("Disk full")
-            })
+            whenever(callSessionRepository.getCallStartTime(any()))
+                .thenReturn(
+                    kotlinx.coroutines.flow.flow {
+                        throw java.io.IOException("Disk full")
+                    },
+                )
 
             // Act
             callTracker.onCallStarted(subId = 1)

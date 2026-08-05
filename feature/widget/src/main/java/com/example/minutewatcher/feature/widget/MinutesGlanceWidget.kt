@@ -42,9 +42,11 @@ import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
+import com.example.minutewatcher.core.resources.R
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -95,29 +97,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val usageRepository = entryPoint.usageStateRepository()
         val widgetSettingsLoader = entryPoint.widgetSettingsLoader()
 
-        var snapshot = usageRepository.observeSnapshot().value
-        var refreshFailed = false
-        if (snapshot.timestamp == 0L) {
-            // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
-            try {
-                val result = withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                    usageRepository.refresh()
-                }
-                if (result != null) {
-                    snapshot = result.snapshot
-                    if (snapshot.timestamp == 0L) {
-                        refreshFailed = true
-                    }
-                } else {
-                    refreshFailed = true
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Widget refresh failed", e)
-                refreshFailed = true
-            }
-        }
+        val (snapshot, refreshFailed) = getSnapshot(usageRepository)
 
         val settingsState =
             try {
@@ -135,6 +115,31 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             settingsState,
             refreshFailed = refreshFailed,
         )
+    }
+
+    private suspend fun getSnapshot(usageRepository: UsageStateRepository): Pair<GlobalSnapshot, Boolean> {
+        val initialSnapshot = usageRepository.observeSnapshot().value
+        if (initialSnapshot.timestamp != 0L) {
+            return initialSnapshot to false
+        }
+
+        // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
+        return try {
+            val result =
+                withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
+                    usageRepository.refresh()
+                }
+            if (result != null && result.snapshot.timestamp != 0L) {
+                result.snapshot to false
+            } else {
+                initialSnapshot to true
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Widget refresh failed", e)
+            initialSnapshot to true
+        }
     }
 }
 
@@ -199,7 +204,7 @@ private fun WidgetContent(
 
         if (uiState.settingsLoadFailed) {
             Text(
-                text = context.getString(com.example.minutewatcher.core.resources.R.string.settings_load_error),
+                text = context.getString(R.string.settings_load_error),
                 style =
                     TextStyle(
                         fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
@@ -208,7 +213,7 @@ private fun WidgetContent(
             )
         } else if (uiState.refreshFailed) {
             Text(
-                text = context.getString(com.example.minutewatcher.core.resources.R.string.refresh_error),
+                text = context.getString(R.string.refresh_error),
                 style =
                     TextStyle(
                         fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
@@ -217,7 +222,7 @@ private fun WidgetContent(
             )
         } else if (simUiStates.isEmpty()) {
             Text(
-                text = context.getString(com.example.minutewatcher.core.resources.R.string.no_data),
+                text = context.getString(R.string.no_data),
                 style =
                     TextStyle(
                         fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
@@ -241,7 +246,10 @@ private fun MultiSimLayout(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             sims.forEachIndexed { index, sim ->
-                Box(modifier = GlanceModifier.fillMaxHeight().defaultWeight(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = GlanceModifier.fillMaxHeight().defaultWeight(),
+                    contentAlignment = Alignment.Center,
+                ) {
                     SimItem(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
@@ -271,7 +279,10 @@ private fun MultiSimLayout(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             sims.forEachIndexed { index, sim ->
-                Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                    contentAlignment = Alignment.Center,
+                ) {
                     SimItem(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
@@ -306,7 +317,7 @@ private fun SimItem(
     val context = LocalContext.current
     val summary =
         context.getString(
-            com.example.minutewatcher.core.resources.R.string.sim_status_summary,
+            R.string.sim_status_summary,
             sim.operatorName,
             sim.minutesText,
             sim.trafficText,

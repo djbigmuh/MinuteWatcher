@@ -85,7 +85,9 @@ class MainViewModel
                     }
                     autoResetUseCase.performAutoReset(shouldNotify = false)
                     controllers.refresh.refreshSimCardsInternal()
-                    lastRefreshAt = SystemClock.elapsedRealtime()
+                    if (lastRefreshAt == 0L) {
+                        lastRefreshAt = SystemClock.elapsedRealtime()
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

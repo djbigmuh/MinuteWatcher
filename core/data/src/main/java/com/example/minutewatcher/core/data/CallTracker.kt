@@ -121,9 +121,12 @@ class CallTracker
             val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
             val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
 
-            val failure = startTimeRes.exceptionOrNull() ?: savedBootTimeRes.exceptionOrNull()
+            val failure =
+                startTimeRes.exceptionOrNull()
+                    ?: savedBootTimeRes.exceptionOrNull()
             if (failure != null) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
                 return false
             }
 
@@ -355,7 +358,8 @@ class CallTracker
                     ?: savedIdentityRes.exceptionOrNull()
 
             if (failure != null) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
                 // Очищаем сессию, чтобы избежать stale-данных
                 clearSession(subId)
                 return
