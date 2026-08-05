@@ -66,6 +66,7 @@ class AndroidLogger : Logger {
 /**
  * Logger implementation that does nothing. Used for unit tests.
  */
+@Suppress("EmptyFunctionBlock")
 class NoOpLogger : Logger {
     override fun d(
         tag: String,

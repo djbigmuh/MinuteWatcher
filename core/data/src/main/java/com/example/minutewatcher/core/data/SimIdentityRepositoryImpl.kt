@@ -79,9 +79,7 @@ class SimIdentityRepositoryImpl
                     if (currentSeed.isNullOrEmpty()) {
                         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                             seedRepository.getOrCreateSeed {
-                                java.util.UUID
-                                    .randomUUID()
-                                    .toString()
+                                java.util.UUID.randomUUID().toString()
                             }
                         } ?: run {
                             com.example.minutewatcher.core.common.util.AppLogger

@@ -29,16 +29,18 @@ class SimUsageRepositoryConcurrencyTest {
     @Before
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                produceFile = { tmpFolder.newFile("test_concurrency_settings.preferences_pb") },
-            )
-        repository = SimUsageRepositoryImpl(dataStore, timeProvider)
     }
 
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
         runTest {
+            dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_concurrency_settings.preferences_pb") },
+                )
+            repository = SimUsageRepositoryImpl(dataStore, timeProvider)
+
             val identity = "test_sim"
             val autoResetDay = 1
             // Billing period starts at 1000000L (simplified)

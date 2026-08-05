@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -15,7 +14,9 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
-import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,9 +27,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicInteger
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -39,7 +37,6 @@ import kotlin.time.Duration.Companion.milliseconds
 class TrafficTracker
     @Inject
     constructor(
-        @param:ApplicationContext private val context: Context,
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val simUsageResetRepository: SimUsageResetRepository,
@@ -221,6 +218,14 @@ class TrafficTracker
                         currentBytes,
                     )
                     AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
+
+                    _status.value =
+                        if (target.isFallback) {
+                            TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, target.slot.toString())
+                        } else {
+                            TrackingStatus.Active
+                        }
+                    return
                 }
             } else if (baselineNeedsRetry[targetIdentity] == true) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")

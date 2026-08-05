@@ -12,7 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
@@ -44,7 +43,6 @@ class UpdateCoordinator
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > 0L }
-                    .drop(1)
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) ==
                             SnapshotUtils.calculateContentHash(new)
