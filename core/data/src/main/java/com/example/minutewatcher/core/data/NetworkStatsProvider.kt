@@ -24,9 +24,11 @@ interface NetworkStatsProvider {
 }
 
 @Singleton
-class RealNetworkStatsProvider @Inject constructor(
-    @ApplicationContext private val context: Context,
-) : NetworkStatsProvider {
+class RealNetworkStatsProvider
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : NetworkStatsProvider {
     private val networkStatsManager =
         context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
 

@@ -2,12 +2,14 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -34,12 +36,13 @@ class UpdateCoordinator
         private val dataRefreshNotifier: DataRefreshNotifier,
         private val widgetUpdater: WidgetUpdater,
         private val usageStateRepository: UsageStateRepository,
+        private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
         private val lastManualSnapshotTimestamp = AtomicLong(-1L)
 
         init {
-            scope.launch {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > 0L }
@@ -51,7 +54,7 @@ class UpdateCoordinator
                         val lastManual = lastManualSnapshotTimestamp.get()
                         if (snapshot.isManualUpdate && lastManual != -1L) {
                             val isWithinWindow =
-                                (System.currentTimeMillis() - lastManual) <
+                                (timeProvider.now() - lastManual) <
                                     Constants.Widget.MANUAL_UPDATE_BLOCK_MS
                             if (snapshot.timestamp <= lastManual && isWithinWindow) {
                                 AppLogger.d("Skipping debounced widget update after recent manual refresh")
@@ -73,7 +76,7 @@ class UpdateCoordinator
         ) {
             if (force) {
                 if (updateWidget) {
-                    lastManualSnapshotTimestamp.set(System.currentTimeMillis())
+                    lastManualSnapshotTimestamp.set(timeProvider.now())
                     widgetUpdater.updateAll()
                 }
                 dataRefreshNotifier.notifyRefresh(isManual = true)

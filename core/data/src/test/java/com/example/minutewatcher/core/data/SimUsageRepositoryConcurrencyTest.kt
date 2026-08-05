@@ -1,8 +1,6 @@
 package com.example.minutewatcher.core.data
 
-import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.NoOpLogger
@@ -22,8 +20,6 @@ class SimUsageRepositoryConcurrencyTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private lateinit var dataStore: DataStore<Preferences>
-    private lateinit var repository: SimUsageRepositoryImpl
     private val timeProvider = FixedTimeProvider(currentTime = 2000000L)
 
     @Before
@@ -34,12 +30,12 @@ class SimUsageRepositoryConcurrencyTest {
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
         runTest {
-            dataStore =
+            val dataStore =
                 PreferenceDataStoreFactory.create(
-                    scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_concurrency_settings.preferences_pb") },
+                    scope = this,
+                    produceFile = { tmpFolder.newFile("test_concurrency_settings_${System.currentTimeMillis()}.preferences_pb") },
                 )
-            repository = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
 
             val identity = "test_sim"
             val autoResetDay = 1

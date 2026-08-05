@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.NoOpLogger
@@ -32,7 +31,6 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerTest {
-    private val context: Context = mock()
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
@@ -81,7 +79,6 @@ class TrafficTrackerTest {
 
         tracker =
             TrafficTracker(
-                context,
                 simIdentityRepository,
                 simUsageRepository,
                 simUsageResetRepository,

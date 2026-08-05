@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
@@ -21,6 +22,11 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,9 +52,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -66,292 +69,294 @@ class SimIdentityRepositoryImpl
         private val mockSimProvider: MockSimProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
-        SimIdentityRepository {
-        private val saveMutex = Mutex()
-        private val migratedIdentities =
-            java.util.concurrent.ConcurrentHashMap
-                .newKeySet<String>()
+    SimIdentityRepository {
+    private val saveMutex = Mutex()
+    private val migratedIdentities =
+        ConcurrentHashMap
+            .newKeySet<String>()
 
-        private val seedFlow: Flow<String> =
-            flow {
-                val currentSeed = seedRepository.getSeed().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                val seed =
-                    if (currentSeed.isNullOrEmpty()) {
-                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                            seedRepository.getOrCreateSeed {
-                                java.util.UUID.randomUUID().toString()
-                            }
-                        } ?: run {
-                            com.example.minutewatcher.core.common.util.AppLogger
-                                .e("Failed to generate identity seed within timeout, using fallback")
-                            "fallback_seed"
+    private val seedFlow: Flow<String> =
+        flow {
+            val currentSeed = seedRepository.getSeed().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+            val seed =
+                if (currentSeed.isNullOrEmpty()) {
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        seedRepository.getOrCreateSeed {
+                            UUID
+                                .randomUUID()
+                                .toString()
                         }
-                    } else {
-                        currentSeed
+                    } ?: run {
+                        AppLogger
+                            .e("Failed to generate identity seed within timeout, using fallback")
+                        "fallback_seed"
                     }
-                emit(seed)
-                emitAll(
-                    seedRepository
-                        .getSeed()
-                        .filter { it.isNotEmpty() },
-                )
-            }.distinctUntilChanged()
-                .shareIn(scope, SharingStarted.Lazily, replay = 1)
-                .filter { it.isNotEmpty() }
-
-        private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
-            seedFlow
-                .flatMapLatest { seed ->
-                    callbackFlow {
-                        val listener =
-                            object : SubscriptionManager.OnSubscriptionsChangedListener() {
-                                override fun onSubscriptionsChanged() {
-                                    launch {
-                                        send(getActiveSimsInternal(seed))
-                                    }
-                                }
-                            }
-
-                        var isListenerRegistered = false
-
-                        fun updateListenerRegistration() {
-                            val hasPermission = permissionManager.hasPhoneStatePermission()
-                            if (hasPermission && !isListenerRegistered) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    subscriptionManager.addOnSubscriptionsChangedListener(
-                                        context.mainExecutor,
-                                        listener,
-                                    )
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    subscriptionManager.addOnSubscriptionsChangedListener(listener)
-                                }
-                                isListenerRegistered = true
-                            } else if (!hasPermission && isListenerRegistered) {
-                                subscriptionManager.removeOnSubscriptionsChangedListener(listener)
-                                isListenerRegistered = false
-                            }
-                        }
-
-                        launch {
-                            permissionStateNotifier.changes.collect {
-                                updateListenerRegistration()
-                                if (permissionManager.hasPhoneStatePermission()) {
-                                    send(getActiveSimsInternal(seed))
-                                } else {
-                                    send(emptyList())
-                                }
-                            }
-                        }
-
-                        // Initial fetch
-                        if (permissionManager.hasPhoneStatePermission()) {
-                            val initialSims = getActiveSimsInternal(seed)
-                            val result = trySend(initialSims)
-                            if (result.isFailure) {
-                                launch { send(initialSims) }
-                            }
-                        }
-
-                        awaitClose {
-                            if (isListenerRegistered) {
-                                subscriptionManager.removeOnSubscriptionsChangedListener(listener)
-                            }
-                        }
-                    }
+                } else {
+                    currentSeed
                 }
-
-        @OptIn(ExperimentalCoroutinesApi::class)
-        private val activeSimsCache: StateFlow<List<ActiveSimInfo>?> =
-            combine(
-                physicalActiveSims,
-                appSettingsRepository.observeAppSettings(),
-            ) { physical, settings ->
-                physical to settings
-            }.flatMapLatest { (physical, settings) ->
-                flow {
-                    val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
-                    if (mocks != null) {
-                        emit(mocks)
-                    } else {
-                        emit(physical)
-                    }
-                }
-            }.stateIn(
-                scope = scope,
-                // Use WhileSubscribed to allow the cache to be cleared when not in use,
-                // but keep it active during UI interaction or background tracking.
-                // This is safer than Lazily as it ensures fresh data on re-subscription.
-                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
-                initialValue = null,
+            emit(seed)
+            emitAll(
+                seedRepository
+                    .getSeed()
+                    .filter { it.isNotEmpty() },
             )
+        }.distinctUntilChanged()
+            .shareIn(scope, SharingStarted.Lazily, replay = 1)
+            .filter { it.isNotEmpty() }
 
-        private suspend fun getSeed(): String = seedFlow.first()
+    private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
+        seedFlow
+            .flatMapLatest { seed ->
+                callbackFlow {
+                    val listener =
+                        object : SubscriptionManager.OnSubscriptionsChangedListener() {
+                            override fun onSubscriptionsChanged() {
+                                launch {
+                                    send(getActiveSimsInternal(seed))
+                                }
+                            }
+                        }
 
-        override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
+                    var isListenerRegistered = false
 
-        override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            // Warm up the seed flow first to ensure that physicalActiveSims (which depends on it)
-            // can start emitting immediately when we subscribe to activeSimsCache.
-            getSeed()
+                    fun updateListenerRegistration() {
+                        val hasPermission = permissionManager.hasPhoneStatePermission()
+                        if (hasPermission && !isListenerRegistered) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                subscriptionManager.addOnSubscriptionsChangedListener(
+                                    context.mainExecutor,
+                                    listener,
+                                )
+                            } else {
+                                @Suppress("DEPRECATION")
+                                subscriptionManager.addOnSubscriptionsChangedListener(listener)
+                            }
+                            isListenerRegistered = true
+                        } else if (!hasPermission && isListenerRegistered) {
+                            subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                            isListenerRegistered = false
+                        }
+                    }
 
-            val currentSims: List<ActiveSimInfo> =
-                activeSimsCache.filterNotNull().firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
-                    com.example.minutewatcher.core.common.util.AppLogger
-                        .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
-                    emptyList()
+                    launch {
+                        permissionStateNotifier.changes.collect {
+                            updateListenerRegistration()
+                            if (permissionManager.hasPhoneStatePermission()) {
+                                send(getActiveSimsInternal(seed))
+                            } else {
+                                send(emptyList())
+                            }
+                        }
+                    }
+
+                    // Initial fetch
+                    if (permissionManager.hasPhoneStatePermission()) {
+                        val initialSims = getActiveSimsInternal(seed)
+                        val result = trySend(initialSims)
+                        if (result.isFailure) {
+                            launch { send(initialSims) }
+                        }
+                    }
+
+                    awaitClose {
+                        if (isListenerRegistered) {
+                            subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                        }
+                    }
                 }
-            currentSims.find { it.slotIndex == slot }?.let {
-                return it.identity
             }
 
-            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                return createFallbackIdentity(slot, "unsupported_$slot")
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val activeSimsCache: StateFlow<List<ActiveSimInfo>?> =
+        combine(
+            physicalActiveSims,
+            appSettingsRepository.observeAppSettings(),
+        ) { physical, settings ->
+            physical to settings
+        }.flatMapLatest { (physical, settings) ->
+            flow {
+                val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
+                if (mocks != null) {
+                    emit(mocks)
+                } else {
+                    emit(physical)
+                }
             }
-
-            return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
-        }
-
-        private suspend fun findActiveIdentityInternal(slot: Int): SimIdentity? {
-            val seed = getSeed()
-            return permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
-                saveSimIdentityInfo(resolved)
-                resolved
-            }
-        }
-
-        private fun createFallbackIdentity(
-            slot: Int,
-            stableId: String,
-        ) = SimIdentity(
-            stableId = stableId,
-            subscriptionId = null,
-            slotIndex = slot,
-            source = IdentitySource.SLOT_FALLBACK,
+        }.stateIn(
+            scope = scope,
+            // Use WhileSubscribed to allow the cache to be cleared when not in use,
+            // but keep it active during UI interaction or background tracking.
+            // This is safer than Lazily as it ensures fresh data on re-subscription.
+            started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+            initialValue = null,
         )
 
-        private suspend fun saveSimIdentityInfo(identity: SimIdentity) =
-            saveMutex.withLock {
-                val slot = identity.slotIndex
-                val subId = identity.subscriptionId
+    private suspend fun getSeed(): String = seedFlow.first()
 
-                val currentPrefs = dataStore.data.first()
-                val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-                val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
+    override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
-                if ((currentSlot == slot) && (currentSub == subId)) return@withLock
+    override suspend fun getSimIdentity(slot: Int): SimIdentity {
+        // Warm up the seed flow first to ensure that physicalActiveSims (which depends on it)
+        // can start emitting immediately when we subscribe to activeSimsCache.
+        getSeed()
 
-                // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
-                // it might be a transition from fallback sim_$slot.
-                if ((identity.source != IdentitySource.SLOT_FALLBACK) &&
-                    (currentSlot == null) &&
-                    migratedIdentities.add(identity.stableId)
-                ) {
-                    scope.launch {
-                        try {
-                            migrationService.migrateLegacyData(identity)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            com.example.minutewatcher.core.common.util.AppLogger.e(
-                                "Failed to migrate legacy data for identity: ${identity.stableId}",
-                                e,
-                            )
-                        }
-                    }
-                }
-
-                dataStore.edit { prefs ->
-                    slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }
-                    subId?.let { prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = it }
-                }
+        val currentSims: List<ActiveSimInfo> =
+            activeSimsCache.filterNotNull().firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
+                AppLogger
+                    .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
+                emptyList()
             }
-
-        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache.filterNotNull()
-
-        private suspend fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
-            val infoList =
-                permissionManager
-                    .getActiveSubscriptions()
-                    .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
-            if (infoList.isEmpty()) return emptyList()
-
-            val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()
-            val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
-
-            return infoList.map { info ->
-                val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
-                try {
-                    saveSimIdentityInfo(identity)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    com.example.minutewatcher.core.common.util.AppLogger
-                        .e("Failed to save identity info for slot ${info.simSlotIndex}", e)
-                }
-
-                ActiveSimInfo(
-                    identity = identity,
-                    slotIndex = info.simSlotIndex,
-                    subscriptionId = info.subscriptionId,
-                    displayName = info.displayName?.toString(),
-                    carrierName = info.carrierName?.toString(),
-                    mccMnc = SimIdentityUtils.getMccMnc(info),
-                    isDefaultData = info.subscriptionId == defaultDataSubId,
-                    isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
-                )
-            }
+        currentSims.find { it.slotIndex == slot }?.let {
+            return it.identity
         }
 
-        override fun getActiveIdentities(): Flow<List<String>> =
-            observeActiveSims().map { sims ->
-                sims.map { it.identity.stableId }
-            }
-
-        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-        override fun observeIdentities(): Flow<List<String>> =
-            getActiveIdentities()
-                .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
-                .distinctUntilChanged()
-
-        override fun getSimOperator(identity: String): Flow<String> =
-            combine(
-                getData(SimSettingsKeys.simOperatorKey(identity), ""),
-                getCustomSimOperator(identity),
-            ) { resolved, custom ->
-                custom ?: resolved
-            }
-
-        override fun getCustomSimOperator(identity: String): Flow<String?> =
-            dataStore.data.map { it[SimSettingsKeys.customSimOperatorKey(identity)] }
-
-        override suspend fun setSimOperator(
-            identity: String,
-            name: String,
-        ) {
-            dataStore.edit { it[SimSettingsKeys.simOperatorKey(identity)] = name }
+        if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+            return createFallbackIdentity(slot, "unsupported_$slot")
         }
 
-        override suspend fun setCustomSimOperator(
-            identity: String,
-            name: String?,
-        ) {
-            dataStore.edit { prefs ->
-                if (name == null) {
-                    prefs.remove(SimSettingsKeys.customSimOperatorKey(identity))
-                } else {
-                    prefs[SimSettingsKeys.customSimOperatorKey(identity)] = name
-                }
-            }
-        }
+        return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
+    }
 
-        override fun getSimCode(identity: String): Flow<String> = getData(SimSettingsKeys.simCodeKey(identity), "")
-
-        override suspend fun setSimCode(
-            identity: String,
-            code: String,
-        ) {
-            dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
+    private suspend fun findActiveIdentityInternal(slot: Int): SimIdentity? {
+        val seed = getSeed()
+        return permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+            val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
+            saveSimIdentityInfo(resolved)
+            resolved
         }
     }
+
+    private fun createFallbackIdentity(
+        slot: Int,
+        stableId: String,
+    ) = SimIdentity(
+        stableId = stableId,
+        subscriptionId = null,
+        slotIndex = slot,
+        source = IdentitySource.SLOT_FALLBACK,
+    )
+
+    private suspend fun saveSimIdentityInfo(identity: SimIdentity) =
+        saveMutex.withLock {
+            val slot = identity.slotIndex
+            val subId = identity.subscriptionId
+
+            val currentPrefs = dataStore.data.first()
+            val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+            val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
+
+            if ((currentSlot == slot) && (currentSub == subId)) return@withLock
+
+            // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
+            // it might be a transition from fallback sim_$slot.
+            if ((identity.source != IdentitySource.SLOT_FALLBACK) &&
+                (currentSlot == null) &&
+                migratedIdentities.add(identity.stableId)
+            ) {
+                scope.launch {
+                    try {
+                        migrationService.migrateLegacyData(identity)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e(
+                            "Failed to migrate legacy data for identity: ${identity.stableId}",
+                            e,
+                        )
+                    }
+                }
+            }
+
+            dataStore.edit { prefs ->
+                slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }
+                subId?.let { prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = it }
+            }
+        }
+
+    override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache.filterNotNull()
+
+    private suspend fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
+        val infoList =
+            permissionManager
+                .getActiveSubscriptions()
+                .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
+        if (infoList.isEmpty()) return emptyList()
+
+        val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()
+        val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
+
+        return infoList.map { info ->
+            val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
+            try {
+                saveSimIdentityInfo(identity)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger
+                    .e("Failed to save identity info for slot ${info.simSlotIndex}", e)
+            }
+
+            ActiveSimInfo(
+                identity = identity,
+                slotIndex = info.simSlotIndex,
+                subscriptionId = info.subscriptionId,
+                displayName = info.displayName?.toString(),
+                carrierName = info.carrierName?.toString(),
+                mccMnc = SimIdentityUtils.getMccMnc(info),
+                isDefaultData = info.subscriptionId == defaultDataSubId,
+                isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
+            )
+        }
+    }
+
+    override fun getActiveIdentities(): Flow<List<String>> =
+        observeActiveSims().map { sims ->
+            sims.map { it.identity.stableId }
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    override fun observeIdentities(): Flow<List<String>> =
+        getActiveIdentities()
+            .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
+            .distinctUntilChanged()
+
+    override fun getSimOperator(identity: String): Flow<String> =
+        combine(
+            getData(SimSettingsKeys.simOperatorKey(identity), ""),
+            getCustomSimOperator(identity),
+        ) { resolved, custom ->
+            custom ?: resolved
+        }
+
+    override fun getCustomSimOperator(identity: String): Flow<String?> =
+        dataStore.data.map { it[SimSettingsKeys.customSimOperatorKey(identity)] }
+
+    override suspend fun setSimOperator(
+        identity: String,
+        name: String,
+    ) {
+        dataStore.edit { it[SimSettingsKeys.simOperatorKey(identity)] = name }
+    }
+
+    override suspend fun setCustomSimOperator(
+        identity: String,
+        name: String?,
+    ) {
+        dataStore.edit { prefs ->
+            if (name == null) {
+                prefs.remove(SimSettingsKeys.customSimOperatorKey(identity))
+            } else {
+                prefs[SimSettingsKeys.customSimOperatorKey(identity)] = name
+            }
+        }
+    }
+
+    override fun getSimCode(identity: String): Flow<String> = getData(SimSettingsKeys.simCodeKey(identity), "")
+
+    override suspend fun setSimCode(
+        identity: String,
+        code: String,
+    ) {
+        dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
+    }
+}

@@ -20,10 +20,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 @Singleton
-class SimUsageRepositoryImpl @Inject constructor(
-    @SimDataStore dataStore: DataStore<Preferences>,
-    private val timeProvider: TimeProvider,
-) : BaseDataStoreRepository(dataStore),
+class SimUsageRepositoryImpl
+    @Inject
+    constructor(
+        @SimDataStore dataStore: DataStore<Preferences>,
+        private val timeProvider: TimeProvider,
+    ) : BaseDataStoreRepository(dataStore),
     SimUsageRepository,
     SimUsageAdjustmentRepository,
     SimUsageResetRepository {
@@ -36,9 +38,9 @@ class SimUsageRepositoryImpl @Inject constructor(
                 slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
                 subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
                 operator =
-                    prefs[SimSettingsKeys.customSimOperatorKey(identity)]
-                        ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
-                        ?: "",
+                prefs[SimSettingsKeys.customSimOperatorKey(identity)]
+                    ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
+                    ?: "",
                 minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
                 minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
                 trafficUsed = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
