@@ -88,7 +88,9 @@ class SimIdentityRepositoryImpl
                             }
                         } ?: run {
                             AppLogger
-                                .w("Failed to generate identity seed within timeout, using temporary non-persistent seed")
+                                .w(
+                                    "Failed to generate identity seed within timeout, using temporary non-persistent seed",
+                                )
                             UUID.randomUUID().toString()
                         }
                     } else {

@@ -407,7 +407,9 @@ class TrafficTrackerTest {
             val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
 
             // Usage with lastResetDate = 0
-            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", lastResetDate = 0L)))
+            whenever(
+                simUsageRepository.getSimUsage("sim_0"),
+            ).thenReturn(flowOf(createSimUsage("sim_0", lastResetDate = 0L)))
             whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(-1L))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(100L))
 

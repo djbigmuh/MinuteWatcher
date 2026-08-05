@@ -120,7 +120,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 
         val refreshResult = getSnapshot(usageRepository)
         val snapshot = refreshResult.snapshot
-        val refreshFailed = refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout && snapshot.timestamp == 0L
+        val refreshFailed =
+            refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout && snapshot.timestamp == 0L
 
         val settingsState =
             try {
@@ -140,22 +141,27 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         )
     }
 
-    private suspend fun getSnapshot(usageRepository: UsageStateRepository): com.example.minutewatcher.core.domain.RefreshResult {
+    private suspend fun getSnapshot(
+        usageRepository: UsageStateRepository,
+    ): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         if (initialSnapshot.timestamp != 0L) {
-            return com.example.minutewatcher.core.domain.RefreshResult.Success(initialSnapshot)
+            return com.example.minutewatcher.core.domain.RefreshResult
+                .Success(initialSnapshot)
         }
 
         // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
         return try {
             withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
                 usageRepository.refresh()
-            } ?: com.example.minutewatcher.core.domain.RefreshResult.Timeout(initialSnapshot)
+            } ?: com.example.minutewatcher.core.domain.RefreshResult
+                .Timeout(initialSnapshot)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             AppLogger.e("Widget refresh failed", e)
-            com.example.minutewatcher.core.domain.RefreshResult.Timeout(initialSnapshot)
+            com.example.minutewatcher.core.domain.RefreshResult
+                .Timeout(initialSnapshot)
         }
     }
 }

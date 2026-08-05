@@ -108,11 +108,12 @@ class TrafficTracker
 
                         _status.value = TrackingStatus.Active
                     } else {
-                        val message = if (statsResult is StatsResult.Error) {
-                            statsResult.exception.message ?: "Stats error"
-                        } else {
-                            "Stats unavailable"
-                        }
+                        val message =
+                            if (statsResult is StatsResult.Error) {
+                                statsResult.exception.message ?: "Stats error"
+                            } else {
+                                "Stats unavailable"
+                            }
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                     }
                 } catch (e: SecurityException) {
@@ -296,11 +297,12 @@ class TrafficTracker
             targetIdentity: String,
             statsResult: StatsResult,
         ) {
-            val message = if (statsResult is StatsResult.Error) {
-                statsResult.exception.message ?: "Stats error"
-            } else {
-                "Stats unavailable"
-            }
+            val message =
+                if (statsResult is StatsResult.Error) {
+                    statsResult.exception.message ?: "Stats error"
+                } else {
+                    "Stats unavailable"
+                }
             AppLogger.w("Traffic stats unavailable for $targetIdentity: $message")
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
@@ -343,9 +345,7 @@ class TrafficTracker
             }
         }
 
-        private fun getCurrentMobileBytes(
-            startTime: Long,
-        ): StatsResult {
+        private fun getCurrentMobileBytes(startTime: Long): StatsResult {
             val now = timeProvider.now()
             val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
 
@@ -355,7 +355,9 @@ class TrafficTracker
             }
 
             if (startTime < lookbackStart) {
-                AppLogger.w("Billing period start is older than 30 days, clamping to lookback window. Some traffic data may be missed.")
+                AppLogger.w(
+                    "Billing period start is older than 30 days, clamping to lookback window. Some traffic data may be missed.",
+                )
                 return networkStatsProvider.queryMobileBytes(lookbackStart, now)
             }
 
@@ -485,12 +487,15 @@ class TrafficTracker
                     callSessionRepository.setLastDataSubId(currentDataSubId)
                     inMemoryLastDataSubId.set(currentDataSubId)
                 } else {
-                    val reason = if (statsResult is StatsResult.Error) {
-                        statsResult.exception.message ?: "Stats error"
-                    } else {
-                        "Stats unavailable"
-                    }
-                    AppLogger.w("Stats unavailable on SIM change for $identity: $reason. Baseline reset will be retried.")
+                    val reason =
+                        if (statsResult is StatsResult.Error) {
+                            statsResult.exception.message ?: "Stats error"
+                        } else {
+                            "Stats unavailable"
+                        }
+                    AppLogger.w(
+                        "Stats unavailable on SIM change for $identity: $reason. Baseline reset will be retried.",
+                    )
                     if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
                         val activeIdentities =
                             simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()

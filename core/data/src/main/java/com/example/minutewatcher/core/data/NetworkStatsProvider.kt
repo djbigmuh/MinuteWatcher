@@ -9,8 +9,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 sealed interface StatsResult {
-    data class Success(val bytes: Long) : StatsResult
-    data class Error(val exception: Exception) : StatsResult
+    data class Success(
+        val bytes: Long,
+    ) : StatsResult
+
+    data class Error(
+        val exception: Exception,
+    ) : StatsResult
+
     object Unavailable : StatsResult
 }
 
