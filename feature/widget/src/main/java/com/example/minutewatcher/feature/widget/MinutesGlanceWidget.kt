@@ -70,11 +70,33 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
-        val uiState = getUiState(context)
-        val navigationProvider = getNavigationProvider(context)
-        provideContent {
-            GlanceTheme {
-                WidgetContent(uiState, navigationProvider)
+        try {
+            val uiState = getUiState(context)
+            val navigationProvider = getNavigationProvider(context)
+            provideContent {
+                GlanceTheme {
+                    WidgetContent(uiState, navigationProvider)
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Widget provideGlance failed, showing fallback", e)
+            provideContent {
+                GlanceTheme {
+                    Box(
+                        modifier = GlanceModifier.fillMaxSize().appWidgetBackground(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = context.getString(R.string.refresh_error),
+                            style =
+                                TextStyle(
+                                    fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                                ),
+                        )
+                    }
+                }
             }
         }
     }

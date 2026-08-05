@@ -179,7 +179,7 @@ class CallTracker
         }
 
         private suspend fun executeCallEnded(subId: Int) {
-            if (!isCallTrackingEnabled() || !checkPermissions()) return
+            if (!checkPermissions()) return
 
             if (subId == -1) {
                 handleUnknownSubIdEnd()
@@ -433,6 +433,10 @@ class CallTracker
             savedIdentity: String?,
             notify: Boolean = true,
         ) {
+            if (!isCallTrackingEnabled()) {
+                AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
+                return
+            }
             val durationMinutes = (durationSeconds + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 

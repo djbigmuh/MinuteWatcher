@@ -33,36 +33,51 @@ class SimUsageRepositoryConcurrencyTest {
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
         runTest {
+            // 1. Генерируем уникальное имя, но НЕ создаем файл на диске заранее.
+            // На Windows java.io.File.renameTo() (который использует DataStore внутри)
+            // завершается ошибкой, если целевой файл уже существует.
             val uniqueName = "test_concurrency_${UUID.randomUUID()}.preferences_pb"
             val file = File(tmpFolder.root, uniqueName)
-            val dataStore =
-                PreferenceDataStoreFactory.create(
-                    scope = backgroundScope,
-                    produceFile = { file },
-                )
-            val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
 
-            val identity = "test_sim"
-            val autoResetDay = 1
-            val now = 2000000L
+            try {
+                // 2. Создаем СТРОГО ОДИН экземпляр DataStore и Repository
+                // Используем backgroundScope для корректного ожидания фоновых задач DataStore
+                val dataStore =
+                    PreferenceDataStoreFactory.create(
+                        scope = backgroundScope,
+                        produceFile = { file },
+                    )
+                val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
 
-            repository.setLastResetDate(identity, 0L)
-            repository.setMinutesUsed(identity, 50)
+                val identity = "test_sim"
+                val autoResetDay = 1
+                val now = 2000000L
 
-            val concurrentCalls = 10
-            val results =
-                (1..concurrentCalls)
-                    .map {
-                        async {
-                            repository.resetSimUsageIfDue(identity, autoResetDay, now)
-                        }
-                    }.awaitAll()
+                // Подготовка данных
+                repository.setLastResetDate(identity, 0L)
+                repository.setMinutesUsed(identity, 50)
 
-            val resetCount = results.count { it }
-            assertEquals("Should only perform reset once", 1, resetCount)
+                // 3. Запускаем конкурентные вызовы на ОДНОМ И ТОМ ЖЕ экземпляре репозитория
+                val concurrentCalls = 10
+                val results =
+                    (1..concurrentCalls)
+                        .map {
+                            async {
+                                repository.resetSimUsageIfDue(identity, autoResetDay, now)
+                            }
+                        }.awaitAll()
 
-            val usage = repository.getSimUsage(identity).first()
-            assertEquals(0, usage.minutesUsed)
-            assertEquals(now, usage.lastResetDate)
+                // Даем время DataStore завершить фоновые операции переименования файлов
+                testScheduler.advanceUntilIdle()
+
+                val resetCount = results.count { it }
+                assertEquals("Should only perform reset once", 1, resetCount)
+
+                val usage = repository.getSimUsage(identity).first()
+                assertEquals(0, usage.minutesUsed)
+                assertEquals(now, usage.lastResetDate)
+            } finally {
+                // TemporaryFolder очистит файлы автоматически, но мы можем помочь GC
+            }
         }
 }

@@ -232,7 +232,7 @@ class SimIdentityRepositoryImpl
             }
 
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                return createFallbackIdentity(slot, "unsupported_$slot")
+                return createFallbackIdentity(slot, "sim_$slot")
             }
 
             return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")

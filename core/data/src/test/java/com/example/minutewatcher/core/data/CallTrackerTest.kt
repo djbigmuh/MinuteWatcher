@@ -405,6 +405,9 @@ class CallTrackerTest {
 
             // Assert
             verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(callSessionRepository).setCallStartTime(1, 0)
+            verify(callSessionRepository).setBootTime(1, 0)
+            verify(callSessionRepository).setUptime(1, 0)
         }
 
     @Test
@@ -425,6 +428,9 @@ class CallTrackerTest {
 
             // Assert
             verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(callSessionRepository).setCallStartTime(1, 0)
+            verify(callSessionRepository).setBootTime(1, 0)
+            verify(callSessionRepository).setUptime(1, 0)
         }
 
     @Test

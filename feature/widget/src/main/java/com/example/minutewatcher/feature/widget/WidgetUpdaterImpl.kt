@@ -11,9 +11,11 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class WidgetUpdaterImpl
@@ -45,6 +47,7 @@ class WidgetUpdaterImpl
                         }
                         is UpdateResult.GenericFailure -> {
                             AppLogger.d("Retrying widget update after generic failure...")
+                            delay(500.milliseconds) // 500ms backoff before retry
                             when (safeUpdateAll(context)) {
                                 is UpdateResult.Success -> setWidgetLimitExceeded(false)
                                 is UpdateResult.LimitExceeded -> AppLogger.w("Retry also hit size limit")
