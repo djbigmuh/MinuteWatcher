@@ -146,6 +146,7 @@ object OperatorResolver {
             "2degrees" to "operator_2degrees",
         )
 
+    @Suppress("ReturnCount")
     private fun loadDb(context: Context): Map<String, String> {
         db?.let { return it }
 
@@ -208,6 +209,7 @@ object OperatorResolver {
             !genericSimRegex.matches(name.trim()) &&
             !SimUtils.isInactiveSim(name)
 
+    @Suppress("ReturnCount")
     private fun resolveFromDbKey(
         context: Context,
         resKey: String,

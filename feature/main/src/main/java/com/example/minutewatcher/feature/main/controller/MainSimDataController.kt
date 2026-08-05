@@ -154,5 +154,4 @@ class MainSimDataController
             }
             // Non-force updates are handled reactively by UpdateCoordinator through snapshot observation.
         }
-
     }

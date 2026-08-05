@@ -2,6 +2,8 @@ package com.example.minutewatcher.core.data.di
 
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
+import com.example.minutewatcher.core.data.NetworkStatsProvider
+import com.example.minutewatcher.core.data.RealNetworkStatsProvider
 import com.example.minutewatcher.core.data.ResetManager
 import com.example.minutewatcher.core.data.SimLimitsRepositoryImpl
 import com.example.minutewatcher.core.data.SimUsageRepositoryImpl
@@ -71,6 +73,10 @@ abstract class UsageDataModule {
     @Binds
     @Singleton
     abstract fun bindDataChangeNotifier(impl: UpdateCoordinator): DataChangeNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindNetworkStatsProvider(impl: RealNetworkStatsProvider): NetworkStatsProvider
 
     @Binds
     @IntoSet

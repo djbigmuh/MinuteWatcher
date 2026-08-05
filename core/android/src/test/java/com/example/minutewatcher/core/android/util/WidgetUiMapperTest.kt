@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import android.graphics.Color
-import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -42,7 +41,7 @@ class WidgetUiMapperTest {
                                 mapOf(
                                     PackageType.MINUTES to
                                         SemanticEntity(
-                                            id = SemanticMapper.getDocumentId(0, PackageType.MINUTES),
+                                            id = "sim_0_minutes",
                                             simSlot = 0,
                                             operatorName = "MTS",
                                             packageType = PackageType.MINUTES,
@@ -130,7 +129,7 @@ class WidgetUiMapperTest {
                                 mapOf(
                                     PackageType.MINUTES to
                                         SemanticEntity(
-                                            id = SemanticMapper.getDocumentId(0, PackageType.MINUTES),
+                                            id = "sim_0_minutes",
                                             simSlot = 0,
                                             operatorName = "MTS",
                                             packageType = PackageType.MINUTES,
@@ -215,7 +214,7 @@ class WidgetUiMapperTest {
                                 mapOf(
                                     PackageType.DATA to
                                         SemanticEntity(
-                                            id = SemanticMapper.getDocumentId(0, PackageType.DATA),
+                                            id = "sim_0_data",
                                             simSlot = 0,
                                             operatorName = "MTS",
                                             packageType = PackageType.DATA,

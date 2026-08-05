@@ -83,7 +83,11 @@ class SimIdentityRepositoryImpl
                                     .randomUUID()
                                     .toString()
                             }
-                        } ?: ""
+                        } ?: run {
+                            com.example.minutewatcher.core.common.util.AppLogger
+                                .e("Failed to generate identity seed within timeout, using fallback")
+                            "fallback_seed"
+                        }
                     } else {
                         currentSeed
                     }
@@ -95,6 +99,7 @@ class SimIdentityRepositoryImpl
                 )
             }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Lazily, replay = 1)
+                .filter { it.isNotEmpty() }
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow

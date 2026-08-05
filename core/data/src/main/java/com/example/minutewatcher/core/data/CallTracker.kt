@@ -351,6 +351,8 @@ class CallTracker
                 || savedIdentityRes.isFailure
             ) {
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "DataStore read timeout")
+                // Очищаем сессию, чтобы избежать stale-данных
+                clearSession(subId)
                 return
             }
 

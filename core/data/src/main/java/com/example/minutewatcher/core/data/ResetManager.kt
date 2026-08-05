@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -37,7 +38,11 @@ class ResetManager
                     val resetIdentities = mutableSetOf<String>()
 
                     // Use active SIMs from repository to ensure we don't skip SIMs on stale snapshots
-                    val activeSims = simIdentityRepository.observeActiveSims().first()
+                    val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+
+                    if (activeSims.isEmpty()) {
+                        AppLogger.w("ResetManager: No active SIMs detected or timeout during auto-reset check.")
+                    }
 
                     for (simInfo in activeSims) {
                         val slot = simInfo.slotIndex

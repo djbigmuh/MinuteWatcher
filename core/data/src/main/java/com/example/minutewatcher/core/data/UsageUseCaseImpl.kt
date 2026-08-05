@@ -1,9 +1,9 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import com.example.minutewatcher.core.android.util.OperatorResolver
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.android.util.OperatorResolver
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository

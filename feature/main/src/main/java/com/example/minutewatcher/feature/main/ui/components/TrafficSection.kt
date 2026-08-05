@@ -120,18 +120,23 @@ private fun TrafficRemainingRow(
             fontWeight = FontWeight.Medium,
         )
         Spacer(modifier = Modifier.width(8.dp))
-        EditableValueBox(
-            value =
-                FormatUtils.formatTrafficDisplay(
-                    context,
-                    model.trafficRemainingGb,
-                    model.trafficLimitMb / Constants.MB_PER_GB,
-                    false,
-                ),
-            color = statusColor,
-            onClick = onAdjustTraffic,
-            contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
-        )
+
+        if (model.trafficRemainingGb < 0) {
+            Text(text = "-", style = MaterialTheme.typography.bodyLarge)
+        } else {
+            EditableValueBox(
+                value =
+                    FormatUtils.formatTrafficDisplay(
+                        context,
+                        model.trafficRemainingGb,
+                        model.trafficLimitMb / Constants.MB_PER_GB,
+                        false,
+                    ),
+                color = statusColor,
+                onClick = onAdjustTraffic,
+                contentDescription = stringResource(id = R.string.adjust_traffic_content_desc),
+            )
+        }
     }
 }
 

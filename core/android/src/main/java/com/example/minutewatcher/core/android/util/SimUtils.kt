@@ -17,6 +17,7 @@ object SimUtils {
             else -> R.drawable.ic_unknown
         }
 
+    @Suppress("ReturnCount")
     fun getShortOperatorName(
         context: Context,
         operatorName: String,
@@ -49,6 +50,7 @@ object SimUtils {
     private const val MAX_OPERATOR_NAME_LENGTH = 20
     private const val TRUNCATED_OPERATOR_NAME_LENGTH = 17
 
+    @Suppress("SwallowedException")
     private fun getStringSafe(
         context: Context,
         resId: Int,

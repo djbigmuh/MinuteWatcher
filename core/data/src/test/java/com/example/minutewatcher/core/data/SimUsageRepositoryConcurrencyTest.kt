@@ -3,7 +3,9 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.common.util.NoOpLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -13,8 +15,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.NoOpLogger
 import org.mockito.kotlin.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)

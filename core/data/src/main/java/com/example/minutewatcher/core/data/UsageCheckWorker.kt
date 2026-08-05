@@ -76,7 +76,11 @@ class UsageCheckWorker
 
             val appSettings =
                 deps.appSettingsRepository.getAppSettings().firstWithTimeout()
-                    ?: AppSettings(notifyLowMinutes = false, notifyLowTraffic = false, callTrackingEnabled = false)
+                    ?: AppSettings(
+                        notifyLowMinutes = false,
+                        notifyLowTraffic = false,
+                        callTrackingEnabled = false,
+                    )
             for (simSnapshot in finalSnapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
                     processSimSnapshot(simSnapshot, appSettings)
@@ -89,10 +93,16 @@ class UsageCheckWorker
             appSettings: AppSettings,
         ) {
             val identity = simSnapshot.identity
-            var simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout()
+            var simUsageResult =
+                deps.simUsageRepository
+                    .getSimUsage(identity)
+                    .firstWithTimeout()
             if (simUsageResult == null) {
                 AppLogger.w("UsageCheckWorker: getSimUsage timed out for $identity, retrying with 10s...")
-                simUsageResult = deps.simUsageRepository.getSimUsage(identity).firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                simUsageResult =
+                    deps.simUsageRepository
+                        .getSimUsage(identity)
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
             }
 
             val simUsage =
@@ -235,7 +245,9 @@ class UsageCheckWorker
             val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
 
             val notifiedExhausted =
-                deps.simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout() ?: false
+                deps.simNotificationFlagsRepository
+                    .getNotifiedExhaustedTraffic(identity)
+                    .firstWithTimeout() ?: false
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(

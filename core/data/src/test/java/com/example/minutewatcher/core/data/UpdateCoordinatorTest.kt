@@ -1,5 +1,7 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -9,7 +11,6 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -18,8 +19,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.NoOpLogger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UpdateCoordinatorTest {

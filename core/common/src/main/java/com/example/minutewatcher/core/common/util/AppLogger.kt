@@ -14,7 +14,7 @@ import java.util.concurrent.Executors
  */
 object AppLogger {
     private const val TAG = "MinuteWatcher"
-    private const val MAX_FILE_SIZE = 1 * 1024 * 1024 // 1 MB
+    private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG // Disabled in release for privacy and security
@@ -67,6 +67,7 @@ object AppLogger {
      * replacing any existing "logs.old.txt". This limits the total log storage to
      * approximately 2 * [MAX_FILE_SIZE].
      */
+    @Suppress("SwallowedException")
     private fun logToFile(
         level: String,
         message: String,

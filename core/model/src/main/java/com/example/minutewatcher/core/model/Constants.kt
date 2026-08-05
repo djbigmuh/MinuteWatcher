@@ -69,7 +69,7 @@ object Constants {
     object Flow {
         const val STATE_FLOW_STOP_TIMEOUT_MS = 5_000L
         const val DEBOUNCE_MS = 300L
-        const val RETRY_TIMEOUT_MS = 15_000L
+        const val RETRY_TIMEOUT_MS = 5_000L
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
     }

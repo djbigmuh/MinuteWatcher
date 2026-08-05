@@ -1,5 +1,7 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
@@ -20,8 +22,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.NoOpLogger
 
 class WidgetSettingsRepositoryTest {
     private lateinit var repository: WidgetSettingsRepository
@@ -224,7 +224,7 @@ class WidgetSettingsRepositoryTest {
         }
 
     @Test
-    fun `load should retry on observeActiveSims timeout and return empty simStates if both fail`() =
+    fun `load should retry on observeActiveSims timeout and return default simStates if both fail`() =
         runTest {
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
 
@@ -235,7 +235,10 @@ class WidgetSettingsRepositoryTest {
 
             val result = repository.load()
 
-            assertEquals(0, result.simStates.size)
+            assertEquals(
+                com.example.minutewatcher.core.model.SimConstants.MAX_SUPPORTED_SIM_SLOTS,
+                result.simStates.size,
+            )
             assertTrue(result.settingsLoadFailed)
         }
 }

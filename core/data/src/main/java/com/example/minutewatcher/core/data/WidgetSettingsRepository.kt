@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.coroutineScope
@@ -28,11 +29,15 @@ class WidgetSettingsRepository
 
                 var activeSimsResult = simIdentityRepository.observeActiveSims().firstWithTimeout()
                 if (activeSimsResult == null) {
-                    AppLogger.w("WidgetSettingsRepository: observeActiveSims timed out, retrying with 15s...")
+                    AppLogger.w(
+                        "WidgetSettingsRepository: observeActiveSims timed out, retrying with " +
+                            "${Constants.Flow.RETRY_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s...",
+                    )
                     activeSimsResult =
                         simIdentityRepository.observeActiveSims().firstWithTimeout(Constants.Flow.RETRY_TIMEOUT_MS)
                     if (activeSimsResult == null) {
                         AppLogger.e("WidgetSettingsRepository: failed to load active SIMs after retry")
+                        val fallbackSimStates = SimConstants.SUPPORTED_SLOT_INDICES.associateWith { SimSettingsState() }
                         return@coroutineScope WidgetSettingsState(
                             layoutMode = settings.widgetLayoutMode,
                             simArrangement = settings.widgetSimArrangement,
@@ -42,7 +47,7 @@ class WidgetSettingsRepository
                             notifyLowMinutes = settings.notifyLowMinutes,
                             notifyLowTraffic = settings.notifyLowTraffic,
                             callTrackingEnabled = settings.callTrackingEnabled,
-                            simStates = emptyMap(),
+                            simStates = fallbackSimStates,
                             widgetLimitExceeded = settings.widgetLimitExceeded,
                             settingsLoadFailed = true,
                         )

@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
@@ -43,13 +44,17 @@ class UpdateCoordinator
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > 0L }
+                    .drop(1)
                     .distinctUntilChanged { old, new ->
-                        SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
+                        SnapshotUtils.calculateContentHash(old) ==
+                            SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
                         val lastManual = lastManualSnapshotTimestamp.get()
                         if (snapshot.isManualUpdate && lastManual != -1L) {
-                            val isWithinWindow = (System.currentTimeMillis() - lastManual) < Constants.Widget.MANUAL_UPDATE_BLOCK_MS
+                            val isWithinWindow =
+                                (System.currentTimeMillis() - lastManual) <
+                                    Constants.Widget.MANUAL_UPDATE_BLOCK_MS
                             if (snapshot.timestamp <= lastManual && isWithinWindow) {
                                 AppLogger.d("Skipping debounced widget update after recent manual refresh")
                                 return@collect

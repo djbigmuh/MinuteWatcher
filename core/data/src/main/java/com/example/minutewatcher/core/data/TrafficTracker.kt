@@ -1,8 +1,6 @@
 package com.example.minutewatcher.core.data
 
-import android.app.usage.NetworkStatsManager
 import android.content.Context
-import android.net.NetworkCapabilities
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -48,6 +46,7 @@ class TrafficTracker
         private val callSessionRepository: CallSessionRepository,
         private val permissionManager: PermissionManager,
         private val timeProvider: TimeProvider,
+        private val networkStatsProvider: NetworkStatsProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
@@ -62,10 +61,6 @@ class TrafficTracker
         }
 
         private val trafficMutex = Mutex()
-        private val networkStatsManager =
-            context.getSystemService(
-                Context.NETWORK_STATS_SERVICE,
-            ) as? NetworkStatsManager
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
         private val baselineNeedsRetry = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
@@ -85,7 +80,10 @@ class TrafficTracker
                     val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return@withLock
                     val currentBytes = getCurrentMobileBytes(usage.lastResetDate, usage.autoResetDay)
                     if (currentBytes != -1L) {
-                        simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+                        simUsageResetRepository.setLastTotalBytes(
+                            identity,
+                            currentBytes,
+                        )
                         AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
 
                         // Sync in-memory last data subId if this identity is currently the default data SIM.
@@ -112,7 +110,7 @@ class TrafficTracker
 
                         _status.value = TrackingStatus.Active
                     } else {
-                        _status.value = TrackingStatus.Idle
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable")
                     }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
@@ -161,6 +159,7 @@ class TrafficTracker
             }
         }
 
+        @Suppress("ReturnCount")
         private fun checkPermissions(): Boolean {
             if (!permissionManager.isTelephonySupported()) {
                 AppLogger.w("TrafficTracker: telephony not supported")
@@ -217,11 +216,16 @@ class TrafficTracker
 
             if (currentBytes != -1L) {
                 if (baselineNeedsRetry.remove(targetIdentity) == true) {
-                    simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                    simUsageResetRepository.setLastTotalBytes(
+                        targetIdentity,
+                        currentBytes,
+                    )
                     AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
                 }
             } else if (baselineNeedsRetry[targetIdentity] == true) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
+                _status.value = TrackingStatus.Idle
+                return
             }
 
             if (currentBytes == -1L) {
@@ -256,13 +260,8 @@ class TrafficTracker
         }
 
         private fun handleStatsUnavailable(targetIdentity: String) {
-            if (networkStatsManager == null) {
-                _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "NetworkStatsManager unavailable")
-            } else {
-                AppLogger.d("Traffic stats unavailable for $targetIdentity")
-                _status.value = TrackingStatus.Idle
-            }
+            AppLogger.w("Traffic stats unavailable for $targetIdentity")
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable")
         }
 
         private suspend fun handleFirstRunOrReset(
@@ -270,7 +269,10 @@ class TrafficTracker
             currentBytes: Long,
             dataSubId: Int,
         ) {
-            simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+            simUsageResetRepository.setLastTotalBytes(
+                identity,
+                currentBytes,
+            )
             AppLogger.d("Traffic baseline initialized/reset for $identity to $currentBytes")
             updateLastDataSubId(dataSubId)
         }
@@ -286,7 +288,10 @@ class TrafficTracker
             if (deltaBytes > 0L) {
                 val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
                 if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
-                    simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+                    simUsageResetRepository.setLastTotalBytes(
+                        identity,
+                        currentBytes,
+                    )
                     simUsageRepository.incrementTrafficUsed(identity, deltaMB)
                     AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
                     updateLastDataSubId(dataSubId)
@@ -305,8 +310,6 @@ class TrafficTracker
             startTime: Long,
             autoResetDay: Int,
         ): Long {
-            if (networkStatsManager == null) return -1L
-
             val now = timeProvider.now()
             // Limit safeStart to a maximum of 30 days back to avoid performance issues
             // with NetworkStatsManager on first run or after a long period of inactivity.
@@ -319,23 +322,7 @@ class TrafficTracker
                 }
             val safeStart = maxOf(calculatedStart, lookbackStart)
 
-            return try {
-                // NOTE: subscriberId is null, which means querySummaryForDevice returns aggregate
-                // mobile traffic for ALL SIM cards. Per-SIM attribution is currently implemented by
-                // assigning all mobile traffic to the active Default Data SIM.
-                // On dual-SIM devices, traffic from SIM 2 will be attributed to SIM 1 if SIM 1 is default.
-                val bucket =
-                    networkStatsManager.querySummaryForDevice(
-                        NetworkCapabilities.TRANSPORT_CELLULAR,
-                        null,
-                        safeStart,
-                        now,
-                    )
-                bucket.rxBytes + bucket.txBytes
-            } catch (e: Exception) {
-                AppLogger.e("Error querying NetworkStatsManager", e)
-                -1L
-            }
+            return networkStatsProvider.queryMobileBytes(safeStart, now)
         }
 
         private suspend fun getTargetSimInfo(): TargetInfo? {
@@ -357,6 +344,7 @@ class TrafficTracker
             return TargetInfo(targetSim, currentDataSubId, skipDelta = isSimChanged, isFallback = isFallback)
         }
 
+        @Suppress("ReturnCount")
         private suspend fun resolveTargetSim(): Triple<Int, Int, Boolean>? {
             var targetSim = -1
             var currentDataSubId = -1
@@ -444,12 +432,17 @@ class TrafficTracker
                     }
 
                 if (currentBytes != -1L) {
-                    simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
+                    simUsageResetRepository.setLastTotalBytes(
+                        identity,
+                        currentBytes,
+                    )
                     AppLogger.d("Baseline reset successfully for $identity")
                 } else {
                     AppLogger.w("Stats unavailable on SIM change for $identity. Baseline reset will be retried.")
                     if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2) {
-                        AppLogger.w("TrafficTracker: baselineNeedsRetry map limit exceeded. Clearing all stale entries.")
+                        AppLogger.w(
+                            "TrafficTracker: baselineNeedsRetry map limit exceeded. Clearing all stale entries.",
+                        )
                         baselineNeedsRetry.clear()
                     }
                     baselineNeedsRetry[identity] = true

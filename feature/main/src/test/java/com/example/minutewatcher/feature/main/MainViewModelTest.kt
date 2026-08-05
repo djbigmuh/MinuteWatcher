@@ -356,7 +356,8 @@ class MainViewModelTest {
             runCurrent()
             advanceUntilIdle()
 
-            org.mockito.kotlin.verify(settingsUseCase)
+            org.mockito.kotlin
+                .verify(settingsUseCase)
                 .setTheme(theme)
         }
 
@@ -376,7 +377,8 @@ class MainViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // Verify that data refresh was triggered via usageStateRepository
-            org.mockito.kotlin.verify(usageStateRepository)
+            org.mockito.kotlin
+                .verify(usageStateRepository)
                 .refresh()
         }
 
