@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.util.NoOpLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -29,11 +30,13 @@ class SimUsageRepositoryConcurrencyTest {
 
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
-        runTest {
+        runTest(UnconfinedTestDispatcher()) {
             val dataStore =
                 PreferenceDataStoreFactory.create(
-                    scope = this,
-                    produceFile = { tmpFolder.newFile("test_concurrency_settings_${System.currentTimeMillis()}.preferences_pb") },
+                    scope = backgroundScope,
+                    produceFile = {
+                        tmpFolder.newFile("test_concurrency.preferences_pb")
+                    },
                 )
             val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
 

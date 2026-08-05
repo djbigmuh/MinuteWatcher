@@ -29,29 +29,29 @@ class RealNetworkStatsProvider
     constructor(
         @ApplicationContext private val context: Context,
     ) : NetworkStatsProvider {
-    private val networkStatsManager =
-        context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
+        private val networkStatsManager =
+            context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
 
-    override fun queryMobileBytes(
-        startTime: Long,
-        endTime: Long,
-    ): Long {
-        if (networkStatsManager == null) return -1L
+        override fun queryMobileBytes(
+            startTime: Long,
+            endTime: Long,
+        ): Long {
+            if (networkStatsManager == null) return -1L
 
-        return try {
-            val bucket =
-                networkStatsManager.querySummaryForDevice(
-                    NetworkCapabilities.TRANSPORT_CELLULAR,
-                    null,
-                    startTime,
-                    endTime,
-                )
-            bucket.rxBytes + bucket.txBytes
-        } catch (e: SecurityException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("Error querying NetworkStatsManager", e)
-            -1L
+            return try {
+                val bucket =
+                    networkStatsManager.querySummaryForDevice(
+                        NetworkCapabilities.TRANSPORT_CELLULAR,
+                        null,
+                        startTime,
+                        endTime,
+                    )
+                bucket.rxBytes + bucket.txBytes
+            } catch (e: SecurityException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Error querying NetworkStatsManager", e)
+                -1L
+            }
         }
     }
-}
