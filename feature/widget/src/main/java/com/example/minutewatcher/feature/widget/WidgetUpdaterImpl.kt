@@ -96,31 +96,47 @@ class WidgetUpdaterImpl
                 UpdateResult.GenericFailure
             }
 
+        /**
+         * Heuristically determines if an [IllegalArgumentException] during widget update
+         * is caused by exceeding the Binder/RemoteViews size limit (TransactionTooLargeException).
+         *
+         * This check includes reliable cause analysis, stack trace inspection, and a fragile
+         * message-based heuristic. The latter may require updates if Android's internal
+         * error messages change in future versions.
+         */
         @VisibleForTesting
         fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
-            // 1. Reliable check: TransactionTooLargeException as cause.
-            if (e.cause is android.os.TransactionTooLargeException) return true
-
-            // 2. Stack trace analysis for RemoteViews/IPC limits.
+            val isTransactionTooLarge = e.cause is android.os.TransactionTooLargeException
             val stackTrace = e.stackTraceToString()
-            if (stackTrace.contains("RemoteViews", ignoreCase = true) &&
-                stackTrace.contains("TransactionTooLarge", ignoreCase = true)
-            ) {
-                return true
+            val isStackTraceLimit =
+                stackTrace.contains(MARKER_REMOTE_VIEWS, ignoreCase = true) &&
+                    stackTrace.contains(MARKER_TRANSACTION_TOO_LARGE, ignoreCase = true)
+
+            return isTransactionTooLarge || isStackTraceLimit || isHeuristicLimitException(e.message ?: "")
+        }
+
+        private fun isHeuristicLimitException(msg: String): Boolean =
+            try {
+                val mentionsRemoteViews = msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true)
+                val mentionsSize =
+                    msg.contains(MARKER_TOO_LARGE, ignoreCase = true) ||
+                        msg.contains(MARKER_EXCEEDS, ignoreCase = true) ||
+                        msg.contains(MARKER_TRANSACTION_TOO_LARGE, ignoreCase = true)
+
+                val mentionsTransactionSize =
+                    msg.contains(MARKER_TRANSACTION, ignoreCase = true) &&
+                        msg.contains(MARKER_TOO_LARGE, ignoreCase = true)
+
+                (mentionsRemoteViews && mentionsSize) || mentionsTransactionSize
+            } catch (_: Exception) {
+                false
             }
 
-            // 3. Fragile heuristic fallback, may break on future Android versions.
-            val msg = e.message ?: ""
-            val mentionsRemoteViews = msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true)
-            val mentionsSize =
-                msg.contains("too large", ignoreCase = true) ||
-                    msg.contains("exceeds", ignoreCase = true) ||
-                    msg.contains("TransactionTooLarge", ignoreCase = true)
-
-            val mentionsTransactionSize =
-                msg.contains("transaction", ignoreCase = true) &&
-                    msg.contains("too large", ignoreCase = true)
-
-            return (mentionsRemoteViews && mentionsSize) || mentionsTransactionSize
+        companion object {
+            private const val MARKER_REMOTE_VIEWS = "RemoteViews"
+            private const val MARKER_TRANSACTION_TOO_LARGE = "TransactionTooLarge"
+            private const val MARKER_TOO_LARGE = "too large"
+            private const val MARKER_EXCEEDS = "exceeds"
+            private const val MARKER_TRANSACTION = "transaction"
         }
     }

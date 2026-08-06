@@ -45,37 +45,8 @@ class ResetManager
                     }
 
                     for (simInfo in activeSims) {
-                        val slot = simInfo.slotIndex
-                        val identity = simInfo.identity.stableId
-
-                        // Skip if we checked this identity recently (e.g. within the last hour)
-                        // Using compute to make check-and-update atomic.
-                        var wasUpdated = false
-                        lastResetCheck.compute(identity) { _, lastCheck ->
-                            if (lastCheck == null || now - lastCheck >= CHECK_INTERVAL_MS) {
-                                wasUpdated = true
-                                now
-                            } else {
-                                lastCheck
-                            }
-                        }
-
-                        if (!wasUpdated) continue
-
-                        val usage = simUsageRepository.getSimUsage(identity).first()
-                        if (usage.autoReset) {
-                            val reset =
-                                simUsageResetRepository.resetSimUsageIfDue(
-                                    identity,
-                                    usage.autoResetDay,
-                                    now,
-                                )
-                            if (reset) {
-                                resetIdentities.add(identity)
-                                AppLogger.d(
-                                    "Auto reset performed for SIM $slot ($identity), day: ${usage.autoResetDay}",
-                                )
-                            }
+                        if (checkAndPerformResetForSim(simInfo, now)) {
+                            resetIdentities.add(simInfo.identity.stableId)
                         }
                     }
                     if (resetIdentities.isNotEmpty()) {
@@ -92,6 +63,44 @@ class ResetManager
                     AppLogger.e("Error in auto reset: ${e.message}")
                 }
             }
+        }
+
+        private suspend fun checkAndPerformResetForSim(
+            simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
+            now: Long,
+        ): Boolean {
+            val identity = simInfo.identity.stableId
+
+            // Skip if we checked this identity recently (e.g. within the last hour)
+            // Using compute to make check-and-update atomic.
+            var wasUpdated = false
+            lastResetCheck.compute(identity) { _, lastCheck ->
+                if (lastCheck == null || now - lastCheck >= CHECK_INTERVAL_MS) {
+                    wasUpdated = true
+                    now
+                } else {
+                    lastCheck
+                }
+            }
+
+            if (!wasUpdated) return false
+
+            val usage = simUsageRepository.getSimUsage(identity).first()
+            if (usage.autoReset) {
+                val reset =
+                    simUsageResetRepository.resetSimUsageIfDue(
+                        identity,
+                        usage.autoResetDay,
+                        now,
+                    )
+                if (reset) {
+                    AppLogger.d(
+                        "Auto reset performed for SIM ${simInfo.slotIndex} ($identity), day: ${usage.autoResetDay}",
+                    )
+                    return true
+                }
+            }
+            return false
         }
 
         companion object {

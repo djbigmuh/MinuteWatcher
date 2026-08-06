@@ -201,14 +201,16 @@ class MainViewModel
 
         fun onActivityResume(nowElapsed: Long) {
             val last = lastRefreshAt
-            if (last == 0L) {
+            // Если last == 0L, это первый запуск в текущем сеансе.
+            // Если nowElapsed == 0L, это может быть крайне редкое совпадение при старте после бута.
+            // В обоих случаях просто фиксируем время без немедленного обновления.
+            if (last == 0L || nowElapsed == 0L) {
                 lastRefreshAt = nowElapsed
                 return
             }
             val elapsed = nowElapsed - last
-            // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt может быть больше.
-            // Проверяем превышение порога обновления (обычно 20с).
-            // Любое превышение более долгого интервала (например, 24ч) также попадает под это условие.
+            // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt из SavedState может быть больше.
+            // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
             val isStale = elapsed < 0 || elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS
 
             if (isStale) {

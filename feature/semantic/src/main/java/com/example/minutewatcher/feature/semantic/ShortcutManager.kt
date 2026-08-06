@@ -130,8 +130,8 @@ class ShortcutManager
         }
 
         private fun createMinutesShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat? {
-            val entity = sim.entities[PackageType.MINUTES] ?: return null
-            if (entity.limit <= 0) return null
+            val entity = sim.entities[PackageType.MINUTES]
+            if (entity == null || entity.limit <= 0) return null
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operator)
@@ -148,8 +148,8 @@ class ShortcutManager
         }
 
         private fun createTrafficShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat? {
-            val entity = sim.entities[PackageType.DATA] ?: return null
-            if (entity.limit <= 0) return null
+            val entity = sim.entities[PackageType.DATA]
+            if (entity == null || entity.limit <= 0) return null
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operator)

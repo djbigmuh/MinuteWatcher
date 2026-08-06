@@ -20,17 +20,21 @@ object TrackingBannerMapper {
         val shortcuts = statusMap["shortcuts"]
         val calls = statusMap["calls"]
 
+        val phonePermissionState =
+            determinePhonePermissionState(
+                phoneGranted,
+                phonePermanentlyDenied,
+                settings.phonePermissionRequested,
+            )
+
         if (!settings.onboardingCompleted) {
-            return TrackingBannerState()
+            return TrackingBannerState(
+                phonePermissionState = phonePermissionState,
+            )
         }
 
         return TrackingBannerState(
-            phonePermissionState =
-                determinePhonePermissionState(
-                    phoneGranted,
-                    phonePermanentlyDenied,
-                    settings.phonePermissionRequested,
-                ),
+            phonePermissionState = phonePermissionState,
             showUsageAccessBanner = !usageGranted,
             showTrafficErrorBanner = isTrafficError(traffic),
             showTrafficFallbackBanner = isTrafficFallback(traffic),

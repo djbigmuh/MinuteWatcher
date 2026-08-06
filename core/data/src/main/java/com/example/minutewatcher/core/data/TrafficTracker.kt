@@ -59,13 +59,14 @@ class TrafficTracker
         private val trafficMutex = Mutex()
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
-        private val baselineNeedsRetry = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+        private val baselineNeedsRetry = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
         private data class TargetInfo(
             val slot: Int,
             val dataSubId: Int,
             val skipDelta: Boolean,
             val isFallback: Boolean = false,
+            val retryCount: Int = 0,
         )
 
         suspend fun resetBaseline(identity: String) {
@@ -213,46 +214,52 @@ class TrafficTracker
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
-            val usage =
-                readWithRetry({ simUsageRepository.getSimUsage(targetIdentity) }, "simUsage", targetIdentity)
-                    .getOrElse {
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, it.message)
-                        return
-                    }
+            val usageRes = readWithRetry({ simUsageRepository.getSimUsage(targetIdentity) }, "simUsage", targetIdentity)
+            val usage = usageRes.getOrNull()
 
-            val statsResult = getCurrentMobileBytes(usage.lastResetDate)
+            if (usage == null) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, usageRes.exceptionOrNull()?.message)
+            } else {
+                val statsResult = getCurrentMobileBytes(usage.lastResetDate)
+                val isHandled = handleBaselineRetry(target, targetIdentity, statsResult)
 
-            if (handleBaselineRetry(target, targetIdentity, statsResult)) return
+                if (!isHandled) {
+                    executeTrafficUpdate(target, targetIdentity, statsResult)
+                }
+            }
+        }
 
+        private suspend fun executeTrafficUpdate(
+            target: TargetInfo,
+            targetIdentity: String,
+            statsResult: StatsResult,
+        ) {
             if (statsResult !is StatsResult.Success) {
                 handleStatsResultError(targetIdentity, statsResult)
                 return
             }
-            val currentBytes = statsResult.bytes
 
-            val lastTotalBytes =
+            val lastBytesRes =
                 readWithRetry(
                     { simUsageResetRepository.getLastTotalBytes(targetIdentity) },
                     "lastTotalBytes",
                     targetIdentity,
-                ).getOrElse {
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, it.message)
-                    return
-                }
+                )
+            val lastTotalBytes = lastBytesRes.getOrNull()
 
-            updateTrafficBaselineAndUsage(targetIdentity, currentBytes, lastTotalBytes, target)
-
-            updateLastDataSubId(target.dataSubId)
-
-            _status.value =
-                if (target.isFallback) {
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                        target.slot.toString(),
-                    )
-                } else {
-                    TrackingStatus.Active
-                }
+            if (lastTotalBytes == null) {
+                _status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, lastBytesRes.exceptionOrNull()?.message)
+            } else {
+                updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
+                updateLastDataSubId(target.dataSubId)
+                _status.value =
+                    if (target.isFallback) {
+                        TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, target.slot.toString())
+                    } else {
+                        TrackingStatus.Active
+                    }
+            }
         }
 
         private suspend fun updateTrafficBaselineAndUsage(
@@ -276,7 +283,7 @@ class TrafficTracker
             var handled = false
             if (statsResult is StatsResult.Success) {
                 val currentBytes = statsResult.bytes
-                if (baselineNeedsRetry.remove(targetIdentity) == true) {
+                if (baselineNeedsRetry.remove(targetIdentity) != null) {
                     simUsageResetRepository.setLastTotalBytes(
                         targetIdentity,
                         currentBytes,
@@ -296,7 +303,7 @@ class TrafficTracker
                         }
                     handled = true
                 }
-            } else if (baselineNeedsRetry[targetIdentity] == true) {
+            } else if (baselineNeedsRetry.containsKey(targetIdentity)) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
                 _status.value = TrackingStatus.Idle
                 handled = true
@@ -360,19 +367,23 @@ class TrafficTracker
             val now = timeProvider.now()
             val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
 
-            if (startTime == 0L) {
-                AppLogger.d("First run: using 30-day lookback window")
-                return networkStatsProvider.queryMobileBytes(lookbackStart, now)
-            }
+            val effectiveStart =
+                when {
+                    startTime == 0L -> {
+                        AppLogger.d("First run: using 30-day lookback window")
+                        lookbackStart
+                    }
+                    startTime < lookbackStart -> {
+                        AppLogger.w(
+                            "Billing period start is older than 30 days, clamping to lookback window. " +
+                                "Some traffic data may be missed.",
+                        )
+                        lookbackStart
+                    }
+                    else -> startTime
+                }
 
-            if (startTime < lookbackStart) {
-                AppLogger.w(
-                    "Billing period start is older than 30 days, clamping to lookback window. Some traffic data may be missed.",
-                )
-                return networkStatsProvider.queryMobileBytes(lookbackStart, now)
-            }
-
-            return networkStatsProvider.queryMobileBytes(startTime, now)
+            return networkStatsProvider.queryMobileBytes(effectiveStart, now)
         }
 
         private suspend fun getTargetSimInfo(): TargetInfo? {
@@ -384,14 +395,23 @@ class TrafficTracker
             val isSimChanged =
                 savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId
 
+            val identity = simIdentityRepository.getIdentity(targetSim)
+            val retryCount = baselineNeedsRetry[identity] ?: 0
+
             if (isSimChanged) {
-                handleSimChange(targetSim, currentDataSubId, savedLastDataSubId)
+                handleSimChange(targetSim, currentDataSubId, savedLastDataSubId, retryCount)
                 if (isFallback) {
                     AppLogger.w("SIM change detected with fallback attribution to slot $targetSim")
                 }
             }
 
-            return TargetInfo(targetSim, currentDataSubId, skipDelta = isSimChanged, isFallback = isFallback)
+            return TargetInfo(
+                targetSim,
+                currentDataSubId,
+                skipDelta = isSimChanged,
+                isFallback = isFallback,
+                retryCount = retryCount,
+            )
         }
 
         private suspend fun resolveTargetSim(): Triple<Int, Int, Boolean>? {
@@ -465,13 +485,15 @@ class TrafficTracker
             if (firstResult != null) return firstResult
 
             AppLogger.w("TrafficTracker: Timeout reading $fieldName for $identity, retrying with 10s...")
-            return tryRead(Constants.Flow.LONG_TIMEOUT_MS) ?: Result.failure(Exception("Timeout reading $fieldName"))
+            return tryRead(Constants.Flow.LONG_TIMEOUT_MS)
+                ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 
         private suspend fun handleSimChange(
             targetSim: Int,
             currentDataSubId: Int,
             savedLastDataSubId: Int,
+            retryCount: Int,
         ) {
             AppLogger.d(
                 "Default data SIM changed from $savedLastDataSubId to $currentDataSubId. " +
@@ -479,6 +501,14 @@ class TrafficTracker
             )
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
+
+                if (retryCount >= MAX_BASELINE_RETRIES) {
+                    AppLogger.w("Giving up baseline reset for $identity after $retryCount retries")
+                    baselineNeedsRetry.remove(identity)
+                    updateLastDataSubId(currentDataSubId)
+                    return
+                }
+
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
                 val statsResult =
                     if (usage != null) {
@@ -500,8 +530,8 @@ class TrafficTracker
                     AppLogger.d("Baseline reset successfully for $identity")
 
                     // Successfully reset baseline, now we can consume the SIM change
-                    callSessionRepository.setLastDataSubId(currentDataSubId)
-                    inMemoryLastDataSubId.set(currentDataSubId)
+                    updateLastDataSubId(currentDataSubId)
+                    baselineNeedsRetry.remove(identity)
                 } else {
                     val reason =
                         if (statsResult is StatsResult.Error) {
@@ -510,19 +540,24 @@ class TrafficTracker
                             "Stats unavailable"
                         }
                     AppLogger.w(
-                        "Stats unavailable on SIM change for $identity: $reason. Baseline reset will be retried.",
+                        "Stats unavailable on SIM change for $identity: $reason. " +
+                            "Baseline reset will be retried (attempt ${retryCount + 1}).",
                     )
                     if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
                         val activeIdentities =
                             simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
                         baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
                     }
-                    baselineNeedsRetry[identity] = true
+                    baselineNeedsRetry[identity] = retryCount + 1
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to handle SIM change", e)
             }
+        }
+
+        companion object {
+            private const val MAX_BASELINE_RETRIES = 5
         }
     }

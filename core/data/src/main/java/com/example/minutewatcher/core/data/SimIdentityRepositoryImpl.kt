@@ -77,7 +77,10 @@ class SimIdentityRepositoryImpl
 
         private val seedFlow: Flow<String> =
             flow {
-                val currentSeed = seedRepository.getSeed().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                val currentSeed =
+                    seedRepository
+                        .getSeed()
+                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                 val seed =
                     if (currentSeed.isNullOrEmpty()) {
                         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -104,7 +107,7 @@ class SimIdentityRepositoryImpl
                 )
             }.distinctUntilChanged()
                 .filter { it.isNotEmpty() }
-                .shareIn(scope, SharingStarted.Lazily, replay = 1)
+                .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow

@@ -75,8 +75,8 @@ class MainViewModelTest {
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
-        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings(onboardingCompleted = true)))
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(onboardingCompleted = true)))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
     }
@@ -194,7 +194,14 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState shows notification banner when alerts enabled but not granted`() =
         runTest(testDispatcher) {
-            val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = true, notifyLowTraffic = false))
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = true,
+                        notifyLowTraffic = false,
+                        onboardingCompleted = true,
+                    ),
+                )
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = false
 
@@ -213,7 +220,14 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState hides notification banner when granted even if alerts enabled`() =
         runTest(testDispatcher) {
-            val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true))
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = true,
+                        notifyLowTraffic = true,
+                        onboardingCompleted = true,
+                    ),
+                )
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = true
 
@@ -233,7 +247,7 @@ class MainViewModelTest {
     fun `trackingBannerState correctly identifies NOT_REQUESTED vs DENIED states`() =
         runTest(testDispatcher) {
             // Case 1: Not requested
-            val settingsFlow = MutableStateFlow(AppSettings(phonePermissionRequested = false))
+            val settingsFlow = MutableStateFlow(AppSettings(phonePermissionRequested = false, onboardingCompleted = true))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             phonePermissionFlow.value = false
 
@@ -249,7 +263,7 @@ class MainViewModelTest {
             assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
 
             // Case 2: Requested but denied
-            settingsFlow.value = AppSettings(phonePermissionRequested = true)
+            settingsFlow.value = AppSettings(phonePermissionRequested = true, onboardingCompleted = true)
             testScheduler.advanceUntilIdle()
 
             bannerState = viewModel.trackingBannerState.value
@@ -259,7 +273,14 @@ class MainViewModelTest {
     @Test
     fun `trackingBannerState hides notification banner when alerts disabled`() =
         runTest(testDispatcher) {
-            val settingsFlow = MutableStateFlow(AppSettings(notifyLowMinutes = false, notifyLowTraffic = false))
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = false,
+                        notifyLowTraffic = false,
+                        onboardingCompleted = true,
+                    ),
+                )
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             notificationPermissionFlow.value = false
 

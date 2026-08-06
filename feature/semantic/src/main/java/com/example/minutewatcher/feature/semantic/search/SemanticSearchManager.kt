@@ -87,8 +87,10 @@ open class SemanticSearchManager
             session?.close()
             session = null
 
+            var success = false
             var shouldForce = forceOverride
-            repeat(SCHEMA_RETRY_ATTEMPTS) { attempt ->
+            for (attempt in 0 until SCHEMA_RETRY_ATTEMPTS) {
+                if (success) break
                 var newSession: AppSearchSessionWrapper? = null
                 try {
                     newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
@@ -96,7 +98,7 @@ open class SemanticSearchManager
                     newSession.setSchema(request)
                     session = newSession
                     _status.value = TrackingStatus.Active
-                    return true
+                    success = true
                 } catch (e: AppSearchException) {
                     newSession?.close()
                     if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce && attempt == 0) {
@@ -105,36 +107,32 @@ open class SemanticSearchManager
                     } else {
                         AppLogger.e("Fatal AppSearch error", e)
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                        return false
+                        break
                     }
-                } catch (e: CancellationException) {
-                    newSession?.close()
-                    throw e
                 } catch (e: Exception) {
                     newSession?.close()
+                    if (e is CancellationException) throw e
                     AppLogger.e("Failed to initialize AppSearch session", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    return false
+                    break
                 }
             }
-            return false
+            return success
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
-            if (snapshot.simSnapshots.none { it.isActive }) {
-                return true
-            }
-
-            val currentHash = SnapshotUtils.calculateContentHash(snapshot)
-            if (currentHash == lastSnapshotHash) return true
-
+            val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
+            val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else -1
             return sessionMutex.withLock {
-                // Re-check after acquiring lock to avoid redundant indexing if another thread
-                // just finished indexing the same content.
-                if (currentHash == lastSnapshotHash) return@withLock true
-
-                if (!ensureSession()) return@withLock false
-                executeIndexing(snapshot, currentHash)
+                if (hasActiveSims && currentHash == lastSnapshotHash) {
+                    true
+                } else if (!hasActiveSims) {
+                    ensureSession()
+                } else if (ensureSession()) {
+                    executeIndexing(snapshot, currentHash)
+                } else {
+                    false
+                }
             }
         }
 

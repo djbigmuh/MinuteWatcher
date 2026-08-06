@@ -49,7 +49,7 @@ class SemanticSearchManagerTest {
     fun `successful initialization sets status to Active`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val flow = MutableStateFlow(createEmptySnapshot())
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             manager.initialize(flow)
 
@@ -65,8 +65,9 @@ class SemanticSearchManagerTest {
             val manager = createManager(backgroundScope)
             fakeWrapper.failNextWithInvalidSchema = true
 
-            val flow = MutableStateFlow(createEmptySnapshot())
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
             manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
 
             assertTrue(manager.status.value is TrackingStatus.Active)
             assertEquals(2, fakeWrapper.createdSessions)
@@ -79,7 +80,7 @@ class SemanticSearchManagerTest {
             val manager = createManager(backgroundScope)
             fakeWrapper.failNextWithFatalError = true
 
-            val flow = MutableStateFlow(createEmptySnapshot())
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
             manager.initialize(flow)
 
             val status = manager.status.value
@@ -255,6 +256,23 @@ class SemanticSearchManagerTest {
             simSnapshots = emptyList(),
             capabilities = emptyList(),
             isManualUpdate = true,
+        )
+
+    private fun createSnapshotWithOneSim() =
+        createSnapshot(
+            listOf(
+                SimSnapshot(
+                    slot = 0,
+                    identity = "sim_0",
+                    operator = "TestOp",
+                    isActive = true,
+                    entities =
+                        mapOf(
+                            PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
+                        ),
+                    autoResetDay = 1,
+                ),
+            ),
         )
 
     private class FakeAppSearchWrapper : AppSearchWrapper {

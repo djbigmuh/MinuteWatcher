@@ -17,8 +17,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.color.ColorProvider as GlanceColorProvider
-import androidx.glance.unit.ColorProvider as IColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -54,6 +52,8 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.glance.color.ColorProvider as GlanceColorProvider
+import androidx.glance.unit.ColorProvider as IColorProvider
 
 class MinutesGlanceWidget : GlanceAppWidget() {
     @EntryPoint
@@ -84,20 +84,25 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             AppLogger.e("Widget provideGlance failed, showing fallback", e)
             provideContent {
                 GlanceTheme {
-                    Box(
-                        modifier = GlanceModifier.fillMaxSize().appWidgetBackground(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = context.getString(R.string.refresh_error),
-                            style =
-                                TextStyle(
-                                    fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-                                ),
-                        )
-                    }
+                    FallbackContent(context)
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun FallbackContent(context: Context) {
+        Box(
+            modifier = GlanceModifier.fillMaxSize().appWidgetBackground(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = context.getString(R.string.refresh_error),
+                style =
+                    TextStyle(
+                        fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+                    ),
+            )
         }
     }
 
@@ -367,75 +372,88 @@ private fun SimSeparator(
     Spacer(modifier = modifier.background(separatorColor))
 }
 
-
-@Composable
-private fun SimItem(
-    sim: SimUiState,
-    uiState: WidgetUiState,
-) {
-    val context = LocalContext.current
-    val summary =
-        context.getString(
-            R.string.sim_status_summary,
-            sim.operatorName,
-            sim.minutesText,
-            sim.trafficText,
-        )
-
-    Column(
-        modifier =
-            GlanceModifier
-                .padding(
-                    Constants.Widget.PADDING_SIM_ITEM.dp,
-                ).semantics { contentDescription = summary },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
+    @Composable
+    private fun SimItem(
+        sim: SimUiState,
+        uiState: WidgetUiState,
     ) {
-        SimLayoutRender(
-            spec = sim.layoutSpec,
-            rowContainer = { content ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    content()
-                }
-            },
-            iconRenderer = { component ->
-                Image(
-                    provider = ImageProvider(component.iconRes),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(component.sizeDp.dp),
-                )
-            },
-            textRenderer = { component ->
-                val textColor =
-                    if (uiState.useSystemColors && component.color == sim.textColor) {
-                        GlanceTheme.colors.onSurface
-                    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                        GlanceTheme.colors.onSurfaceVariant
-                    } else {
-                        val composeColor =
-                            androidx.compose.ui.graphics
-                                .Color(component.color)
-                        GlanceColorProvider(day = composeColor, night = composeColor)
-                    }
+        val context = LocalContext.current
+        val summary =
+            context.getString(
+                R.string.sim_status_summary,
+                sim.operatorName,
+                sim.minutesText,
+                sim.trafficText,
+            )
 
-                Text(
-                    text = component.text,
-                    style =
-                        TextStyle(
-                            fontSize = component.fontSizeSp.sp,
-                            fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
-                            color = textColor,
-                        ),
-                )
-            },
-            spacerRenderer = { component ->
-                if (component.widthDp > 0) {
-                    Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
-                }
-                if (component.heightDp > 0) {
-                    Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
-                }
-            },
+        Column(
+            modifier =
+                GlanceModifier
+                    .padding(
+                        Constants.Widget.PADDING_SIM_ITEM.dp,
+                    ).semantics { contentDescription = summary },
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SimLayoutRender(
+                spec = sim.layoutSpec,
+                rowContainer = { content ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        content()
+                    }
+                },
+                iconRenderer = { component ->
+                    Image(
+                        provider = ImageProvider(component.iconRes),
+                        contentDescription = null,
+                        modifier = GlanceModifier.size(component.sizeDp.dp),
+                    )
+                },
+                textRenderer = { component ->
+                    SimItemText(component, sim, uiState)
+                },
+                spacerRenderer = { component ->
+                    SimItemSpacer(component)
+                },
+            )
+        }
+    }
+
+    @Composable
+    private fun SimItemText(
+        component: com.example.minutewatcher.core.model.SimLayoutComponent.Text,
+        sim: SimUiState,
+        uiState: WidgetUiState,
+    ) {
+        val textColor =
+            if (uiState.useSystemColors && component.color == sim.textColor) {
+                GlanceTheme.colors.onSurface
+            } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+                GlanceTheme.colors.onSurfaceVariant
+            } else {
+                val composeColor =
+                    androidx.compose.ui.graphics
+                        .Color(component.color)
+                GlanceColorProvider(day = composeColor, night = composeColor)
+            }
+
+        Text(
+            text = component.text,
+            style =
+                TextStyle(
+                    fontSize = component.fontSizeSp.sp,
+                    fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
+                    color = textColor,
+                ),
         )
     }
-}
+
+    @Composable
+    private fun SimItemSpacer(component: com.example.minutewatcher.core.model.SimLayoutComponent.Spacer) {
+        if (component.widthDp > 0) {
+            Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
+        }
+        if (component.heightDp > 0) {
+            Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
+        }
+    }

@@ -92,7 +92,7 @@ class WidgetSettingsViewModel
             if (currentState == null) {
                 com.example.minutewatcher.core.common.util.AppLogger
                     .w("saveAndNotify called before settings were loaded")
-                viewModelScope.launch { onComplete(false) }
+                onComplete(false)
                 return
             }
 

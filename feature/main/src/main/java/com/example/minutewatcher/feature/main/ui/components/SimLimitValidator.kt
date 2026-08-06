@@ -2,12 +2,17 @@ package com.example.minutewatcher.feature.main.ui.components
 
 import com.example.minutewatcher.core.model.Constants
 
-data class ValidationResult(
-    val minutes: Int?,
-    val trafficGb: Float?,
-    val minutesError: String?,
-    val trafficError: String?,
-)
+sealed interface SimLimitValidationResult {
+    data class Valid(
+        val minutes: Int,
+        val trafficGb: Float,
+    ) : SimLimitValidationResult
+
+    data class Invalid(
+        val minutesError: String?,
+        val trafficError: String?,
+    ) : SimLimitValidationResult
+}
 
 object SimLimitValidator {
     fun validate(
@@ -17,7 +22,7 @@ object SimLimitValidator {
         invalidNumberMsg: String,
         minutesRangeMsg: String,
         trafficRangeMsg: String,
-    ): ValidationResult {
+    ): SimLimitValidationResult {
         val min = minutesText.toIntOrNull()
         val trafGb = trafficText.toFloatOrNull()
 
@@ -39,6 +44,10 @@ object SimLimitValidator {
             trafErr = trafficRangeMsg
         }
 
-        return ValidationResult(min, trafGb, minErr, trafErr)
+        return if (minErr == null && trafErr == null && min != null && trafGb != null) {
+            SimLimitValidationResult.Valid(min, trafGb)
+        } else {
+            SimLimitValidationResult.Invalid(minErr, trafErr)
+        }
     }
 }

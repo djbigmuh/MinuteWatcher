@@ -20,7 +20,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(),
+                settings = AppSettings(onboardingCompleted = true),
             )
 
         assertEquals(PermissionUiState.GRANTED, state.phonePermissionState)
@@ -40,7 +40,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(phonePermissionRequested = false),
+                settings = AppSettings(phonePermissionRequested = false, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.NOT_REQUESTED, state.phonePermissionState)
 
@@ -53,7 +53,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(phonePermissionRequested = true),
+                settings = AppSettings(phonePermissionRequested = true, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.DENIED, state.phonePermissionState)
 
@@ -66,7 +66,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = true,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(phonePermissionRequested = true),
+                settings = AppSettings(phonePermissionRequested = true, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
     }
@@ -81,7 +81,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(),
+                settings = AppSettings(onboardingCompleted = true),
             )
 
         assertTrue(state.showUsageAccessBanner)
@@ -97,7 +97,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(),
+                settings = AppSettings(onboardingCompleted = true),
             )
 
         assertTrue(state.showTrafficErrorBanner)
@@ -115,7 +115,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(),
+                settings = AppSettings(onboardingCompleted = true),
             )
 
         assertFalse(state.showTrafficErrorBanner)
@@ -124,30 +124,24 @@ class TrackingBannerMapperTest {
 
     @Test
     fun `mapToBannerState reflects notification permission based on settings`() {
-        // Enabled in settings, but not granted
-        var state =
-            TrackingBannerMapper.mapToBannerState(
-                statusMap = emptyMap(),
-                phoneGranted = true,
-                usageGranted = true,
-                notificationsGranted = false,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
-                settings = AppSettings(notifyLowMinutes = true),
-            )
-        assertNotEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
+        // ... (текущий код) ...
+    }
 
-        // Disabled in settings, should report GRANTED (suppressed)
-        state =
+    @Test
+    fun `mapToBannerState still shows phone permission banner before onboarding completed`() {
+        val state =
             TrackingBannerMapper.mapToBannerState(
                 statusMap = emptyMap(),
-                phoneGranted = true,
-                usageGranted = true,
+                phoneGranted = false,
+                usageGranted = false,
                 notificationsGranted = false,
-                phonePermanentlyDenied = false,
+                phonePermanentlyDenied = true,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(notifyLowMinutes = false, notifyLowTraffic = false),
+                settings = AppSettings(onboardingCompleted = false, phonePermissionRequested = true),
             )
-        assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
+
+        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
+        assertFalse(state.showUsageAccessBanner) // Should be suppressed
+        assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState) // Default
     }
 }

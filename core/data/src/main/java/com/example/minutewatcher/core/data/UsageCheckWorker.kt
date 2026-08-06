@@ -37,8 +37,7 @@ class UsageCheckWorker
                     // Refresh operator info periodically
                     deps.usageUseCase.refreshOperatorInfo()
 
-                    checkUsageAndNotify()
-                    Result.success()
+                    return@withContext checkUsageAndNotify()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: java.io.IOException) {
@@ -53,7 +52,7 @@ class UsageCheckWorker
                 }
             }
 
-        private suspend fun checkUsageAndNotify() {
+        private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
 
             // Perform auto-reset logic. We skip internal notification here because we do a single unified refresh and notify below.
@@ -62,7 +61,8 @@ class UsageCheckWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("Auto-reset failed in UsageCheckWorker", e)
+                AppLogger.e("Auto-reset failed in UsageCheckWorker, retrying", e)
+                return Result.retry()
             }
 
             // Single refresh to capture all recent changes (traffic update and potential auto-reset)
@@ -70,7 +70,7 @@ class UsageCheckWorker
             if (refreshResult is RefreshResult.Timeout) {
                 AppLogger.w("UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.")
                 deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
-                return
+                return Result.success()
             }
 
             val finalSnapshot = refreshResult.snapshot
@@ -98,6 +98,7 @@ class UsageCheckWorker
                     processSimSnapshot(simSnapshot, appSettings)
                 }
             }
+            return Result.success()
         }
 
         private suspend fun processSimSnapshot(

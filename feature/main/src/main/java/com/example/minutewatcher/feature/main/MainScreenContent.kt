@@ -85,7 +85,13 @@ private fun rememberTrackingBannerCallbacks(
     onOpenAppSettings: () -> Unit,
     onGrantNotificationPermission: () -> Unit,
 ): TrackingBannerCallbacks =
-    remember(viewModel) {
+    remember(
+        viewModel,
+        onGrantPhonePermission,
+        onShowUsageAccessDialog,
+        onOpenAppSettings,
+        onGrantNotificationPermission,
+    ) {
         TrackingBannerCallbacks(
             onGrantPhonePermission = onGrantPhonePermission,
             onShowUsageAccessDialog = onShowUsageAccessDialog,

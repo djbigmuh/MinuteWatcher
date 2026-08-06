@@ -406,29 +406,35 @@ class CallTracker
             data: CallSessionData,
             currentBootTime: Long,
         ): Boolean {
-            if (data.savedBootTime == 0L) {
+            val isMissingBootTime = data.savedBootTime == 0L
+            val isStaleSession = data.savedBootTime > currentBootTime
+
+            if (isMissingBootTime) {
                 AppLogger.w("Call session for subId $subId has no boot time (possible write failure). Discarding.")
-                clearSession(subId)
-                return false
             }
-            if (data.savedBootTime > currentBootTime) {
+            if (isStaleSession) {
                 AppLogger.d("Stale call session detected for subId $subId (reboot). Clearing.")
-                clearSession(subId)
-                return false
             }
-            return true
+
+            val isValid = !isMissingBootTime && !isStaleSession
+            if (!isValid) {
+                clearSession(subId)
+            }
+            return isValid
         }
 
         private suspend fun refreshStatus(force: Boolean = false) {
             val current = _status.value
-            if (current is TrackingStatus.Error) {
-                if (!force && current.type == TrackingStatus.ErrorType.UNKNOWN) return
-                if (current.type == TrackingStatus.ErrorType.PERMISSION_MISSING) return
-                if (!force) return
-            }
+            val isIgnoredError =
+                current is TrackingStatus.Error &&
+                    !force &&
+                    (current.type == TrackingStatus.ErrorType.UNKNOWN ||
+                        current.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
 
-            val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
-            _status.value = if (hasActiveCalls) TrackingStatus.Active else TrackingStatus.Idle
+            if (!isIgnoredError) {
+                val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
+                _status.value = if (hasActiveCalls) TrackingStatus.Active else TrackingStatus.Idle
+            }
         }
 
         private suspend fun clearSession(subId: Int) {
@@ -504,18 +510,20 @@ class CallTracker
                     Result.failure(e)
                 }
 
-            val firstResult = tryRead(5000L)
+            val firstResult = tryRead(READ_RETRY_SHORT_TIMEOUT_MS)
             if (firstResult != null && firstResult.isSuccess) return firstResult
 
             val reason = if (firstResult == null) "Timeout" else "Error (${firstResult.exceptionOrNull()?.message})"
             AppLogger.w("CallTracker: $reason reading $fieldName for subId $subId, retrying with 10s...")
 
-            val secondResult = tryRead(10000L)
+            val secondResult = tryRead(READ_RETRY_LONG_TIMEOUT_MS)
             return secondResult ?: Result.failure(TimeoutException("Timeout reading $fieldName"))
         }
 
         companion object {
             private const val MILLIS_IN_SECOND = 1000L
             private const val SECONDS_IN_MINUTE = 60
+            private const val READ_RETRY_SHORT_TIMEOUT_MS = 5_000L
+            private const val READ_RETRY_LONG_TIMEOUT_MS = 10_000L
         }
     }

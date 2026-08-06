@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -42,7 +41,7 @@ class UpdateCoordinator
         private val lastManualSnapshotTimestamp = AtomicLong(-1L)
 
         init {
-            scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            scope.launch {
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > 0L }
@@ -63,6 +62,8 @@ class UpdateCoordinator
                         }
                         try {
                             widgetUpdater.updateAll()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             AppLogger.e("Widget update failed in coordinator", e)
                         }

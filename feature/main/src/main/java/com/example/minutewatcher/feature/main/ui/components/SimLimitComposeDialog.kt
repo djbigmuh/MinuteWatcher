@@ -67,15 +67,10 @@ fun SimLimitComposeDialog(
             DialogButtons(
                 onConfirm = {
                     if (state.validate(validationMessages)) {
+                        // After successful validate(), validatedMinutes and validatedTrafficGb are guaranteed to be non-null.
                         onConfirm(
-                            requireNotNull(
-                                state.validatedMinutes,
-                            ) { "Validated minutes should not be null after successful validation" },
-                            (
-                                requireNotNull(state.validatedTrafficGb) {
-                                    "Validated traffic should not be null after successful validation"
-                                } * Constants.MB_PER_GB
-                            ).roundToInt(),
+                            state.validatedMinutes!!,
+                            (state.validatedTrafficGb!! * Constants.MB_PER_GB).roundToInt(),
                             state.rolloverEnabled,
                         )
                     }
@@ -140,11 +135,23 @@ private class SimLimitState(
                 msgs.minutesRange,
                 msgs.trafficRange,
             )
-        minutesError = result.minutesError
-        trafficError = result.trafficError
-        validatedMinutes = result.minutes
-        validatedTrafficGb = result.trafficGb
-        return minutesError == null && trafficError == null
+        return when (result) {
+            is SimLimitValidationResult.Valid -> {
+                minutesError = null
+                trafficError = null
+                validatedMinutes = result.minutes
+                validatedTrafficGb = result.trafficGb
+                true
+            }
+
+            is SimLimitValidationResult.Invalid -> {
+                minutesError = result.minutesError
+                trafficError = result.trafficError
+                validatedMinutes = null
+                validatedTrafficGb = null
+                false
+            }
+        }
     }
 
     fun onMinutesChange(text: String) {
