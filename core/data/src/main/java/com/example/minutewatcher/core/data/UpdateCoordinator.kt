@@ -10,12 +10,12 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,7 +38,7 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val forceUpdateFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        private val forceUpdateChannel = Channel<Unit>(Channel.UNLIMITED)
 
         init {
             scope.launch {
@@ -50,7 +50,7 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(old) ==
                                 SnapshotUtils.calculateContentHash(new)
                         }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds),
-                    forceUpdateFlow.map { },
+                    forceUpdateChannel.receiveAsFlow(),
                 ).collect {
                     try {
                         widgetUpdater.updateAll()
@@ -71,7 +71,7 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             if (updateWidget && force) {
-                forceUpdateFlow.tryEmit(Unit)
+                forceUpdateChannel.trySend(Unit)
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }

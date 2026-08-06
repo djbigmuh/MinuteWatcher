@@ -126,16 +126,14 @@ open class SemanticSearchManager
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
             val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
-            val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else -1
+            val currentHash =
+                if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else EMPTY_INDEX_HASH
             return sessionMutex.withLock {
-                if (hasActiveSims && currentHash == lastSnapshotHash) {
-                    true
-                } else if (!hasActiveSims) {
-                    ensureSession()
-                } else if (ensureSession()) {
-                    executeIndexing(snapshot, currentHash)
-                } else {
-                    false
+                when {
+                    hasActiveSims && currentHash == lastSnapshotHash -> true
+                    !hasActiveSims && lastSnapshotHash == EMPTY_INDEX_HASH -> true // чистить нечего
+                    ensureSession() -> executeIndexing(snapshot, currentHash)
+                    else -> false
                 }
             }
         }
@@ -206,5 +204,6 @@ open class SemanticSearchManager
             private const val DATABASE_NAME = "usage"
             const val NAMESPACE = "usage"
             private const val SCHEMA_RETRY_ATTEMPTS = 2
+            private const val EMPTY_INDEX_HASH = -1
         }
     }

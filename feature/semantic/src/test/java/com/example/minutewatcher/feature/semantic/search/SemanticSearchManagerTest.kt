@@ -195,6 +195,48 @@ class SemanticSearchManagerTest {
             assertTrue(lastPut.genericDocuments.isNotEmpty())
         }
 
+    @Test
+    fun `empty snapshot triggers stale document removal`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Index snapshot with one SIM
+            manager.indexSnapshot(createSnapshotWithOneSim())
+            val session = fakeWrapper.lastSession!!
+            val initialRemoves = session.removeRequests.size
+
+            // 2. Pass empty snapshot
+            val emptySnapshot = createSnapshot(emptyList())
+            val result = manager.indexSnapshot(emptySnapshot)
+
+            assertTrue("indexSnapshot should return true for empty snapshot", result)
+            assertEquals("Should have one more remove request", initialRemoves + 1, session.removeRequests.size)
+
+            val lastRemove = session.removeRequests.last()
+            assertTrue("Should remove sim_0_minutes", lastRemove.ids.contains("sim_0_minutes"))
+            assertTrue("Should remove sim_0_data", lastRemove.ids.contains("sim_0_data"))
+        }
+
+    @Test
+    fun `empty snapshot resets hash and allows re-indexing`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // 1. Index snapshot
+            manager.indexSnapshot(snapshot)
+            val session = fakeWrapper.lastSession!!
+            val initialPuts = session.putRequests.size
+
+            // 2. Pass empty snapshot
+            manager.indexSnapshot(createSnapshot(emptyList()))
+
+            // 3. Pass SAME snapshot again
+            manager.indexSnapshot(snapshot)
+
+            assertEquals("Should have re-indexed same data because hash was reset", initialPuts + 1, session.putRequests.size)
+        }
+
     private fun createManager(scope: CoroutineScope) =
         object : SemanticSearchManager(
             context = context,

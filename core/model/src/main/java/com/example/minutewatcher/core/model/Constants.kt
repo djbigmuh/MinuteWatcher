@@ -32,7 +32,6 @@ object Constants {
         const val PERCENT_MAX_FLOAT = 100f
         const val SEPARATOR_ALPHA = 0.5f
 
-
         const val PADDING_DEFAULT = 8
         const val PADDING_SIM_ITEM = 4
         const val CORNER_RADIUS = 16

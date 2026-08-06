@@ -39,10 +39,16 @@ class WidgetUpdaterImplTest {
         val e = IllegalArgumentException("Fake exception")
         // We can't easily mock stackTraceToString() as it's an extension function,
         // but we can set the stack trace of the exception.
-        e.stackTrace = arrayOf(
-            StackTraceElement("android.widget.RemoteViews", "writeToParcel", "RemoteViews.java", 100),
-            StackTraceElement("android.os.TransactionTooLargeException", "<init>", "TransactionTooLargeException.java", 1)
-        )
+        e.stackTrace =
+            arrayOf(
+                StackTraceElement("android.widget.RemoteViews", "writeToParcel", "RemoteViews.java", 100),
+                StackTraceElement(
+                    "android.os.TransactionTooLargeException",
+                    "<init>",
+                    "TransactionTooLargeException.java",
+                    1,
+                ),
+            )
         assertTrue(updater.isRemoteViewsLimitException(e))
     }
 }

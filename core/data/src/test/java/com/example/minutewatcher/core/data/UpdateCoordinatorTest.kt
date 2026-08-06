@@ -101,8 +101,10 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            testScheduler.advanceUntilIdle()
 
             coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.advanceUntilIdle()
 
             verify(widgetUpdater).updateAll()
             verify(dataRefreshNotifier).notifyRefresh(isManual = true)
@@ -145,12 +147,15 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            testScheduler.advanceUntilIdle()
 
             // First force
             coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.advanceUntilIdle()
 
             // Second force
             coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.advanceUntilIdle()
 
             // Should be 2 calls
             verify(widgetUpdater, times(2)).updateAll()

@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -55,7 +54,8 @@ class WidgetSettingsViewModelTest {
             val snapshotFlow: StateFlow<GlobalSnapshot> = MutableStateFlow<GlobalSnapshot>(snapshot)
             whenever<StateFlow<GlobalSnapshot>>(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
-            whenever(saver.save(any())).thenAnswer { runBlocking(Dispatchers.IO) { saveDeferred.await() } }
+            // Default: successful immediate save
+            whenever(saver.save(any())).thenReturn(true)
 
             viewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
         }
@@ -109,32 +109,35 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify prevents concurrent saves`() =
         runTest {
+            val gate = CompletableDeferred<Unit>()
+            val blockingLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = WidgetSettingsState()
+
+                    override suspend fun save(state: WidgetSettingsState) {
+                        gate.await()
+                    }
+                }
+            val blockingSaver = WidgetSettingsSaver(blockingLoader, mock())
+            val vm = WidgetSettingsViewModel(context, loader, blockingSaver, usageStateRepository)
             advanceUntilIdle()
 
-            // Start first save
-            viewModel.saveAndNotify { }
-            runCurrent()
-
-            // Check that isSaving is true immediately
-            assertTrue(viewModel.isSaving.value)
-
-            // Attempt second save immediately
+            var firstResult: Boolean? = null
             var secondCompleted = false
-            viewModel.saveAndNotify { secondCompleted = true }
+
+            vm.saveAndNotify { firstResult = it }
             runCurrent()
+            assertTrue(vm.isSaving.value)
 
+            vm.saveAndNotify { secondCompleted = true }
+            runCurrent()
+            assertFalse(secondCompleted) // второй вызов отклонён tryLock
+
+            gate.complete(Unit)
             advanceUntilIdle()
 
-            // Second save should NOT have run/completed
-            assertFalse(secondCompleted)
-
-            // Complete the first save
-            saveDeferred.complete(true)
-            advanceUntilIdle()
-
-            // Verify save was called only once
-            verify(saver).save(any())
-            assertFalse(viewModel.isSaving.value)
+            assertEquals(true, firstResult)
+            assertFalse(vm.isSaving.value)
         }
 
     @Test

@@ -11,10 +11,11 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -28,7 +29,7 @@ class WidgetSettingsScreenTest {
         androidx.compose.ui.test.junit4.v2
             .createComposeRule()
 
-    private val viewModel: WidgetSettingsViewModel = mock()
+    private lateinit var viewModel: WidgetSettingsViewModel
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     private val testSettings =
@@ -47,12 +48,19 @@ class WidgetSettingsScreenTest {
                 ),
         )
 
+    @Before
+    fun setup() {
+        viewModel = mock()
+        // Provide default stubs to avoid NPE on collectAsStateWithLifecycle
+        whenever(viewModel.settingsState).doReturn(MutableStateFlow(null))
+        whenever(viewModel.uiState).doReturn(MutableStateFlow(null))
+        whenever(viewModel.loadError).doReturn(MutableStateFlow(false))
+        whenever(viewModel.isSaving).doReturn(MutableStateFlow(false))
+    }
+
     @Test
     fun loadingState_isDisplayed() {
-        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
-        whenever(viewModel.settingsState).thenReturn(MutableStateFlow(null))
-        whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
-        whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))
+        // settingsState is already null by default from @Before
 
         composeTestRule.setContent {
             WidgetSettingsScreen(
@@ -71,10 +79,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun errorState_isDisplayed() {
-        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
-        whenever(viewModel.settingsState).thenReturn(MutableStateFlow(null))
-        whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
-        whenever(viewModel.loadError).thenReturn(MutableStateFlow(true))
+        whenever(viewModel.loadError).doReturn(MutableStateFlow(true))
 
         composeTestRule.setContent {
             WidgetSettingsScreen(
@@ -90,10 +95,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun settingsContent_isDisplayed() {
-        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
-        whenever(viewModel.settingsState).thenReturn(MutableStateFlow(testSettings))
-        whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
-        whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))
+        whenever(viewModel.settingsState).doReturn(MutableStateFlow(testSettings))
 
         composeTestRule.setContent {
             WidgetSettingsScreen(
@@ -109,10 +111,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun saveButton_triggersCallback() {
-        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
-        whenever(viewModel.settingsState).thenReturn(MutableStateFlow(testSettings))
-        whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
-        whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))
+        whenever(viewModel.settingsState).doReturn(MutableStateFlow(testSettings))
 
         var saved = false
         composeTestRule.setContent {
@@ -124,6 +123,6 @@ class WidgetSettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText(context.getString(R.string.save_button)).performClick()
-        assertTrue(saved)
+        org.junit.Assert.assertTrue(saved)
     }
 }

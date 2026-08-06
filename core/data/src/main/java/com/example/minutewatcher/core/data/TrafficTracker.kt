@@ -84,27 +84,8 @@ class TrafficTracker
                         )
                         AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
 
-                        // Sync in-memory last data subId if this identity is currently the default data SIM.
-                        // This prevents handleSimChange from triggering immediately after a manual reset.
-                        val currentDataSubId =
-                            try {
-                                permissionManager.getDefaultDataSubscriptionId()
-                            } catch (_: Exception) {
-                                -1
-                            }
-                        if (currentDataSubId != -1) {
-                            val info =
-                                permissionManager.getActiveSubscriptions().find {
-                                    it.subscriptionId ==
-                                        currentDataSubId
-                                }
-                            if (info != null) {
-                                val currentIdentity = simIdentityRepository.getIdentity(info.simSlotIndex)
-                                if (currentIdentity == identity) {
-                                    updateLastDataSubId(currentDataSubId)
-                                }
-                            }
-                        }
+                        syncLastDataSubIdIfNeeded(identity)
+
                         baselineNeedsRetry.remove(identity)
 
                         _status.value = TrackingStatus.Active
@@ -118,7 +99,8 @@ class TrafficTracker
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                     }
                 } catch (e: SecurityException) {
-                    handleSecurityException(e)
+                    AppLogger.e("SecurityException in TrafficTracker", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -135,7 +117,8 @@ class TrafficTracker
 
                     val target =
                         getTargetSimInfo() ?: run {
-                            handleNoTarget()
+                            AppLogger.d("TrafficTracker: no active SIM detected for traffic tracking")
+                            _status.value = TrackingStatus.Idle
                             return@withLock
                         }
 
@@ -154,7 +137,8 @@ class TrafficTracker
 
                     processTrafficUpdate(target)
                 } catch (e: SecurityException) {
-                    handleSecurityException(e)
+                    AppLogger.e("SecurityException in TrafficTracker", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -201,16 +185,6 @@ class TrafficTracker
             return error == null
         }
 
-        private fun handleSecurityException(e: SecurityException) {
-            AppLogger.e("SecurityException in TrafficTracker", e)
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-        }
-
-        private fun handleNoTarget() {
-            AppLogger.d("TrafficTracker: no active SIM detected for traffic tracking")
-            _status.value = TrackingStatus.Idle
-        }
-
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
@@ -241,7 +215,14 @@ class TrafficTracker
             statsResult: StatsResult,
         ) {
             if (statsResult !is StatsResult.Success) {
-                handleStatsResultError(targetIdentity, statsResult)
+                val message =
+                    if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message ?: "Stats error"
+                    } else {
+                        "Stats unavailable"
+                    }
+                AppLogger.w("Traffic stats unavailable for $targetIdentity: $message")
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                 return
             }
 
@@ -272,7 +253,8 @@ class TrafficTracker
             target: TargetInfo,
         ) {
             if (lastTotalBytes == -1L || (currentBytes < lastTotalBytes)) {
-                handleFirstRunOrReset(targetIdentity, currentBytes)
+                simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
             } else {
                 handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
             }
@@ -312,31 +294,6 @@ class TrafficTracker
                 handled = true
             }
             return handled
-        }
-
-        private fun handleStatsResultError(
-            targetIdentity: String,
-            statsResult: StatsResult,
-        ) {
-            val message =
-                if (statsResult is StatsResult.Error) {
-                    statsResult.exception.message ?: "Stats error"
-                } else {
-                    "Stats unavailable"
-                }
-            AppLogger.w("Traffic stats unavailable for $targetIdentity: $message")
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
-        }
-
-        private suspend fun handleFirstRunOrReset(
-            identity: String,
-            currentBytes: Long,
-        ) {
-            simUsageResetRepository.setLastTotalBytes(
-                identity,
-                currentBytes,
-            )
-            AppLogger.d("Traffic baseline initialized/reset for $identity to $currentBytes")
         }
 
         private suspend fun handleTrafficDelta(
@@ -462,6 +419,30 @@ class TrafficTracker
                             "Using fallback heuristic: attributing all traffic to Slot ${selected.simSlotIndex}.",
                     )
                     Triple(selected.simSlotIndex, selected.subscriptionId, true)
+                }
+            }
+        }
+
+        private suspend fun syncLastDataSubIdIfNeeded(identity: String) {
+            // Sync in-memory last data subId if this identity is currently the default data SIM.
+            // This prevents handleSimChange from triggering immediately after a manual reset.
+            val currentDataSubId =
+                try {
+                    permissionManager.getDefaultDataSubscriptionId()
+                } catch (_: Exception) {
+                    -1
+                }
+            if (currentDataSubId != -1) {
+                val info =
+                    permissionManager.getActiveSubscriptions().find {
+                        it.subscriptionId ==
+                            currentDataSubId
+                    }
+                if (info != null) {
+                    val currentIdentity = simIdentityRepository.getIdentity(info.simSlotIndex)
+                    if (currentIdentity == identity) {
+                        updateLastDataSubId(currentDataSubId)
+                    }
                 }
             }
         }

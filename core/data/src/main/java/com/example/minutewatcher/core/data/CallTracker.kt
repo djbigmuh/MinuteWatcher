@@ -27,7 +27,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -89,17 +88,8 @@ class CallTracker
                 try {
                     if (!isCallTrackingEnabled() || !checkPermissions()) return@withLock
 
-                    val effectiveSubId =
-                        if (subId == -1) {
-                            permissionManager.getDefaultVoiceSubscriptionId()
-                        } else {
-                            subId
-                        }
-
-                    if (effectiveSubId == -1) {
-                        AppLogger.d("Call started with unknown subId and no default voice subId, ignoring")
-                        return@withLock
-                    }
+                    val effectiveSubId = resolveEffectiveSubId(subId)
+                    if (effectiveSubId == -1) return@withLock
 
                     val started = handleCallStartInternal(effectiveSubId)
                     if (started) {
@@ -125,21 +115,36 @@ class CallTracker
             }
         }
 
-        private suspend fun handleCallStartInternal(subId: Int): Boolean {
-            val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
-            val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
+        private fun resolveEffectiveSubId(subId: Int): Int {
+            val effective =
+                if (subId == -1) {
+                    permissionManager.getDefaultVoiceSubscriptionId()
+                } else {
+                    subId
+                }
 
-            val failure =
-                startTimeRes.exceptionOrNull()
-                    ?: savedBootTimeRes.exceptionOrNull()
-            if (failure != null) {
-                _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
+            if (effective == -1) {
+                AppLogger.d("Call started with unknown subId and no default voice subId, ignoring")
+            }
+            return effective
+        }
+
+        private suspend fun handleCallStartInternal(subId: Int): Boolean {
+            val startTime =
+                withTimeoutOrNull(READ_RETRY_LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getCallStartTime(subId).first()
+                }
+            val savedBootTime =
+                withTimeoutOrNull(READ_RETRY_LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getBootTime(subId).first()
+                }
+
+            if (startTime == null || savedBootTime == null) {
+                val field = if (startTime == null) "startTime" else "bootTime"
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading $field")
                 return false
             }
 
-            val startTime = startTimeRes.getOrThrow()
-            val savedBootTime = savedBootTimeRes.getOrThrow()
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 
@@ -388,30 +393,35 @@ class CallTracker
         )
 
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
-            val startTimeRes = readWithRetry({ callSessionRepository.getCallStartTime(subId) }, "startTime", subId)
-            val savedBootTimeRes = readWithRetry({ callSessionRepository.getBootTime(subId) }, "bootTime", subId)
-            val savedUptimeRes = readWithRetry({ callSessionRepository.getUptime(subId) }, "uptime", subId)
-            val savedIdentityRes = readWithRetry({ callSessionRepository.getCallIdentity(subId) }, "identity", subId)
+            val startTime =
+                withTimeoutOrNull(READ_RETRY_LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getCallStartTime(subId).first()
+                }
+            val savedBootTime =
+                withTimeoutOrNull(READ_RETRY_LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getBootTime(subId).first()
+                }
+            val savedUptime =
+                withTimeoutOrNull(READ_RETRY_LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getUptime(subId).first()
+                }
+            val savedIdentity =
+                withTimeoutOrNull(READ_RETRY_LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getCallIdentity(subId).first()
+                }
 
-            val failure =
-                startTimeRes.exceptionOrNull()
-                    ?: savedBootTimeRes.exceptionOrNull()
-                    ?: savedUptimeRes.exceptionOrNull()
-                    ?: savedIdentityRes.exceptionOrNull()
-
-            if (failure != null) {
-                _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, failure.message ?: "Unknown error")
+            if (startTime == null || savedBootTime == null || savedUptime == null) {
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout loading session data")
                 // Очищаем сессию, чтобы избежать stale-данных
                 clearSession(subId)
                 return null
             }
 
             return CallSessionData(
-                startTime = startTimeRes.getOrThrow(),
-                savedBootTime = savedBootTimeRes.getOrThrow(),
-                savedUptime = savedUptimeRes.getOrThrow(),
-                savedIdentity = savedIdentityRes.getOrThrow(),
+                startTime = startTime,
+                savedBootTime = savedBootTime,
+                savedUptime = savedUptime,
+                savedIdentity = savedIdentity,
             )
         }
 
@@ -521,53 +531,9 @@ class CallTracker
             }
         }
 
-        private suspend fun <T> readWithRetry(
-            flowProvider: () -> kotlinx.coroutines.flow.Flow<T>,
-            fieldName: String,
-            subId: Int,
-        ): Result<T> {
-            suspend fun tryRead(timeout: Long): Result<T>? =
-                try {
-                    withTimeoutOrNull(timeout.milliseconds) {
-                        Result.success(flowProvider().first())
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Result.failure(e)
-                }
-
-            val firstResult = tryRead(READ_RETRY_SHORT_TIMEOUT_MS)
-            var finalResult: Result<T>? = null
-            if (firstResult != null) {
-                if (firstResult.isSuccess) {
-                    finalResult = firstResult
-                } else {
-                    // If it's a real failure (not a timeout), don't retry.
-                    AppLogger.w(
-                        "CallTracker: Error reading $fieldName for subId $subId, not retrying. " +
-                            "Reason: ${firstResult.exceptionOrNull()?.message}",
-                    )
-                    finalResult = firstResult
-                }
-            }
-
-            if (finalResult == null) {
-                // If it's a timeout (firstResult == null), retry with longer timeout.
-                AppLogger.w("CallTracker: Timeout reading $fieldName for subId $subId, retrying with 10s...")
-
-                finalResult = tryRead(READ_RETRY_LONG_TIMEOUT_MS)
-            }
-
-            return finalResult ?: Result.failure(
-                TimeoutException("Timeout reading $fieldName"),
-            )
-        }
-
         companion object {
             private const val MILLIS_IN_SECOND = 1000L
             private const val SECONDS_IN_MINUTE = 60
-            private const val READ_RETRY_SHORT_TIMEOUT_MS = 5_000L
             private const val READ_RETRY_LONG_TIMEOUT_MS = 10_000L
         }
     }
