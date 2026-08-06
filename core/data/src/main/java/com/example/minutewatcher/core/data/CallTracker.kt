@@ -63,7 +63,12 @@ class CallTracker
         }
 
         private suspend fun isCallTrackingEnabled(): Boolean =
-            appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled ?: false
+            appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled
+                ?: run {
+                    // Default to true: if settings are temporarily unreadable, it is safer
+                    // to track a call (matching the AppSettings default) than to silently lose data.
+                    true
+                }
 
         /**
          * Called on device boot to clean up any stale state.
@@ -276,9 +281,9 @@ class CallTracker
             }
 
             if (staleSessions.isNotEmpty()) {
-                AppLogger.d("Ending ${staleSessions.size} stale sessions")
+                AppLogger.d("Clearing ${staleSessions.size} stale sessions")
                 for (subId in staleSessions) {
-                    endCall(subId, notify = false)
+                    clearStaleSession(subId)
                 }
                 dataChangeNotifier.notifyDataChanged()
             } else {
@@ -341,6 +346,12 @@ class CallTracker
                     "defaultVoice=$defaultVoice. Criteria: defaultVoice match or oldest startTime.",
             )
             return chosen
+        }
+
+        private suspend fun clearStaleSession(subId: Int) {
+            loadCallSessionData(subId)
+            clearSession(subId)
+            AppLogger.d("Cleared stale call session for subId $subId without adding minutes")
         }
 
         private suspend fun endCall(

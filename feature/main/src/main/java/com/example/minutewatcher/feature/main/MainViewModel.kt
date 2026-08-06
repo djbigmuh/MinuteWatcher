@@ -83,7 +83,13 @@ class MainViewModel
                     if (settings?.onboardingCompleted == false) {
                         controllers.dialog.setShowOnboardingDialog(true)
                     }
-                    autoResetUseCase.performAutoReset(shouldNotify = false)
+                    try {
+                        autoResetUseCase.performAutoReset(shouldNotify = false)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Auto-reset failed during initialization", e)
+                    }
                     controllers.refresh.refreshSimCardsInternal()
                     if (lastRefreshAt == 0L) {
                         lastRefreshAt = SystemClock.elapsedRealtime()
@@ -97,13 +103,6 @@ class MainViewModel
         }
 
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
-
-        fun refreshSimCards() {
-            viewModelScope.launch {
-                controllers.refresh.refreshSimCardsInternal()
-                lastRefreshAt = SystemClock.elapsedRealtime()
-            }
-        }
 
         fun retryAppSearch() = controllers.simData.retryAppSearch()
 

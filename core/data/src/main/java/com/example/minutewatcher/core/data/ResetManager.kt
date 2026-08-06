@@ -49,6 +49,11 @@ class ResetManager
                             resetIdentities.add(simInfo.identity.stableId)
                         }
                     }
+
+                    // Clear stale check timestamps for identities that are no longer active
+                    val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
+                    lastResetCheck.keys.removeAll { it !in activeIdentitySet }
+
                     if (resetIdentities.isNotEmpty()) {
                         resetIdentities.forEach { identity ->
                             trafficTracker.resetBaseline(identity)

@@ -16,10 +16,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -163,5 +165,50 @@ class SimIdentityRepositoryHangTest {
                 assertEquals("sim_0", identity.stableId)
                 assertEquals(IdentitySource.SLOT_FALLBACK, identity.source)
             }
+        }
+
+    @Test
+    fun `observeActiveSims emits when seed generation fails`() =
+        runTest {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+            // Mock seedRepository to hang
+            val hangingSeedRepo =
+                object : SimIdentitySeedRepository {
+                    override fun getSeed(): Flow<String> = flowOf("")
+
+                    override suspend fun setSeed(seed: String) {
+                        // No-op
+                    }
+
+                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                        delay(1000000)
+                        return "seed"
+                    }
+                }
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context,
+                    subscriptionManager,
+                    permissionManager,
+                    permissionStateNotifier,
+                    dataStore,
+                    hangingSeedRepo,
+                    appSettingsRepository,
+                    migrationService,
+                    mockSimProvider,
+                    backgroundScope,
+                )
+
+            // Act: observeActiveSims().first() should complete due to fallback seed
+            val result =
+                withTimeoutOrNull(60.seconds) {
+                    identityRepo.observeActiveSims().first()
+                }
+
+            // Assert: it should have emitted (even if empty list)
+            assertTrue("Flow should have emitted a value instead of hanging", result != null)
         }
 }

@@ -66,12 +66,11 @@ fun SimLimitComposeDialog(
         confirmButton = {
             DialogButtons(
                 onConfirm = {
-                    if (state.validate(validationMessages)) {
-                        // After successful validate(), validatedMinutes and validatedTrafficGb
-                        // are guaranteed to be non-null.
+                    val result = state.validate(validationMessages)
+                    if (result is SimLimitValidationResult.Valid) {
                         onConfirm(
-                            state.validatedMinutes!!,
-                            (state.validatedTrafficGb!! * Constants.MB_PER_GB).roundToInt(),
+                            result.minutes,
+                            (result.trafficGb * Constants.MB_PER_GB).roundToInt(),
                             state.rolloverEnabled,
                         )
                     }
@@ -123,10 +122,7 @@ private class SimLimitState(
     var minutesError by mutableStateOf<String?>(null)
     var trafficError by mutableStateOf<String?>(null)
 
-    var validatedMinutes: Int? = null
-    var validatedTrafficGb: Float? = null
-
-    fun validate(msgs: ValidationMessages): Boolean {
+    fun validate(msgs: ValidationMessages): SimLimitValidationResult {
         val result =
             SimLimitValidator.validate(
                 minutesText,
@@ -136,23 +132,18 @@ private class SimLimitState(
                 msgs.minutesRange,
                 msgs.trafficRange,
             )
-        return when (result) {
+        when (result) {
             is SimLimitValidationResult.Valid -> {
                 minutesError = null
                 trafficError = null
-                validatedMinutes = result.minutes
-                validatedTrafficGb = result.trafficGb
-                true
             }
 
             is SimLimitValidationResult.Invalid -> {
                 minutesError = result.minutesError
                 trafficError = result.trafficError
-                validatedMinutes = null
-                validatedTrafficGb = null
-                false
             }
         }
+        return result
     }
 
     fun onMinutesChange(text: String) {

@@ -88,8 +88,10 @@ jobs:
     - name: Check test results
       if: always()
       run: |
-        # Check for failures in any module's test reports
-        if grep -r -q 'failures="[^0]"\|errors="[^0]"' **/build/test-results/testDebugUnitTest/*.xml; then
-          echo "Tests failed in one or more modules."
+        FAILED=$(find . -path '*/build/test-results/testDebugUnitTest/*.xml' \
+          -exec grep -l -E 'failures="[1-9]|errors="[1-9]' {} + 2>/dev/null || true)
+        if [ -n "$FAILED" ]; then
+          echo "Tests failed in one or more modules:"
+          echo "$FAILED"
           exit 1
         fi

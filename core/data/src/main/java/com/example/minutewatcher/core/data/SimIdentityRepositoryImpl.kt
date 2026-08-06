@@ -108,10 +108,8 @@ class SimIdentityRepositoryImpl
 
                     val seed =
                         result ?: run {
-                            AppLogger.e(
-                                "Failed to generate identity seed after retries. " +
-                                    "Stopping seed flow to prevent unstable identities.",
-                            )
+                            AppLogger.e("Failed to generate identity seed after retries. Using slot-based fallback.")
+                            emit(FALLBACK_SEED)
                             return@flow
                         }
                     emit(seed)
@@ -226,7 +224,13 @@ class SimIdentityRepositoryImpl
                 initialValue = null,
             )
 
-        private suspend fun getSeed(): String = seedFlow.firstOrNull() ?: error("Identity seed generation timeout")
+        private suspend fun getSeed(): String {
+            val seed = seedFlow.firstOrNull()
+            if (seed == null) {
+                AppLogger.e("Identity seed unavailable, using slot-based fallback")
+            }
+            return seed ?: FALLBACK_SEED
+        }
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
@@ -256,7 +260,12 @@ class SimIdentityRepositoryImpl
             seed: String,
         ): SimIdentity? =
             permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
+                val resolved =
+                    if (seed == FALLBACK_SEED) {
+                        createFallbackIdentity(slot, "sim_$slot")
+                    } else {
+                        SimIdentityUtils.createIdentityFromInfo(it, seed)
+                    }
                 saveSimIdentityInfo(resolved)
                 resolved
             }
@@ -312,7 +321,14 @@ class SimIdentityRepositoryImpl
                     .getActiveSubscriptions()
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
 
-            val currentIdentities = infoList.map { SimIdentityUtils.createIdentityFromInfo(it, seed).stableId }.toSet()
+            val currentIdentities =
+                infoList.map { info ->
+                    if (seed == FALLBACK_SEED) {
+                        "sim_${info.simSlotIndex}"
+                    } else {
+                        SimIdentityUtils.createIdentityFromInfo(info, seed).stableId
+                    }
+                }.toSet()
             migratedIdentities.retainAll(currentIdentities)
 
             if (infoList.isEmpty()) return emptyList()
@@ -321,7 +337,12 @@ class SimIdentityRepositoryImpl
             val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
 
             return infoList.map { info ->
-                val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
+                val identity =
+                    if (seed == FALLBACK_SEED) {
+                        createFallbackIdentity(info.simSlotIndex, "sim_${info.simSlotIndex}")
+                    } else {
+                        SimIdentityUtils.createIdentityFromInfo(info, seed)
+                    }
                 try {
                     saveSimIdentityInfo(identity)
                 } catch (e: CancellationException) {
@@ -393,5 +414,9 @@ class SimIdentityRepositoryImpl
             code: String,
         ) {
             dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
+        }
+
+        companion object {
+            private const val FALLBACK_SEED = "fallback_seed_no_persistence"
         }
     }

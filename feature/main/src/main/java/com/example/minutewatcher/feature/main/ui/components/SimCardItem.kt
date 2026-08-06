@@ -51,16 +51,11 @@ fun SimCardItem(
     onAdjustTraffic: () -> Unit = {},
     onShowTrafficInfo: () -> Unit = {},
 ) {
-    val simCardDetailsDesc = stringResource(id = R.string.sim_card_details_content_desc, model.operatorName)
-
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .semantics(mergeDescendants = true) {
-                    contentDescription = simCardDetailsDesc
-                },
+                .padding(vertical = 8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         SimCardContent(
@@ -126,6 +121,7 @@ private fun SimCardHeader(
     model: SimCardUiModel,
     onSetLimits: () -> Unit,
 ) {
+    val simCardDetailsDesc = stringResource(id = R.string.sim_card_details_content_desc, model.operatorName)
     val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Image(
@@ -138,7 +134,7 @@ private fun SimCardHeader(
             text = model.operatorName,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).semantics { contentDescription = simCardDetailsDesc },
         )
         OutlinedButton(
             onClick = onSetLimits,

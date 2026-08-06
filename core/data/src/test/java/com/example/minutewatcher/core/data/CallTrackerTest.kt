@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -456,34 +457,61 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `call tracking defaults to disabled on settings timeout`() =
+    fun `call tracking defaults to enabled on settings timeout`() =
         runTest(testDispatcher) {
             // Arrange: flow that never emits triggers firstWithTimeout to return null (on real timeout)
-            // Note: firstWithTimeout uses withTimeoutOrNull under the hood.
-            // In unit tests, we can just return an empty flow or a flow that doesn't emit.
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
-
-            // Re-create tracker to pick up the new mocked repository behavior if needed
-            // Actually, CallTracker calls getAppSettings() every time it checks if tracking is enabled.
-            callTracker =
-                CallTracker(
-                    simIdentityRepository,
-                    simUsageRepository,
-                    appSettingsRepository,
-                    callSessionRepository,
-                    dataChangeNotifier,
-                    permissionManager,
-                    telephonyManager,
-                    TestScope(testDispatcher),
-                    timeProvider,
-                )
 
             // Act
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
-            // Assert: verify that call start state was NOT saved because isCallTrackingEnabled returned false
-            verify(callSessionRepository, never()).setCallStartTime(any(), any())
+            // Assert: verify that call start state WAS saved because isCallTrackingEnabled now returns true on timeout
+            verify(callSessionRepository).setCallStartTime(eq(1), any())
+        }
+
+    @Test
+    fun `stale session cleanup does not increment minutes`() =
+        runTest(testDispatcher) {
+            // Arrange: Two active sessions, one is stale (> 12h)
+            val staleSubId = 1
+            val activeSubId = 2
+
+            val now = 200000000L
+            timeProvider.setTime(now)
+            timeProvider.setRealtime(100000000L)
+
+            // Stale session: started 13 hours ago
+            val staleStartTime = now - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(staleSubId, activeSubId))
+
+            // staleSubId data
+            whenever(callSessionRepository.getCallStartTime(staleSubId)).thenReturn(flowOf(staleStartTime))
+            whenever(callSessionRepository.getBootTime(staleSubId)).thenReturn(flowOf(100000L))
+            whenever(callSessionRepository.getUptime(staleSubId)).thenReturn(flowOf(100000L))
+            whenever(callSessionRepository.getCallIdentity(staleSubId)).thenReturn(flowOf("id_1"))
+
+            // activeSubId data
+            whenever(callSessionRepository.getCallStartTime(activeSubId)).thenReturn(flowOf(now - 1000L))
+            whenever(callSessionRepository.getBootTime(activeSubId)).thenReturn(flowOf(99900000L))
+            whenever(callSessionRepository.getUptime(activeSubId)).thenReturn(flowOf(99900000L))
+            whenever(callSessionRepository.getCallIdentity(activeSubId)).thenReturn(flowOf("id_2"))
+
+            // Telephony state OFFHOOK to trigger handleAmbiguousIdle
+            @Suppress("DEPRECATION")
+            whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+            whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+
+            // Act: End call with unknown subId
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: verify stale session was cleared but NO minutes were added
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(callSessionRepository).setCallStartTime(staleSubId, 0)
+
+            // activeSubId should NOT be cleared yet as it's not stale and we don't know which one ended
+            verify(callSessionRepository, never()).setCallStartTime(activeSubId, 0)
         }
 
     @Test
