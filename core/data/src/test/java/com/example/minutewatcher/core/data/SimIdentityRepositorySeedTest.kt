@@ -72,25 +72,20 @@ class SimIdentityRepositorySeedTest {
     @Test
     fun `seedFlow recovers from fallback when seed eventually becomes available`() =
         runTest {
-            val activeSub = mock<android.telephony.SubscriptionInfo>()
-            whenever(activeSub.simSlotIndex).thenReturn(0)
-            whenever(activeSub.subscriptionId).thenReturn(1)
-            whenever(activeSub.displayName).thenReturn("SIM 1")
-            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(activeSub))
-
             val storedSeed = MutableStateFlow("")
             val seedRepo =
                 object : SimIdentitySeedRepository {
-                    override fun getSeed(): Flow<String> = storedSeed
+                    override val seedFlow: Flow<String> = storedSeed
 
                     override suspend fun setSeed(seed: String) {
                         storedSeed.value = seed
                     }
 
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        delay(60_000) // гарантированно больше SEED_GENERATION_TIMEOUT_MS и второй попытки
-                        return generator()
+                        if (storedSeed.value.isEmpty()) {
+                            delay(60_000)
+                        }
+                        return if (storedSeed.value.isEmpty()) generator() else storedSeed.value
                     }
                 }
 
@@ -118,15 +113,17 @@ class SimIdentityRepositorySeedTest {
 
             advanceUntilIdle() // This should trigger the timeout and emission of FALLBACK_SEED
 
-            // После первого advanceUntilIdle() assert'ить, что есть эмиссия с "sim_0"
-            assertTrue(identitiesList.any { it.contains("sim_0") })
+            // At this point, seedFlow should have emitted FALLBACK_SEED.
+            assertTrue("Expected sim_0 in $identitiesList", identitiesList.any { it.contains("sim_0") })
 
-            // Затем storedSeed.value = "real_seed";
+            // Now provide real seed
             storedSeed.value = "real_seed"
             advanceUntilIdle()
 
-            // после второго advanceUntilIdle() assert'ить, что появилась эмиссия с "sub_1"
-            assertTrue(identitiesList.any { it.contains("sub_1") })
+            // It should now have emitted identities based on real_seed.
+            assertTrue("Expected sub_1 in $identitiesList", identitiesList.any { it.contains("sub_1") })
+
+            identitiesJob.cancel()
 
             identitiesJob.cancel()
         }

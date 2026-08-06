@@ -52,7 +52,7 @@ class SimVisibilityTest {
         }
     private val seedRepository: SimIdentitySeedRepository =
         mock {
-            on { getSeed() } doReturn flowOf("test_seed")
+            on { seedFlow } doReturn flowOf("test_seed")
             on { getOrCreateSeed(any()) } doReturn "test_seed"
         }
     private val migrationService: IdentityMigrationService = mock()

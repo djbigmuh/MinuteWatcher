@@ -42,16 +42,18 @@ class UpdateCoordinator
 
         init {
             scope.launch {
-                merge(
+                val snapshotFlow =
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > 0L }
                         .distinctUntilChanged { old, new ->
                             SnapshotUtils.calculateContentHash(old) ==
                                 SnapshotUtils.calculateContentHash(new)
-                        }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds),
-                    forceUpdateChannel.receiveAsFlow(),
-                ).collect {
+                        }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+
+                val forceFlow = forceUpdateChannel.receiveAsFlow()
+
+                merge(snapshotFlow, forceFlow).collect {
                     try {
                         widgetUpdater.updateAll()
                     } catch (e: kotlinx.coroutines.CancellationException) {
@@ -71,7 +73,7 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             if (updateWidget && force) {
-                forceUpdateChannel.trySend(Unit)
+                forceUpdateChannel.send(Unit)
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }

@@ -64,7 +64,7 @@ class SimRepositoryImplTest {
 
         seedRepository =
             mock {
-                on { getSeed() } doReturn flowOf("test_seed")
+                on { seedFlow } doReturn flowOf("test_seed")
                 on { getOrCreateSeed(any()) } doReturn "test_seed"
             }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))

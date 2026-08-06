@@ -234,7 +234,11 @@ class SemanticSearchManagerTest {
             // 3. Pass SAME snapshot again
             manager.indexSnapshot(snapshot)
 
-            assertEquals("Should have re-indexed same data because hash was reset", initialPuts + 1, session.putRequests.size)
+            assertEquals(
+                "Should have re-indexed same data because hash was reset",
+                initialPuts + 1,
+                session.putRequests.size,
+            )
         }
 
     private fun createManager(scope: CoroutineScope) =

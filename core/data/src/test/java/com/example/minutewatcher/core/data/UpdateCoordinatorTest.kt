@@ -12,6 +12,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -94,6 +96,9 @@ class UpdateCoordinatorTest {
     @Test
     fun `notifyDataChanged with force triggers immediate widget update`() =
         runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
@@ -101,10 +106,10 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
-            testScheduler.advanceUntilIdle()
+            runCurrent()
 
             coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             verify(widgetUpdater).updateAll()
             verify(dataRefreshNotifier).notifyRefresh(isManual = true)
@@ -140,6 +145,9 @@ class UpdateCoordinatorTest {
     @Test
     fun `two consecutive forced updates both trigger widget update`() =
         runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
@@ -147,15 +155,15 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
-            testScheduler.advanceUntilIdle()
+            runCurrent()
 
             // First force
             coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
+            runCurrent()
 
             // Second force
             coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Should be 2 calls
             verify(widgetUpdater, times(2)).updateAll()

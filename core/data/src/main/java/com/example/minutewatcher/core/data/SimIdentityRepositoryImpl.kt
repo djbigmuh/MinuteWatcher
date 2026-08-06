@@ -82,7 +82,7 @@ class SimIdentityRepositoryImpl
             flow {
                 val currentSeed =
                     seedRepository
-                        .getSeed()
+                        .seedFlow
                         .filter { it.isNotEmpty() }
                         .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
@@ -114,7 +114,7 @@ class SimIdentityRepositoryImpl
                     }
                 }
 
-                emitAll(seedRepository.getSeed().filter { it.isNotEmpty() })
+                emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
             }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 

@@ -66,7 +66,7 @@ class SimIdentitySeedRaceTest {
     fun `identities are not computed until seed is available`() =
         runTest {
             val seedFlow = MutableSharedFlow<String>(replay = 1)
-            whenever(seedRepository.getSeed()).thenReturn(seedFlow)
+            whenever(seedRepository.seedFlow).thenReturn(seedFlow)
             // Mock getOrCreateSeed to hang so it doesn't auto-generate seed during timeout
             whenever(seedRepository.getOrCreateSeed(any())).thenAnswer {
                 "generated"
@@ -110,7 +110,7 @@ class SimIdentitySeedRaceTest {
     fun `identity remains stable after seed creation`() =
         runTest {
             val seedFlow = MutableSharedFlow<String>(replay = 1)
-            whenever(seedRepository.getSeed()).thenReturn(seedFlow)
+            whenever(seedRepository.seedFlow).thenReturn(seedFlow)
             whenever(seedRepository.getOrCreateSeed(any())).doReturn("test-seed")
 
             val repository =

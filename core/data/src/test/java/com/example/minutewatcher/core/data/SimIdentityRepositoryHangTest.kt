@@ -67,7 +67,7 @@ class SimIdentityRepositoryHangTest {
 
         seedRepository =
             mock {
-                on { getSeed() } doReturn flowOf("test_seed")
+                on { seedFlow } doReturn flowOf("test_seed")
                 on { getOrCreateSeed(any()) } doReturn "test_seed"
             }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
@@ -98,9 +98,9 @@ class SimIdentityRepositoryHangTest {
                     backgroundScope,
                 )
 
-            // Mock seedRepository.getSeed() to return a flow that never emits,
+            // Mock seedRepository.seedFlow to return a flow that never emits,
             // which will cause activeSimsCache to wait indefinitely.
-            whenever(seedRepository.getSeed()).thenReturn(MutableSharedFlow())
+            whenever(seedRepository.seedFlow).thenReturn(MutableSharedFlow())
 
             // Act
             val identity = identityRepo.getSimIdentity(0)
@@ -116,13 +116,13 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
-            // Mock seedRepository.getSeed() to return empty/null
-            whenever(seedRepository.getSeed()).thenReturn(flowOf(""))
+            // Mock seedRepository.seedFlow to return empty/null
+            whenever(seedRepository.seedFlow).thenReturn(flowOf(""))
 
             // Mock getOrCreateSeed to hang
             val hangingSeedRepo =
                 object : SimIdentitySeedRepository {
-                    override fun getSeed(): Flow<String> = flowOf("")
+                    override val seedFlow: Flow<String> = flowOf("")
 
                     override suspend fun setSeed(seed: String) {
                         // No-op
@@ -176,7 +176,7 @@ class SimIdentityRepositoryHangTest {
             // Mock seedRepository to hang
             val hangingSeedRepo =
                 object : SimIdentitySeedRepository {
-                    override fun getSeed(): Flow<String> = flowOf("")
+                    override val seedFlow: Flow<String> = flowOf("")
 
                     override suspend fun setSeed(seed: String) {
                         // No-op
