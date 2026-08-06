@@ -322,13 +322,14 @@ class SimIdentityRepositoryImpl
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
 
             val currentIdentities =
-                infoList.map { info ->
-                    if (seed == FALLBACK_SEED) {
-                        "sim_${info.simSlotIndex}"
-                    } else {
-                        SimIdentityUtils.createIdentityFromInfo(info, seed).stableId
-                    }
-                }.toSet()
+                infoList
+                    .map { info ->
+                        if (seed == FALLBACK_SEED) {
+                            "sim_${info.simSlotIndex}"
+                        } else {
+                            SimIdentityUtils.createIdentityFromInfo(info, seed).stableId
+                        }
+                    }.toSet()
             migratedIdentities.retainAll(currentIdentities)
 
             if (infoList.isEmpty()) return emptyList()

@@ -42,6 +42,7 @@ fun WidgetSettingsScreen(
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val loadError by viewModel.loadError.collectAsStateWithLifecycle()
+    val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
 
     if (loadError) {
         ErrorState(
@@ -60,6 +61,7 @@ fun WidgetSettingsScreen(
     WidgetSettingsContent(
         state = nonNullState,
         uiState = uiState,
+        isSaving = isSaving,
         viewModel = viewModel,
         onSave = onSave,
         onBack = onBack,
@@ -112,6 +114,7 @@ private fun ErrorState(
 private fun WidgetSettingsContent(
     state: WidgetSettingsState,
     uiState: WidgetUiState?,
+    isSaving: Boolean,
     viewModel: WidgetSettingsViewModel,
     onSave: () -> Unit,
     onBack: () -> Unit,
@@ -140,6 +143,7 @@ private fun WidgetSettingsContent(
         bottomBar = {
             BottomPreviewBar(
                 uiState = uiState,
+                isSaving = isSaving,
                 onSave = onSave,
             )
         },

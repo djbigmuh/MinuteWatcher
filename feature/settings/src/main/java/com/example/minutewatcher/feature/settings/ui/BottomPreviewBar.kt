@@ -23,6 +23,7 @@ import com.example.minutewatcher.feature.settings.ui.components.WidgetPreview
 @Composable
 fun BottomPreviewBar(
     uiState: WidgetUiState?,
+    isSaving: Boolean,
     onSave: () -> Unit,
 ) {
     Column(
@@ -58,6 +59,7 @@ fun BottomPreviewBar(
 
         Button(
             onClick = onSave,
+            enabled = !isSaving,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(id = R.string.save_button))

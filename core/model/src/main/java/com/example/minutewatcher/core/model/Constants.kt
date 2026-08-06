@@ -97,6 +97,10 @@ object Constants {
     const val MAX_TRAFFIC_LIMIT_GB = 10240f
 }
 
+object IntentExtras {
+    const val SIM_SLOT = "sim_slot"
+}
+
 object SimConstants {
     const val MAX_SUPPORTED_SIM_SLOTS = 10
     const val MOCK_SUB_ID_BASE = 1000

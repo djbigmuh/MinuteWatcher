@@ -7,10 +7,17 @@ data class SimUsage(
     val operator: String,
     val minutesUsed: Int,
     val minutesLimit: Int,
-    val trafficUsed: Float,
+    /**
+     * Traffic used in MB.
+     * Note: Use Double for calculations to avoid precision loss, then convert back to Float for storage.
+     */
+    val trafficUsedMb: Float,
     val trafficLimitMb: Int,
     val manualAdjustment: Int,
-    val trafficAdjustment: Float,
+    /**
+     * Traffic adjustment in GB.
+     */
+    val trafficAdjustmentGb: Float,
     val autoReset: Boolean,
     val autoResetDay: Int,
     val lastResetDate: Long,

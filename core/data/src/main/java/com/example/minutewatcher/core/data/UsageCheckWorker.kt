@@ -102,7 +102,6 @@ class UsageCheckWorker
                 AppLogger.w(
                     "UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.",
                 )
-                deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
             }
 
             return Result.success()

@@ -27,10 +27,7 @@ fun MainScreenContent(
     viewModel: MainViewModel,
     trackingBannerState: TrackingBannerState,
     highlightedSlot: Int?,
-    onGrantPhonePermission: () -> Unit,
-    onShowUsageAccessDialog: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onGrantNotificationPermission: () -> Unit,
+    actions: SimCardScreenActions,
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -58,10 +55,7 @@ fun MainScreenContent(
                 callbacks =
                     rememberTrackingBannerCallbacks(
                         viewModel = viewModel,
-                        onGrantPhonePermission = onGrantPhonePermission,
-                        onShowUsageAccessDialog = onShowUsageAccessDialog,
-                        onOpenAppSettings = onOpenAppSettings,
-                        onGrantNotificationPermission = onGrantNotificationPermission,
+                        actions = actions,
                     ),
             )
 
@@ -70,7 +64,7 @@ fun MainScreenContent(
                     uiState = uiState,
                     listState = listState,
                     viewModel = viewModel,
-                    onGrantPhonePermission = onGrantPhonePermission,
+                    onGrantPhonePermission = actions.onGrantPhonePermission,
                 )
             }
         }
@@ -80,27 +74,18 @@ fun MainScreenContent(
 @Composable
 private fun rememberTrackingBannerCallbacks(
     viewModel: MainViewModel,
-    onGrantPhonePermission: () -> Unit,
-    onShowUsageAccessDialog: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onGrantNotificationPermission: () -> Unit,
+    actions: SimCardScreenActions,
 ): TrackingBannerCallbacks =
-    remember(
-        viewModel,
-        onGrantPhonePermission,
-        onShowUsageAccessDialog,
-        onOpenAppSettings,
-        onGrantNotificationPermission,
-    ) {
+    remember(viewModel, actions) {
         TrackingBannerCallbacks(
-            onGrantPhonePermission = onGrantPhonePermission,
-            onShowUsageAccessDialog = onShowUsageAccessDialog,
-            onOpenAppSettings = onOpenAppSettings,
+            onGrantPhonePermission = actions.onGrantPhonePermission,
+            onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
+            onOpenAppSettings = actions.onOpenAppSettings,
             onRetryAppSearch = { viewModel.retryAppSearch() },
             onRetryCalls = { viewModel.retryCalls() },
             onRetryShortcuts = { viewModel.retryShortcuts() },
             onRetryTraffic = { viewModel.retryTraffic() },
-            onGrantNotificationPermission = onGrantNotificationPermission,
+            onGrantNotificationPermission = actions.onGrantNotificationPermission,
             onDismissWidgetError = { viewModel.dismissWidgetError() },
             onDismissInaccurateCalls = { viewModel.dismissInaccurateCalls() },
         )

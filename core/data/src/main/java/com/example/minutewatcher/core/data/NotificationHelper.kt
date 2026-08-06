@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.IntentExtras
 import com.example.minutewatcher.core.resources.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -56,7 +57,7 @@ class NotificationHelper
                 val intent =
                     Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        putExtra("sim_slot", simSlot)
+                        putExtra(IntentExtras.SIM_SLOT, simSlot)
                     }
 
                 val pendingIntent =
@@ -97,9 +98,12 @@ class NotificationHelper
             } catch (e: SecurityException) {
                 AppLogger.w("SecurityException while checking notification status: ${e.message}")
                 false
+            } catch (e: android.os.DeadObjectException) {
+                AppLogger.w("NotificationManager service died: ${e.message}")
+                false
             } catch (e: RuntimeException) {
-                // Catches DeadObjectException and other system service issues
-                AppLogger.w("System error while checking notification status: ${e.message}")
+                // Catches other system service issues and unexpected errors
+                AppLogger.w("Unexpected error checking notification status: ${e.javaClass.simpleName}: ${e.message}")
                 false
             }
 

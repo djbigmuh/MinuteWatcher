@@ -10,8 +10,8 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -393,7 +393,11 @@ class TrafficTracker
         }
 
         private suspend fun getTargetSimInfo(): TargetInfo? {
-            val (targetSim, currentDataSubId, isFallback) = resolveTargetSim() ?: return null
+            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+            val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
+            baselineNeedsRetry.keys.removeAll { it !in activeIdentitySet }
+
+            val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
 
             ensureInMemoryLastDataSubId()
 
@@ -420,7 +424,7 @@ class TrafficTracker
             )
         }
 
-        private suspend fun resolveTargetSim(): Triple<Int, Int, Boolean>? {
+        private suspend fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
             var targetSim = -1
             var currentDataSubId = -1
             var isFallback = false
@@ -435,7 +439,7 @@ class TrafficTracker
             }
 
             if (targetSim == -1) {
-                val resolveResult = resolveTargetSimFromActiveSims()
+                val resolveResult = resolveTargetSimFromActiveSims(activeSims)
                 if (resolveResult != null) {
                     targetSim = resolveResult.first
                     currentDataSubId = resolveResult.second
@@ -446,8 +450,7 @@ class TrafficTracker
             return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
         }
 
-        private suspend fun resolveTargetSimFromActiveSims(): Triple<Int, Int, Boolean>? {
-            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+        private suspend fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
             val defaultDataSim = activeSims.find { it.isDefaultData }
 
             return if (defaultDataSim != null) {
@@ -571,7 +574,7 @@ class TrafficTracker
                 StatsResult.Unavailable
             }
 
-        private suspend fun handleFailedSimChangeAttempt(
+        private fun handleFailedSimChangeAttempt(
             identity: String,
             statsResult: StatsResult,
             retryCount: Int,
@@ -586,11 +589,6 @@ class TrafficTracker
                 "Stats unavailable on SIM change for $identity: $reason. " +
                     "Baseline reset will be retried (attempt ${retryCount + 1}).",
             )
-            if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
-                val activeIdentities =
-                    simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
-                baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
-            }
             baselineNeedsRetry[identity] = retryCount + 1
         }
 

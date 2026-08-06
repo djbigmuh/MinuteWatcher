@@ -8,13 +8,13 @@ interface SimUsageAdjustmentRepository {
 
     suspend fun setTrafficAdjustment(
         identity: String,
-        value: Float,
+        valueGb: Float,
     )
 
     suspend fun updateSimStats(
         identity: String,
         minutesUsed: Int,
-        trafficUsed: Float,
+        trafficUsedMb: Float,
         manualAdjustment: Int,
     )
 }

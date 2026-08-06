@@ -15,12 +15,24 @@ data class TrafficModel(
             limitMb: Int,
             manualAdjustmentGb: Float,
         ): TrafficModel {
-            val limitGb = limitMb / Constants.MB_PER_GB
-            val usedGb = usedMb / Constants.MB_PER_GB
-            val effectiveLimitGb = maxOf(0f, limitGb + manualAdjustmentGb)
+            val mbPerGb = Constants.MB_PER_GB.toDouble()
+            val limitGbD = limitMb.toDouble() / mbPerGb
+            val usedGbD = usedMb.toDouble() / mbPerGb
+            val manualAdjGbD = manualAdjustmentGb.toDouble()
+
+            val effectiveLimitGbD = maxOf(0.0, limitGbD + manualAdjGbD)
             val isLimitSet = limitMb > 0 || manualAdjustmentGb != 0f
-            val remainingGb = if (isLimitSet) maxOf(0f, effectiveLimitGb - usedGb) else -1f
-            return TrafficModel(usedMb, limitMb, manualAdjustmentGb, remainingGb, limitGb, effectiveLimitGb, isLimitSet)
+            val remainingGbD = if (isLimitSet) maxOf(0.0, effectiveLimitGbD - usedGbD) else -1.0
+
+            return TrafficModel(
+                usedMb = usedMb,
+                limitMb = limitMb,
+                manualAdjustmentGb = manualAdjustmentGb,
+                remainingGb = remainingGbD.toFloat(),
+                limitGb = limitGbD.toFloat(),
+                effectiveLimitGb = effectiveLimitGbD.toFloat(),
+                isLimitSet = isLimitSet,
+            )
         }
     }
 }

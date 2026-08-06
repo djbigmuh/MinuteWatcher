@@ -97,14 +97,19 @@ class UsageUseCaseImpl
             adjustmentMutex.withLock {
                 val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val usedMb = usage?.trafficUsed ?: 0f
+                val usedMb = usage?.trafficUsedMb ?: 0f
 
-                val safeRemainingGb = remainingGb.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_GB)
-                val limitGb = limitMb.toFloat() / Constants.MB_PER_GB
-                val usedGb = usedMb / Constants.MB_PER_GB
+                val safeRemainingGb = remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
+                val mbPerGb = Constants.MB_PER_GB.toDouble()
+                val limitGb = limitMb.toDouble() / mbPerGb
+                val usedGb = usedMb.toDouble() / mbPerGb
                 val adj = safeRemainingGb - (limitGb - usedGb)
-                val safeAdj = adj.coerceIn(-Constants.MAX_TRAFFIC_LIMIT_GB, Constants.MAX_TRAFFIC_LIMIT_GB)
-                simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj)
+                val safeAdj =
+                    adj.coerceIn(
+                        -Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
+                        Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
+                    )
+                simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj.toFloat())
             }
         }
 

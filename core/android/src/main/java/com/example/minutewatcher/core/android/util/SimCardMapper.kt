@@ -21,9 +21,9 @@ object SimCardMapper {
 
         val trafficModel =
             TrafficModel.calculate(
-                usedMb = usage.trafficUsed,
+                usedMb = usage.trafficUsedMb,
                 limitMb = usage.trafficLimitMb,
-                manualAdjustmentGb = usage.trafficAdjustment,
+                manualAdjustmentGb = usage.trafficAdjustmentGb,
             )
 
         return SimCardUiModel(
@@ -37,11 +37,11 @@ object SimCardMapper {
             minutesRemaining = minutesModel.remaining,
             effectiveMinutesLimit = minutesModel.effectiveLimit,
             isMinutesLimitSet = minutesModel.isLimitSet,
-            trafficUsedMb = usage.trafficUsed,
+            trafficUsedMb = usage.trafficUsedMb,
             trafficLimitMb = usage.trafficLimitMb,
             trafficRemainingGb = trafficModel.remainingGb,
             effectiveTrafficLimitGb = trafficModel.effectiveLimitGb,
-            trafficAdjustmentGb = usage.trafficAdjustment,
+            trafficAdjustmentGb = usage.trafficAdjustmentGb,
             isTrafficLimitSet = trafficModel.isLimitSet,
             autoResetEnabled = usage.autoReset,
             autoResetDay = usage.autoResetDay,

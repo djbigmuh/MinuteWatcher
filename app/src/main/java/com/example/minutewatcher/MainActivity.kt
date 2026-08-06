@@ -32,6 +32,7 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.IntentExtras
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
@@ -181,7 +182,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent?) {
         intent?.let {
-            val simSlot = it.getIntExtra("sim_slot", -1)
+            val simSlot = it.getIntExtra(IntentExtras.SIM_SLOT, -1)
             if (simSlot != -1) {
                 viewModel.highlightSlot(simSlot)
             }

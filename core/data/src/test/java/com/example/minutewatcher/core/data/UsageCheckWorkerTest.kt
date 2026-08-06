@@ -243,7 +243,7 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 900f, trafficLimit = 1024)))
+            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 900f, trafficLimitMb = 1024)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
 
@@ -365,7 +365,7 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 950f, trafficLimit = 1000)))
+            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 950f, trafficLimitMb = 1000)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
 
@@ -492,8 +492,8 @@ class UsageCheckWorkerTest {
         id: String,
         minutesUsed: Int = 0,
         minutesLimit: Int = 0,
-        trafficUsed: Float = 0f,
-        trafficLimit: Int = 0,
+        trafficUsedMb: Float = 0f,
+        trafficLimitMb: Int = 0,
         autoResetDay: Int = 1,
     ) = SimUsage(
         identity = id,
@@ -502,10 +502,10 @@ class UsageCheckWorkerTest {
         operator = "MTS",
         minutesUsed = minutesUsed,
         minutesLimit = minutesLimit,
-        trafficUsed = trafficUsed,
-        trafficLimitMb = trafficLimit,
+        trafficUsedMb = trafficUsedMb,
+        trafficLimitMb = trafficLimitMb,
         manualAdjustment = 0,
-        trafficAdjustment = 0f,
+        trafficAdjustmentGb = 0f,
         autoReset = true,
         autoResetDay = autoResetDay,
         lastResetDate = 0L,

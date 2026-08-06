@@ -104,8 +104,8 @@ class WidgetUpdaterImpl
          * message-based heuristic. The latter may require updates if Android's internal
          * error messages change in future versions.
          */
-        @VisibleForTesting
-        fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val isTransactionTooLarge = e.cause is android.os.TransactionTooLargeException
             val stackTrace = e.stackTraceToString()
             val isStackTraceLimit =

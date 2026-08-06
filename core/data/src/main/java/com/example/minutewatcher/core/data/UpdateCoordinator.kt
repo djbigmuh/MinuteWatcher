@@ -11,11 +11,11 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -38,7 +38,7 @@ class UpdateCoordinator
         private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val lastManualSnapshotTimestamp = MutableStateFlow(-1L)
+        private val lastManualSnapshotTimestamp = AtomicLong(-1L)
 
         init {
             scope.launch {
@@ -50,8 +50,7 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
-                        val lastManual = lastManualSnapshotTimestamp.value
-                        lastManualSnapshotTimestamp.value = -1L
+                        val lastManual = lastManualSnapshotTimestamp.getAndSet(-1L)
                         if (snapshot.isManualUpdate && lastManual != -1L) {
                             val isWithinWindow =
                                 (timeProvider.now() - lastManual) <
@@ -82,7 +81,7 @@ class UpdateCoordinator
             if (force) {
                 if (updateWidget) {
                     val now = timeProvider.now()
-                    lastManualSnapshotTimestamp.value = now
+                    lastManualSnapshotTimestamp.set(now)
                     widgetUpdater.updateAll()
                 }
                 dataRefreshNotifier.notifyRefresh(isManual = true)

@@ -84,7 +84,7 @@ class UsageUseCaseImplTest {
             whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240)) // 10 GB
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsed = 2048f))) // 2 GB
+            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 2048f))) // 2 GB
 
             // target remaining = 5 GB
             // limitGb = 10, usedGb = 2
@@ -98,7 +98,7 @@ class UsageUseCaseImplTest {
     private fun createSimUsage(
         id: String,
         minutesUsed: Int = 0,
-        trafficUsed: Float = 0f,
+        trafficUsedMb: Float = 0f,
     ) = SimUsage(
         identity = id,
         slotIndex = 0,
@@ -106,10 +106,10 @@ class UsageUseCaseImplTest {
         operator = "MTS",
         minutesUsed = minutesUsed,
         minutesLimit = 0,
-        trafficUsed = trafficUsed,
+        trafficUsedMb = trafficUsedMb,
         trafficLimitMb = 0,
         manualAdjustment = 0,
-        trafficAdjustment = 0f,
+        trafficAdjustmentGb = 0f,
         autoReset = true,
         autoResetDay = 1,
         lastResetDate = 0L,

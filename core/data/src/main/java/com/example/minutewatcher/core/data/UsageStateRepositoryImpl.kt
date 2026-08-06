@@ -119,9 +119,9 @@ class UsageStateRepositoryImpl
 
                     val traffic =
                         TrafficModel.calculate(
-                            usedMb = usage.trafficUsed,
+                            usedMb = usage.trafficUsedMb,
                             limitMb = usage.trafficLimitMb,
-                            manualAdjustmentGb = usage.trafficAdjustment,
+                            manualAdjustmentGb = usage.trafficAdjustmentGb,
                         )
 
                     val entities =

@@ -151,12 +151,15 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         usageRepository: UsageStateRepository,
     ): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
-        if (initialSnapshot.timestamp != 0L) {
+        val now = System.currentTimeMillis()
+        val isStale = (now - initialSnapshot.timestamp) > STALE_THRESHOLD_MS
+
+        if (initialSnapshot.timestamp != 0L && !isStale) {
             return com.example.minutewatcher.core.domain.RefreshResult
                 .Success(initialSnapshot)
         }
 
-        // Attempt to force a refresh if the snapshot is empty (e.g. after reboot)
+        // Attempt to force a refresh if the snapshot is empty or stale
         return try {
             withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
                 usageRepository.refresh()
@@ -169,6 +172,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             com.example.minutewatcher.core.domain.RefreshResult
                 .Timeout(initialSnapshot)
         }
+    }
+
+    companion object {
+        private const val STALE_THRESHOLD_MS = 60_000L
     }
 }
 

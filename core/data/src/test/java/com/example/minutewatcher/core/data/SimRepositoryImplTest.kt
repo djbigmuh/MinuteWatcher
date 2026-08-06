@@ -202,9 +202,9 @@ class SimRepositoryImplTest {
 
             // 3. Verify rollover
             val usage = usageRepo.getSimUsage(identity).first()
-            assertEquals(0f, usage.trafficUsed)
-            assertEquals(0.5f, usage.trafficAdjustment)
-            assertEquals(1.5f, (usage.trafficLimitMb / 1024f) + usage.trafficAdjustment, 0.001f)
+            assertEquals(0f, usage.trafficUsedMb)
+            assertEquals(0.5f, usage.trafficAdjustmentGb)
+            assertEquals(1.5f, (usage.trafficLimitMb / 1024f) + usage.trafficAdjustmentGb, 0.001f)
         }
 
     @Test
@@ -225,9 +225,9 @@ class SimRepositoryImplTest {
             // 3. Verify EVERYTHING is cleared
             val usage = usageRepo.getSimUsage(identity).first()
             assertEquals(0, usage.minutesUsed)
-            assertEquals(0f, usage.trafficUsed)
+            assertEquals(0f, usage.trafficUsedMb)
             assertEquals(0, usage.manualAdjustment)
-            assertEquals(0f, usage.trafficAdjustment)
+            assertEquals(0f, usage.trafficAdjustmentGb)
         }
 
     @Test

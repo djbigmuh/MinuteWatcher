@@ -43,10 +43,10 @@ class SimUsageRepositoryImpl
                             ?: "",
                     minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
                     minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
-                    trafficUsed = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
+                    trafficUsedMb = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
                     trafficLimitMb = prefs[SimSettingsKeys.trafficLimitKey(identity)] ?: 0,
                     manualAdjustment = prefs[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0,
-                    trafficAdjustment = prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f,
+                    trafficAdjustmentGb = prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f,
                     autoReset = prefs[SimSettingsKeys.autoResetKey(identity)] ?: false,
                     autoResetDay = prefs[SimSettingsKeys.autoResetDayKey(identity)] ?: 1,
                     lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L,
@@ -73,9 +73,9 @@ class SimUsageRepositoryImpl
 
         override suspend fun setTrafficUsed(
             identity: String,
-            value: Float,
+            valueMb: Float,
         ) {
-            dataStore.edit { it[SimSettingsKeys.trafficUsedKey(identity)] = value }
+            dataStore.edit { it[SimSettingsKeys.trafficUsedKey(identity)] = valueMb }
         }
 
         override suspend fun incrementTrafficUsed(
@@ -83,8 +83,8 @@ class SimUsageRepositoryImpl
             deltaMb: Float,
         ) {
             dataStore.edit { prefs ->
-                val current = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f
-                prefs[SimSettingsKeys.trafficUsedKey(identity)] = current + deltaMb
+                val current = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                prefs[SimSettingsKeys.trafficUsedKey(identity)] = (current + deltaMb.toDouble()).toFloat()
             }
         }
 
@@ -97,20 +97,20 @@ class SimUsageRepositoryImpl
 
         override suspend fun setTrafficAdjustment(
             identity: String,
-            value: Float,
+            valueGb: Float,
         ) {
-            dataStore.edit { it[SimSettingsKeys.trafficAdjustmentKey(identity)] = value }
+            dataStore.edit { it[SimSettingsKeys.trafficAdjustmentKey(identity)] = valueGb }
         }
 
         override suspend fun updateSimStats(
             identity: String,
             minutesUsed: Int,
-            trafficUsed: Float,
+            trafficUsedMb: Float,
             manualAdjustment: Int,
         ) {
             dataStore.edit {
                 it[SimSettingsKeys.minutesUsedKey(identity)] = minutesUsed
-                it[SimSettingsKeys.trafficUsedKey(identity)] = trafficUsed
+                it[SimSettingsKeys.trafficUsedKey(identity)] = trafficUsedMb
                 it[SimSettingsKeys.manualAdjustmentKey(identity)] = manualAdjustment
             }
         }
@@ -171,14 +171,14 @@ class SimUsageRepositoryImpl
                     ).toInt()
 
                 val trafficLimitMb = this[SimSettingsKeys.trafficLimitKey(identity)] ?: 0
-                val trafficUsedMb = this[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f
-                val trafficAdjGb = this[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f
+                val trafficUsedMb = (this[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                val trafficAdjGb = (this[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
                 val remainingMb =
                     maxOf(
-                        0f,
-                        (trafficLimitMb.toFloat() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
+                        0.0,
+                        (trafficLimitMb.toDouble() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
                     )
-                val remainingTrafficGb = remainingMb / Constants.MB_PER_GB
+                val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
 
                 this[SimSettingsKeys.manualAdjustmentKey(identity)] = remainingMinutes
                 this[SimSettingsKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb

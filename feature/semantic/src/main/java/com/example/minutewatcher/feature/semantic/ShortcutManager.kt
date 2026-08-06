@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.IntentExtras
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -179,7 +180,7 @@ class ShortcutManager
                     navigationProvider.mainActivityClassName,
                 ).apply {
                     action = Intent.ACTION_VIEW
-                    putExtra("sim_slot", slot)
+                    putExtra(IntentExtras.SIM_SLOT, slot)
                 }
 
         private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {

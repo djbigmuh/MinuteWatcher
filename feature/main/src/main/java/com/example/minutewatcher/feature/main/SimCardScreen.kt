@@ -36,10 +36,7 @@ fun SimCardScreen(
             viewModel = viewModel,
             trackingBannerState = trackingBannerState,
             highlightedSlot = highlightedSlot,
-            onGrantPhonePermission = actions.onGrantPhonePermission,
-            onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
-            onOpenAppSettings = actions.onOpenAppSettings,
-            onGrantNotificationPermission = actions.onGrantNotificationPermission,
+            actions = actions,
         )
 
         DialogRenderer(

@@ -38,6 +38,9 @@ class WidgetSettingsViewModel
         private val _loadError = MutableStateFlow(false)
         val loadError: StateFlow<Boolean> = _loadError.asStateFlow()
 
+        private val _isSaving = MutableStateFlow(false)
+        val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
         val uiState: StateFlow<WidgetUiState?> =
             _settingsState
                 .filterNotNull()
@@ -88,6 +91,7 @@ class WidgetSettingsViewModel
         }
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
+            if (_isSaving.value) return
             val currentState = _settingsState.value
             if (currentState == null) {
                 com.example.minutewatcher.core.common.util.AppLogger
@@ -96,9 +100,14 @@ class WidgetSettingsViewModel
                 return
             }
 
+            _isSaving.value = true
             viewModelScope.launch {
-                val success = saver.save(currentState)
-                onComplete(success)
+                try {
+                    val success = saver.save(currentState)
+                    onComplete(success)
+                } finally {
+                    _isSaving.value = false
+                }
             }
         }
     }

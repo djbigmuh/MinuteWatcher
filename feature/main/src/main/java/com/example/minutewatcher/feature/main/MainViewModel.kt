@@ -84,7 +84,12 @@ class MainViewModel
                         controllers.dialog.setShowOnboardingDialog(true)
                     }
                     try {
-                        autoResetUseCase.performAutoReset(shouldNotify = false)
+                        val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
+                        val now = System.currentTimeMillis()
+                        if (now - lastResetCheck > AUTO_RESET_CHECK_INTERVAL_MS) {
+                            autoResetUseCase.performAutoReset(shouldNotify = false)
+                            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -220,5 +225,7 @@ class MainViewModel
 
         companion object {
             private const val KEY_LAST_REFRESH_AT = "last_refresh_at"
+            private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+            private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
         }
     }

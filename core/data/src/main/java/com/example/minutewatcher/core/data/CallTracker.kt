@@ -495,10 +495,21 @@ class CallTracker
             }
 
             if (targetIdentity != null) {
-                simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
-                AppLogger.d("Added $durationMinutes min to identity $targetIdentity")
-                if (notify) {
-                    dataChangeNotifier.notifyDataChanged()
+                try {
+                    simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
+                    AppLogger.d("Added $durationMinutes min to identity $targetIdentity")
+                    if (notify) {
+                        dataChangeNotifier.notifyDataChanged()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e(
+                        "CRITICAL: Lost $durationMinutes min for identity $targetIdentity (subId=$subId). " +
+                            "DataStore write failed.",
+                        e,
+                    )
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Write failed")
                 }
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")

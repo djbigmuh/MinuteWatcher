@@ -50,12 +50,14 @@ class SimIdentitySeedRaceTest {
         permissionManager = mock()
         permissionStateNotifier = mock()
         migrationService = mock()
-        dataStore = mock {
-            on { data } doReturn flowOf(mock())
-        }
-        appSettingsRepository = mock {
-            on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
-        }
+        dataStore =
+            mock {
+                on { data } doReturn flowOf(mock())
+            }
+        appSettingsRepository =
+            mock {
+                on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
+            }
         seedRepository = mock()
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
     }

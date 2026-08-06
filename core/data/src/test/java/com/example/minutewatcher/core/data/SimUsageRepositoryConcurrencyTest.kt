@@ -38,10 +38,12 @@ class SimUsageRepositoryConcurrencyTest {
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
         runTest {
-            // 1. Генерируем уникальное имя.
-            // С Robolectric файловая система работает стабильно, и баг Windows renameTo не проявляется.
+            // 1. Генерируем уникальную директорию и имя файла.
+            // Использование отдельной директории гарантирует изоляцию от других тестов
+            // и стабильность работы файловой системы (особенно на Windows).
+            val dir = tmpFolder.newFolder()
             val uniqueName = "test_concurrency_${UUID.randomUUID()}.preferences_pb"
-            val file = File(tmpFolder.root, uniqueName)
+            val file = File(dir, uniqueName)
 
             try {
                 // 2. Создаем СТРОГО ОДИН экземпляр DataStore и Repository

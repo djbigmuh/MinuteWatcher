@@ -18,7 +18,7 @@ interface SimUsageRepository {
 
     suspend fun setTrafficUsed(
         identity: String,
-        value: Float,
+        valueMb: Float,
     )
 
     suspend fun incrementTrafficUsed(

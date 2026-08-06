@@ -41,7 +41,7 @@ class BenchmarkUseCaseImpl
                 simUsageAdjustmentRepository.updateSimStats(
                     identity = identity,
                     minutesUsed = 100 * (i + 1),
-                    trafficUsed = Constants.MB_PER_GB * (i + 1),
+                    trafficUsedMb = Constants.MB_PER_GB * (i + 1),
                     manualAdjustment = 10 * (i + 1),
                 )
             }

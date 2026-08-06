@@ -90,6 +90,31 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
+    fun `saveAndNotify prevents concurrent saves`() =
+        runTest {
+            advanceUntilIdle()
+
+            // Start first save
+            viewModel.saveAndNotify { }
+
+            // Check that isSaving is true immediately
+            assertTrue(viewModel.isSaving.value)
+
+            // Attempt second save immediately
+            var secondCompleted = false
+            viewModel.saveAndNotify { secondCompleted = true }
+
+            advanceUntilIdle()
+
+            // Second save should NOT have run/completed
+            assertFalse(secondCompleted)
+
+            // Verify save was called only once
+            verify(saver).save(any())
+            assertFalse(viewModel.isSaving.value)
+        }
+
+    @Test
     fun `updateSettings updates state locally`() =
         runTest {
             advanceUntilIdle()

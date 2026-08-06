@@ -24,9 +24,9 @@ class SimCardMapperTest {
                 minutesUsed = 50,
                 minutesLimit = 100,
                 manualAdjustment = 10,
-                trafficUsed = 512f, // 0.5 GB
+                trafficUsedMb = 512f, // 0.5 GB
                 trafficLimitMb = 1024, // 1 GB
-                trafficAdjustment = 0.5f, // +0.5 GB
+                trafficAdjustmentGb = 0.5f, // +0.5 GB
                 autoReset = false,
                 autoResetDay = 1,
                 lastResetDate = 0L,
@@ -55,9 +55,9 @@ class SimCardMapperTest {
                 minutesUsed = 0,
                 minutesLimit = 100,
                 manualAdjustment = -200, // Result: -100, should be clamped to 0
-                trafficUsed = 0f,
+                trafficUsedMb = 0f,
                 trafficLimitMb = 1024,
-                trafficAdjustment = -2f, // Result: -1GB, should be clamped to 0
+                trafficAdjustmentGb = -2f, // Result: -1GB, should be clamped to 0
                 autoReset = false,
                 autoResetDay = 1,
                 lastResetDate = 0L,
