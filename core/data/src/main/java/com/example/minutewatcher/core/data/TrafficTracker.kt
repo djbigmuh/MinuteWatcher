@@ -218,7 +218,13 @@ class TrafficTracker
             val usage = usageRes.getOrNull()
 
             if (usage == null) {
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, usageRes.exceptionOrNull()?.message)
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        usageRes
+                            .exceptionOrNull()
+                            ?.message,
+                    )
             } else {
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
                 val isHandled = handleBaselineRetry(target, targetIdentity, statsResult)
@@ -489,6 +495,20 @@ class TrafficTracker
                 ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 
+        private suspend fun resetStatsAfterSimChange(
+            identity: String,
+            statsResult: StatsResult,
+        ) {
+            if (statsResult is StatsResult.Success) {
+                val currentBytes = statsResult.bytes
+                simUsageResetRepository.setLastTotalBytes(
+                    identity,
+                    currentBytes,
+                )
+                AppLogger.d("Baseline reset successfully for $identity")
+            }
+        }
+
         private suspend fun handleSimChange(
             targetSim: Int,
             currentDataSubId: Int,
@@ -502,59 +522,76 @@ class TrafficTracker
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
 
-                if (retryCount >= MAX_BASELINE_RETRIES) {
-                    AppLogger.w("Giving up baseline reset for $identity after $retryCount retries")
-                    baselineNeedsRetry.remove(identity)
-                    updateLastDataSubId(currentDataSubId)
-                    return
-                }
+                if (handleRetryLimitExceeded(identity, retryCount, currentDataSubId)) return
 
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val statsResult =
-                    if (usage != null) {
-                        try {
-                            getCurrentMobileBytes(usage.lastResetDate)
-                        } catch (e: Exception) {
-                            StatsResult.Error(e)
-                        }
-                    } else {
-                        StatsResult.Unavailable
-                    }
+                val statsResult = fetchStatsOnSimChange(usage)
 
                 if (statsResult is StatsResult.Success) {
-                    val currentBytes = statsResult.bytes
-                    simUsageResetRepository.setLastTotalBytes(
-                        identity,
-                        currentBytes,
-                    )
-                    AppLogger.d("Baseline reset successfully for $identity")
-
+                    resetStatsAfterSimChange(identity, statsResult)
                     // Successfully reset baseline, now we can consume the SIM change
                     updateLastDataSubId(currentDataSubId)
                     baselineNeedsRetry.remove(identity)
                 } else {
-                    val reason =
-                        if (statsResult is StatsResult.Error) {
-                            statsResult.exception.message ?: "Stats error"
-                        } else {
-                            "Stats unavailable"
-                        }
-                    AppLogger.w(
-                        "Stats unavailable on SIM change for $identity: $reason. " +
-                            "Baseline reset will be retried (attempt ${retryCount + 1}).",
-                    )
-                    if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
-                        val activeIdentities =
-                            simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
-                        baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
-                    }
-                    baselineNeedsRetry[identity] = retryCount + 1
+                    handleFailedSimChangeAttempt(identity, statsResult, retryCount)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to handle SIM change", e)
             }
+        }
+
+        private suspend fun handleRetryLimitExceeded(
+            identity: String,
+            retryCount: Int,
+            currentDataSubId: Int,
+        ): Boolean {
+            if (retryCount >= MAX_BASELINE_RETRIES) {
+                AppLogger.w(
+                    "Giving up baseline reset for $identity after $retryCount retries. " +
+                        "Forcing baseline re-initialization on next update.",
+                )
+                simUsageResetRepository.setLastTotalBytes(identity, -1L)
+                baselineNeedsRetry.remove(identity)
+                updateLastDataSubId(currentDataSubId)
+                return true
+            }
+            return false
+        }
+
+        private fun fetchStatsOnSimChange(usage: com.example.minutewatcher.core.model.SimUsage?): StatsResult =
+            if (usage != null) {
+                try {
+                    getCurrentMobileBytes(usage.lastResetDate)
+                } catch (e: Exception) {
+                    StatsResult.Error(e)
+                }
+            } else {
+                StatsResult.Unavailable
+            }
+
+        private suspend fun handleFailedSimChangeAttempt(
+            identity: String,
+            statsResult: StatsResult,
+            retryCount: Int,
+        ) {
+            val reason =
+                if (statsResult is StatsResult.Error) {
+                    statsResult.exception.message ?: "Stats error"
+                } else {
+                    "Stats unavailable"
+                }
+            AppLogger.w(
+                "Stats unavailable on SIM change for $identity: $reason. " +
+                    "Baseline reset will be retried (attempt ${retryCount + 1}).",
+            )
+            if (baselineNeedsRetry.size >= SimConstants.MAX_SUPPORTED_SIM_SLOTS) {
+                val activeIdentities =
+                    simIdentityRepository.getActiveIdentities().firstWithTimeout() ?: emptyList()
+                baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
+            }
+            baselineNeedsRetry[identity] = retryCount + 1
         }
 
         companion object {

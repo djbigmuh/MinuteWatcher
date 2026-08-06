@@ -86,6 +86,7 @@ class ResetManager
             if (!wasUpdated) return false
 
             val usage = simUsageRepository.getSimUsage(identity).first()
+            var result = false
             if (usage.autoReset) {
                 val reset =
                     simUsageResetRepository.resetSimUsageIfDue(
@@ -97,10 +98,10 @@ class ResetManager
                     AppLogger.d(
                         "Auto reset performed for SIM ${simInfo.slotIndex} ($identity), day: ${usage.autoResetDay}",
                     )
-                    return true
+                    result = true
                 }
             }
-            return false
+            return result
         }
 
         companion object {

@@ -104,7 +104,12 @@ class UsageAccessNavigationTest {
                 appSettingsRepository = appSettingsRepository,
                 scope = scope,
             )
-        val refreshController = MainSimRefreshController(usageUseCase, usageStateRepository, testDispatcher)
+        val refreshController =
+            MainSimRefreshController(
+                usageUseCase = usageUseCase,
+                usageStateRepository = usageStateRepository,
+                ioDispatcher = testDispatcher,
+            )
         val settingsController =
             MainSettingsController(
                 appSettingsRepository = appSettingsRepository,

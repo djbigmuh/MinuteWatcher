@@ -2,9 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun MultiSimLayout( sims: List&lt;SimUiState&gt;, uiState: WidgetUiState, )</ID>
-    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun SimItem( sim: SimUiState, uiState: WidgetUiState, )</ID>
-    <ID>LongMethod:MinutesGlanceWidget.kt$@Composable private fun WidgetContent( uiState: WidgetUiState, navigationProvider: NavigationProvider, )</ID>
-    <ID>MaxLineLength:WidgetUpdaterImpl.kt$WidgetUpdaterImpl$"Widget update failed with IllegalArgumentException. isRemoteViewsLimit=$isLimitExceeded. Message: $msg"</ID>
+    <ID>TooManyFunctions:MinutesGlanceWidget.kt$com.example.minutewatcher.feature.widget.MinutesGlanceWidget.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

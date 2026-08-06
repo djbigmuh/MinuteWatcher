@@ -89,8 +89,9 @@ open class SemanticSearchManager
 
             var success = false
             var shouldForce = forceOverride
-            for (attempt in 0 until SCHEMA_RETRY_ATTEMPTS) {
-                if (success) break
+            var attempt = 0
+            var isTerminalError = false
+            while (attempt < SCHEMA_RETRY_ATTEMPTS && !success && !isTerminalError) {
                 var newSession: AppSearchSessionWrapper? = null
                 try {
                     newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
@@ -107,15 +108,18 @@ open class SemanticSearchManager
                     } else {
                         AppLogger.e("Fatal AppSearch error", e)
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                        break
+                        isTerminalError = true
                     }
+                } catch (e: CancellationException) {
+                    newSession?.close()
+                    throw e
                 } catch (e: Exception) {
                     newSession?.close()
-                    if (e is CancellationException) throw e
                     AppLogger.e("Failed to initialize AppSearch session", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    break
+                    isTerminalError = true
                 }
+                attempt++
             }
             return success
         }

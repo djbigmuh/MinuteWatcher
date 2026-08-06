@@ -428,8 +428,10 @@ class CallTracker
             val isIgnoredError =
                 current is TrackingStatus.Error &&
                     !force &&
-                    (current.type == TrackingStatus.ErrorType.UNKNOWN ||
-                        current.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+                    (
+                        current.type == TrackingStatus.ErrorType.UNKNOWN ||
+                            current.type == TrackingStatus.ErrorType.PERMISSION_MISSING
+                    )
 
             if (!isIgnoredError) {
                 val hasActiveCalls = callSessionRepository.getActiveCallSubIds().isNotEmpty()
@@ -511,13 +513,30 @@ class CallTracker
                 }
 
             val firstResult = tryRead(READ_RETRY_SHORT_TIMEOUT_MS)
-            if (firstResult != null && firstResult.isSuccess) return firstResult
+            var finalResult: Result<T>? = null
+            if (firstResult != null) {
+                if (firstResult.isSuccess) {
+                    finalResult = firstResult
+                } else {
+                    // If it's a real failure (not a timeout), don't retry.
+                    AppLogger.w(
+                        "CallTracker: Error reading $fieldName for subId $subId, not retrying. " +
+                            "Reason: ${firstResult.exceptionOrNull()?.message}",
+                    )
+                    finalResult = firstResult
+                }
+            }
 
-            val reason = if (firstResult == null) "Timeout" else "Error (${firstResult.exceptionOrNull()?.message})"
-            AppLogger.w("CallTracker: $reason reading $fieldName for subId $subId, retrying with 10s...")
+            if (finalResult == null) {
+                // If it's a timeout (firstResult == null), retry with longer timeout.
+                AppLogger.w("CallTracker: Timeout reading $fieldName for subId $subId, retrying with 10s...")
 
-            val secondResult = tryRead(READ_RETRY_LONG_TIMEOUT_MS)
-            return secondResult ?: Result.failure(TimeoutException("Timeout reading $fieldName"))
+                finalResult = tryRead(READ_RETRY_LONG_TIMEOUT_MS)
+            }
+
+            return finalResult ?: Result.failure(
+                TimeoutException("Timeout reading $fieldName"),
+            )
         }
 
         companion object {

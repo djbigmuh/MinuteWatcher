@@ -55,49 +55,56 @@ class UsageCheckWorker
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
 
-            // Perform auto-reset logic. We skip internal notification here because we do a single unified refresh and notify below.
-            try {
-                deps.autoResetUseCase.performAutoReset(shouldNotify = false)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Auto-reset failed in UsageCheckWorker, retrying", e)
-                return Result.retry()
-            }
+            // Perform auto-reset logic. We skip internal notification here because we do a single
+            // unified refresh and notify below.
+            val isAutoResetSuccess =
+                try {
+                    deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+                    true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Auto-reset failed in UsageCheckWorker, retrying", e)
+                    false
+                }
+
+            if (!isAutoResetSuccess) return Result.retry()
 
             // Single refresh to capture all recent changes (traffic update and potential auto-reset)
             val refreshResult = deps.usageStateRepository.refresh()
-            if (refreshResult is RefreshResult.Timeout) {
-                AppLogger.w("UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.")
+            if (refreshResult !is RefreshResult.Timeout) {
+                val finalSnapshot = refreshResult.snapshot
                 deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
-                return Result.success()
+
+                // Cleanup orphaned widget settings for non-existent SIMs
+                val activeIdentities = finalSnapshot.simSnapshots.map { it.identity }
+                deps.simWidgetVisibilityRepository.clearOrphanedSettings(activeIdentities)
+
+                val appSettingsResult =
+                    deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: run {
+                        AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with 10s...")
+                        deps.appSettingsRepository
+                            .getAppSettings()
+                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                    }
+
+                val appSettings =
+                    appSettingsResult ?: run {
+                        AppLogger.w("UsageCheckWorker: AppSettings read failed after retry, using defaults")
+                        AppSettings()
+                    }
+                for (simSnapshot in finalSnapshot.simSnapshots) {
+                    if (simSnapshot.isActive) {
+                        processSimSnapshot(simSnapshot, appSettings)
+                    }
+                }
+            } else {
+                AppLogger.w(
+                    "UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.",
+                )
+                deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
             }
 
-            val finalSnapshot = refreshResult.snapshot
-            deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
-
-            // Cleanup orphaned widget settings for non-existent SIMs
-            val activeIdentities = finalSnapshot.simSnapshots.map { it.identity }
-            deps.simWidgetVisibilityRepository.clearOrphanedSettings(activeIdentities)
-
-            val appSettingsResult =
-                deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: run {
-                    AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with 10s...")
-                    deps.appSettingsRepository
-                        .getAppSettings()
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-                }
-
-            val appSettings =
-                appSettingsResult ?: run {
-                    AppLogger.w("UsageCheckWorker: AppSettings read failed after retry, using defaults")
-                    AppSettings()
-                }
-            for (simSnapshot in finalSnapshot.simSnapshots) {
-                if (simSnapshot.isActive) {
-                    processSimSnapshot(simSnapshot, appSettings)
-                }
-            }
             return Result.success()
         }
 

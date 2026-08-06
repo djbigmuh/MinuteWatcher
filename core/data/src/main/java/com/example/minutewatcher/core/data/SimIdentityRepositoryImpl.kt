@@ -6,6 +6,7 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -27,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +39,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -55,6 +57,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
+@Suppress("LongParameterList")
 class SimIdentityRepositoryImpl
     @Inject
     constructor(
@@ -63,7 +66,7 @@ class SimIdentityRepositoryImpl
         private val permissionManager: PermissionManager,
         permissionStateNotifier: PermissionStateNotifier,
         @SimDataStore dataStore: DataStore<Preferences>,
-        seedRepository: SimIdentitySeedRepository,
+        private val seedRepository: SimIdentitySeedRepository,
         appSettingsRepository: AppSettingsRepository,
         private val migrationService: IdentityMigrationService,
         private val mockSimProvider: MockSimProvider,
@@ -80,33 +83,42 @@ class SimIdentityRepositoryImpl
                 val currentSeed =
                     seedRepository
                         .getSeed()
+                        .filter { it.isNotEmpty() }
                         .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                val seed =
-                    if (currentSeed.isNullOrEmpty()) {
-                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                            seedRepository.getOrCreateSeed {
-                                UUID
-                                    .randomUUID()
-                                    .toString()
+
+                if (!currentSeed.isNullOrEmpty()) {
+                    emit(currentSeed)
+                } else {
+                    var result: String? = null
+                    for (attempt in 1..2) {
+                        result =
+                            withTimeoutOrNull(
+                                Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds,
+                            ) {
+                                seedRepository.getOrCreateSeed {
+                                    UUID.randomUUID().toString()
+                                }
                             }
-                        } ?: run {
-                            AppLogger
-                                .w(
-                                    "Failed to generate identity seed within timeout, using temporary non-persistent seed",
-                                )
-                            UUID.randomUUID().toString()
+                        if (result != null) break
+                        if (attempt == 1) {
+                            AppLogger.w("Identity seed generation timeout, retrying once...")
+                            delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
                         }
-                    } else {
-                        currentSeed
                     }
-                emit(seed)
-                emitAll(
-                    seedRepository
-                        .getSeed()
-                        .filter { it.isNotEmpty() },
-                )
+
+                    val seed =
+                        result ?: run {
+                            AppLogger.e(
+                                "Failed to generate identity seed after retries. " +
+                                    "Stopping seed flow to prevent unstable identities.",
+                            )
+                            return@flow
+                        }
+                    emit(seed)
+                }
+
+                emitAll(seedRepository.getSeed().filter { it.isNotEmpty() })
             }.distinctUntilChanged()
-                .filter { it.isNotEmpty() }
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
@@ -210,21 +222,16 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                // Use WhileSubscribed to allow the cache to be cleared when not in use,
-                // but keep it active during UI interaction or background tracking.
-                // This is safer than Lazily as it ensures fresh data on re-subscription.
                 started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
                 initialValue = null,
             )
 
-        private suspend fun getSeed(): String = seedFlow.first()
+        private suspend fun getSeed(): String = seedFlow.firstOrNull() ?: error("Identity seed generation timeout")
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            // Warm up the seed flow first to ensure that physicalActiveSims (which depends on it)
-            // can start emitting immediately when we subscribe to activeSimsCache.
-            getSeed()
+            val seed = getSeed()
 
             val currentSims: List<ActiveSimInfo> =
                 activeSimsCache.filterNotNull().firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
@@ -240,17 +247,19 @@ class SimIdentityRepositoryImpl
                 return createFallbackIdentity(slot, "sim_$slot")
             }
 
-            return findActiveIdentityInternal(slot) ?: createFallbackIdentity(slot, "sim_$slot")
+            // If not found in cache, try direct resolution
+            return findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
         }
 
-        private suspend fun findActiveIdentityInternal(slot: Int): SimIdentity? {
-            val seed = getSeed()
-            return permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+        private suspend fun findActiveIdentityInternal(
+            slot: Int,
+            seed: String,
+        ): SimIdentity? =
+            permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
                 val resolved = SimIdentityUtils.createIdentityFromInfo(it, seed)
                 saveSimIdentityInfo(resolved)
                 resolved
             }
-        }
 
         private fun createFallbackIdentity(
             slot: Int,
@@ -267,14 +276,12 @@ class SimIdentityRepositoryImpl
                 val slot = identity.slotIndex
                 val subId = identity.subscriptionId
 
-                val currentPrefs = dataStore.data.first()
+                val currentPrefs = dataStore.data.firstWithTimeout() ?: emptyPreferences()
                 val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
                 val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
 
                 if ((currentSlot == slot) && (currentSub == subId)) return@withLock
 
-                // If this is a permanent identity (not fallback) and we haven't saved info for it yet,
-                // it might be a transition from fallback sim_$slot.
                 if ((identity.source != IdentitySource.SLOT_FALLBACK) &&
                     (currentSlot == null) &&
                     migratedIdentities.add(identity.stableId)
@@ -305,7 +312,6 @@ class SimIdentityRepositoryImpl
                     .getActiveSubscriptions()
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
 
-            // Clean up in-memory migration guard for removed SIMs
             val currentIdentities = infoList.map { SimIdentityUtils.createIdentityFromInfo(it, seed).stableId }.toSet()
             migratedIdentities.retainAll(currentIdentities)
 

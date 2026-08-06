@@ -249,15 +249,6 @@ class SemanticSearchManagerTest {
             isManualUpdate = true,
         )
 
-    private fun createEmptySnapshot() =
-        GlobalSnapshot(
-            version = SchemaVersion(1, 0, 0),
-            timestamp = 0,
-            simSnapshots = emptyList(),
-            capabilities = emptyList(),
-            isManualUpdate = true,
-        )
-
     private fun createSnapshotWithOneSim() =
         createSnapshot(
             listOf(

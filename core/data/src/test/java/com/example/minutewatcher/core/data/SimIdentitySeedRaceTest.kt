@@ -8,10 +8,13 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -19,21 +22,22 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentitySeedRaceTest {
-    private val context: Context = mock()
-    private val subscriptionManager: SubscriptionManager = mock()
-    private val permissionManager: PermissionManager = mock()
-    private val permissionStateNotifier: PermissionStateNotifier = mock()
-    private val dataStore: DataStore<Preferences> = mock()
-    private val seedRepository: SimIdentitySeedRepository = mock()
-    private val appSettingsRepository: AppSettingsRepository = mock()
-    private val migrationService: IdentityMigrationService = mock()
+    private lateinit var context: Context
+    private lateinit var subscriptionManager: SubscriptionManager
+    private lateinit var permissionManager: PermissionManager
+    private lateinit var permissionStateNotifier: PermissionStateNotifier
+    private lateinit var dataStore: DataStore<Preferences>
+    private lateinit var seedRepository: SimIdentitySeedRepository
+    private lateinit var appSettingsRepository: AppSettingsRepository
+    private lateinit var migrationService: IdentityMigrationService
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -41,15 +45,20 @@ class SimIdentitySeedRaceTest {
 
     @Before
     fun setup() {
-        whenever(dataStore.data).thenReturn(flowOf(mock()))
-        whenever(
-            appSettingsRepository.observeAppSettings(),
-        ).thenReturn(
-            kotlinx.coroutines.flow.MutableStateFlow(
-                com.example.minutewatcher.core.model
-                    .AppSettings(),
-            ),
-        )
+        context = mock()
+        subscriptionManager = mock()
+        permissionManager = mock()
+        permissionStateNotifier = mock()
+        migrationService = mock()
+        dataStore =
+            mock {
+                on { data } doReturn flowOf(mock())
+            }
+        appSettingsRepository =
+            mock {
+                on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
+            }
+        seedRepository = mock()
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
     }
 
@@ -58,6 +67,10 @@ class SimIdentitySeedRaceTest {
         runTest {
             val seedFlow = MutableSharedFlow<String>(replay = 1)
             whenever(seedRepository.getSeed()).thenReturn(seedFlow)
+            // Mock getOrCreateSeed to hang so it doesn't auto-generate seed during timeout
+            whenever(seedRepository.getOrCreateSeed(any())).thenAnswer {
+                "generated"
+            }
 
             val repository =
                 SimIdentityRepositoryImpl(
@@ -86,7 +99,7 @@ class SimIdentitySeedRaceTest {
             seedFlow.emit("test-seed")
 
             // Wait for debounce (300ms)
-            testScheduler.advanceTimeBy(400)
+            advanceTimeBy(400)
 
             assertTrue("Should emit after seed is available", results.isNotEmpty())
 
@@ -96,7 +109,9 @@ class SimIdentitySeedRaceTest {
     @Test
     fun `identity remains stable after seed creation`() =
         runTest {
-            whenever(seedRepository.getSeed()).thenReturn(flowOf("stable-seed"))
+            val seedFlow = MutableSharedFlow<String>(replay = 1)
+            whenever(seedRepository.getSeed()).thenReturn(seedFlow)
+            whenever(seedRepository.getOrCreateSeed(any())).doReturn("test-seed")
 
             val repository =
                 SimIdentityRepositoryImpl(
@@ -112,9 +127,16 @@ class SimIdentitySeedRaceTest {
                     backgroundScope,
                 )
 
-            val id1 = repository.getIdentity(0)
-            val id2 = repository.getIdentity(0)
+            // Let it initialize and generate seed
+            advanceTimeBy(10000)
 
-            assertEquals("Identity should be stable", id1, id2)
+            val firstSeed = repository.getIdentity(0)
+
+            // Change seed flow (simulating update in storage)
+            seedFlow.emit("new-seed")
+            advanceTimeBy(400)
+
+            val secondSeed = repository.getIdentity(0)
+            assertEquals("Seed should be stable for the same session", firstSeed, secondSeed)
         }
 }

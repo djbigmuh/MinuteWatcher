@@ -14,7 +14,7 @@ fun SimLayoutRender(
     rowContainer: @Composable (content: @Composable () -> Unit) -> Unit,
     iconRenderer: @Composable (SimLayoutComponent.Icon) -> Unit,
     textRenderer: @Composable (SimLayoutComponent.Text) -> Unit,
-    spacerRenderer: @Composable (SimLayoutComponent.Spacer) -> Unit
+    spacerRenderer: @Composable (SimLayoutComponent.Spacer) -> Unit,
 ) {
     spec.rows.forEach { row ->
         rowContainer {

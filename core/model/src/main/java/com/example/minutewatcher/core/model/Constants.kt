@@ -73,6 +73,8 @@ object Constants {
         const val RETRY_TIMEOUT_MS = 5_000L
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
+        const val SEED_GENERATION_TIMEOUT_MS = 10_000L
+        const val RETRY_DELAY_MS = 1_000L
     }
 
     object Calls {

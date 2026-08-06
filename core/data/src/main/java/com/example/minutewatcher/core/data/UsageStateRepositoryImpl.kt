@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -28,6 +29,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -76,6 +78,9 @@ class UsageStateRepositoryImpl
                             },
                         ) { it.toList() }
                     }
+                }.catch { e ->
+                    AppLogger.e("UsageStateRepository: Critical error in simUsagesFlow", e)
+                    emit(emptyList())
                 }
 
         override fun observeSimUsages(): Flow<List<SimUsage>> =
@@ -158,9 +163,18 @@ class UsageStateRepositoryImpl
             )
         }
 
+        private fun createEmptySnapshot() =
+            GlobalSnapshot(
+                version = semanticVersion.getVersion(),
+                timestamp = 0L,
+                simSnapshots = emptyList(),
+                capabilities = semanticCapabilities.getCapabilities(),
+                isManualUpdate = false,
+            )
+
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
-        override suspend fun refresh(): com.example.minutewatcher.core.domain.RefreshResult =
+        override suspend fun refresh(): RefreshResult =
             refreshMutex.withLock {
                 coroutineScope {
                     val currentTimestamp = snapshotFlow.value.timestamp
@@ -168,25 +182,19 @@ class UsageStateRepositoryImpl
                         async {
                             snapshotFlow.first { it.timestamp > currentTimestamp }
                         }
-                    dataRefreshNotifier.notifyRefresh()
-                    withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) { nextSnapshot.await() }?.let {
-                        com.example.minutewatcher.core.domain.RefreshResult
-                            .Success(it)
+                    dataRefreshNotifier.notifyRefresh(isManual = true)
+                    withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
+                        nextSnapshot.await()
+                    }?.let {
+                        RefreshResult.Success(it)
                     } ?: run {
                         AppLogger.w(
-                            "UsageStateRepository: Refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s, returning current snapshot",
+                            "UsageStateRepository: Refresh timed out after " +
+                                "${Constants.Data.SNAPSHOT_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s, " +
+                                "returning current snapshot",
                         )
-                        com.example.minutewatcher.core.domain.RefreshResult
-                            .Timeout(snapshotFlow.value)
+                        RefreshResult.Timeout(snapshotFlow.value)
                     }
                 }
             }
-
-        private fun createEmptySnapshot() =
-            GlobalSnapshot(
-                version = semanticVersion.getVersion(),
-                timestamp = 0L,
-                simSnapshots = emptyList(),
-                capabilities = semanticCapabilities.getCapabilities(),
-            )
     }

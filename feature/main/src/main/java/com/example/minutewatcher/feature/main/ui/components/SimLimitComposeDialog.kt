@@ -67,7 +67,8 @@ fun SimLimitComposeDialog(
             DialogButtons(
                 onConfirm = {
                     if (state.validate(validationMessages)) {
-                        // After successful validate(), validatedMinutes and validatedTrafficGb are guaranteed to be non-null.
+                        // After successful validate(), validatedMinutes and validatedTrafficGb
+                        // are guaranteed to be non-null.
                         onConfirm(
                             state.validatedMinutes!!,
                             (state.validatedTrafficGb!! * Constants.MB_PER_GB).roundToInt(),

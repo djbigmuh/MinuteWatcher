@@ -21,6 +21,10 @@ class WidgetSettingsSaver
 
         suspend fun save(state: WidgetSettingsState): Boolean =
             try {
+                if (state.settingsLoadFailed) {
+                    AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
+                    return false
+                }
                 saveMutex.withLock {
                     loader.save(state)
                     dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)

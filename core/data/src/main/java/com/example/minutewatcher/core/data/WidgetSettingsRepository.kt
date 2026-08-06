@@ -85,6 +85,11 @@ class WidgetSettingsRepository
             }
 
         override suspend fun save(state: WidgetSettingsState) {
+            if (state.settingsLoadFailed) {
+                AppLogger.w("Skipping save: settings were not loaded successfully")
+                return
+            }
+
             appSettingsRepository.updateAppSettings { current ->
                 current.copy(
                     widgetLayoutMode = state.layoutMode,

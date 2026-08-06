@@ -44,7 +44,9 @@ object SimLimitValidator {
             trafErr = trafficRangeMsg
         }
 
-        return if (minErr == null && trafErr == null && min != null && trafGb != null) {
+        val isInputValid = minErr == null && trafErr == null
+        val areValuesNotNull = min != null && trafGb != null
+        return if (isInputValid && areValuesNotNull) {
             SimLimitValidationResult.Valid(min, trafGb)
         } else {
             SimLimitValidationResult.Invalid(minErr, trafErr)

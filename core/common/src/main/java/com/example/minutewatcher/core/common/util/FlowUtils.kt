@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.common.util
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -14,7 +14,7 @@ suspend fun <T> Flow<T>.firstWithTimeout(
     timeoutMillis: Long = com.example.minutewatcher.core.model.Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS,
 ): T? =
     withTimeoutOrNull(timeoutMillis.milliseconds) {
-        this@firstWithTimeout.first()
+        this@firstWithTimeout.firstOrNull()
     }
 
 /**
@@ -22,5 +22,5 @@ suspend fun <T> Flow<T>.firstWithTimeout(
  */
 suspend fun <T> Flow<T>.firstWithTimeout(timeout: Duration): T? =
     withTimeoutOrNull(timeout) {
-        this@firstWithTimeout.first()
+        this@firstWithTimeout.firstOrNull()
     }

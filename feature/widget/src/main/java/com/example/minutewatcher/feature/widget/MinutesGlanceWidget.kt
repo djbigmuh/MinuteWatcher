@@ -372,88 +372,88 @@ private fun SimSeparator(
     Spacer(modifier = modifier.background(separatorColor))
 }
 
-    @Composable
-    private fun SimItem(
-        sim: SimUiState,
-        uiState: WidgetUiState,
+@Composable
+private fun SimItem(
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
+    val context = LocalContext.current
+    val summary =
+        context.getString(
+            R.string.sim_status_summary,
+            sim.operatorName,
+            sim.minutesText,
+            sim.trafficText,
+        )
+
+    Column(
+        modifier =
+            GlanceModifier
+                .padding(
+                    Constants.Widget.PADDING_SIM_ITEM.dp,
+                ).semantics { contentDescription = summary },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        val context = LocalContext.current
-        val summary =
-            context.getString(
-                R.string.sim_status_summary,
-                sim.operatorName,
-                sim.minutesText,
-                sim.trafficText,
-            )
-
-        Column(
-            modifier =
-                GlanceModifier
-                    .padding(
-                        Constants.Widget.PADDING_SIM_ITEM.dp,
-                    ).semantics { contentDescription = summary },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SimLayoutRender(
-                spec = sim.layoutSpec,
-                rowContainer = { content ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        content()
-                    }
-                },
-                iconRenderer = { component ->
-                    Image(
-                        provider = ImageProvider(component.iconRes),
-                        contentDescription = null,
-                        modifier = GlanceModifier.size(component.sizeDp.dp),
-                    )
-                },
-                textRenderer = { component ->
-                    SimItemText(component, sim, uiState)
-                },
-                spacerRenderer = { component ->
-                    SimItemSpacer(component)
-                },
-            )
-        }
-    }
-
-    @Composable
-    private fun SimItemText(
-        component: com.example.minutewatcher.core.model.SimLayoutComponent.Text,
-        sim: SimUiState,
-        uiState: WidgetUiState,
-    ) {
-        val textColor =
-            if (uiState.useSystemColors && component.color == sim.textColor) {
-                GlanceTheme.colors.onSurface
-            } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-                GlanceTheme.colors.onSurfaceVariant
-            } else {
-                val composeColor =
-                    androidx.compose.ui.graphics
-                        .Color(component.color)
-                GlanceColorProvider(day = composeColor, night = composeColor)
-            }
-
-        Text(
-            text = component.text,
-            style =
-                TextStyle(
-                    fontSize = component.fontSizeSp.sp,
-                    fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
-                    color = textColor,
-                ),
+        SimLayoutRender(
+            spec = sim.layoutSpec,
+            rowContainer = { content ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    content()
+                }
+            },
+            iconRenderer = { component ->
+                Image(
+                    provider = ImageProvider(component.iconRes),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(component.sizeDp.dp),
+                )
+            },
+            textRenderer = { component ->
+                SimItemText(component, sim, uiState)
+            },
+            spacerRenderer = { component ->
+                SimItemSpacer(component)
+            },
         )
     }
+}
 
-    @Composable
-    private fun SimItemSpacer(component: com.example.minutewatcher.core.model.SimLayoutComponent.Spacer) {
-        if (component.widthDp > 0) {
-            Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
+@Composable
+private fun SimItemText(
+    component: com.example.minutewatcher.core.model.SimLayoutComponent.Text,
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
+    val textColor =
+        if (uiState.useSystemColors && component.color == sim.textColor) {
+            GlanceTheme.colors.onSurface
+        } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+            GlanceTheme.colors.onSurfaceVariant
+        } else {
+            val composeColor =
+                androidx.compose.ui.graphics
+                    .Color(component.color)
+            GlanceColorProvider(day = composeColor, night = composeColor)
         }
-        if (component.heightDp > 0) {
-            Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
-        }
+
+    Text(
+        text = component.text,
+        style =
+            TextStyle(
+                fontSize = component.fontSizeSp.sp,
+                fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
+                color = textColor,
+            ),
+    )
+}
+
+@Composable
+private fun SimItemSpacer(component: com.example.minutewatcher.core.model.SimLayoutComponent.Spacer) {
+    if (component.widthDp > 0) {
+        Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
     }
+    if (component.heightDp > 0) {
+        Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
+    }
+}

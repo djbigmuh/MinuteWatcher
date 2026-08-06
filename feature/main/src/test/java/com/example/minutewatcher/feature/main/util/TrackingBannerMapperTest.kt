@@ -5,7 +5,6 @@ import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

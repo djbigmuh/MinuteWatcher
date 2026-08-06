@@ -14,6 +14,11 @@ import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.feature.main.controller.MainBannerController
+import com.example.minutewatcher.feature.main.controller.MainDialogController
+import com.example.minutewatcher.feature.main.controller.MainSettingsController
+import com.example.minutewatcher.feature.main.controller.MainSimDataController
+import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
 import kotlinx.coroutines.CoroutineScope
@@ -75,8 +80,24 @@ class MainViewModelTest {
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
-        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings(onboardingCompleted = true)))
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(onboardingCompleted = true)))
+        whenever(
+            appSettingsRepository.observeAppSettings(),
+        ).thenReturn(
+            MutableStateFlow(
+                AppSettings(
+                    onboardingCompleted = true,
+                ),
+            ),
+        )
+        whenever(
+            appSettingsRepository.getAppSettings(),
+        ).thenReturn(
+            flowOf(
+                AppSettings(
+                    onboardingCompleted = true,
+                ),
+            ),
+        )
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
     }
@@ -87,30 +108,28 @@ class MainViewModelTest {
     }
 
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
-        val dialogController =
-            com.example.minutewatcher.feature.main.controller
-                .MainDialogController(savedStateHandle)
+        val dialogController = MainDialogController(savedStateHandle)
         val bannerController =
-            com.example.minutewatcher.feature.main.controller.MainBannerController(
+            MainBannerController(
                 trackingStatusRepository = trackingStatusRepository,
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 scope = scope,
             )
         val refreshController =
-            com.example.minutewatcher.feature.main.controller.MainSimRefreshController(
-                usageUseCase,
-                usageStateRepository,
-                testDispatcher,
+            MainSimRefreshController(
+                usageUseCase = usageUseCase,
+                usageStateRepository = usageStateRepository,
+                ioDispatcher = testDispatcher,
             )
         val settingsController =
-            com.example.minutewatcher.feature.main.controller.MainSettingsController(
+            MainSettingsController(
                 appSettingsRepository = appSettingsRepository,
                 settingsUseCase = settingsUseCase,
                 scope = scope,
             )
         val simDataController =
-            com.example.minutewatcher.feature.main.controller.MainSimDataController(
+            MainSimDataController(
                 usageStateRepository = usageStateRepository,
                 trackingRecoveryController = trackingRecoveryController,
                 simIdentityRepository = simIdentityRepository,
@@ -247,7 +266,13 @@ class MainViewModelTest {
     fun `trackingBannerState correctly identifies NOT_REQUESTED vs DENIED states`() =
         runTest(testDispatcher) {
             // Case 1: Not requested
-            val settingsFlow = MutableStateFlow(AppSettings(phonePermissionRequested = false, onboardingCompleted = true))
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        phonePermissionRequested = false,
+                        onboardingCompleted = true,
+                    ),
+                )
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
             phonePermissionFlow.value = false
 
@@ -263,7 +288,11 @@ class MainViewModelTest {
             assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
 
             // Case 2: Requested but denied
-            settingsFlow.value = AppSettings(phonePermissionRequested = true, onboardingCompleted = true)
+            settingsFlow.value =
+                AppSettings(
+                    phonePermissionRequested = true,
+                    onboardingCompleted = true,
+                )
             testScheduler.advanceUntilIdle()
 
             bannerState = viewModel.trackingBannerState.value
