@@ -214,16 +214,16 @@ class TrafficTracker
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
-            val usageRes = readWithRetry({ simUsageRepository.getSimUsage(targetIdentity) }, "simUsage", targetIdentity)
-            val usage = usageRes.getOrNull()
+            val usage =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    simUsageRepository.getSimUsage(targetIdentity).first()
+                }
 
             if (usage == null) {
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
-                        usageRes
-                            .exceptionOrNull()
-                            ?.message,
+                        "Timeout reading simUsage",
                     )
             } else {
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
@@ -245,17 +245,14 @@ class TrafficTracker
                 return
             }
 
-            val lastBytesRes =
-                readWithRetry(
-                    { simUsageResetRepository.getLastTotalBytes(targetIdentity) },
-                    "lastTotalBytes",
-                    targetIdentity,
-                )
-            val lastTotalBytes = lastBytesRes.getOrNull()
+            val lastTotalBytes =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    simUsageResetRepository.getLastTotalBytes(targetIdentity).first()
+                }
 
             if (lastTotalBytes == null) {
                 _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, lastBytesRes.exceptionOrNull()?.message)
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading lastTotalBytes")
             } else {
                 updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
                 updateLastDataSubId(target.dataSubId)
@@ -450,7 +447,9 @@ class TrafficTracker
             return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
         }
 
-        private suspend fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
+        private suspend fun resolveTargetSimFromActiveSims(
+            activeSims: List<ActiveSimInfo>,
+        ): Triple<Int, Int, Boolean>? {
             val defaultDataSim = activeSims.find { it.isDefaultData }
 
             return if (defaultDataSim != null) {
@@ -472,30 +471,6 @@ class TrafficTracker
                 val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
                 inMemoryLastDataSubId.compareAndSet(-1, savedId)
             }
-        }
-
-        private suspend fun <T> readWithRetry(
-            flowProvider: () -> kotlinx.coroutines.flow.Flow<T>,
-            fieldName: String,
-            identity: String,
-        ): Result<T> {
-            suspend fun tryRead(timeout: Long): Result<T>? =
-                try {
-                    withTimeoutOrNull(timeout.milliseconds) {
-                        Result.success(flowProvider().first())
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    Result.failure(Exception("Timeout reading $fieldName"))
-                }
-
-            val firstResult = tryRead(Constants.Flow.SHORT_TIMEOUT_MS)
-            if (firstResult != null) return firstResult
-
-            AppLogger.w("TrafficTracker: Timeout reading $fieldName for $identity, retrying with 10s...")
-            return tryRead(Constants.Flow.LONG_TIMEOUT_MS)
-                ?: Result.failure(Exception("Timeout reading $fieldName"))
         }
 
         private suspend fun resetStatsAfterSimChange(
@@ -524,6 +499,7 @@ class TrafficTracker
             )
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
+                baselineNeedsRetry.keys.removeAll { it != identity }
 
                 if (handleRetryLimitExceeded(identity, retryCount, currentDataSubId)) return
 

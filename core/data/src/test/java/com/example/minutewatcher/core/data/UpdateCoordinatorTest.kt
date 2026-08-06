@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.NoOpLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -26,14 +25,12 @@ class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
-    private val timeProvider: TimeProvider = mock()
 
     private val snapshotFlow = MutableSharedFlow<GlobalSnapshot>(replay = 1, extraBufferCapacity = 10)
 
     @Before
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
-        whenever(timeProvider.now()).thenReturn(0L)
         snapshotFlow.tryEmit(createEmptySnapshot())
     }
 
@@ -48,7 +45,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
@@ -56,13 +52,13 @@ class UpdateCoordinatorTest {
             // 1. First meaningful snapshot
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
             verify(widgetUpdater).updateAll()
 
             // 2. Second change
             val s2 = createSnapshot(timestamp = 2000L, content = "B")
             snapshotFlow.tryEmit(s2)
-            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
             verify(widgetUpdater, times(2)).updateAll()
         }
 
@@ -77,20 +73,19 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
             verify(widgetUpdater, times(1)).updateAll()
 
             // Same content, different timestamp
             val s2 = createSnapshot(timestamp = 2000L, content = "A")
             snapshotFlow.tryEmit(s2)
-            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
 
             // Still only 1 call
             verify(widgetUpdater, times(1)).updateAll()
@@ -104,7 +99,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
 
@@ -125,7 +119,6 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
 
@@ -138,44 +131,8 @@ class UpdateCoordinatorTest {
             // Should call updateAll after snapshot change and debounce
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(1000)
-            verify(widgetUpdater, times(1)).updateAll()
-        }
-
-    @Test
-    fun `manual snapshot is skipped by reactive flow if recently forced`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
-
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    timeProvider,
-                    backgroundScope,
-                )
-
-            // 1. Force update
-            whenever(timeProvider.now()).thenReturn(10000L)
-            coordinator.notifyDataChanged(updateWidget = true, force = true)
-            verify(widgetUpdater, times(1)).updateAll()
-
-            // 2. Emit manual snapshot (e.g. from the refresh triggered by force)
-            // Timestamp in snapshot is <= lastManual (10000) and within 5s window
-            val s1 = createSnapshot(timestamp = 10000L, content = "A").copy(isManualUpdate = true)
-            snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
-
-            // Should still be 1 call (the forced one), reactive one skipped
             verify(widgetUpdater, times(1)).updateAll()
-
-            // 3. Emit another snapshot - should be processed because gate is reset
-            val s2 = createSnapshot(timestamp = 20000L, content = "B")
-            snapshotFlow.tryEmit(s2)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
-            verify(widgetUpdater, times(2)).updateAll()
         }
 
     @Test
@@ -186,16 +143,13 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    timeProvider,
                     backgroundScope,
                 )
 
             // First force
-            whenever(timeProvider.now()).thenReturn(10000L)
             coordinator.notifyDataChanged(updateWidget = true, force = true)
 
-            // Second force within 5s
-            whenever(timeProvider.now()).thenReturn(12000L)
+            // Second force
             coordinator.notifyDataChanged(updateWidget = true, force = true)
 
             // Should be 2 calls

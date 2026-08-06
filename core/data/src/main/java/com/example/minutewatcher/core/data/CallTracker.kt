@@ -101,7 +101,8 @@ class CallTracker
                         return@withLock
                     }
 
-                    if (handleCallStartInternal(effectiveSubId)) {
+                    val started = handleCallStartInternal(effectiveSubId)
+                    if (started) {
                         _status.value = TrackingStatus.Active
                     }
                 } catch (e: SecurityException) {
@@ -114,7 +115,9 @@ class CallTracker
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            refreshStatus()
+                            if (_status.value !is TrackingStatus.Error) {
+                                refreshStatus()
+                            }
                         } catch (_: Exception) {
                         }
                     }

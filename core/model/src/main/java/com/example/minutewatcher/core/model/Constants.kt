@@ -32,11 +32,6 @@ object Constants {
         const val PERCENT_MAX_FLOAT = 100f
         const val SEPARATOR_ALPHA = 0.5f
 
-        /**
-         * Marker string found in IllegalArgumentException message when RemoteViews
-         * exceeds the system's maximum allowed size (usually 2MB for the entire transaction).
-         */
-        const val REMOTE_VIEWS_ERROR_MARKER = "RemoteViews"
 
         const val PADDING_DEFAULT = 8
         const val PADDING_SIM_ITEM = 4

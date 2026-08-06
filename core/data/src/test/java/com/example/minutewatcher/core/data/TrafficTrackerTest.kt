@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -418,6 +419,36 @@ class TrafficTrackerTest {
 
             // Verify query was called with lookbackStart
             verify(networkStatsProvider).queryMobileBytes(eq(lookbackStart), eq(now))
+        }
+
+    @Test
+    fun `handleSimChange clears previous retry entries`() =
+        runTest(testDispatcher) {
+            // 1. Initial state: SubId 1 (sim_0)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+
+            // 2. SIM swap to SubId 2 (sim_1), but stats are unavailable
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
+
+            tracker.updateTrafficUsage()
+
+            // Verify sim_1 is in baselineNeedsRetry
+            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            field.isAccessible = true
+            val map = field.get(tracker) as Map<*, *>
+            assertTrue("sim_1 should be in retry map", map.containsKey("sim_1"))
+
+            // 3. SIM swap back to SubId 1 (sim_0)
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(3000L))
+
+            tracker.updateTrafficUsage()
+
+            // Assert: sim_1 should have been cleared even though it's still in "activeSims"
+            assertFalse("sim_1 should be cleared from retry map", map.containsKey("sim_1"))
         }
 
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.

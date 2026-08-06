@@ -49,6 +49,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun loadingState_isDisplayed() {
+        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
         whenever(viewModel.settingsState).thenReturn(MutableStateFlow(null))
         whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
         whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))
@@ -70,6 +71,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun errorState_isDisplayed() {
+        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
         whenever(viewModel.settingsState).thenReturn(MutableStateFlow(null))
         whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
         whenever(viewModel.loadError).thenReturn(MutableStateFlow(true))
@@ -88,6 +90,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun settingsContent_isDisplayed() {
+        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
         whenever(viewModel.settingsState).thenReturn(MutableStateFlow(testSettings))
         whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
         whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))
@@ -106,6 +109,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun saveButton_triggersCallback() {
+        whenever(viewModel.isSaving).thenReturn(MutableStateFlow(false))
         whenever(viewModel.settingsState).thenReturn(MutableStateFlow(testSettings))
         whenever(viewModel.uiState).thenReturn(MutableStateFlow(null))
         whenever(viewModel.loadError).thenReturn(MutableStateFlow(false))

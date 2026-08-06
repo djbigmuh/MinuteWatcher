@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 
 @HiltViewModel
@@ -40,6 +41,8 @@ class WidgetSettingsViewModel
 
         private val _isSaving = MutableStateFlow(false)
         val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
+        private val saveMutex = Mutex()
 
         val uiState: StateFlow<WidgetUiState?> =
             _settingsState
@@ -91,22 +94,23 @@ class WidgetSettingsViewModel
         }
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
-            if (_isSaving.value) return
-            val currentState = _settingsState.value
-            if (currentState == null) {
-                com.example.minutewatcher.core.common.util.AppLogger
-                    .w("saveAndNotify called before settings were loaded")
-                onComplete(false)
-                return
-            }
-
-            _isSaving.value = true
             viewModelScope.launch {
+                if (!saveMutex.tryLock()) return@launch
+                _isSaving.value = true
                 try {
+                    val currentState = _settingsState.value
+                    if (currentState == null) {
+                        com.example.minutewatcher.core.common.util.AppLogger
+                            .w("saveAndNotify called before settings were loaded")
+                        onComplete(false)
+                        return@launch
+                    }
+
                     val success = saver.save(currentState)
                     onComplete(success)
                 } finally {
                     _isSaving.value = false
+                    saveMutex.unlock()
                 }
             }
         }

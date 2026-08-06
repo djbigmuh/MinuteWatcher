@@ -106,13 +106,12 @@ class SimIdentityRepositoryImpl
                         }
                     }
 
-                    val seed =
-                        result ?: run {
-                            AppLogger.e("Failed to generate identity seed after retries. Using slot-based fallback.")
-                            emit(FALLBACK_SEED)
-                            return@flow
-                        }
-                    emit(seed)
+                    if (result == null) {
+                        AppLogger.e("Failed to generate identity seed after retries. Using slot-based fallback.")
+                        emit(FALLBACK_SEED)
+                    } else {
+                        emit(result)
+                    }
                 }
 
                 emitAll(seedRepository.getSeed().filter { it.isNotEmpty() })

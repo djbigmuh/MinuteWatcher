@@ -100,9 +100,7 @@ class WidgetUpdaterImpl
          * Heuristically determines if an [IllegalArgumentException] during widget update
          * is caused by exceeding the Binder/RemoteViews size limit (TransactionTooLargeException).
          *
-         * This check includes reliable cause analysis, stack trace inspection, and a fragile
-         * message-based heuristic. The latter may require updates if Android's internal
-         * error messages change in future versions.
+         * This check includes reliable cause analysis and stack trace inspection.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
@@ -112,31 +110,11 @@ class WidgetUpdaterImpl
                 stackTrace.contains(MARKER_REMOTE_VIEWS, ignoreCase = true) &&
                     stackTrace.contains(MARKER_TRANSACTION_TOO_LARGE, ignoreCase = true)
 
-            return isTransactionTooLarge || isStackTraceLimit || isHeuristicLimitException(e.message ?: "")
+            return isTransactionTooLarge || isStackTraceLimit
         }
-
-        private fun isHeuristicLimitException(msg: String): Boolean =
-            try {
-                val mentionsRemoteViews = msg.contains(Constants.Widget.REMOTE_VIEWS_ERROR_MARKER, ignoreCase = true)
-                val mentionsSize =
-                    msg.contains(MARKER_TOO_LARGE, ignoreCase = true) ||
-                        msg.contains(MARKER_EXCEEDS, ignoreCase = true) ||
-                        msg.contains(MARKER_TRANSACTION_TOO_LARGE, ignoreCase = true)
-
-                val mentionsTransactionSize =
-                    msg.contains(MARKER_TRANSACTION, ignoreCase = true) &&
-                        msg.contains(MARKER_TOO_LARGE, ignoreCase = true)
-
-                (mentionsRemoteViews && mentionsSize) || mentionsTransactionSize
-            } catch (_: Exception) {
-                false
-            }
 
         companion object {
             private const val MARKER_REMOTE_VIEWS = "RemoteViews"
             private const val MARKER_TRANSACTION_TOO_LARGE = "TransactionTooLarge"
-            private const val MARKER_TOO_LARGE = "too large"
-            private const val MARKER_EXCEEDS = "exceeds"
-            private const val MARKER_TRANSACTION = "transaction"
         }
     }

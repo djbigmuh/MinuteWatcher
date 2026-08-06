@@ -7,11 +7,19 @@ import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -34,20 +42,28 @@ class WidgetSettingsViewModelTest {
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private var saveDeferred = CompletableDeferred<Boolean>()
 
     private lateinit var viewModel: WidgetSettingsViewModel
 
     @Before
     fun setup() =
         runTest {
+            Dispatchers.setMain(UnconfinedTestDispatcher())
+            saveDeferred = CompletableDeferred()
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
             val snapshotFlow: StateFlow<GlobalSnapshot> = MutableStateFlow<GlobalSnapshot>(snapshot)
             whenever<StateFlow<GlobalSnapshot>>(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
-            whenever(saver.save(any())).thenReturn(true)
+            whenever(saver.save(any())).thenAnswer { runBlocking(Dispatchers.IO) { saveDeferred.await() } }
 
             viewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
         }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `init loads settings`() =
@@ -77,6 +93,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify calls save and notifies`() =
         runTest {
+            whenever(saver.save(any())).thenReturn(true)
             advanceUntilIdle()
             var completed = false
             viewModel.saveAndNotify { success ->
@@ -96,6 +113,7 @@ class WidgetSettingsViewModelTest {
 
             // Start first save
             viewModel.saveAndNotify { }
+            runCurrent()
 
             // Check that isSaving is true immediately
             assertTrue(viewModel.isSaving.value)
@@ -103,11 +121,16 @@ class WidgetSettingsViewModelTest {
             // Attempt second save immediately
             var secondCompleted = false
             viewModel.saveAndNotify { secondCompleted = true }
+            runCurrent()
 
             advanceUntilIdle()
 
             // Second save should NOT have run/completed
             assertFalse(secondCompleted)
+
+            // Complete the first save
+            saveDeferred.complete(true)
+            advanceUntilIdle()
 
             // Verify save was called only once
             verify(saver).save(any())

@@ -206,9 +206,8 @@ class MainViewModel
         fun onActivityResume(nowElapsed: Long) {
             val last = lastRefreshAt
             // Если last == 0L, это первый запуск в текущем сеансе.
-            // Если nowElapsed == 0L, это может быть крайне редкое совпадение при старте после бута.
-            // В обоих случаях просто фиксируем время без немедленного обновления.
-            if (last == 0L || nowElapsed == 0L) {
+            // Просто фиксируем время без немедленного обновления.
+            if (last == 0L) {
                 lastRefreshAt = nowElapsed
                 return
             }
