@@ -19,8 +19,8 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.Constants.SimConstants
+import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -49,11 +49,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -110,6 +110,7 @@ class SimIdentityRepositoryImpl
                     if (result == null) {
                         AppLogger.e("Failed to generate identity seed after retries. Using slot-based fallback.")
                         emit(FALLBACK_SEED)
+                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
                     } else {
                         emit(result)
                         emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
@@ -219,7 +220,7 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                started = SharingStarted.Eagerly,
                 initialValue = null,
             )
 
@@ -281,6 +282,8 @@ class SimIdentityRepositoryImpl
 
         private suspend fun saveSimIdentityInfo(identity: SimIdentity) =
             saveMutex.withLock {
+                if (identity.source == IdentitySource.SLOT_FALLBACK) return@withLock
+
                 val slot = identity.slotIndex
                 val subId = identity.subscriptionId
 
@@ -290,8 +293,7 @@ class SimIdentityRepositoryImpl
 
                 if ((currentSlot == slot) && (currentSub == subId)) return@withLock
 
-                if ((identity.source != IdentitySource.SLOT_FALLBACK) &&
-                    (currentSlot == null) &&
+                if ((currentSlot == null) &&
                     migratedIdentities.add(identity.stableId)
                 ) {
                     try {
@@ -417,6 +419,11 @@ class SimIdentityRepositoryImpl
         }
 
         companion object {
+            /**
+             * Sentinel value used when the identity seed cannot be generated/retrieved in time.
+             * When this value is used, the repository MUST use slot-based fallback (sim_N)
+             * instead of ICCID-based hashing to prevent data loss when a real seed becomes available.
+             */
             private const val FALLBACK_SEED = "fallback_seed_no_persistence"
         }
     }

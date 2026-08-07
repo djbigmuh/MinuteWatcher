@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.util.SnapshotUtils
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -132,14 +133,21 @@ class MainViewModel
         }
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
+            val beforeHash = SnapshotUtils.calculateContentHash(controllers.simData.getSnapshot())
             controllers.refresh.refreshSimCardsInternal()
             lastRefreshAt = SystemClock.elapsedRealtime()
+
+            val afterHash = SnapshotUtils.calculateContentHash(controllers.simData.getSnapshot())
+            val hasChanged = beforeHash != afterHash
+
             /*
              * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).
-             * force=false уведомляет систему об изменениях, позволяя UpdateCoordinator обновить виджет реактивно.
-             * Мы вызываем notifyDataChanged всегда, чтобы гарантировать доставку события обновления.
+             * force=false уведомляет систему об изменениях, только если данные реально изменились,
+             * чтобы избежать лишних перерисовок виджета в UpdateCoordinator.
              */
-            controllers.simData.notifyDataChanged(force = force)
+            if (force || hasChanged) {
+                controllers.simData.notifyDataChanged(force = force)
+            }
         }
 
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage

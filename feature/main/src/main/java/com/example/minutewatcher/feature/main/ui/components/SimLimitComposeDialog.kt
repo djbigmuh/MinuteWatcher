@@ -19,6 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,7 +105,7 @@ private fun rememberSimLimitState(
             "%.1f".format(gb).replace(",", ".")
         }
 
-    return remember {
+    return rememberSaveable(saver = SimLimitState.Saver) {
         SimLimitState(
             initialMinutesText = initialMinutes.toString(),
             initialTrafficText = initialTrafficText,
@@ -121,6 +124,31 @@ private class SimLimitState(
     var rolloverEnabled by mutableStateOf(initialRolloverEnabled)
     var minutesError by mutableStateOf<String?>(null)
     var trafficError by mutableStateOf<String?>(null)
+
+    companion object {
+        val Saver: Saver<SimLimitState, *> =
+            listSaver(
+                save = {
+                    listOf(
+                        it.minutesText,
+                        it.trafficText,
+                        it.rolloverEnabled,
+                        it.minutesError ?: "",
+                        it.trafficError ?: "",
+                    )
+                },
+                restore = {
+                    SimLimitState(
+                        initialMinutesText = it[0] as String,
+                        initialTrafficText = it[1] as String,
+                        initialRolloverEnabled = it[2] as Boolean,
+                    ).apply {
+                        minutesError = (it[3] as String).takeIf { it.isNotEmpty() }
+                        trafficError = (it[4] as String).takeIf { it.isNotEmpty() }
+                    }
+                },
+            )
+    }
 
     fun validate(msgs: ValidationMessages): SimLimitValidationResult {
         val result =

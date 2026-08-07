@@ -26,6 +26,8 @@ interface AppSearchWrapper {
  * Wrapper for [AppSearchSession] to simplify suspend calls.
  */
 interface AppSearchSessionWrapper : AutoCloseable {
+    val isClosed: Boolean
+
     suspend fun setSchema(request: SetSchemaRequest)
 
     suspend fun putDocuments(request: PutDocumentsRequest)
@@ -59,7 +61,8 @@ class AppSearchWrapperImpl
 private class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,
 ) : AppSearchSessionWrapper {
-    private var isClosed = false
+    override var isClosed = false
+        private set
 
     override suspend fun setSchema(request: SetSchemaRequest) {
         session.setSchemaAsync(request).await()

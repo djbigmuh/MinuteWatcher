@@ -95,7 +95,10 @@ class WidgetSettingsViewModel
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
             viewModelScope.launch {
-                if (!saveMutex.tryLock()) return@launch
+                if (!saveMutex.tryLock()) {
+                    onComplete(false)
+                    return@launch
+                }
                 _isSaving.value = true
                 try {
                     val currentState = _settingsState.value

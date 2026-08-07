@@ -41,7 +41,12 @@ class WidgetUpdaterImplTest {
         // but we can set the stack trace of the exception.
         e.stackTrace =
             arrayOf(
-                StackTraceElement("android.widget.RemoteViews", "writeToParcel", "RemoteViews.java", 100),
+                StackTraceElement(
+                    "android.widget.RemoteViews",
+                    "writeToParcel",
+                    "RemoteViews.java",
+                    100,
+                ),
                 StackTraceElement(
                     "android.os.TransactionTooLargeException",
                     "<init>",

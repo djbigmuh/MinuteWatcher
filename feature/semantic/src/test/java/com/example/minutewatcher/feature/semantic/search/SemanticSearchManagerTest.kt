@@ -210,7 +210,11 @@ class SemanticSearchManagerTest {
             val result = manager.indexSnapshot(emptySnapshot)
 
             assertTrue("indexSnapshot should return true for empty snapshot", result)
-            assertEquals("Should have one more remove request", initialRemoves + 1, session.removeRequests.size)
+            assertEquals(
+                "Should have one more remove request",
+                initialRemoves + 1,
+                session.removeRequests.size,
+            )
 
             val lastRemove = session.removeRequests.last()
             assertTrue("Should remove sim_0_minutes", lastRemove.ids.contains("sim_0_minutes"))
@@ -239,6 +243,44 @@ class SemanticSearchManagerTest {
                 initialPuts + 1,
                 session.putRequests.size,
             )
+        }
+
+    @Test
+    fun `recover after error reinitializes session`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // 1. Initial indexing
+            manager.indexSnapshot(snapshot)
+            assertEquals(1, fakeWrapper.createdSessions)
+            val session1 = fakeWrapper.lastSession!!
+
+            // 2. Simulate failure that leads to retry
+            session1.failPutDocuments = true
+            val updatedSnapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            identity = "sim_0",
+                            operator = "TestOp",
+                            isActive = true,
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 99),
+                                ),
+                            autoResetDay = 1,
+                        ),
+                    ),
+                )
+
+            manager.indexSnapshot(updatedSnapshot)
+
+            // Should have retried and created a new session
+            assertEquals(2, fakeWrapper.createdSessions)
+            assertTrue(session1.isClosed)
+            assertTrue(manager.status.value is TrackingStatus.Active)
         }
 
     private fun createManager(scope: CoroutineScope) =
@@ -339,6 +381,9 @@ class SemanticSearchManagerTest {
     private class FakeAppSearchSessionWrapper(
         private val wrapper: FakeAppSearchWrapper,
     ) : AppSearchSessionWrapper {
+        override var isClosed = false
+            private set
+
         var schemaSet = false
         var lastSchemaRequest: SetSchemaRequest? = null
         val putRequests = mutableListOf<PutDocumentsRequest>()
@@ -368,7 +413,7 @@ class SemanticSearchManagerTest {
         }
 
         override fun close() {
-            // No-op for fake
+            isClosed = true
         }
     }
 }

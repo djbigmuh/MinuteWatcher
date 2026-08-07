@@ -127,7 +127,7 @@ class TrafficTracker
                             if (target.isFallback) {
                                 TrackingStatus.Error(
                                     TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                                    target.slot.toString(),
+                                    slotIndex = target.slot,
                                 )
                             } else {
                                 TrackingStatus.Active
@@ -239,7 +239,10 @@ class TrafficTracker
                 updateLastDataSubId(target.dataSubId)
                 _status.value =
                     if (target.isFallback) {
-                        TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, target.slot.toString())
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                            slotIndex = target.slot,
+                        )
                     } else {
                         TrackingStatus.Active
                     }
@@ -279,10 +282,10 @@ class TrafficTracker
 
                     _status.value =
                         if (target.isFallback) {
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                                target.slot.toString(),
-                            )
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                            slotIndex = target.slot,
+                        )
                         } else {
                             TrackingStatus.Active
                         }

@@ -10,9 +10,9 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,9 +30,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.milliseconds
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages AppSearch indexing for usage data.
@@ -82,7 +82,7 @@ open class SemanticSearchManager
         }
 
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
-            if (session != null && !forceOverride) return true
+            if (session != null && !session!!.isClosed && !forceOverride) return true
 
             session?.close()
             session = null
@@ -129,12 +129,29 @@ open class SemanticSearchManager
             val currentHash =
                 if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else EMPTY_INDEX_HASH
             return sessionMutex.withLock {
-                when {
-                    hasActiveSims && currentHash == lastSnapshotHash -> true
-                    !hasActiveSims && lastSnapshotHash == EMPTY_INDEX_HASH -> true // чистить нечего
-                    ensureSession() -> executeIndexing(snapshot, currentHash)
-                    else -> false
+                if (hasActiveSims && currentHash == lastSnapshotHash) return@withLock true
+                if (!hasActiveSims && lastSnapshotHash == EMPTY_INDEX_HASH) return@withLock true
+
+                var result = false
+                if (ensureSession()) {
+                    try {
+                        result = executeIndexing(snapshot, currentHash)
+                    } catch (e: AppSearchException) {
+                        AppLogger.w("AppSearch session error, retrying once: ${e.message}")
+                        session?.close()
+                        session = null
+                        if (ensureSession()) {
+                            try {
+                                result = executeIndexing(snapshot, currentHash)
+                            } catch (retryException: Exception) {
+                                AppLogger.e("AppSearch indexing failed again after retry", retryException)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.e("AppSearch non-AppSearch error during indexing", e)
+                    }
                 }
+                result
             }
         }
 
@@ -152,6 +169,9 @@ open class SemanticSearchManager
                         true
                     }
                 } catch (e: CancellationException) {
+                    throw e
+                } catch (e: AppSearchException) {
+                    // Bubble up to indexSnapshot for retry
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("AppSearch indexing error", e)

@@ -73,20 +73,21 @@ class SimIdentityRepositorySeedTest {
     @Test
     fun `seedFlow recovers from fallback when seed eventually becomes available`() =
         runTest {
-            val storedSeed = MutableStateFlow("")
+            val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
 
                     override suspend fun setSeed(seed: String) {
-                        storedSeed.value = seed
+                        storedSeed.emit(seed)
                     }
 
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        if (storedSeed.value.isEmpty()) {
+                        val current = storedSeed.replayCache.firstOrNull() ?: ""
+                        if (current.isEmpty()) {
                             delay(60.seconds)
                         }
-                        return storedSeed.value.ifEmpty { generator() }
+                        return current.ifEmpty { generator() }
                     }
                 }
 
@@ -103,6 +104,7 @@ class SimIdentityRepositorySeedTest {
                     mockSimProvider,
                     backgroundScope,
                 )
+            testScheduler.advanceUntilIdle()
 
             val identitiesList = mutableListOf<List<String>>()
             val identitiesJob =
@@ -117,10 +119,10 @@ class SimIdentityRepositorySeedTest {
             // At this point, seedFlow should have emitted FALLBACK_SEED.
             // Since getActiveSubscriptions() returns emptyList() in @Before, getActiveIdentities() will be empty.
             // But we can check that we didn't hang and seed is correctly handled.
-            assertTrue("Expected empty identities list during fallback with no SIMs", identitiesList.isNotEmpty())
+            assertTrue("Expected at least one emission from getActiveIdentities during fallback", identitiesList.isNotEmpty())
 
             // Now provide real seed
-            storedSeed.value = "real_seed"
+            storedSeed.emit("real_seed")
             // Mock a subscription so we get an identity
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(
                 listOf(
@@ -131,8 +133,8 @@ class SimIdentityRepositorySeedTest {
                         on { number } doReturn "123"
                         on { displayName } doReturn "SIM 1"
                         on { carrierName } doReturn "Carrier 1"
-                    }
-                )
+                    },
+                ),
             )
             advanceUntilIdle()
 

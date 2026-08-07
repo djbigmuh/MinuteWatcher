@@ -43,14 +43,7 @@ class WidgetUpdaterImpl
                             setWidgetLimitExceeded(false)
                         }
                         is UpdateResult.LimitExceeded -> {
-                            AppLogger.w("Widget update failed due to size limit. Re-rendering with simplified layout.")
-                            try {
-                                widget.updateAll(context)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Widget re-render after size limit failure also failed", e)
-                            }
+                            AppLogger.w("Widget update failed due to size limit. Flag set to trigger simplified layout on next update.")
                         }
                         is UpdateResult.GenericFailure -> {
                             AppLogger.d("Retrying widget update after generic failure...")
@@ -58,14 +51,7 @@ class WidgetUpdaterImpl
                             when (safeUpdateAll(context)) {
                                 is UpdateResult.Success -> setWidgetLimitExceeded(false)
                                 is UpdateResult.LimitExceeded -> {
-                                    AppLogger.w("Retry also hit size limit. Re-rendering with simplified layout.")
-                                    try {
-                                        widget.updateAll(context)
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        AppLogger.e("Widget re-render after size limit failure also failed", e)
-                                    }
+                                    AppLogger.w("Retry also hit size limit. Flag set to trigger simplified layout on next update.")
                                 }
                                 is UpdateResult.GenericFailure -> AppLogger.e("Widget update retry also failed")
                             }

@@ -92,7 +92,7 @@ object TrackingBannerMapper {
         if (status is TrackingStatus.Error &&
             status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
         ) {
-            status.message?.toIntOrNull() ?: -1
+            status.slotIndex ?: -1
         } else {
             -1
         }

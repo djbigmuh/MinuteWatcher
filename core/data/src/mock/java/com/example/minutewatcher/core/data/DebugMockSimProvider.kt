@@ -1,8 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.model.ActiveSimInfo
-import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.Constants.SimConstants
+import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import javax.inject.Inject
 

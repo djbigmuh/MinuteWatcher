@@ -13,7 +13,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -68,7 +67,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `init loads settings`() =
         runTest {
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertNotNull(viewModel.settingsState.value)
             assertFalse(viewModel.loadError.value)
             verify(loader).load()
@@ -81,11 +80,11 @@ class WidgetSettingsViewModelTest {
 
             // Initial load in init
             val initialViewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertTrue(initialViewModel.loadError.value)
 
             initialViewModel.retryLoad()
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertFalse(initialViewModel.loadError.value)
             assertNotNull(initialViewModel.settingsState.value)
         }
@@ -94,13 +93,13 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify calls save and notifies`() =
         runTest {
             whenever(saver.save(any())).thenReturn(true)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             var completed = false
             viewModel.saveAndNotify { success ->
                 completed = true
                 assertTrue(success)
             }
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             assertTrue(completed)
             verify(saver).save(any())
@@ -120,21 +119,21 @@ class WidgetSettingsViewModelTest {
                 }
             val blockingSaver = WidgetSettingsSaver(blockingLoader, mock())
             val vm = WidgetSettingsViewModel(context, loader, blockingSaver, usageStateRepository)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             var firstResult: Boolean? = null
-            var secondCompleted = false
+            var secondResult: Boolean? = null
 
             vm.saveAndNotify { firstResult = it }
             runCurrent()
             assertTrue(vm.isSaving.value)
 
-            vm.saveAndNotify { secondCompleted = true }
+            vm.saveAndNotify { secondResult = it }
             runCurrent()
-            assertFalse(secondCompleted) // второй вызов отклонён tryLock
+            assertEquals(false, secondResult) // второй вызов отклонён tryLock и вернул false
 
             gate.complete(Unit)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             assertEquals(true, firstResult)
             assertFalse(vm.isSaving.value)
@@ -143,7 +142,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `updateSettings updates state locally`() =
         runTest {
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(fontSize = 10) }
             assertEquals(10, viewModel.settingsState.value?.fontSize)
         }

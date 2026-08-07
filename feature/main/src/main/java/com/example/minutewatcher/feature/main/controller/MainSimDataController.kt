@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainSimDataController
     @Inject
     constructor(
-        usageStateRepository: UsageStateRepository,
+        private val usageStateRepository: UsageStateRepository,
         private val trackingRecoveryController: TrackingRecoveryController,
         private val simIdentityRepository: SimIdentityRepository,
         private val simLimitsRepository: SimLimitsRepository,
@@ -145,6 +145,8 @@ class MainSimDataController
         fun retryShortcuts() = trackingRecoveryController.retryShortcuts()
 
         fun retryTraffic(onRefresh: suspend () -> Unit) = trackingRecoveryController.retryTraffic(scope, onRefresh)
+
+        fun getSnapshot() = usageStateRepository.observeSnapshot().value
 
         fun notifyDataChanged(force: Boolean = false) {
             scope.launch {

@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -39,14 +41,17 @@ class UpdateCoordinator
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
         private val forceUpdateFlow =
-            MutableSharedFlow<Unit>(
-                replay = 0,
+            MutableSharedFlow<Long>(
+                replay = 1,
                 extraBufferCapacity = 64,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
 
         init {
             scope.launch {
+                val startTime = System.nanoTime()
+                var lastProcessedHash: Int? = null
+
                 val snapshotFlow =
                     usageStateRepository
                         .observeSnapshot()
@@ -55,19 +60,35 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(old) ==
                                 SnapshotUtils.calculateContentHash(new)
                         }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .map { UpdateEvent.Snapshot(SnapshotUtils.calculateContentHash(it)) }
 
-                val forceFlow = forceUpdateFlow
+                val forceFlow =
+                    forceUpdateFlow
+                        .filter { it > startTime }
+                        .map { UpdateEvent.Force }
 
-                merge(snapshotFlow, forceFlow).collect {
+                merge(snapshotFlow, forceFlow).collect { event ->
                     try {
-                        widgetUpdater.updateAll()
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        val currentSnapshot = usageStateRepository.observeSnapshot().value
+                        val currentHash = SnapshotUtils.calculateContentHash(currentSnapshot)
+
+                        if (event is UpdateEvent.Force || currentHash != lastProcessedHash) {
+                            widgetUpdater.updateAll()
+                            lastProcessedHash = currentHash
+                        }
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         AppLogger.e("Widget update failed in coordinator", e)
                     }
                 }
             }
+        }
+
+        private sealed class UpdateEvent {
+            object Force : UpdateEvent()
+
+            data class Snapshot(val hash: Int) : UpdateEvent()
         }
 
         /**
@@ -78,7 +99,7 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             if (updateWidget && force) {
-                forceUpdateFlow.tryEmit(Unit)
+                forceUpdateFlow.tryEmit(System.nanoTime())
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }
