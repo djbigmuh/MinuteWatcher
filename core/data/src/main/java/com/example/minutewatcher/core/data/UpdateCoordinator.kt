@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,7 +34,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * за снимками состояния (observeSnapshot) живет в течение всего времени работы приложения
  * после первого вызова [notifyDataChanged].
  */
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @Singleton
 class UpdateCoordinator
     @Inject
@@ -47,6 +48,7 @@ class UpdateCoordinator
 
         private val forceUpdateFlow =
             MutableSharedFlow<Long>(
+                replay = 1,
                 extraBufferCapacity = 64,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
@@ -85,6 +87,10 @@ class UpdateCoordinator
                             widgetUpdater.updateAll()
                             lastProcessedHash = currentHash
                         }
+
+                        if (event is UpdateEvent.Force) {
+                            forceUpdateFlow.resetReplayCache()
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -111,7 +117,12 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             if (updateWidget && force) {
-                forceUpdateFlow.tryEmit(forceCounter.incrementAndGet())
+                val emitted = forceUpdateFlow.tryEmit(forceCounter.incrementAndGet())
+                if (!emitted) {
+                    AppLogger.w("UpdateCoordinator: force update signal dropped, buffer full")
+                    // Fallback: прямое обновление
+                    widgetUpdater.updateAll()
+                }
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }

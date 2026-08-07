@@ -114,7 +114,7 @@ class WidgetUpdaterImpl
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
-            val isTransactionTooLarge = e.cause is android.os.TransactionTooLargeException
+            val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
             val stackTrace = e.stackTraceToString()
             val isStackTraceLimit =
                 stackTrace.contains(MARKER_REMOTE_VIEWS, ignoreCase = true) &&
@@ -123,8 +123,20 @@ class WidgetUpdaterImpl
             return isTransactionTooLarge || isStackTraceLimit
         }
 
+        private fun hasCauseOfType(
+            e: Throwable,
+            type: Class<out Throwable>,
+        ): Boolean {
+            var current: Throwable? = e
+            while (current != null) {
+                if (type.isInstance(current)) return true
+                current = current.cause
+            }
+            return false
+        }
+
         companion object {
-            private const val MARKER_REMOTE_VIEWS = "RemoteViews"
-            private const val MARKER_TRANSACTION_TOO_LARGE = "TransactionTooLarge"
+            private const val MARKER_REMOTE_VIEWS = "android.widget.RemoteViews"
+            private const val MARKER_TRANSACTION_TOO_LARGE = "TransactionTooLargeException"
         }
     }

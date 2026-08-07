@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -39,7 +38,6 @@ class WidgetSettingsViewModelTest {
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
-    private var saveDeferred = CompletableDeferred<Boolean>()
 
     private lateinit var viewModel: WidgetSettingsViewModel
 
@@ -47,7 +45,6 @@ class WidgetSettingsViewModelTest {
     fun setup() =
         runTest {
             Dispatchers.setMain(UnconfinedTestDispatcher())
-            saveDeferred = CompletableDeferred()
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
             val snapshotFlow = MutableStateFlow(snapshot)
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)

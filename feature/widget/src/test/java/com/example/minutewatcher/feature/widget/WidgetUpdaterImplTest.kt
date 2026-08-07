@@ -20,9 +20,9 @@ class WidgetUpdaterImplTest {
     fun setup() {
         updater =
             WidgetUpdaterImpl(
-                context,
-                scope,
-                appSettingsRepository,
+                context = context,
+                scope = scope,
+                appSettingsRepository = appSettingsRepository,
             )
     }
 
@@ -35,7 +35,11 @@ class WidgetUpdaterImplTest {
     @Test
     fun `isRemoteViewsLimitException returns true for TransactionTooLargeException cause`() {
         val cause = android.os.TransactionTooLargeException()
-        val e = IllegalArgumentException("Failure sending RemoteViews", cause)
+        val e =
+            IllegalArgumentException(
+                "Failure sending RemoteViews",
+                cause,
+            )
         assertTrue(updater.isRemoteViewsLimitException(e))
     }
 

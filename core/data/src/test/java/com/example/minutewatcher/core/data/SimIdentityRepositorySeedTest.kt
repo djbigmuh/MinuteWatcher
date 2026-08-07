@@ -29,6 +29,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -49,6 +50,8 @@ class SimIdentityRepositorySeedTest {
             on { getMockSims(any()) }.thenReturn(null)
         }
 
+    private val permissionChanges = MutableSharedFlow<Unit>(replay = 1)
+
     @Before
     fun setup() {
         context = mock()
@@ -60,7 +63,7 @@ class SimIdentityRepositorySeedTest {
             mock {
                 on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
             }
-        whenever(permissionStateNotifier.changes).doReturn(MutableSharedFlow())
+        whenever(permissionStateNotifier.changes).doReturn(permissionChanges)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
@@ -138,7 +141,11 @@ class SimIdentityRepositorySeedTest {
             whenever(mockSubInfo.carrierName).thenReturn("Carrier 1")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
+            // Trigger re-emission
+            permissionChanges.emit(Unit)
             advanceUntilIdle()
+            // SimIdentityRepositoryImpl has a debounce(300.milliseconds) in observeIdentities()
+            testScheduler.advanceTimeBy(400.milliseconds)
 
             // It should now have emitted identities based on real_seed.
             assertTrue(

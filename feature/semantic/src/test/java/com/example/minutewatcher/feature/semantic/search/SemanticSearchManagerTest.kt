@@ -15,12 +15,14 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -107,10 +109,13 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "A",
                             isActive = true,
-                            entities =
-                                mapOf(
-                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
+                            entities = mapOf(
+                                PackageType.MINUTES to createEntity(
+                                    slot = 0,
+                                    type = PackageType.MINUTES,
+                                    remaining = 100,
                                 ),
+                            ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -139,10 +144,13 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "A",
                             isActive = true,
-                            entities =
-                                mapOf(
-                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
+                            entities = mapOf(
+                                PackageType.MINUTES to createEntity(
+                                    slot = 0,
+                                    type = PackageType.MINUTES,
+                                    remaining = 100,
                                 ),
+                            ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -159,10 +167,13 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "A",
                             isActive = true,
-                            entities =
-                                mapOf(
-                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 101),
+                            entities = mapOf(
+                                PackageType.MINUTES to createEntity(
+                                    slot = 0,
+                                    type = PackageType.MINUTES,
+                                    remaining = 101,
                                 ),
+                            ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -171,12 +182,29 @@ class SemanticSearchManagerTest {
 
             assertTrue(manager.status.value is TrackingStatus.Error)
 
+            // Recovery
             fakeWrapper.failAllPutDocuments = false
+            fakeWrapper.lastSession?.failPutDocuments = false
+            testScheduler.advanceUntilIdle()
+
+            // Verify that the hash for updated data is not -1 (the error state value)
+            assertNotEquals(
+                "Hash should not be -1 for real data",
+                -1,
+                SnapshotUtils.calculateContentHash(updatedSnapshot),
+            )
+
             manager.indexSnapshot(updatedSnapshot)
 
-            assertTrue(manager.status.value is TrackingStatus.Active)
+            assertTrue(
+                "Status should be Active after recovery, but was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Active,
+            )
             val currentSession = fakeWrapper.lastSession!!
-            assertTrue(currentSession.putRequests.isNotEmpty())
+            assertTrue(
+                "Should have performed puts after recovery",
+                currentSession.putRequests.isNotEmpty(),
+            )
         }
 
     @Test
@@ -191,10 +219,13 @@ class SemanticSearchManagerTest {
                             identity = "sim_1",
                             operator = "B",
                             isActive = true,
-                            entities =
-                                mapOf(
-                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50),
+                            entities = mapOf(
+                                PackageType.DATA to createEntity(
+                                    slot = 1,
+                                    type = PackageType.DATA,
+                                    remaining = 50,
                                 ),
+                            ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -276,10 +307,13 @@ class SemanticSearchManagerTest {
                             identity = "sim_0",
                             operator = "TestOp",
                             isActive = true,
-                            entities =
-                                mapOf(
-                                    PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 99),
+                            entities = mapOf(
+                                PackageType.MINUTES to createEntity(
+                                    slot = 0,
+                                    type = PackageType.MINUTES,
+                                    remaining = 99,
                                 ),
+                            ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -355,10 +389,13 @@ class SemanticSearchManagerTest {
                     identity = "sim_0",
                     operator = "TestOp",
                     isActive = true,
-                    entities =
-                        mapOf(
-                            PackageType.MINUTES to createEntity(0, PackageType.MINUTES, 100),
+                    entities = mapOf(
+                        PackageType.MINUTES to createEntity(
+                            slot = 0,
+                            type = PackageType.MINUTES,
+                            remaining = 100,
                         ),
+                    ),
                     autoResetDay = 1,
                 ),
             ),

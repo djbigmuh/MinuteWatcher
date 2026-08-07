@@ -27,33 +27,14 @@ class WidgetSettingsRepository
             coroutineScope {
                 val settings = appSettingsRepository.getAppSettings().first()
 
-                var activeSimsResult = simIdentityRepository.observeActiveSims().firstWithTimeout()
-                if (activeSimsResult == null) {
-                    AppLogger.w(
-                        "WidgetSettingsRepository: observeActiveSims timed out, retrying with " +
-                            "${Constants.Flow.RETRY_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s...",
-                    )
-                    activeSimsResult =
-                        simIdentityRepository.observeActiveSims().firstWithTimeout(Constants.Flow.RETRY_TIMEOUT_MS)
-                    if (activeSimsResult == null) {
-                        AppLogger.e("WidgetSettingsRepository: failed to load active SIMs after retry")
-                        val fallbackSimStates = SimConstants.SUPPORTED_SLOT_INDICES.associateWith { SimSettingsState() }
-                        return@coroutineScope WidgetSettingsState(
-                            layoutMode = settings.widgetLayoutMode,
-                            simArrangement = settings.widgetSimArrangement,
-                            transparency = settings.widgetTransparency,
-                            fontSize = settings.widgetFontSize,
-                            backgroundColor = settings.widgetBackgroundColor,
-                            notifyLowMinutes = settings.notifyLowMinutes,
-                            notifyLowTraffic = settings.notifyLowTraffic,
-                            callTrackingEnabled = settings.callTrackingEnabled,
-                            simStates = fallbackSimStates,
-                            widgetLimitExceeded = settings.widgetLimitExceeded,
-                            settingsLoadFailed = true,
-                        )
-                    }
+                val activeSims =
+                    simIdentityRepository
+                        .observeActiveSims()
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                if (activeSims == null) {
+                    AppLogger.e("WidgetSettingsRepository: failed to load active SIMs")
+                    return@coroutineScope getFallbackWidgetSettings(settings)
                 }
-                val activeSims = activeSimsResult
 
                 // Use the fresh activeSims to load settings in one atomic-like operation to minimize inconsistency.
                 val realIdentities = activeSims.map { it.identity.stableId }
@@ -123,5 +104,22 @@ class WidgetSettingsRepository
                 }
             }
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
+        }
+
+        private fun getFallbackWidgetSettings(settings: com.example.minutewatcher.core.model.AppSettings): WidgetSettingsState {
+            val fallbackSimStates = SimConstants.SUPPORTED_SLOT_INDICES.associateWith { SimSettingsState() }
+            return WidgetSettingsState(
+                layoutMode = settings.widgetLayoutMode,
+                simArrangement = settings.widgetSimArrangement,
+                transparency = settings.widgetTransparency,
+                fontSize = settings.widgetFontSize,
+                backgroundColor = settings.widgetBackgroundColor,
+                notifyLowMinutes = settings.notifyLowMinutes,
+                notifyLowTraffic = settings.notifyLowTraffic,
+                callTrackingEnabled = settings.callTrackingEnabled,
+                simStates = fallbackSimStates,
+                widgetLimitExceeded = settings.widgetLimitExceeded,
+                settingsLoadFailed = true,
+            )
         }
     }

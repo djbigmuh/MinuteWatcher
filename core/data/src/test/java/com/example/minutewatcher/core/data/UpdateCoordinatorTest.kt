@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -32,6 +33,10 @@ class UpdateCoordinatorTest {
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
         snapshotFlow.tryEmit(createEmptySnapshot())
+
+        runTest {
+            whenever(dataRefreshNotifier.notifyRefresh(any())).thenAnswer { }
+        }
     }
 
     @Test

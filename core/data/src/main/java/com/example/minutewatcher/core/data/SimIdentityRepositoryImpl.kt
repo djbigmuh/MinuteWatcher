@@ -58,21 +58,22 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 @Suppress("LongParameterList")
-class SimIdentityRepositoryImpl
-    @Inject
-    constructor(
-        @param:ApplicationContext private val context: Context,
-        private val subscriptionManager: SubscriptionManager,
-        private val permissionManager: PermissionManager,
-        permissionStateNotifier: PermissionStateNotifier,
-        @SimDataStore dataStore: DataStore<Preferences>,
-        private val seedRepository: SimIdentitySeedRepository,
-        appSettingsRepository: AppSettingsRepository,
-        private val migrationService: IdentityMigrationService,
-        private val mockSimProvider: MockSimProvider,
-        @ApplicationScope private val scope: CoroutineScope,
-    ) : BaseDataStoreRepository(dataStore),
-        SimIdentityRepository {
+class SimIdentityRepositoryImpl @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val subscriptionManager: SubscriptionManager,
+    private val permissionManager: PermissionManager,
+    permissionStateNotifier: PermissionStateNotifier,
+    @SimDataStore dataStore: DataStore<Preferences>,
+    private val seedRepository: SimIdentitySeedRepository,
+    appSettingsRepository: AppSettingsRepository,
+    private val migrationService: IdentityMigrationService,
+    private val mockSimProvider: MockSimProvider,
+    @ApplicationScope private val scope: CoroutineScope,
+)
+    : BaseDataStoreRepository(
+        dataStore,
+    ),
+    SimIdentityRepository {
         private sealed interface SeedResult {
             data class Real(val value: String) : SeedResult
 
@@ -87,8 +88,7 @@ class SimIdentityRepositoryImpl
         private val seedFlow: Flow<SeedResult> =
             flow {
                 val currentSeed =
-                    seedRepository
-                        .seedFlow
+                    seedRepository.seedFlow
                         .filter { it.isNotEmpty() }
                         .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
@@ -96,31 +96,14 @@ class SimIdentityRepositoryImpl
                     emit(SeedResult.Real(currentSeed))
                     emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
                 } else {
-                    var result: String? = null
-                    for (attempt in 1..2) {
-                        result =
-                            withTimeoutOrNull(
-                                Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds,
-                            ) {
-                                seedRepository.getOrCreateSeed {
-                                    UUID.randomUUID().toString()
-                                }
-                            }
-                        if (result != null) break
-                        if (attempt == 1) {
-                            AppLogger.w("Identity seed generation timeout, retrying once...")
-                            delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
-                        }
-                    }
-
-                    if (result == null) {
-                        AppLogger.e("Failed to generate identity seed after retries. Using slot-based fallback.")
-                        emit(SeedResult.Fallback)
-                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
+                    val generated = generateSeedWithRetry()
+                    if (generated != null) {
+                        emit(SeedResult.Real(generated))
                     } else {
-                        emit(SeedResult.Real(result))
-                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
+                        AppLogger.e("Failed to generate identity seed. Using slot-based fallback.")
+                        emit(SeedResult.Fallback)
                     }
+                    emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
                 }
             }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
@@ -433,8 +416,22 @@ class SimIdentityRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
         }
 
+        private suspend fun generateSeedWithRetry(): String? {
+            for (attempt in 1..SEED_RETRY_ATTEMPTS) {
+                val result =
+                    withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                        seedRepository.getOrCreateSeed { UUID.randomUUID().toString() }
+                    }
+                if (result != null) return result
+                if (attempt < SEED_RETRY_ATTEMPTS) {
+                    AppLogger.w("Identity seed generation timeout, retrying ($attempt/$SEED_RETRY_ATTEMPTS)...")
+                    delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+                }
+            }
+            return null
+        }
+
         companion object {
-            private const val FALLBACK_SEED = "MW_FALLBACK_SEED"
-            private const val MOCK_IDENTITY_PREFIX = "mock_"
+            private const val SEED_RETRY_ATTEMPTS = 2
         }
     }

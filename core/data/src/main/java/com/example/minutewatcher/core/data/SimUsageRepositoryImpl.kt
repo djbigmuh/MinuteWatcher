@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -143,16 +144,18 @@ class SimUsageRepositoryImpl
             nowMillis: Long,
         ): Boolean =
             resetMutex.withLock {
-                var didReset = false
+                val didReset = AtomicBoolean(false)
                 dataStore.edit { prefs ->
                     val lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L
                     val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
                     if (lastResetDate < periodStart) {
                         prefs.applyResetWithRollover(identity, nowMillis)
-                        didReset = true
+                        didReset.set(true)
+                    } else {
+                        didReset.set(false)
                     }
                 }
-                didReset
+                didReset.get()
             }
 
         private fun MutablePreferences.applyResetWithRollover(

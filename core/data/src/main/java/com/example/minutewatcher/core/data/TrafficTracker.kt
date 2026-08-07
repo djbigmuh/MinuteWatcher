@@ -492,7 +492,7 @@ class TrafficTracker
 
                 baselineNeedsRetry.keys.removeAll { it != identity }
 
-                if (handleRetryLimitExceeded(identity, retryCount, currentDataSubId)) return
+                if (handleRetryLimitExceeded(identity, retryCount)) return
 
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
                 val statsResult = fetchStatsOnSimChange(usage)
@@ -513,7 +513,6 @@ class TrafficTracker
         private suspend fun handleRetryLimitExceeded(
             identity: String,
             retryCount: Int,
-            currentDataSubId: Int,
         ): Boolean {
             if (retryCount >= MAX_BASELINE_RETRIES) {
                 AppLogger.w(
@@ -543,6 +542,10 @@ class TrafficTracker
             statsResult: StatsResult,
             retryCount: Int,
         ) {
+            if (retryCount >= MAX_BASELINE_RETRIES) {
+                AppLogger.w("Baseline retry limit reached for $identity, will force reset on next SIM change")
+                return
+            }
             val reason =
                 if (statsResult is StatsResult.Error) {
                     statsResult.exception.message ?: "Stats error"
