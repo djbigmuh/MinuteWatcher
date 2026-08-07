@@ -15,14 +15,12 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -100,26 +98,8 @@ class SemanticSearchManagerTest {
     fun `indexSnapshot hash check skips identical data`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
+            val s = createTestSnapshot(100)
 
-            val s =
-                createSnapshot(
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operator = "A",
-                            isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(
-                                    slot = 0,
-                                    type = PackageType.MINUTES,
-                                    remaining = 100,
-                                ),
-                            ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                )
             manager.indexSnapshot(s)
             val session = fakeWrapper.lastSession!!
             val initialPuts = session.putRequests.size
@@ -136,75 +116,22 @@ class SemanticSearchManagerTest {
     fun `putDocuments failure sets error status and does not update hash`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val snapshot =
-                createSnapshot(
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operator = "A",
-                            isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(
-                                    slot = 0,
-                                    type = PackageType.MINUTES,
-                                    remaining = 100,
-                                ),
-                            ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                )
+            val snapshot = createTestSnapshot(100)
 
             manager.indexSnapshot(snapshot)
             fakeWrapper.failAllPutDocuments = true
 
-            val updatedSnapshot =
-                createSnapshot(
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operator = "A",
-                            isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(
-                                    slot = 0,
-                                    type = PackageType.MINUTES,
-                                    remaining = 101,
-                                ),
-                            ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                )
+            val updatedSnapshot = createTestSnapshot(101)
             manager.indexSnapshot(updatedSnapshot)
 
             assertTrue(manager.status.value is TrackingStatus.Error)
 
-            // Recovery
             fakeWrapper.failAllPutDocuments = false
-            fakeWrapper.lastSession?.failPutDocuments = false
-            testScheduler.advanceUntilIdle()
-
-            // Verify that the hash for updated data is not -1 (the error state value)
-            assertNotEquals(
-                "Hash should not be -1 for real data",
-                -1,
-                SnapshotUtils.calculateContentHash(updatedSnapshot),
-            )
-
             manager.indexSnapshot(updatedSnapshot)
 
-            assertTrue(
-                "Status should be Active after recovery, but was ${manager.status.value}",
-                manager.status.value is TrackingStatus.Active,
-            )
+            assertTrue(manager.status.value is TrackingStatus.Active)
             val currentSession = fakeWrapper.lastSession!!
-            assertTrue(
-                "Should have performed puts after recovery",
-                currentSession.putRequests.isNotEmpty(),
-            )
+            assertTrue(currentSession.putRequests.isNotEmpty())
         }
 
     @Test
@@ -219,13 +146,10 @@ class SemanticSearchManagerTest {
                             identity = "sim_1",
                             operator = "B",
                             isActive = true,
-                            entities = mapOf(
-                                PackageType.DATA to createEntity(
-                                    slot = 1,
-                                    type = PackageType.DATA,
-                                    remaining = 50,
+                            entities =
+                                mapOf(
+                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50),
                                 ),
-                            ),
                             autoResetDay = 1,
                         ),
                     ),
@@ -299,25 +223,7 @@ class SemanticSearchManagerTest {
 
             // 2. Simulate failure that leads to retry
             session1.failPutDocuments = true
-            val updatedSnapshot =
-                createSnapshot(
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operator = "TestOp",
-                            isActive = true,
-                            entities = mapOf(
-                                PackageType.MINUTES to createEntity(
-                                    slot = 0,
-                                    type = PackageType.MINUTES,
-                                    remaining = 99,
-                                ),
-                            ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                )
+            val updatedSnapshot = createTestSnapshot(99)
 
             manager.indexSnapshot(updatedSnapshot)
 
@@ -381,25 +287,24 @@ class SemanticSearchManagerTest {
             isManualUpdate = true,
         )
 
-    private fun createSnapshotWithOneSim() =
+    private fun createTestSnapshot(remaining: Long) =
         createSnapshot(
             listOf(
                 SimSnapshot(
                     slot = 0,
                     identity = "sim_0",
-                    operator = "TestOp",
+                    operator = "A",
                     isActive = true,
-                    entities = mapOf(
-                        PackageType.MINUTES to createEntity(
-                            slot = 0,
-                            type = PackageType.MINUTES,
-                            remaining = 100,
+                    entities =
+                        mapOf(
+                            PackageType.MINUTES to createEntity(0, PackageType.MINUTES, remaining),
                         ),
-                    ),
                     autoResetDay = 1,
                 ),
             ),
         )
+
+    private fun createSnapshotWithOneSim() = createTestSnapshot(100)
 
     private class FakeAppSearchWrapper : AppSearchWrapper {
         var createdSessions = 0

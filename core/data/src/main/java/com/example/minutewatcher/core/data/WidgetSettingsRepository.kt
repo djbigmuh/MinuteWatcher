@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
@@ -106,7 +107,7 @@ class WidgetSettingsRepository
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
         }
 
-        private fun getFallbackWidgetSettings(settings: com.example.minutewatcher.core.model.AppSettings): WidgetSettingsState {
+        private fun getFallbackWidgetSettings(settings: AppSettings): WidgetSettingsState {
             val fallbackSimStates = SimConstants.SUPPORTED_SLOT_INDICES.associateWith { SimSettingsState() }
             return WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,

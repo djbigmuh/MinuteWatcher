@@ -58,22 +58,21 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 @Suppress("LongParameterList")
-class SimIdentityRepositoryImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-    private val subscriptionManager: SubscriptionManager,
-    private val permissionManager: PermissionManager,
-    permissionStateNotifier: PermissionStateNotifier,
-    @SimDataStore dataStore: DataStore<Preferences>,
-    private val seedRepository: SimIdentitySeedRepository,
-    appSettingsRepository: AppSettingsRepository,
-    private val migrationService: IdentityMigrationService,
-    private val mockSimProvider: MockSimProvider,
-    @ApplicationScope private val scope: CoroutineScope,
-)
-    : BaseDataStoreRepository(
-        dataStore,
-    ),
-    SimIdentityRepository {
+class SimIdentityRepositoryImpl
+    @Inject
+    constructor(
+        @param:ApplicationContext private val context: Context,
+        private val subscriptionManager: SubscriptionManager,
+        private val permissionManager: PermissionManager,
+        permissionStateNotifier: PermissionStateNotifier,
+        @SimDataStore dataStore: DataStore<Preferences>,
+        private val seedRepository: SimIdentitySeedRepository,
+        appSettingsRepository: AppSettingsRepository,
+        private val migrationService: IdentityMigrationService,
+        private val mockSimProvider: MockSimProvider,
+        @ApplicationScope private val scope: CoroutineScope,
+    ) : BaseDataStoreRepository(dataStore),
+        SimIdentityRepository {
         private sealed interface SeedResult {
             data class Real(val value: String) : SeedResult
 
@@ -366,9 +365,11 @@ class SimIdentityRepositoryImpl @Inject constructor(
         }
 
         override fun getActiveIdentities(): Flow<List<String>> =
-            observeActiveSims().map { sims ->
-                sims.map { it.identity.stableId }
-            }
+            seedFlow.flatMapLatest {
+                observeActiveSims().map { sims ->
+                    sims.map { it.identity.stableId }
+                }
+            }.distinctUntilChanged()
 
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =

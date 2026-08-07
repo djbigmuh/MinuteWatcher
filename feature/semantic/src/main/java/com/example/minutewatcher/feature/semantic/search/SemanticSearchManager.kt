@@ -137,21 +137,31 @@ open class SemanticSearchManager
                     try {
                         result = executeIndexing(snapshot, currentHash)
                     } catch (e: AppSearchException) {
-                        AppLogger.w("AppSearch session error, retrying once: ${e.message}")
-                        session?.close()
-                        session = null
-                        if (ensureSession()) {
-                            try {
-                                result = executeIndexing(snapshot, currentHash)
-                            } catch (retryException: Exception) {
-                                AppLogger.e("AppSearch indexing failed again after retry", retryException)
-                                lastSnapshotHash = -1
-                                _status.value =
-                                    TrackingStatus.Error(
-                                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                                        retryException.message,
-                                    )
+                        if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                            AppLogger.w("AppSearch schema mismatch, retrying with force override")
+                            session?.close()
+                            session = null
+                            if (ensureSession(forceOverride = true)) {
+                                try {
+                                    result = executeIndexing(snapshot, currentHash)
+                                } catch (retryException: Exception) {
+                                    AppLogger.e("AppSearch indexing failed again after retry", retryException)
+                                    lastSnapshotHash = -1
+                                    _status.value =
+                                        TrackingStatus.Error(
+                                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                                            retryException.message,
+                                        )
+                                }
                             }
+                        } else {
+                            AppLogger.e("AppSearch indexing failed", e)
+                            lastSnapshotHash = -1
+                            _status.value =
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                                    e.message,
+                                )
                         }
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch non-AppSearch error during indexing", e)

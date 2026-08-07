@@ -29,7 +29,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -50,7 +49,7 @@ class SimIdentityRepositorySeedTest {
             on { getMockSims(any()) }.thenReturn(null)
         }
 
-    private val permissionChanges = MutableSharedFlow<Unit>(replay = 1)
+    private val permissionChanges = MutableSharedFlow<Unit>(replay = 1).apply { tryEmit(Unit) }
 
     @Before
     fun setup() {
@@ -132,6 +131,9 @@ class SimIdentityRepositorySeedTest {
 
             // Now provide real seed
             storedSeed.emit("real_seed")
+            // Give time for seedFlow to propagate through flatMapLatest
+            advanceUntilIdle()
+
             // Mock a subscription so we get an identity
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
@@ -141,18 +143,14 @@ class SimIdentityRepositorySeedTest {
             whenever(mockSubInfo.carrierName).thenReturn("Carrier 1")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-            // Trigger re-emission
+            // Trigger re-emission in callbackFlow via permission notifier
             permissionChanges.emit(Unit)
             advanceUntilIdle()
-            // SimIdentityRepositoryImpl has a debounce(300.milliseconds) in observeIdentities()
-            testScheduler.advanceTimeBy(400.milliseconds)
 
             // It should now have emitted identities based on real_seed.
             assertTrue(
-                "Expected some identities in $identitiesList",
-                identitiesList
-                    .last()
-                    .isNotEmpty(),
+                "Expected some identities in $identitiesList. Last emission: ${identitiesList.lastOrNull()}",
+                identitiesList.isNotEmpty() && identitiesList.last().isNotEmpty(),
             )
 
             identitiesJob.cancel()
