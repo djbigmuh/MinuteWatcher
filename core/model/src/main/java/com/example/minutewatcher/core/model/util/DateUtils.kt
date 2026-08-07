@@ -6,10 +6,12 @@ object DateUtils {
     fun getMonthProgressPercentage(
         resetDay: Int,
         nowMillis: Long = System.currentTimeMillis(),
-    ): Int = BillingPeriodCalculator.calculate(resetDay, nowMillis, zoneId = ZoneId.systemDefault()).progressPercentage
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): Int = BillingPeriodCalculator.calculate(resetDay, nowMillis, zoneId).progressPercentage
 
     fun getDaysRemainingInMonth(
         resetDay: Int,
         nowMillis: Long = System.currentTimeMillis(),
-    ): Int = BillingPeriodCalculator.calculate(resetDay, nowMillis, zoneId = ZoneId.systemDefault()).daysRemaining
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): Int = BillingPeriodCalculator.calculate(resetDay, nowMillis, zoneId).daysRemaining
 }

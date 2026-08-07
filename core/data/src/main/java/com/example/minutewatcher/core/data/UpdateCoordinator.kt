@@ -41,12 +41,11 @@ class UpdateCoordinator
             scope.launch {
                 usageStateRepository
                     .observeSnapshot()
-                    .filter { it.timestamp > 0L }
+                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                     .distinctUntilChanged { old, new ->
-                        SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
-                    }
-                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                    .collect { snapshot ->
+                        SnapshotUtils.calculateContentHash(old) ==
+                            SnapshotUtils.calculateContentHash(new)
+                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds).collect { snapshot ->
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
                         if (newHash != lastSnapshotHash.get()) {
                             lastSnapshotHash.set(newHash)
@@ -63,10 +62,11 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             if (updateWidget && force) {
-                // При force=true обновляем немедленно, игнорируя проверку хэша
+                val snapshot = usageStateRepository.observeSnapshot().value
+                if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                    lastSnapshotHash.set(SnapshotUtils.calculateContentHash(snapshot))
+                }
                 widgetUpdater.updateAll()
-                // Обновляем хэш, чтобы избежать немедленного повторного обновления из реактивного цикла
-                lastSnapshotHash.set(SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value))
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }

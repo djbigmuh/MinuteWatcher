@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +24,7 @@ class SimIdentitySeedRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : SimIdentitySeedRepository {
+
         companion object {
             private val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
         }

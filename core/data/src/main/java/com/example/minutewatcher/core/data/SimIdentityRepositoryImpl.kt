@@ -119,12 +119,19 @@ class SimIdentityRepositoryImpl
                             if (s.isNotEmpty()) {
                                 emit(SeedResult.Real(s))
                             } else {
-                                // If seed is empty, retry generation after some time
-                                delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
-                                val retryGenerated = generateSeedWithRetry()
-                                if (retryGenerated != null) {
-                                    emit(SeedResult.Real(retryGenerated))
+                                var currentDelayMs = Constants.Flow.RETRY_DELAY_MS
+                                var attempt = 0
+                                while (attempt < MAX_SEED_RETRY) {
+                                    delay(currentDelayMs.milliseconds)
+                                    val retrySeed = generateSeedWithRetry()
+                                    if (retrySeed != null) {
+                                        emit(SeedResult.Real(retrySeed))
+                                        return@transformLatest
+                                    }
+                                    currentDelayMs = (currentDelayMs * 2).coerceAtMost(MAX_SEED_DELAY_MS)
+                                    attempt++
                                 }
+                                // After exhausting retries, just wait for non-empty emit from seedFlow
                             }
                         },
                     )
@@ -314,11 +321,13 @@ class SimIdentityRepositoryImpl
 
                 if (toUpdate.isEmpty()) return@withLock
 
-                val toMigrate =
-                    toUpdate.filter { identity ->
-                        val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-                        currentSlot == null && migratedIdentities.add(identity.stableId)
+                val toMigrate = mutableListOf<SimIdentity>()
+                toUpdate.forEach { identity ->
+                    val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+                    if (currentSlot == null && migratedIdentities.add(identity.stableId)) {
+                        toMigrate.add(identity)
                     }
+                }
 
                 dataStore.edit { prefs ->
                     toUpdate.forEach { identity ->
@@ -398,19 +407,14 @@ class SimIdentityRepositoryImpl
         }
 
         override fun getActiveIdentities(): Flow<List<String>> =
-            seedFlow
-                .flatMapLatest {
-                    observeActiveSims()
-                        .map { sims ->
-                            sims.map { it.identity.stableId }
-                        }
+            observeActiveSims()
+                .map { sims ->
+                    sims.map { it.identity.stableId }
                 }.distinctUntilChanged()
 
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =
             getActiveIdentities()
-                // Используем debounce для предотвращения "дребезга" при множественных быстрых изменениях
-                // состояния подписок от ОС (например, при переключении сетей или вставке SIM).
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
 
         override fun getSimOperator(identity: String): Flow<String> =
@@ -470,5 +474,7 @@ class SimIdentityRepositoryImpl
 
         companion object {
             private const val SEED_RETRY_ATTEMPTS = 2
+            private const val MAX_SEED_RETRY = 5
+            private const val MAX_SEED_DELAY_MS = 16_000L
         }
     }

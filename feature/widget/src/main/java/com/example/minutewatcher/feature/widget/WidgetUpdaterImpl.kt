@@ -41,7 +41,8 @@ class WidgetUpdaterImpl
             updateJob?.cancel()
             updateJob = scope.launch {
                 try {
-                    when (safeUpdateAll(context)) {
+                    val result = safeUpdateAll(context)
+                    when (result) {
                         is UpdateResult.Success -> {
                             setWidgetLimitExceeded(false)
                         }
@@ -127,7 +128,15 @@ class WidgetUpdaterImpl
             // Это эвристика, так как система может выбрасывать IAE с текстом о размере данных.
             val isMessageLimit = e.message?.contains(MARKER_REMOTE_VIEWS_SHORT, ignoreCase = true) == true
 
-            return isTransactionTooLarge || isMessageLimit
+            // Проверяем stack trace на маркеры RemoteViews / TransactionTooLargeException
+            val isStackLimit =
+                e.stackTrace.any { frame ->
+                    val cls = frame.className ?: ""
+                    cls.contains("RemoteViews", ignoreCase = true) ||
+                        cls.contains("TransactionTooLargeException", ignoreCase = true)
+                }
+
+            return isTransactionTooLarge || isMessageLimit || isStackLimit
         }
 
         private fun hasCauseOfType(

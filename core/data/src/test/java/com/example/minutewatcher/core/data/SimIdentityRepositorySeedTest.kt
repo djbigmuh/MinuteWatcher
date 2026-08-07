@@ -142,12 +142,17 @@ class SimIdentityRepositorySeedTest {
 
             // Now provide real seed
             storedSeed.emit("real_seed")
+            testScheduler.advanceUntilIdle()
+            // Just in case there are any debounces or delays in the chain
+            testScheduler.advanceTimeBy(1000)
             advanceUntilIdle()
 
             // It should now have emitted identities based on real_seed.
             assertTrue(
-                "Expected identities based on real_seed in $identitiesList. Last emission: ${identitiesList.lastOrNull()}",
-                identitiesList.isNotEmpty() && identitiesList.last().isNotEmpty() &&
+                "Expected identities based on real_seed in $identitiesList. " +
+                    "Last emission: ${identitiesList.lastOrNull()}",
+                identitiesList.isNotEmpty() &&
+                    identitiesList.last().isNotEmpty() &&
                     identitiesList.last().first() != fallbackIdentity,
             )
 

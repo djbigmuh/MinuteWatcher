@@ -19,11 +19,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -421,7 +421,9 @@ class CallTracker
         /**
          * Wrapper to handle nullable values in [readWithRetry].
          */
-        private data class Box<out T>(val value: T)
+        private data class Box<out T>(
+            val value: T,
+        )
 
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
             val startTime = readWithRetry { callSessionRepository.getCallStartTime(subId) }

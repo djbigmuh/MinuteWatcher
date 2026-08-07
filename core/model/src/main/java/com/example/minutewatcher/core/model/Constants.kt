@@ -57,6 +57,7 @@ object Constants {
 
     object Data {
         const val SNAPSHOT_TIMEOUT_MS = 2000L
+        const val EMPTY_TIMESTAMP = 0L
     }
 
     object Semantic {

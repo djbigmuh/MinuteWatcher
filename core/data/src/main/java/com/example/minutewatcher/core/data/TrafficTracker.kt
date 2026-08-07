@@ -137,7 +137,10 @@ class TrafficTracker
                         }
 
                     if (target.skipDelta) {
-                        AppLogger.d("Traffic delta skipped due to SIM change (slot=${target.slot}, retryCount=${target.retryCount})")
+                        AppLogger.d(
+                            "Traffic delta skipped due to SIM change " +
+                                "(slot=${target.slot}, retryCount=${target.retryCount})",
+                        )
                         _status.value =
                             if (target.isFallback) {
                                 TrackingStatus.Error(
@@ -204,7 +207,9 @@ class TrafficTracker
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
             val usage =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(
+                    Constants.Flow.LONG_TIMEOUT_MS.milliseconds,
+                ) {
                     simUsageRepository.getSimUsage(targetIdentity).first()
                 }
 
@@ -249,7 +254,10 @@ class TrafficTracker
 
             if (lastTotalBytes == null) {
                 _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading lastTotalBytes")
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Timeout reading lastTotalBytes",
+                    )
             } else {
                 updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
                 updateLastDataSubId(target.dataSubId)
@@ -362,7 +370,11 @@ class TrafficTracker
                     else -> startTime
                 }
 
-            return networkStatsProvider.queryMobileBytes(effectiveStart, now)
+            return networkStatsProvider
+                .queryMobileBytes(
+                    effectiveStart,
+                    now,
+                )
         }
 
         private suspend fun getTargetSimInfo(): TargetInfo? {

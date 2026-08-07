@@ -249,45 +249,40 @@ class SemanticSearchManagerTest {
             override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
                 val builder = PutDocumentsRequest.Builder()
                 documents.forEach { doc ->
-                    builder.addGenericDocuments(
+                    val genericDoc =
                         androidx.appsearch.app.GenericDocument
                             .Builder<androidx.appsearch.app.GenericDocument.Builder<*>>(
                                 doc.namespace,
                                 doc.id,
                                 "UsageDocument",
-                            ).build(),
-                    )
+                            ).build()
+                    builder.addGenericDocuments(genericDoc)
                 }
                 return builder.build()
             }
 
             override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-                RemoveByDocumentIdRequest.Builder(
-                    "usage",
-                ).addIds(
-                    ids,
-                ).build()
+                RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
         }
 
     private fun createEntity(
         slot: Int,
         type: PackageType,
         remaining: Long,
-    ) =
-        SemanticEntity(
-            id = "sim_${slot}_${type.name}",
-            simSlot = slot,
-            operatorName = "ABC",
-            packageType = type,
-            limit = 10000,
-            used = 10000 - remaining,
-            remaining = remaining,
-            unit = if (type == PackageType.MINUTES) MeasurementUnit.MINUTES else MeasurementUnit.BYTES,
-            periodStart = 0,
-            periodEnd = 0,
-            lastUpdateTime = currentTime,
-            sourceType = DataSourceType.SYSTEM,
-        )
+    ) = SemanticEntity(
+        id = "sim_${slot}_${type.name}",
+        simSlot = slot,
+        operatorName = "ABC",
+        packageType = type,
+        limit = 10000,
+        used = 10000 - remaining,
+        remaining = remaining,
+        unit = if (type == PackageType.MINUTES) MeasurementUnit.MINUTES else MeasurementUnit.BYTES,
+        periodStart = 0,
+        periodEnd = 0,
+        lastUpdateTime = currentTime,
+        sourceType = DataSourceType.SYSTEM,
+    )
 
     private fun createSnapshot(sims: List<SimSnapshot>) =
         GlobalSnapshot(

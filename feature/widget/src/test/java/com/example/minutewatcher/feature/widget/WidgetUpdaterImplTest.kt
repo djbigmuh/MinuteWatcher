@@ -19,23 +19,23 @@ class WidgetUpdaterImplTest {
     @Before
     fun setup() {
         updater =
-                WidgetUpdaterImpl(
-                    context = context,
-                    scope = scope,
-                    appSettingsRepository = appSettingsRepository,
-                )
+            WidgetUpdaterImpl(
+                context = context,
+                scope = scope,
+                appSettingsRepository = appSettingsRepository,
+            )
     }
 
     @Test
     fun `isRemoteViewsLimitException returns false for generic IllegalArgumentException`() {
         val e =
-                IllegalArgumentException(
-                    "Something else went wrong",
-                )
+            IllegalArgumentException(
+                "Something else went wrong",
+            )
         assertFalse(
-                updater.isRemoteViewsLimitException(
-                    e,
-                ),
+            updater.isRemoteViewsLimitException(
+                e,
+            ),
         )
     }
 
@@ -43,44 +43,44 @@ class WidgetUpdaterImplTest {
     fun `isRemoteViewsLimitException returns true for TransactionTooLargeException cause`() {
         val cause = android.os.TransactionTooLargeException()
         val e =
-                IllegalArgumentException(
-                    "Failure sending RemoteViews",
-                    cause,
-                )
+            IllegalArgumentException(
+                "Failure sending RemoteViews",
+                cause,
+            )
         assertTrue(
-                updater.isRemoteViewsLimitException(
-                    e,
-                ),
+            updater.isRemoteViewsLimitException(
+                e,
+            ),
         )
     }
 
     @Test
     fun `isRemoteViewsLimitException returns true when stack trace contains markers`() {
         val e =
-                IllegalArgumentException(
-                    "Fake exception",
-                )
+            IllegalArgumentException(
+                "Fake exception",
+            )
         // We can't easily mock stackTraceToString() as it's an extension function,
         // but we can set the stack trace of the exception.
         e.stackTrace =
-                arrayOf(
-                    StackTraceElement(
-                        "android.widget.RemoteViews",
-                        "writeToParcel",
-                        "RemoteViews.java",
-                        100,
-                    ),
-                    StackTraceElement(
-                        "android.os.TransactionTooLargeException",
-                        "<init>",
-                        "TransactionTooLargeException.java",
-                        1,
-                    ),
-                )
-        assertTrue(
-                updater.isRemoteViewsLimitException(
-                    e,
+            arrayOf(
+                StackTraceElement(
+                    "android.widget.RemoteViews",
+                    "writeToParcel",
+                    "RemoteViews.java",
+                    100,
                 ),
+                StackTraceElement(
+                    "android.os.TransactionTooLargeException",
+                    "<init>",
+                    "TransactionTooLargeException.java",
+                    1,
+                ),
+            )
+        assertTrue(
+            updater.isRemoteViewsLimitException(
+                e,
+            ),
         )
     }
 }
