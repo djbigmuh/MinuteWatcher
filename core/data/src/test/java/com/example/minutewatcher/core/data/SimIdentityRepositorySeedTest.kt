@@ -115,11 +115,17 @@ class SimIdentityRepositorySeedTest {
                 }
 
             advanceUntilIdle() // This should trigger the timeout and emission of FALLBACK_SEED
+            testScheduler.advanceTimeBy(30.seconds)
+            advanceUntilIdle()
 
             // At this point, seedFlow should have emitted FALLBACK_SEED.
             // Since getActiveSubscriptions() returns emptyList() in @Before, getActiveIdentities() will be empty.
-            // But we can check that we didn't hang and seed is correctly handled.
-            assertTrue("Expected at least one emission from getActiveIdentities during fallback", identitiesList.isNotEmpty())
+            // Но мы ожидаем, что поток эмитировал пустой список (после фильтрации seedFlow).
+            assertTrue(
+                "Expected at least one emission from getActiveIdentities during fallback",
+                identitiesList
+                    .isNotEmpty(),
+            )
 
             // Now provide real seed
             storedSeed.emit("real_seed")
@@ -130,7 +136,6 @@ class SimIdentityRepositorySeedTest {
                         on { subscriptionId } doReturn 1
                         on { simSlotIndex } doReturn 0
                         on { iccId } doReturn "icc_1"
-                        on { number } doReturn "123"
                         on { displayName } doReturn "SIM 1"
                         on { carrierName } doReturn "Carrier 1"
                     },
@@ -139,7 +144,12 @@ class SimIdentityRepositorySeedTest {
             advanceUntilIdle()
 
             // It should now have emitted identities based on real_seed.
-            assertTrue("Expected some identities in $identitiesList", identitiesList.last().isNotEmpty())
+            assertTrue(
+                "Expected some identities in $identitiesList",
+                identitiesList
+                    .last()
+                    .isNotEmpty(),
+            )
 
             identitiesJob.cancel()
         }

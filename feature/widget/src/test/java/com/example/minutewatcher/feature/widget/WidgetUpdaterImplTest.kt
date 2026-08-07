@@ -18,20 +18,28 @@ class WidgetUpdaterImplTest {
 
     @Before
     fun setup() {
-        updater = WidgetUpdaterImpl(context, scope, appSettingsRepository)
+        updater = WidgetUpdaterImpl(
+            context,
+            scope,
+            appSettingsRepository,
+        )
     }
 
     @Test
     fun `isRemoteViewsLimitException returns false for generic IllegalArgumentException`() {
         val e = IllegalArgumentException("Something else went wrong")
-        assertFalse(updater.isRemoteViewsLimitException(e))
+        assertFalse(
+            updater.isRemoteViewsLimitException(e),
+        )
     }
 
     @Test
     fun `isRemoteViewsLimitException returns true for TransactionTooLargeException cause`() {
         val cause = android.os.TransactionTooLargeException()
         val e = IllegalArgumentException("Failure sending RemoteViews", cause)
-        assertTrue(updater.isRemoteViewsLimitException(e))
+        assertTrue(
+            updater.isRemoteViewsLimitException(e),
+        )
     }
 
     @Test
@@ -39,21 +47,22 @@ class WidgetUpdaterImplTest {
         val e = IllegalArgumentException("Fake exception")
         // We can't easily mock stackTraceToString() as it's an extension function,
         // but we can set the stack trace of the exception.
-        e.stackTrace =
-            arrayOf(
-                StackTraceElement(
-                    "android.widget.RemoteViews",
-                    "writeToParcel",
-                    "RemoteViews.java",
-                    100,
-                ),
-                StackTraceElement(
-                    "android.os.TransactionTooLargeException",
-                    "<init>",
-                    "TransactionTooLargeException.java",
-                    1,
-                ),
-            )
-        assertTrue(updater.isRemoteViewsLimitException(e))
+        e.stackTrace = arrayOf(
+            StackTraceElement(
+                "android.widget.RemoteViews",
+                "writeToParcel",
+                "RemoteViews.java",
+                100,
+            ),
+            StackTraceElement(
+                "android.os.TransactionTooLargeException",
+                "<init>",
+                "TransactionTooLargeException.java",
+                1,
+            ),
+        )
+        assertTrue(
+            updater.isRemoteViewsLimitException(e),
+        )
     }
 }

@@ -53,7 +53,10 @@ class SemanticSearchManagerTest {
 
             manager.initialize(flow)
 
-            assertTrue("Status was ${manager.status.value}", manager.status.value is TrackingStatus.Active)
+            assertTrue(
+                "Status was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Active,
+            )
             assertEquals(1, fakeWrapper.createdSessions)
             assertNotNull(fakeWrapper.lastSession)
             assertTrue(fakeWrapper.lastSession!!.schemaSet)
@@ -84,7 +87,10 @@ class SemanticSearchManagerTest {
             manager.initialize(flow)
 
             val status = manager.status.value
-            assertTrue("Expected Error but was $status", status is TrackingStatus.Error)
+            assertTrue(
+                "Expected Error but was $status",
+                status is TrackingStatus.Error,
+            )
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
         }
 
@@ -114,7 +120,11 @@ class SemanticSearchManagerTest {
             val initialPuts = session.putRequests.size
 
             manager.indexSnapshot(s)
-            assertEquals("Should skip due to identical hash", initialPuts, session.putRequests.size)
+            assertEquals(
+                "Should skip due to identical hash",
+                initialPuts,
+                session.putRequests.size,
+            )
         }
 
     @Test

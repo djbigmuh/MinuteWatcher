@@ -113,6 +113,13 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
+                    val activeIdentities =
+                        simIdentityRepository
+                            .getActiveIdentities()
+                            .firstWithTimeout()
+                            ?.toSet() ?: emptySet()
+                    baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
+
                     if (!checkPermissions()) return@withLock
 
                     val target =
@@ -282,10 +289,10 @@ class TrafficTracker
 
                     _status.value =
                         if (target.isFallback) {
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                            slotIndex = target.slot,
-                        )
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                                slotIndex = target.slot,
+                            )
                         } else {
                             TrackingStatus.Active
                         }
@@ -351,8 +358,6 @@ class TrafficTracker
 
         private suspend fun getTargetSimInfo(): TargetInfo? {
             val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
-            val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
-            baselineNeedsRetry.keys.removeAll { it !in activeIdentitySet }
 
             val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
 

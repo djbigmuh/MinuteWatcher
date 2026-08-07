@@ -30,9 +30,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlin.time.Duration.Companion.milliseconds
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages AppSearch indexing for usage data.
@@ -145,10 +145,17 @@ open class SemanticSearchManager
                                 result = executeIndexing(snapshot, currentHash)
                             } catch (retryException: Exception) {
                                 AppLogger.e("AppSearch indexing failed again after retry", retryException)
+                                lastSnapshotHash = -1
+                                _status.value = TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                                    retryException.message,
+                                )
                             }
                         }
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch non-AppSearch error during indexing", e)
+                        lastSnapshotHash = -1
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }
                 }
                 result
@@ -215,10 +222,16 @@ open class SemanticSearchManager
         }
 
         protected open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
-            PutDocumentsRequest.Builder().addDocuments(documents).build()
+            PutDocumentsRequest
+                .Builder()
+                .addDocuments(documents)
+                .build()
 
         protected open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-            RemoveByDocumentIdRequest.Builder(NAMESPACE).addIds(ids).build()
+            RemoveByDocumentIdRequest
+                .Builder(NAMESPACE)
+                .addIds(ids)
+                .build()
 
         companion object {
             private const val DATABASE_NAME = "usage"

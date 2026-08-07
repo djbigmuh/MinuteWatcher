@@ -43,7 +43,11 @@ class WidgetUpdaterImpl
                             setWidgetLimitExceeded(false)
                         }
                         is UpdateResult.LimitExceeded -> {
-                            AppLogger.w("Widget update failed due to size limit. Flag set to trigger simplified layout on next update.")
+                            setWidgetLimitExceeded(true)
+                            AppLogger.w(
+                                "Widget update failed due to size limit. " +
+                                    "Flag set to trigger simplified layout on next update.",
+                            )
                         }
                         is UpdateResult.GenericFailure -> {
                             AppLogger.d("Retrying widget update after generic failure...")
@@ -51,7 +55,11 @@ class WidgetUpdaterImpl
                             when (safeUpdateAll(context)) {
                                 is UpdateResult.Success -> setWidgetLimitExceeded(false)
                                 is UpdateResult.LimitExceeded -> {
-                                    AppLogger.w("Retry also hit size limit. Flag set to trigger simplified layout on next update.")
+                                    setWidgetLimitExceeded(true)
+                                    AppLogger.w(
+                                        "Retry also hit size limit. " +
+                                            "Flag set to trigger simplified layout on next update.",
+                                    )
                                 }
                                 is UpdateResult.GenericFailure -> AppLogger.e("Widget update retry also failed")
                             }

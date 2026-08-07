@@ -49,11 +49,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.milliseconds
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -73,12 +73,18 @@ class SimIdentityRepositoryImpl
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
+        private sealed interface SeedResult {
+            data class Real(val value: String) : SeedResult
+
+            object Fallback : SeedResult
+        }
+
         private val saveMutex = Mutex()
         private val migratedIdentities =
             ConcurrentHashMap
                 .newKeySet<String>()
 
-        private val seedFlow: Flow<String> =
+        private val seedFlow: Flow<SeedResult> =
             flow {
                 val currentSeed =
                     seedRepository
@@ -87,8 +93,8 @@ class SimIdentityRepositoryImpl
                         .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (!currentSeed.isNullOrEmpty()) {
-                    emit(currentSeed)
-                    emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
+                    emit(SeedResult.Real(currentSeed))
+                    emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
                 } else {
                     var result: String? = null
                     for (attempt in 1..2) {
@@ -109,11 +115,11 @@ class SimIdentityRepositoryImpl
 
                     if (result == null) {
                         AppLogger.e("Failed to generate identity seed after retries. Using slot-based fallback.")
-                        emit(FALLBACK_SEED)
-                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
+                        emit(SeedResult.Fallback)
+                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
                     } else {
-                        emit(result)
-                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
+                        emit(SeedResult.Real(result))
+                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
                     }
                 }
             }.distinctUntilChanged()
@@ -224,12 +230,12 @@ class SimIdentityRepositoryImpl
                 initialValue = null,
             )
 
-        private suspend fun getSeed(): String {
+        private suspend fun getSeed(): SeedResult {
             val seed = seedFlow.firstOrNull()
             if (seed == null) {
                 AppLogger.e("Identity seed unavailable, using slot-based fallback")
             }
-            return seed ?: FALLBACK_SEED
+            return seed ?: SeedResult.Fallback
         }
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
@@ -257,14 +263,17 @@ class SimIdentityRepositoryImpl
 
         private suspend fun findActiveIdentityInternal(
             slot: Int,
-            seed: String,
+            seed: SeedResult,
         ): SimIdentity? =
             permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
                 val resolved =
-                    if (seed == FALLBACK_SEED) {
-                        createFallbackIdentity(slot, "sim_$slot")
-                    } else {
-                        SimIdentityUtils.createIdentityFromInfo(it, seed)
+                    when (seed) {
+                        is SeedResult.Fallback -> {
+                            createFallbackIdentity(slot, "sim_$slot")
+                        }
+                        is SeedResult.Real -> {
+                            SimIdentityUtils.createIdentityFromInfo(it, seed.value)
+                        }
                     }
                 saveSimIdentityInfo(resolved)
                 resolved
@@ -316,7 +325,7 @@ class SimIdentityRepositoryImpl
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache.filterNotNull()
 
-        private suspend fun getActiveSimsInternal(seed: String): List<ActiveSimInfo> {
+        private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val infoList =
                 permissionManager
                     .getActiveSubscriptions()
@@ -325,10 +334,13 @@ class SimIdentityRepositoryImpl
             val currentIdentities =
                 infoList
                     .map { info ->
-                        if (seed == FALLBACK_SEED) {
-                            "sim_${info.simSlotIndex}"
-                        } else {
-                            SimIdentityUtils.createIdentityFromInfo(info, seed).stableId
+                        when (seed) {
+                            is SeedResult.Fallback -> {
+                                "sim_${info.simSlotIndex}"
+                            }
+                            is SeedResult.Real -> {
+                                SimIdentityUtils.createIdentityFromInfo(info, seed.value).stableId
+                            }
                         }
                     }.toSet()
             migratedIdentities.retainAll(currentIdentities)
@@ -340,10 +352,13 @@ class SimIdentityRepositoryImpl
 
             return infoList.map { info ->
                 val identity =
-                    if (seed == FALLBACK_SEED) {
-                        createFallbackIdentity(info.simSlotIndex, "sim_${info.simSlotIndex}")
-                    } else {
-                        SimIdentityUtils.createIdentityFromInfo(info, seed)
+                    when (seed) {
+                        is SeedResult.Fallback -> {
+                            createFallbackIdentity(info.simSlotIndex, "sim_${info.simSlotIndex}")
+                        }
+                        is SeedResult.Real -> {
+                            SimIdentityUtils.createIdentityFromInfo(info, seed.value)
+                        }
                     }
                 try {
                     saveSimIdentityInfo(identity)
@@ -419,11 +434,5 @@ class SimIdentityRepositoryImpl
         }
 
         companion object {
-            /**
-             * Sentinel value used when the identity seed cannot be generated/retrieved in time.
-             * When this value is used, the repository MUST use slot-based fallback (sim_N)
-             * instead of ICCID-based hashing to prevent data loss when a real seed becomes available.
-             */
-            private const val FALLBACK_SEED = "fallback_seed_no_persistence"
         }
     }

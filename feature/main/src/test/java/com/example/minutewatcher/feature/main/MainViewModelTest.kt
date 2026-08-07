@@ -13,7 +13,9 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.feature.main.controller.MainBannerController
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
@@ -79,7 +81,16 @@ class MainViewModelTest {
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(mock()))
+
+        val initialSnapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0L,
+                simSnapshots = emptyList(),
+                capabilities = emptyList(),
+            )
+        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(initialSnapshot))
+
         whenever(
             appSettingsRepository.observeAppSettings(),
         ).thenReturn(

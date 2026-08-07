@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -40,6 +41,8 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
+        private val forceCounter = AtomicLong(0)
+
         private val forceUpdateFlow =
             MutableSharedFlow<Long>(
                 replay = 1,
@@ -49,7 +52,7 @@ class UpdateCoordinator
 
         init {
             scope.launch {
-                val startTime = System.nanoTime()
+                val startCount = forceCounter.get()
                 var lastProcessedHash: Int? = null
 
                 val snapshotFlow =
@@ -64,7 +67,7 @@ class UpdateCoordinator
 
                 val forceFlow =
                     forceUpdateFlow
-                        .filter { it > startTime }
+                        .filter { it > startCount }
                         .map { UpdateEvent.Force }
 
                 merge(snapshotFlow, forceFlow).collect { event ->
@@ -88,7 +91,9 @@ class UpdateCoordinator
         private sealed class UpdateEvent {
             object Force : UpdateEvent()
 
-            data class Snapshot(val hash: Int) : UpdateEvent()
+            data class Snapshot(
+                val hash: Int,
+            ) : UpdateEvent()
         }
 
         /**
@@ -99,7 +104,7 @@ class UpdateCoordinator
             force: Boolean,
         ) {
             if (updateWidget && force) {
-                forceUpdateFlow.tryEmit(System.nanoTime())
+                forceUpdateFlow.tryEmit(forceCounter.incrementAndGet())
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }

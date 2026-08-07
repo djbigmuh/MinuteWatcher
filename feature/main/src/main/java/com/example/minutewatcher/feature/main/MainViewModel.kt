@@ -19,6 +19,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,6 +32,8 @@ class MainViewModel
         private val savedStateHandle: SavedStateHandle,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
+        private val isInitialized = AtomicBoolean(false)
+
         // Dialog States
         val showLimitDialog = controllers.dialog.showLimitDialog
         val showDayDialog = controllers.dialog.showDayDialog
@@ -104,6 +107,8 @@ class MainViewModel
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
+                } finally {
+                    isInitialized.set(true)
                 }
             }
         }
@@ -212,6 +217,8 @@ class MainViewModel
             }
 
         fun onActivityResume(nowElapsed: Long) {
+            if (!isInitialized.get()) return
+
             val last = lastRefreshAt
             // Если last == 0L, это первый запуск в текущем сеансе.
             // Просто фиксируем время без немедленного обновления.
