@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -106,7 +105,7 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
-            runCurrent()
+            advanceUntilIdle()
 
             coordinator.notifyDataChanged(updateWidget = true, force = true)
             advanceUntilIdle()
@@ -155,11 +154,11 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
-            runCurrent()
+            advanceUntilIdle()
 
             // First force
             coordinator.notifyDataChanged(updateWidget = true, force = true)
-            runCurrent()
+            advanceUntilIdle()
 
             // Second force
             coordinator.notifyDataChanged(updateWidget = true, force = true)

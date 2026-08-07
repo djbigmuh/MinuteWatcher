@@ -13,9 +13,9 @@ import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
-import com.example.minutewatcher.core.model.IntentExtras
+import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.core.model.PackageType
-import com.example.minutewatcher.core.model.SimConstants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import dagger.hilt.android.qualifiers.ApplicationContext

@@ -11,7 +11,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * This prevents tasks from hanging indefinitely if a Flow never emits.
  */
 suspend fun <T> Flow<T>.firstWithTimeout(
-    timeoutMillis: Long = com.example.minutewatcher.core.model.Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS,
+    timeoutMillis: Long = com.example.minutewatcher.core.model.Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
 ): T? =
     withTimeoutOrNull(timeoutMillis.milliseconds) {
         this@firstWithTimeout.firstOrNull()

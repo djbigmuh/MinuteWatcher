@@ -12,7 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.SimDataStore
-import com.example.minutewatcher.core.model.SimConstants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton

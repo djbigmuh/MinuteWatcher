@@ -12,7 +12,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimConstants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex

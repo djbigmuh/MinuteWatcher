@@ -13,6 +13,11 @@ object Constants {
         const val SWITCH_SCALE = 0.8f
         const val HIGHLIGHT_DELAY_MS = 3000L
 
+        /**
+         * Порог (мс) для принудительного обновления при onResume.
+         * Если прошло больше этого времени с последнего обновления — обновляем.
+         * Отрицательный elapsed (перезагрузка устройства) всегда триггерит обновление.
+         */
         const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
     }
 
@@ -60,7 +65,7 @@ object Constants {
     }
 
     object Flow {
-        const val STATE_FLOW_STOP_TIMEOUT_MS = 5_000L
+        const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MS = 5_000L
         const val DEBOUNCE_MS = 300L
         const val RETRY_TIMEOUT_MS = 5_000L
         const val SHORT_TIMEOUT_MS = 5_000L
@@ -78,6 +83,16 @@ object Constants {
         const val MAX_CALL_DURATION_MS = 12 * 60 * 60 * 1000L
     }
 
+    object IntentExtras {
+        const val SIM_SLOT = "sim_slot"
+    }
+
+    object SimConstants {
+        const val MAX_SUPPORTED_SIM_SLOTS = 10
+        const val MOCK_SUB_ID_BASE = 1000
+        val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
+    }
+
     const val MILLIS_PER_SECOND = 1000L
     const val MILLIS_PER_DAY = 24 * 60 * 60 * MILLIS_PER_SECOND
     const val BYTES_PER_MB = 1024L * 1024L
@@ -87,14 +102,4 @@ object Constants {
     const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f
     const val MAX_MINUTES_LIMIT = 44640
     const val MAX_TRAFFIC_LIMIT_GB = 10240f
-}
-
-object IntentExtras {
-    const val SIM_SLOT = "sim_slot"
-}
-
-object SimConstants {
-    const val MAX_SUPPORTED_SIM_SLOTS = 10
-    const val MOCK_SUB_ID_BASE = 1000
-    val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
 }

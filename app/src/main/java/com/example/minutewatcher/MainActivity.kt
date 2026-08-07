@@ -32,7 +32,7 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.IntentExtras
+import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen

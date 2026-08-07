@@ -12,7 +12,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.IntentExtras
+import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.core.resources.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException

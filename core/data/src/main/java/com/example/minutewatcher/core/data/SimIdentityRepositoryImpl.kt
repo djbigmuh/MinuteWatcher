@@ -20,7 +20,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
-import com.example.minutewatcher.core.model.SimConstants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -88,6 +88,7 @@ class SimIdentityRepositoryImpl
 
                 if (!currentSeed.isNullOrEmpty()) {
                     emit(currentSeed)
+                    emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
                 } else {
                     var result: String? = null
                     for (attempt in 1..2) {
@@ -111,10 +112,9 @@ class SimIdentityRepositoryImpl
                         emit(FALLBACK_SEED)
                     } else {
                         emit(result)
+                        emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
                     }
                 }
-
-                emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() })
             }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
@@ -219,7 +219,7 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                 initialValue = null,
             )
 

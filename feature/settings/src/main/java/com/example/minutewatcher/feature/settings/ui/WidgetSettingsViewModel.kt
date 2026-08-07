@@ -51,7 +51,7 @@ class WidgetSettingsViewModel
                     WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
                 }.stateIn(
                     viewModelScope,
-                    SharingStarted.WhileSubscribed(Constants.Flow.STATE_FLOW_STOP_TIMEOUT_MS),
+                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                     null,
                 )
 
