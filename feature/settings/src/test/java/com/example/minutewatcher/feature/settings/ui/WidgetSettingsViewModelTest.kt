@@ -13,7 +13,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -122,11 +121,9 @@ class WidgetSettingsViewModelTest {
             var secondResult: Boolean? = null
 
             vm.saveAndNotify { firstResult = it }
-            runCurrent()
             assertTrue(vm.isSaving.value)
 
             vm.saveAndNotify { secondResult = it }
-            runCurrent()
             assertEquals(false, secondResult) // второй вызов отклонён tryLock и вернул false
 
             gate.complete(Unit)

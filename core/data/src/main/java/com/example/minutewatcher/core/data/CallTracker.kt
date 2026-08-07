@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -130,27 +132,28 @@ class CallTracker
             return effective
         }
 
-        private suspend fun handleCallStartInternal(subId: Int): Boolean {
-            var startTime: Long? = null
-            var savedBootTime: Long? = null
-
-            for (attempt in 1..2) {
-                startTime =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getCallStartTime(subId).first()
+        private suspend fun <T : Any> readWithRetry(
+            attempts: Int = 2,
+            timeoutMs: Long = Constants.Flow.SHORT_TIMEOUT_MS,
+            retryDelayMs: Long = Constants.Flow.RETRY_DELAY_MS,
+            reader: () -> Flow<T>,
+        ): T? {
+            for (attempt in 1..attempts) {
+                val result =
+                    withTimeoutOrNull<T>(timeoutMs.milliseconds) {
+                        reader().first()
                     }
-                savedBootTime =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getBootTime(subId).first()
-                    }
-
-                if (startTime != null && savedBootTime != null) break
-
-                if (attempt == 1) {
-                    AppLogger.w("Timeout reading call session data for subId $subId, retrying once...")
-                    delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+                if (result != null) return result
+                if (attempt < attempts) {
+                    delay(retryDelayMs.milliseconds)
                 }
             }
+            return null
+        }
+
+        private suspend fun handleCallStartInternal(subId: Int): Boolean {
+            val startTime = readWithRetry { callSessionRepository.getCallStartTime(subId) }
+            val savedBootTime = readWithRetry { callSessionRepository.getBootTime(subId) }
 
             if (startTime == null || savedBootTime == null) {
                 val field = if (startTime == null) "startTime" else "bootTime"
@@ -252,7 +255,16 @@ class CallTracker
         @SuppressLint("MissingPermission")
         private suspend fun handleUnknownSubIdEnd() {
             if (!permissionManager.hasPhoneStatePermission()) return
-            val activeSubIds = callSessionRepository.getActiveCallSubIds()
+            val activeSubIds =
+                try {
+                    callSessionRepository.getActiveCallSubIds()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to read active call sessions on unknown subId end", e)
+                    emptyList()
+                }
+
             if (activeSubIds.isEmpty()) {
                 AppLogger.d("Call ended with unknown subId and no active sessions found")
             } else if (isDeviceIdle(activeSubIds)) {
@@ -406,37 +418,19 @@ class CallTracker
             val savedIdentity: String?,
         )
 
+        /**
+         * Wrapper to handle nullable values in [readWithRetry].
+         */
+        private data class Box<out T>(val value: T)
+
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
-            var startTime: Long? = null
-            var savedBootTime: Long? = null
-            var savedUptime: Long? = null
-            var savedIdentity: String? = null
-
-            for (attempt in 1..2) {
-                startTime =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getCallStartTime(subId).first()
-                    }
-                savedBootTime =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getBootTime(subId).first()
-                    }
-                savedUptime =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getUptime(subId).first()
-                    }
-                savedIdentity =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getCallIdentity(subId).first()
-                    }
-
-                if (startTime != null && savedBootTime != null && savedUptime != null) break
-
-                if (attempt == 1) {
-                    AppLogger.w("Timeout loading call session data for subId $subId, retrying once...")
-                    delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+            val startTime = readWithRetry { callSessionRepository.getCallStartTime(subId) }
+            val savedBootTime = readWithRetry { callSessionRepository.getBootTime(subId) }
+            val savedUptime = readWithRetry { callSessionRepository.getUptime(subId) }
+            val savedIdentityBox =
+                readWithRetry {
+                    callSessionRepository.getCallIdentity(subId).map { Box(it) }
                 }
-            }
 
             if (startTime == null || savedBootTime == null || savedUptime == null) {
                 AppLogger.w("Call end event attribution failed due to DataStore timeout for subId $subId")
@@ -450,7 +444,7 @@ class CallTracker
                 startTime = startTime,
                 savedBootTime = savedBootTime,
                 savedUptime = savedUptime,
-                savedIdentity = savedIdentity,
+                savedIdentity = savedIdentityBox?.value,
             )
         }
 
@@ -522,11 +516,12 @@ class CallTracker
             savedIdentity: String?,
             notify: Boolean = true,
         ) {
+            if (durationSeconds < 0) return
             if (!isCallTrackingEnabled()) {
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 return
             }
-            val durationMinutes = (durationSeconds + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE
+            val durationMinutes = ((durationSeconds.toLong() + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE).toInt()
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 
             if (targetIdentity == null) {

@@ -124,12 +124,18 @@ class SemanticSearchManagerTest {
             val updatedSnapshot = createTestSnapshot(101)
             manager.indexSnapshot(updatedSnapshot)
 
-            assertTrue(manager.status.value is TrackingStatus.Error)
+            assertTrue(
+                "Status should be Error, but was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Error,
+            )
 
             fakeWrapper.failAllPutDocuments = false
             manager.indexSnapshot(updatedSnapshot)
 
-            assertTrue(manager.status.value is TrackingStatus.Active)
+            assertTrue(
+                "Status should be Active after recovery, but was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Active,
+            )
             val currentSession = fakeWrapper.lastSession!!
             assertTrue(currentSession.putRequests.isNotEmpty())
         }
@@ -221,8 +227,8 @@ class SemanticSearchManagerTest {
             assertEquals(1, fakeWrapper.createdSessions)
             val session1 = fakeWrapper.lastSession!!
 
-            // 2. Simulate failure that leads to retry
-            session1.failPutDocuments = true
+            // 2. Simulate failure that leads to retry (Schema Mismatch)
+            session1.putDocumentsResultCode = AppSearchResult.RESULT_INVALID_SCHEMA
             val updatedSnapshot = createTestSnapshot(99)
 
             manager.indexSnapshot(updatedSnapshot)
@@ -256,27 +262,32 @@ class SemanticSearchManagerTest {
             }
 
             override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-                RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
+                RemoveByDocumentIdRequest.Builder(
+                    "usage",
+                ).addIds(
+                    ids,
+                ).build()
         }
 
     private fun createEntity(
         slot: Int,
         type: PackageType,
         remaining: Long,
-    ) = SemanticEntity(
-        id = "sim_${slot}_${type.name}",
-        simSlot = slot,
-        operatorName = "ABC",
-        packageType = type,
-        limit = 10000,
-        used = 10000 - remaining,
-        remaining = remaining,
-        unit = if (type == PackageType.MINUTES) MeasurementUnit.MINUTES else MeasurementUnit.BYTES,
-        periodStart = 0,
-        periodEnd = 0,
-        lastUpdateTime = currentTime,
-        sourceType = DataSourceType.SYSTEM,
-    )
+    ) =
+        SemanticEntity(
+            id = "sim_${slot}_${type.name}",
+            simSlot = slot,
+            operatorName = "ABC",
+            packageType = type,
+            limit = 10000,
+            used = 10000 - remaining,
+            remaining = remaining,
+            unit = if (type == PackageType.MINUTES) MeasurementUnit.MINUTES else MeasurementUnit.BYTES,
+            periodStart = 0,
+            periodEnd = 0,
+            lastUpdateTime = currentTime,
+            sourceType = DataSourceType.SYSTEM,
+        )
 
     private fun createSnapshot(sims: List<SimSnapshot>) =
         GlobalSnapshot(
@@ -297,7 +308,12 @@ class SemanticSearchManagerTest {
                     isActive = true,
                     entities =
                         mapOf(
-                            PackageType.MINUTES to createEntity(0, PackageType.MINUTES, remaining),
+                            PackageType.MINUTES to
+                                createEntity(
+                                    0,
+                                    PackageType.MINUTES,
+                                    remaining,
+                                ),
                         ),
                     autoResetDay = 1,
                 ),
@@ -343,6 +359,7 @@ class SemanticSearchManagerTest {
         val putRequests = mutableListOf<PutDocumentsRequest>()
         val removeRequests = mutableListOf<RemoveByDocumentIdRequest>()
         var failPutDocuments = false
+        var putDocumentsResultCode: Int = AppSearchResult.RESULT_OK
 
         override suspend fun setSchema(request: SetSchemaRequest) {
             if (wrapper.failNextWithInvalidSchema && !request.isForceOverride) {
@@ -356,8 +373,11 @@ class SemanticSearchManagerTest {
         }
 
         override suspend fun putDocuments(request: PutDocumentsRequest) {
-            if (failPutDocuments) {
+            if (failPutDocuments || wrapper.failAllPutDocuments) {
                 throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Simulated failure")
+            }
+            if (putDocumentsResultCode != AppSearchResult.RESULT_OK) {
+                throw AppSearchException(putDocumentsResultCode, "Simulated failure with code $putDocumentsResultCode")
             }
             putRequests.add(request)
         }

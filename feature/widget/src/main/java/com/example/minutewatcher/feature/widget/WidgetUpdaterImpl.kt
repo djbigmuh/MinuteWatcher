@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,6 +27,7 @@ class WidgetUpdaterImpl
         private val appSettingsRepository: AppSettingsRepository,
     ) : WidgetUpdater {
         private val widget = MinutesGlanceWidget()
+        private var updateJob: Job? = null
 
         private sealed class UpdateResult {
             object Success : UpdateResult()
@@ -36,7 +38,8 @@ class WidgetUpdaterImpl
         }
 
         override fun updateAll() {
-            scope.launch {
+            updateJob?.cancel()
+            updateJob = scope.launch {
                 try {
                     when (safeUpdateAll(context)) {
                         is UpdateResult.Success -> {
@@ -107,20 +110,24 @@ class WidgetUpdaterImpl
             }
 
         /**
-         * Heuristically determines if an [IllegalArgumentException] during widget update
-         * is caused by exceeding the Binder/RemoteViews size limit (TransactionTooLargeException).
+         * Эвристически определяет, вызвана ли ошибка [IllegalArgumentException] при обновлении виджета
+         * превышением лимита размера Binder/RemoteViews (TransactionTooLargeException).
          *
-         * This check includes reliable cause analysis and stack trace inspection.
+         * Проверка основана на двух критериях:
+         * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин (наиболее надежный способ).
+         * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке, что часто встречается в исключениях,
+         *    бросаемых системой при маршалинге больших структур RemoteViews, даже если корень ошибки
+         *    не обернут в TransactionTooLargeException.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
-            val stackTrace = e.stackTraceToString()
-            val isStackTraceLimit =
-                stackTrace.contains(MARKER_REMOTE_VIEWS, ignoreCase = true) &&
-                    stackTrace.contains(MARKER_TRANSACTION_TOO_LARGE, ignoreCase = true)
 
-            return isTransactionTooLarge || isStackTraceLimit
+            // Проверяем сообщение исключения на упоминание RemoteViews.
+            // Это эвристика, так как система может выбрасывать IAE с текстом о размере данных.
+            val isMessageLimit = e.message?.contains(MARKER_REMOTE_VIEWS_SHORT, ignoreCase = true) == true
+
+            return isTransactionTooLarge || isMessageLimit
         }
 
         private fun hasCauseOfType(
@@ -136,7 +143,6 @@ class WidgetUpdaterImpl
         }
 
         companion object {
-            private const val MARKER_REMOTE_VIEWS = "android.widget.RemoteViews"
-            private const val MARKER_TRANSACTION_TOO_LARGE = "TransactionTooLargeException"
+            private const val MARKER_REMOTE_VIEWS_SHORT = "RemoteViews"
         }
     }

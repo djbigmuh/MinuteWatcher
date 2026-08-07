@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
@@ -17,6 +18,7 @@ import com.example.minutewatcher.feature.main.controller.MainViewModelController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
@@ -33,6 +35,8 @@ class MainViewModel
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val isInitialized = AtomicBoolean(false)
+        private var lastSnapshotHash: Int = -1
+        private var resumeRefreshJob: Job? = null
 
         // Dialog States
         val showLimitDialog = controllers.dialog.showLimitDialog
@@ -89,17 +93,28 @@ class MainViewModel
                     }
                     try {
                         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
+                        val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
                         val now = System.currentTimeMillis()
                         if (now - lastResetCheck > AUTO_RESET_CHECK_INTERVAL_MS) {
-                            autoResetUseCase.performAutoReset(shouldNotify = false)
-                            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                            if (failCount <= MAX_AUTO_RESET_RETRIES) {
+                                autoResetUseCase.performAutoReset(shouldNotify = false)
+                                savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
+                            } else {
+                                AppLogger.e("Auto-reset skipped after $failCount consecutive failures")
+                            }
                         }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         AppLogger.e("Auto-reset failed during initialization", e)
+                        val currentFails = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+                        savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = currentFails + 1
                     }
-                    controllers.refresh.refreshSimCardsInternal()
+                    val result = controllers.refresh.refreshSimCardsInternal()
+                    result?.let {
+                        lastSnapshotHash = SnapshotUtils.calculateContentHash(it.snapshot)
+                    }
                     if (lastRefreshAt == 0L) {
                         lastRefreshAt = SystemClock.elapsedRealtime()
                     }
@@ -138,12 +153,14 @@ class MainViewModel
         }
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
-            val beforeHash = SnapshotUtils.calculateContentHash(controllers.simData.getSnapshot())
-            controllers.refresh.refreshSimCardsInternal()
+            val result = controllers.refresh.refreshSimCardsInternal()
             lastRefreshAt = SystemClock.elapsedRealtime()
 
-            val afterHash = SnapshotUtils.calculateContentHash(controllers.simData.getSnapshot())
-            val hasChanged = beforeHash != afterHash
+            if (result == null) return
+
+            val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
+            val hasChanged = result is RefreshResult.Success && newHash != lastSnapshotHash
+            lastSnapshotHash = newHash
 
             /*
              * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).
@@ -233,13 +250,16 @@ class MainViewModel
 
             if (isStale) {
                 lastRefreshAt = nowElapsed
-                viewModelScope.launch { refreshAndNotify(force = false) }
+                resumeRefreshJob?.cancel()
+                resumeRefreshJob = viewModelScope.launch { refreshAndNotify(force = false) }
             }
         }
 
         companion object {
             private const val KEY_LAST_REFRESH_AT = "last_refresh_at"
             private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+            private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
             private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
+            private const val MAX_AUTO_RESET_RETRIES = 3
         }
     }

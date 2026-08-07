@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,7 +60,12 @@ class TrafficTracker
         private val trafficMutex = Mutex()
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
-        private val baselineNeedsRetry = mutableMapOf<String, Int>()
+
+        /**
+         * Список identity, требующих повторной инициализации базовой линии трафика.
+         * Доступ к коллекции также защищен [trafficMutex].
+         */
+        private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
         private data class TargetInfo(
             val slot: Int,
@@ -92,7 +98,8 @@ class TrafficTracker
                     } else {
                         val message =
                             if (statsResult is StatsResult.Error) {
-                                statsResult.exception.message ?: "Stats error"
+                                AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
+                                statsResult.exception.message
                             } else {
                                 "Stats unavailable"
                             }
@@ -117,7 +124,7 @@ class TrafficTracker
                         simIdentityRepository
                             .getActiveIdentities()
                             .firstWithTimeout()
-                            ?.toSet() ?: emptySet()
+                            ?.toSet() ?: return@withLock
                     baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
 
                     if (!checkPermissions()) return@withLock
@@ -130,6 +137,7 @@ class TrafficTracker
                         }
 
                     if (target.skipDelta) {
+                        AppLogger.d("Traffic delta skipped due to SIM change (slot=${target.slot}, retryCount=${target.retryCount})")
                         _status.value =
                             if (target.isFallback) {
                                 TrackingStatus.Error(
@@ -224,7 +232,8 @@ class TrafficTracker
             if (statsResult !is StatsResult.Success) {
                 val message =
                     if (statsResult is StatsResult.Error) {
-                        statsResult.exception.message ?: "Stats error"
+                        AppLogger.e("Traffic stats query failed", statsResult.exception)
+                        statsResult.exception.message
                     } else {
                         "Stats unavailable"
                     }
@@ -548,7 +557,8 @@ class TrafficTracker
             }
             val reason =
                 if (statsResult is StatsResult.Error) {
-                    statsResult.exception.message ?: "Stats error"
+                    AppLogger.e("Traffic stats query failed on SIM change", statsResult.exception)
+                    statsResult.exception.message
                 } else {
                     "Stats unavailable"
                 }

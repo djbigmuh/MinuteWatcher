@@ -11,8 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -33,18 +35,23 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private var lastSnapshotHash: Int? = null
+        private val lastSnapshotHash = AtomicReference<Int?>(null)
 
         init {
             scope.launch {
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > 0L }
+                    .distinctUntilChanged { old, new ->
+                        SnapshotUtils.calculateContentHash(old) == SnapshotUtils.calculateContentHash(new)
+                    }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
-                        if (newHash != lastSnapshotHash) {
-                            lastSnapshotHash = newHash
+                        if (newHash != lastSnapshotHash.get()) {
+                            lastSnapshotHash.set(newHash)
+                            // Обновление виджета при отсутствии активных SIM выполняется намеренно —
+                            // виджет должен корректно отобразить состояние "No SIM" или "No Data".
                             widgetUpdater.updateAll()
                         }
                     }
@@ -59,7 +66,7 @@ class UpdateCoordinator
                 // При force=true обновляем немедленно, игнорируя проверку хэша
                 widgetUpdater.updateAll()
                 // Обновляем хэш, чтобы избежать немедленного повторного обновления из реактивного цикла
-                lastSnapshotHash = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
+                lastSnapshotHash.set(SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value))
             }
             dataRefreshNotifier.notifyRefresh(isManual = force)
         }

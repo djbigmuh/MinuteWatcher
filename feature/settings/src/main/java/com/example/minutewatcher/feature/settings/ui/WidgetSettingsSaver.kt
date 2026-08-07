@@ -5,8 +5,6 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,18 +15,14 @@ class WidgetSettingsSaver
         private val loader: WidgetSettingsLoader,
         private val dataChangeNotifier: DataChangeNotifier,
     ) {
-        private val saveMutex = Mutex()
-
         suspend fun save(state: WidgetSettingsState): Boolean =
             try {
                 if (state.settingsLoadFailed) {
                     AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
                     return false
                 }
-                saveMutex.withLock {
-                    loader.save(state)
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                }
+                loader.save(state)
+                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
                 true
             } catch (e: CancellationException) {
                 throw e

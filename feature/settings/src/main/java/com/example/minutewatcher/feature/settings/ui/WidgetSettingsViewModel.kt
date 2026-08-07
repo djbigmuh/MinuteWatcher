@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -71,8 +72,7 @@ class WidgetSettingsViewModel
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    com.example.minutewatcher.core.common.util.AppLogger
-                        .e("Failed to load widget settings", e)
+                    AppLogger.e("Failed to load widget settings", e)
                     _loadError.value = true
                 }
             }
@@ -88,7 +88,11 @@ class WidgetSettingsViewModel
         ) {
             val currentState = _settingsState.value ?: return
             val currentSims = currentState.simStates.toMutableMap()
-            val simState = currentSims[slot] ?: return
+            val simState =
+                currentSims[slot] ?: run {
+                    AppLogger.w("updateSimSettings: slot $slot not found in simStates. Creating default.")
+                    SimSettingsState()
+                }
             currentSims[slot] = update(simState)
             _settingsState.value = currentState.copy(simStates = currentSims)
         }
@@ -103,8 +107,7 @@ class WidgetSettingsViewModel
                 try {
                     val currentState = _settingsState.value
                     if (currentState == null) {
-                        com.example.minutewatcher.core.common.util.AppLogger
-                            .w("saveAndNotify called before settings were loaded")
+                        AppLogger.w("saveAndNotify called before settings were loaded")
                         onComplete(false)
                         return@launch
                     }

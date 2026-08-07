@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -61,6 +62,10 @@ import kotlin.time.Duration.Companion.milliseconds
 class SimIdentityRepositoryImpl
     @Inject
     constructor(
+        /**
+         * Context used for obtaining [Context.getMainExecutor] when registering
+         * subscription change listeners on Android R+.
+         */
         @param:ApplicationContext private val context: Context,
         private val subscriptionManager: SubscriptionManager,
         private val permissionManager: PermissionManager,
@@ -74,7 +79,9 @@ class SimIdentityRepositoryImpl
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
         private sealed interface SeedResult {
-            data class Real(val value: String) : SeedResult
+            data class Real(
+                val value: String,
+            ) : SeedResult
 
             object Fallback : SeedResult
         }
@@ -93,7 +100,11 @@ class SimIdentityRepositoryImpl
 
                 if (!currentSeed.isNullOrEmpty()) {
                     emit(SeedResult.Real(currentSeed))
-                    emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
+                    emitAll(
+                        seedRepository.seedFlow
+                            .filter { it.isNotEmpty() }
+                            .map { SeedResult.Real(it) },
+                    )
                 } else {
                     val generated = generateSeedWithRetry()
                     if (generated != null) {
@@ -102,7 +113,21 @@ class SimIdentityRepositoryImpl
                         AppLogger.e("Failed to generate identity seed. Using slot-based fallback.")
                         emit(SeedResult.Fallback)
                     }
-                    emitAll(seedRepository.seedFlow.filter { it.isNotEmpty() }.map { SeedResult.Real(it) })
+
+                    emitAll(
+                        seedRepository.seedFlow.transformLatest { s ->
+                            if (s.isNotEmpty()) {
+                                emit(SeedResult.Real(s))
+                            } else {
+                                // If seed is empty, retry generation after some time
+                                delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+                                val retryGenerated = generateSeedWithRetry()
+                                if (retryGenerated != null) {
+                                    emit(SeedResult.Real(retryGenerated))
+                                }
+                            }
+                        },
+                    )
                 }
             }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
@@ -223,6 +248,7 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
+            require(slot >= 0) { "Slot index must be non-negative, got $slot" }
             val seed = getSeed()
 
             val currentSims: List<ActiveSimInfo> =
@@ -236,6 +262,7 @@ class SimIdentityRepositoryImpl
             }
 
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
                 return createFallbackIdentity(slot, "sim_$slot")
             }
 
@@ -257,7 +284,7 @@ class SimIdentityRepositoryImpl
                             SimIdentityUtils.createIdentityFromInfo(it, seed.value)
                         }
                     }
-                saveSimIdentityInfo(resolved)
+                saveSimIdentitiesInfo(listOf(resolved))
                 resolved
             }
 
@@ -271,22 +298,40 @@ class SimIdentityRepositoryImpl
             source = IdentitySource.SLOT_FALLBACK,
         )
 
-        private suspend fun saveSimIdentityInfo(identity: SimIdentity) =
+        private suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) =
             saveMutex.withLock {
-                if (identity.source == IdentitySource.SLOT_FALLBACK) return@withLock
-
-                val slot = identity.slotIndex
-                val subId = identity.subscriptionId
+                val validIdentities = identities.filter { it.source != IdentitySource.SLOT_FALLBACK }
+                if (validIdentities.isEmpty()) return@withLock
 
                 val currentPrefs = dataStore.data.firstWithTimeout() ?: emptyPreferences()
-                val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-                val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
 
-                if ((currentSlot == slot) && (currentSub == subId)) return@withLock
+                val toUpdate =
+                    validIdentities.filter { identity ->
+                        val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+                        val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
+                        (currentSlot != identity.slotIndex) || (currentSub != identity.subscriptionId)
+                    }
 
-                if ((currentSlot == null) &&
-                    migratedIdentities.add(identity.stableId)
-                ) {
+                if (toUpdate.isEmpty()) return@withLock
+
+                val toMigrate =
+                    toUpdate.filter { identity ->
+                        val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+                        currentSlot == null && migratedIdentities.add(identity.stableId)
+                    }
+
+                dataStore.edit { prefs ->
+                    toUpdate.forEach { identity ->
+                        identity.slotIndex?.let { slot ->
+                            prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = slot
+                        }
+                        identity.subscriptionId?.let { subId ->
+                            prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = subId
+                        }
+                    }
+                }
+
+                toMigrate.forEach { identity ->
                     try {
                         migrationService.migrateLegacyData(identity)
                     } catch (e: CancellationException) {
@@ -298,14 +343,11 @@ class SimIdentityRepositoryImpl
                         )
                     }
                 }
-
-                dataStore.edit { prefs ->
-                    slot?.let { prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = it }
-                    subId?.let { prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = it }
-                }
             }
 
-        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache.filterNotNull()
+        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
+            activeSimsCache
+                .filterNotNull()
 
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val infoList =
@@ -313,27 +355,8 @@ class SimIdentityRepositoryImpl
                     .getActiveSubscriptions()
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
 
-            val currentIdentities =
-                infoList
-                    .map { info ->
-                        when (seed) {
-                            is SeedResult.Fallback -> {
-                                "sim_${info.simSlotIndex}"
-                            }
-                            is SeedResult.Real -> {
-                                SimIdentityUtils.createIdentityFromInfo(info, seed.value).stableId
-                            }
-                        }
-                    }.toSet()
-            migratedIdentities.retainAll(currentIdentities)
-
-            if (infoList.isEmpty()) return emptyList()
-
-            val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()
-            val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
-
-            return infoList.map { info ->
-                val identity =
+            val identities =
+                infoList.map { info ->
                     when (seed) {
                         is SeedResult.Fallback -> {
                             createFallbackIdentity(info.simSlotIndex, "sim_${info.simSlotIndex}")
@@ -342,15 +365,25 @@ class SimIdentityRepositoryImpl
                             SimIdentityUtils.createIdentityFromInfo(info, seed.value)
                         }
                     }
-                try {
-                    saveSimIdentityInfo(identity)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger
-                        .e("Failed to save identity info for slot ${info.simSlotIndex}", e)
                 }
 
+            val currentIdentities = identities.map { it.stableId }.toSet()
+            migratedIdentities.retainAll(currentIdentities)
+
+            if (infoList.isEmpty()) return emptyList()
+
+            try {
+                saveSimIdentitiesInfo(identities)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save identity info for active SIMs", e)
+            }
+
+            val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()
+            val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
+
+            return infoList.zip(identities).map { (info, identity) ->
                 ActiveSimInfo(
                     identity = identity,
                     slotIndex = info.simSlotIndex,
@@ -365,17 +398,20 @@ class SimIdentityRepositoryImpl
         }
 
         override fun getActiveIdentities(): Flow<List<String>> =
-            seedFlow.flatMapLatest {
-                observeActiveSims().map { sims ->
-                    sims.map { it.identity.stableId }
-                }
-            }.distinctUntilChanged()
+            seedFlow
+                .flatMapLatest {
+                    observeActiveSims()
+                        .map { sims ->
+                            sims.map { it.identity.stableId }
+                        }
+                }.distinctUntilChanged()
 
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =
             getActiveIdentities()
+                // Используем debounce для предотвращения "дребезга" при множественных быстрых изменениях
+                // состояния подписок от ОС (например, при переключении сетей или вставке SIM).
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
-                .distinctUntilChanged()
 
         override fun getSimOperator(identity: String): Flow<String> =
             combine(

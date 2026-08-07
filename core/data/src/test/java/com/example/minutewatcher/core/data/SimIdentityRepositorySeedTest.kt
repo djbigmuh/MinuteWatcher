@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -75,6 +76,15 @@ class SimIdentityRepositorySeedTest {
     @Test
     fun `seedFlow recovers from fallback when seed eventually becomes available`() =
         runTest {
+            // Mock a subscription info beforehand
+            val mockSubInfo = mock<SubscriptionInfo>()
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.iccId).thenReturn("icc_1")
+            whenever(mockSubInfo.displayName).thenReturn("SIM 1")
+            whenever(mockSubInfo.carrierName).thenReturn("Carrier 1")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
             val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
             val seedRepo =
                 object : SimIdentitySeedRepository {
@@ -116,41 +126,29 @@ class SimIdentityRepositorySeedTest {
                     }
                 }
 
-            advanceUntilIdle() // This should trigger the timeout and emission of FALLBACK_SEED
+            // Trigger fallback by advancing time past seed generation timeout
             testScheduler.advanceTimeBy(30.seconds)
             advanceUntilIdle()
 
             // At this point, seedFlow should have emitted FALLBACK_SEED.
-            // Since getActiveSubscriptions() returns emptyList() in @Before, getActiveIdentities() will be empty.
-            // Но мы ожидаем, что поток эмитировал пустой список (после фильтрации seedFlow).
+            // Since getActiveSubscriptions() now returns our mock, identitiesList should have an entry.
             assertTrue(
-                "Expected at least one emission from getActiveIdentities during fallback",
-                identitiesList
-                    .isNotEmpty(),
+                "Expected fallback identity emission. List: $identitiesList",
+                identitiesList.isNotEmpty() && identitiesList.any { it.isNotEmpty() },
             )
+
+            val fallbackIdentity = identitiesList.last().first()
+            assertTrue("Expected fallback identity format", fallbackIdentity.startsWith("sim_"))
 
             // Now provide real seed
             storedSeed.emit("real_seed")
-            // Give time for seedFlow to propagate through flatMapLatest
-            advanceUntilIdle()
-
-            // Mock a subscription so we get an identity
-            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
-            whenever(mockSubInfo.subscriptionId).thenReturn(1)
-            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
-            whenever(mockSubInfo.iccId).thenReturn("icc_1")
-            whenever(mockSubInfo.displayName).thenReturn("SIM 1")
-            whenever(mockSubInfo.carrierName).thenReturn("Carrier 1")
-            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
-
-            // Trigger re-emission in callbackFlow via permission notifier
-            permissionChanges.emit(Unit)
             advanceUntilIdle()
 
             // It should now have emitted identities based on real_seed.
             assertTrue(
-                "Expected some identities in $identitiesList. Last emission: ${identitiesList.lastOrNull()}",
-                identitiesList.isNotEmpty() && identitiesList.last().isNotEmpty(),
+                "Expected identities based on real_seed in $identitiesList. Last emission: ${identitiesList.lastOrNull()}",
+                identitiesList.isNotEmpty() && identitiesList.last().isNotEmpty() &&
+                    identitiesList.last().first() != fallbackIdentity,
             )
 
             identitiesJob.cancel()

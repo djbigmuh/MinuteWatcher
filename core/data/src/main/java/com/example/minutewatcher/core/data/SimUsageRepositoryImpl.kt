@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -144,18 +144,20 @@ class SimUsageRepositoryImpl
             nowMillis: Long,
         ): Boolean =
             resetMutex.withLock {
-                val didReset = AtomicBoolean(false)
+                val currentPrefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                val lastResetDate = currentPrefs?.get(SimSettingsKeys.lastResetDateKey(identity)) ?: 0L
+                val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
+
+                if (lastResetDate >= periodStart) return@withLock false
+
                 dataStore.edit { prefs ->
-                    val lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L
-                    val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
-                    if (lastResetDate < periodStart) {
+                    // Повторная проверка внутри edit для атомарности
+                    val innerLastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L
+                    if (innerLastResetDate < periodStart) {
                         prefs.applyResetWithRollover(identity, nowMillis)
-                        didReset.set(true)
-                    } else {
-                        didReset.set(false)
                     }
                 }
-                didReset.get()
+                true
             }
 
         private fun MutablePreferences.applyResetWithRollover(

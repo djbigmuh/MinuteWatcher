@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import kotlinx.coroutines.CancellationException
@@ -19,21 +20,20 @@ class MainSimRefreshController
     ) {
         private val simCheckMutex = Mutex()
 
-        suspend fun refreshSimCardsInternal() =
+        suspend fun refreshSimCardsInternal(): RefreshResult? =
             withContext(ioDispatcher) {
                 if (!simCheckMutex.tryLock()) {
                     AppLogger.d("Refresh already in progress, skipping")
-                    return@withContext
+                    return@withContext null
                 }
                 try {
-                    try {
-                        usageUseCase.refreshOperatorInfo()
-                        usageStateRepository.refresh()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Error refreshing SIM cards", e)
-                    }
+                    usageUseCase.refreshOperatorInfo()
+                    usageStateRepository.refresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Error refreshing SIM cards", e)
+                    null
                 } finally {
                     simCheckMutex.unlock()
                 }

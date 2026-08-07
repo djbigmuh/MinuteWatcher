@@ -26,6 +26,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Контроллер данных SIM-карт для главной страницы.
+ *
+ * Все операции по обновлению данных запускаются на [ioDispatcher], так как они
+ * преимущественно связаны с чтением и записью в DataStore (I/O-bound).
+ */
 class MainSimDataController
     @Inject
     constructor(

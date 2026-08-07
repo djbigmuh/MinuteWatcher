@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,7 +52,7 @@ open class SemanticSearchManager
 
         private val sessionMutex = Mutex()
         private var session: AppSearchSessionWrapper? = null
-        private var lastSnapshotHash: Int = -1
+        private var lastSnapshotHash: Int? = null
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
@@ -76,6 +77,7 @@ open class SemanticSearchManager
                         .debounce { snapshot ->
                             if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
                         }.collect { snapshot ->
+                            ensureActive()
                             indexSnapshot(snapshot)
                         }
                 }
@@ -127,10 +129,10 @@ open class SemanticSearchManager
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
             val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
             val currentHash =
-                if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else EMPTY_INDEX_HASH
+                if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
             return sessionMutex.withLock {
                 if (hasActiveSims && currentHash == lastSnapshotHash) return@withLock true
-                if (!hasActiveSims && lastSnapshotHash == EMPTY_INDEX_HASH) return@withLock true
+                if (!hasActiveSims && lastSnapshotHash == null) return@withLock true
 
                 var result = false
                 if (ensureSession()) {
@@ -146,7 +148,7 @@ open class SemanticSearchManager
                                     result = executeIndexing(snapshot, currentHash)
                                 } catch (retryException: Exception) {
                                     AppLogger.e("AppSearch indexing failed again after retry", retryException)
-                                    lastSnapshotHash = -1
+                                    lastSnapshotHash = null
                                     _status.value =
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -156,7 +158,7 @@ open class SemanticSearchManager
                             }
                         } else {
                             AppLogger.e("AppSearch indexing failed", e)
-                            lastSnapshotHash = -1
+                            lastSnapshotHash = null
                             _status.value =
                                 TrackingStatus.Error(
                                     TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -165,7 +167,7 @@ open class SemanticSearchManager
                         }
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch non-AppSearch error during indexing", e)
-                        lastSnapshotHash = -1
+                        lastSnapshotHash = null
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }
                 }
@@ -175,7 +177,7 @@ open class SemanticSearchManager
 
         private suspend fun executeIndexing(
             snapshot: GlobalSnapshot,
-            currentHash: Int,
+            currentHash: Int?,
         ): Boolean =
             withContext(ioDispatcher) {
                 try {
@@ -193,7 +195,7 @@ open class SemanticSearchManager
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("AppSearch indexing error", e)
-                    lastSnapshotHash = -1
+                    lastSnapshotHash = null
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     false
                 }
@@ -248,6 +250,5 @@ open class SemanticSearchManager
             private const val DATABASE_NAME = "usage"
             const val NAMESPACE = "usage"
             private const val SCHEMA_RETRY_ATTEMPTS = 2
-            private const val EMPTY_INDEX_HASH = -1
         }
     }

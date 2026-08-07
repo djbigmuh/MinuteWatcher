@@ -9,8 +9,18 @@ import com.example.minutewatcher.core.model.SimSnapshot
  */
 object SnapshotUtils {
     /**
-     * Calculates a content-based hash to detect meaningful changes,
-     * ignoring timestamps and transient fields.
+     * Вычисляет хэш содержимого снапшота для обнаружения значимых изменений данных.
+     *
+     * В хэш включаются только поля, влияющие на визуальное представление или логику работы виджетов:
+     * - Лимиты, использованные и оставшиеся значения (минуты/байты).
+     * - Периоды действия пакетов.
+     * - Тип источника данных (системный/ручной).
+     * - Настройки автосброса (день месяца).
+     *
+     * Исключаются:
+     * - Временные метки (lastUpdateTime, timestamp) — чтобы избежать бесконечных циклов обновления.
+     * - Имя оператора — чтобы избежать лишних перерисовок виджета при обновлении метаданных,
+     *   если числовые показатели не изменились.
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
         var result = (snapshot.version as Any?).hashCode()
@@ -24,11 +34,10 @@ object SnapshotUtils {
                     sim.slot to (
                         sim.autoResetDay to
                             (sim.entities as Map<*, SemanticEntity>?)?.values?.filterNotNull()?.map { entity ->
-                                // Explicitly list fields to exclude lastUpdateTime
+                                // Исключаем operatorName и lastUpdateTime для стабильности хэша
                                 listOf(
                                     entity.id,
                                     entity.simSlot,
-                                    entity.operatorName,
                                     entity.packageType,
                                     entity.limit,
                                     entity.used,

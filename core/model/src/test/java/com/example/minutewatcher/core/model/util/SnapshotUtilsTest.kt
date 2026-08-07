@@ -53,6 +53,14 @@ class SnapshotUtilsTest {
     }
 
     @Test
+    fun `hash remains same when only operatorName changes`() {
+        val s1 = createSnapshot(remaining = 90, operatorName = "Operator A")
+        val s2 = createSnapshot(remaining = 90, operatorName = "Operator B")
+
+        assertEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
+    }
+
+    @Test
     fun `hash remains same when only global timestamp changes`() {
         val s1 = createSnapshot(remaining = 90, timestamp = 1000L)
         val s2 = createSnapshot(remaining = 90, timestamp = 2000L)
@@ -86,12 +94,13 @@ class SnapshotUtilsTest {
     private fun createSimSnapshot(
         slot: Int,
         remaining: Long,
+        operatorName: String = "ABC",
     ): SimSnapshot {
         val entity =
             SemanticEntity(
                 id = "test_$slot",
                 simSlot = slot,
-                operatorName = "ABC",
+                operatorName = operatorName,
                 packageType = PackageType.MINUTES,
                 limit = 1000,
                 used = 0,
@@ -112,12 +121,13 @@ class SnapshotUtilsTest {
         periodEnd: Long = 0,
         lastUpdateTime: Long = 0,
         timestamp: Long = 0,
+        operatorName: String = "ABC",
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
                 id = "test",
                 simSlot = 0,
-                operatorName = "ABC",
+                operatorName = operatorName,
                 packageType = PackageType.MINUTES,
                 limit = limit,
                 used = used,

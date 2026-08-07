@@ -8,7 +8,9 @@ import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
+import com.example.minutewatcher.core.common.util.AppLogger
 import kotlinx.coroutines.guava.await
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -63,16 +65,25 @@ class AppSearchWrapperImpl
 private class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,
 ) : AppSearchSessionWrapper {
-    override var isClosed = false
-        private set
+    private val closed = AtomicBoolean(false)
+    override val isClosed: Boolean get() = closed.get()
 
     override suspend fun setSchema(request: SetSchemaRequest) {
         session.setSchemaAsync(request).await()
     }
 
+    /**
+     * Сохраняет документы в AppSearch.
+     *
+     * В случае частичного успеха (некоторые документы не удалось добавить) бросает [AppSearchException].
+     * Это намеренное поведение: в [SemanticSearchManager] это приведет к сбросу `lastSnapshotHash`,
+     * что гарантирует полную переиндексацию снапшота при следующем вызове и предотвращает
+     * рассинхронизацию индекса с реальным состоянием пакетов.
+     */
     override suspend fun putDocuments(request: PutDocumentsRequest) {
         val result = session.putAsync(request).await()
         if (!result.isSuccess) {
+            AppLogger.w("Partial put failure in AppSearch: ${result.failures}")
             val firstError = result.failures.values.firstOrNull()
             throw AppSearchException(
                 AppSearchResult.RESULT_INTERNAL_ERROR,
@@ -93,9 +104,8 @@ private class AppSearchSessionWrapperImpl(
     }
 
     override fun close() {
-        if (!isClosed) {
+        if (closed.compareAndSet(false, true)) {
             session.close()
-            isClosed = true
         }
     }
 }

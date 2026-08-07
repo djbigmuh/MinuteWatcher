@@ -37,7 +37,10 @@ class WidgetSettingsRepository
                     return@coroutineScope getFallbackWidgetSettings(settings)
                 }
 
-                // Use the fresh activeSims to load settings in one atomic-like operation to minimize inconsistency.
+                // Use the captured activeSims to load settings.
+                // While the list of active SIMs could theoretically change between these calls,
+                // we maintain consistency by mapping the results back to the identities we just identified.
+                // Eventual consistency is acceptable for widget settings UI.
                 val realIdentities = activeSims.map { it.identity.stableId }
                 val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
                 val allIdentities = (realIdentities + fallbackIdentities).distinct()
@@ -51,10 +54,14 @@ class WidgetSettingsRepository
                 }
                 val batchSettings = batchSettingsResult ?: emptyMap()
 
+                // Map results back to the activeSims list we started with to ensure
+                // the returned state only contains data for SIMs that were active at the start of the call.
                 val simStates =
                     activeSims.associate { info ->
                         val identity = info.identity.stableId
                         val fallbackKey = "sim_${info.slotIndex}"
+
+                        // Use default settings if specific settings for this identity are missing.
                         val settings = batchSettings[identity] ?: batchSettings[fallbackKey] ?: SimSettingsState()
                         info.slotIndex to settings
                     }

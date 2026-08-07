@@ -11,9 +11,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -32,26 +30,15 @@ class SimIdentitySeedRepositoryImpl
         }
 
         private val seedMutex = Mutex()
-        private val ephemeralSeed by lazy {
-            UUID
-                .randomUUID()
-                .toString()
-        }
 
         override val seedFlow: Flow<String> =
-            flow {
-                emitAll(
-                    dataStore.data
-                        .catch { e ->
-                            AppLogger.e("DataStore error in seedFlow, emitting ephemeral seed", e)
-                            emit(emptyPreferences())
-                        }.map { prefs ->
-                            prefs[SIM_IDENTITY_SEED] ?: generateEphemeralSeed()
-                        },
-                )
-            }
-
-        private fun generateEphemeralSeed(): String = ephemeralSeed
+            dataStore.data
+                .catch { e ->
+                    AppLogger.e("DataStore error in seedFlow, emitting empty string", e)
+                    emit(emptyPreferences())
+                }.map { prefs ->
+                    prefs[SIM_IDENTITY_SEED] ?: ""
+                }
 
         override suspend fun setSeed(seed: String) {
             dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
