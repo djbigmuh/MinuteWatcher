@@ -39,36 +39,38 @@ class WidgetUpdaterImpl
 
         override fun updateAll() {
             updateJob?.cancel()
-            updateJob = scope.launch {
-                try {
-                    val result = safeUpdateAll(context)
-                    when (result) {
-                        is UpdateResult.Success -> {
-                            setWidgetLimitExceeded(false)
-                        }
-                        is UpdateResult.LimitExceeded -> {
-                            setWidgetLimitExceeded(true)
-                            AppLogger.w(
-                                "Widget update failed due to size limit. " +
-                                    "Flag set to trigger simplified layout on next update.",
-                            )
-                        }
-                        is UpdateResult.GenericFailure -> {
-                            AppLogger.d("Retrying widget update after generic failure...")
-                            delay(Constants.Widget.RETRY_BACKOFF_MS.milliseconds) // Backoff before retry
-                            when (safeUpdateAll(context)) {
-                                is UpdateResult.Success -> setWidgetLimitExceeded(false)
-                                is UpdateResult.LimitExceeded -> {
-                                    setWidgetLimitExceeded(true)
-                                    AppLogger.w(
-                                        "Retry also hit size limit. " +
-                                            "Flag set to trigger simplified layout on next update.",
-                                    )
+            updateJob =
+                scope.launch {
+                    try {
+                        val result = safeUpdateAll(context)
+                        when (result) {
+                            is UpdateResult.Success -> {
+                                setWidgetLimitExceeded(false)
+                            }
+                            is UpdateResult.LimitExceeded -> {
+                                setWidgetLimitExceeded(true)
+                                AppLogger.w(
+                                    "Widget update failed due to size limit. " +
+                                        "Flag set to trigger simplified layout on next update.",
+                                )
+                            }
+                            is UpdateResult.GenericFailure -> {
+                                AppLogger.d("Retrying widget update after generic failure...")
+                                delay(Constants.Widget.RETRY_BACKOFF_MS.milliseconds) // Backoff before retry
+                                val retryResult = safeUpdateAll(context)
+                                when (retryResult) {
+                                    is UpdateResult.Success -> setWidgetLimitExceeded(false)
+                                    is UpdateResult.LimitExceeded -> {
+                                        setWidgetLimitExceeded(true)
+                                        AppLogger.w(
+                                            "Retry also hit size limit. " +
+                                                "Flag set to trigger simplified layout on next update.",
+                                        )
+                                    }
+                                    is UpdateResult.GenericFailure -> AppLogger.e("Widget update retry also failed")
                                 }
-                                is UpdateResult.GenericFailure -> AppLogger.e("Widget update retry also failed")
                             }
                         }
-                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -111,21 +113,28 @@ class WidgetUpdaterImpl
             }
 
         /**
-         * Эвристически определяет, вызвана ли ошибка [IllegalArgumentException] при обновлении виджета
-         * превышением лимита размера Binder/RemoteViews (TransactionTooLargeException).
+         * Эвристически определяет, вызвана ли ошибка [IllegalArgumentException]
+         * при обновлении виджета превышением лимита размера Binder/RemoteViews
+         * (TransactionTooLargeException).
          *
-         * Проверка основана на двух критериях:
-         * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин (наиболее надежный способ).
-         * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке, что часто встречается в исключениях,
-         *    бросаемых системой при маршалинге больших структур RemoteViews, даже если корень ошибки
-         *    не обернут в TransactionTooLargeException.
+         * Проверка основана на трех критериях:
+         * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин
+         *    (наиболее надежный способ).
+         * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке, что часто
+         *    встречается в исключениях, бросаемых системой при маршалинге больших
+         *    структур RemoteViews, даже если корень ошибки не обернут в
+         *    TransactionTooLargeException.
+         * 3. Наличие маркеров "RemoteViews" или "TransactionTooLargeException"
+         *    в stack trace (позволяет обнаружить ошибку в глубине системных
+         *    вызовов).
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
 
             // Проверяем сообщение исключения на упоминание RemoteViews.
-            // Это эвристика, так как система может выбрасывать IAE с текстом о размере данных.
+            // Это эвристика, так как система может выбрасывать IAE
+            // с текстом о размере данных.
             val isMessageLimit = e.message?.contains(MARKER_REMOTE_VIEWS_SHORT, ignoreCase = true) == true
 
             // Проверяем stack trace на маркеры RemoteViews / TransactionTooLargeException
@@ -133,7 +142,10 @@ class WidgetUpdaterImpl
                 e.stackTrace.any { frame ->
                     val cls = frame.className ?: ""
                     cls.contains("RemoteViews", ignoreCase = true) ||
-                        cls.contains("TransactionTooLargeException", ignoreCase = true)
+                        cls.contains(
+                            "TransactionTooLargeException",
+                            ignoreCase = true,
+                        )
                 }
 
             return isTransactionTooLarge || isMessageLimit || isStackLimit

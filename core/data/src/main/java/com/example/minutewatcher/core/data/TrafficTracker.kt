@@ -62,7 +62,8 @@ class TrafficTracker
         private val inMemoryLastDataSubId = AtomicInteger(-1)
 
         /**
-         * Список identity, требующих повторной инициализации базовой линии трафика.
+         * Список identity, требующих повторной инициализации
+         * базовой линии трафика.
          * Доступ к коллекции также защищен [trafficMutex].
          */
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()

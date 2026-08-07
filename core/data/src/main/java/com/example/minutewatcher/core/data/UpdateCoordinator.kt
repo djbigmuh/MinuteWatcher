@@ -22,8 +22,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Единый механизм обновления.
  *
- * Координатор является Singleton и использует ApplicationScope, поэтому цикл наблюдения
- * за снимками состояния (observeSnapshot) живет в течение всего времени работы приложения.
+ * Координатор является Singleton и использует ApplicationScope, поэтому цикл
+ * наблюдения за снимками состояния (observeSnapshot) живет в течение всего
+ * времени работы приложения.
  */
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @Singleton
@@ -45,12 +46,14 @@ class UpdateCoordinator
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) ==
                             SnapshotUtils.calculateContentHash(new)
-                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds).collect { snapshot ->
+                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    .collect { snapshot ->
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
                         if (newHash != lastSnapshotHash.get()) {
                             lastSnapshotHash.set(newHash)
-                            // Обновление виджета при отсутствии активных SIM выполняется намеренно —
-                            // виджет должен корректно отобразить состояние "No SIM" или "No Data".
+                            // Обновление виджета при отсутствии активных SIM выполняется
+                            // намеренно — виджет должен корректно отобразить состояние
+                            // "No SIM" или "No Data".
                             widgetUpdater.updateAll()
                         }
                     }

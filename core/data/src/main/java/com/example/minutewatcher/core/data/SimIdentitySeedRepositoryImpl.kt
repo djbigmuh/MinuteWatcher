@@ -24,7 +24,6 @@ class SimIdentitySeedRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : SimIdentitySeedRepository {
-
         companion object {
             private val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
         }
