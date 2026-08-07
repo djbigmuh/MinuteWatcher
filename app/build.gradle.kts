@@ -71,6 +71,7 @@ configure<ApplicationExtension> {
 
     lint {
         baseline = file("lint-baseline.xml")
+        disable += "AndroidGradlePluginVersion"
     }
 
     testOptions {

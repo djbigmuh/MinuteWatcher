@@ -117,24 +117,28 @@ class WidgetUpdaterImpl
          * при обновлении виджета превышением лимита размера Binder/RemoteViews
          * (TransactionTooLargeException).
          *
-         * Проверка основана на двух критериях:
+         * Проверка основана на трех критериях:
          * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин
          *    (наиболее надежный способ).
-         * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке, что часто
-         *    встречается в исключениях, бросаемых системой при маршалинге больших
-         *    структур RemoteViews, даже если корень ошибки не обернут в
-         *    TransactionTooLargeException.
+         * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке.
+         * 3. Наличие маркеров в stack trace (поиск конкретных системных классов).
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
 
             // Проверяем сообщение исключения на упоминание RemoteViews.
-            // Это эвристика, так как система может выбрасывать IAE
-            // с текстом о размере данных.
             val isMessageRelated = e.message?.contains("RemoteViews", ignoreCase = true) == true
 
-            return isTransactionTooLarge || isMessageRelated
+            // Проверяем stack trace на маркеры RemoteViews / TransactionTooLargeException
+            val isStackLimit =
+                e.stackTrace.any { frame ->
+                    val cls = frame.className ?: ""
+                    cls.startsWith("android.widget.RemoteViews") ||
+                        cls.startsWith("android.os.TransactionTooLargeException")
+                }
+
+            return isTransactionTooLarge || isMessageRelated || isStackLimit
         }
 
         private fun hasCauseOfType(
@@ -147,8 +151,5 @@ class WidgetUpdaterImpl
                 current = current.cause
             }
             return false
-        }
-
-        companion object {
         }
     }

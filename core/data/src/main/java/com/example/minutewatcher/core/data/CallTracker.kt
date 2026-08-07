@@ -516,6 +516,7 @@ class CallTracker
          * Uses ceiling rounding for minutes (1 sec = 1 min, 61 sec = 2 min).
          * This follows the most common carrier billing practices.
          */
+        @Suppress("ReturnCount")
         private suspend fun processCallDuration(
             durationSeconds: Int,
             subId: Int,

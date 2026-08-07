@@ -105,26 +105,25 @@ class SimIdentityRepositorySeedTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepo,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
             testScheduler.advanceUntilIdle()
 
             val identitiesList = mutableListOf<List<String>>()
-            val identitiesJob =
-                launch {
-                    identityRepo.getActiveIdentities().collect {
-                        identitiesList.add(it)
-                    }
+            backgroundScope.launch {
+                identityRepo.getActiveIdentities().collect {
+                    identitiesList.add(it)
                 }
+            }
 
             // Trigger fallback by advancing time past seed generation timeout
             advanceUntilIdle()
@@ -151,7 +150,5 @@ class SimIdentityRepositorySeedTest {
                     identitiesList.last().isNotEmpty() &&
                     identitiesList.last().first() != fallbackIdentity,
             )
-
-            identitiesJob.cancel()
         }
 }

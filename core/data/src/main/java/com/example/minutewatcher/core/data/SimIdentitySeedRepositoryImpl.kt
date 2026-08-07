@@ -18,7 +18,6 @@ import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
-
 @Singleton
 class SimIdentitySeedRepositoryImpl
     @Inject

@@ -36,8 +36,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -91,35 +89,22 @@ class SimIdentityRepositoryImpl
                 .newKeySet<String>()
 
         private val seedFlow: Flow<SeedResult> =
-            flow {
-                val currentSeed =
-                    seedRepository.seedFlow
-                        .filter { it.isNotEmpty() }
-                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-
-                if (!currentSeed.isNullOrEmpty()) {
-                    emit(SeedResult.Real(currentSeed))
-                    emitAll(
-                        seedRepository.seedFlow
-                            .filter { it.isNotEmpty() }
-                            .map { SeedResult.Real(it) },
-                    )
-                } else {
-                    val generated = generateSeedWithRetry()
-                    if (generated != null) {
-                        emit(SeedResult.Real(generated))
-                    } else {
-                        AppLogger.e("Failed to generate identity seed. Using slot-based fallback.")
-                        emit(SeedResult.Fallback)
+            seedRepository.seedFlow
+                .flatMapLatest { s ->
+                    flow {
+                        if (s.isNotEmpty()) {
+                            emit(SeedResult.Real(s))
+                        } else {
+                            val generated = generateSeedWithRetry()
+                            if (generated != null) {
+                                emit(SeedResult.Real(generated))
+                            } else {
+                                AppLogger.e("Failed to generate identity seed. Using slot-based fallback.")
+                                emit(SeedResult.Fallback)
+                            }
+                        }
                     }
-
-                    emitAll(
-                        seedRepository.seedFlow
-                            .filter { it.isNotEmpty() }
-                            .map { SeedResult.Real(it) },
-                    )
-                }
-            }.distinctUntilChanged()
+                }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =

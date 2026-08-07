@@ -75,23 +75,22 @@ class SimIdentitySeedRaceTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             val results = mutableListOf<List<String>>()
-            val job =
-                launch {
-                    repository.observeIdentities().collect { results.add(it) }
-                }
+            backgroundScope.launch {
+                repository.observeIdentities().collect { results.add(it) }
+            }
 
             // Initially seed is empty/not emitted
             assertTrue("Should not emit with empty seed", results.isEmpty())
@@ -103,8 +102,6 @@ class SimIdentitySeedRaceTest {
             advanceTimeBy(400.milliseconds)
 
             assertTrue("Should emit after seed is available", results.isNotEmpty())
-
-            job.cancel()
         }
 
     @Test
@@ -116,16 +113,16 @@ class SimIdentitySeedRaceTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             // Let it initialize and generate seed

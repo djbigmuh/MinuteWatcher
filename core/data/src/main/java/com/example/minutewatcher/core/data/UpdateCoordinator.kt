@@ -46,8 +46,7 @@ class UpdateCoordinator
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) ==
                             SnapshotUtils.calculateContentHash(new)
-                    }
-                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
                         if (newHash != lastSnapshotHash.value) {
