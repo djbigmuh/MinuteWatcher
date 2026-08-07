@@ -404,9 +404,7 @@ class TrafficTracker
             return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
         }
 
-        private suspend fun resolveTargetSimFromActiveSims(
-            activeSims: List<ActiveSimInfo>,
-        ): Triple<Int, Int, Boolean>? {
+        private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
             val defaultDataSim = activeSims.find { it.isDefaultData }
 
             return if (defaultDataSim != null) {

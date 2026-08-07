@@ -129,7 +129,7 @@ class SimIdentityRepositoryHangTest {
                     }
 
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        delay(1000000)
+                        delay(1000.seconds)
                         return "seed"
                     }
                 }
@@ -183,7 +183,7 @@ class SimIdentityRepositoryHangTest {
                     }
 
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        delay(1000000)
+                        delay(1000.seconds)
                         return "seed"
                     }
                 }

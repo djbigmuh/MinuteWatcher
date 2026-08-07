@@ -102,7 +102,7 @@ open class SemanticSearchManager
                     success = true
                 } catch (e: AppSearchException) {
                     newSession?.close()
-                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce && attempt == 0) {
+                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce) {
                         AppLogger.w("AppSearch schema mismatch, retrying with force override")
                         shouldForce = true
                     } else {

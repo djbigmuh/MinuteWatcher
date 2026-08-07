@@ -26,6 +26,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -99,7 +100,7 @@ class SimIdentitySeedRaceTest {
             seedFlow.emit("test-seed")
 
             // Wait for debounce (300ms)
-            advanceTimeBy(400)
+            advanceTimeBy(400.milliseconds)
 
             assertTrue("Should emit after seed is available", results.isNotEmpty())
 
@@ -128,13 +129,13 @@ class SimIdentitySeedRaceTest {
                 )
 
             // Let it initialize and generate seed
-            advanceTimeBy(10000)
+            advanceTimeBy(10000.milliseconds)
 
             val firstSeed = repository.getIdentity(0)
 
             // Change seed flow (simulating update in storage)
             seedFlow.emit("new-seed")
-            advanceTimeBy(400)
+            advanceTimeBy(400.milliseconds)
 
             val secondSeed = repository.getIdentity(0)
             assertEquals("Seed should be stable for the same session", firstSeed, secondSeed)

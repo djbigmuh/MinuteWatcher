@@ -14,7 +14,6 @@ object Constants {
         const val HIGHLIGHT_DELAY_MS = 3000L
 
         const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
-        const val MAX_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24 hours
     }
 
     object Widget {
@@ -38,7 +37,6 @@ object Constants {
         const val SEPARATOR_THICKNESS = 1
         const val ALPHA_FULL = 1f
 
-        const val MANUAL_UPDATE_BLOCK_MS = 5000L
         const val RETRY_BACKOFF_MS = 500L
     }
 
