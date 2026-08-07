@@ -71,12 +71,12 @@ class WidgetUpdaterImpl
                                 }
                             }
                         }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Unexpected error updating widgets", e)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Unexpected error updating widgets", e)
+                    }
                 }
-            }
         }
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {
@@ -117,16 +117,13 @@ class WidgetUpdaterImpl
          * при обновлении виджета превышением лимита размера Binder/RemoteViews
          * (TransactionTooLargeException).
          *
-         * Проверка основана на трех критериях:
+         * Проверка основана на двух критериях:
          * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин
          *    (наиболее надежный способ).
          * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке, что часто
          *    встречается в исключениях, бросаемых системой при маршалинге больших
          *    структур RemoteViews, даже если корень ошибки не обернут в
          *    TransactionTooLargeException.
-         * 3. Наличие маркеров "RemoteViews" или "TransactionTooLargeException"
-         *    в stack trace (позволяет обнаружить ошибку в глубине системных
-         *    вызовов).
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
@@ -135,20 +132,9 @@ class WidgetUpdaterImpl
             // Проверяем сообщение исключения на упоминание RemoteViews.
             // Это эвристика, так как система может выбрасывать IAE
             // с текстом о размере данных.
-            val isMessageLimit = e.message?.contains(MARKER_REMOTE_VIEWS_SHORT, ignoreCase = true) == true
+            val isMessageRelated = e.message?.contains("RemoteViews", ignoreCase = true) == true
 
-            // Проверяем stack trace на маркеры RemoteViews / TransactionTooLargeException
-            val isStackLimit =
-                e.stackTrace.any { frame ->
-                    val cls = frame.className ?: ""
-                    cls.contains("RemoteViews", ignoreCase = true) ||
-                        cls.contains(
-                            "TransactionTooLargeException",
-                            ignoreCase = true,
-                        )
-                }
-
-            return isTransactionTooLarge || isMessageLimit || isStackLimit
+            return isTransactionTooLarge || isMessageRelated
         }
 
         private fun hasCauseOfType(
@@ -164,6 +150,5 @@ class WidgetUpdaterImpl
         }
 
         companion object {
-            private const val MARKER_REMOTE_VIEWS_SHORT = "RemoteViews"
         }
     }

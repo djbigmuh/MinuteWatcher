@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
+import java.util.HashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,12 +61,8 @@ class TrafficTracker
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
 
-        /**
-         * Список identity, требующих повторной инициализации
-         * базовой линии трафика.
-         * Доступ к коллекции также защищен [trafficMutex].
-         */
-        private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
+        /** Доступ только под [trafficMutex]. */
+        private val baselineNeedsRetry = HashMap<String, Int>()
 
         private data class TargetInfo(
             val slot: Int,

@@ -45,7 +45,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -115,25 +114,9 @@ class SimIdentityRepositoryImpl
                     }
 
                     emitAll(
-                        seedRepository.seedFlow.transformLatest { s ->
-                            if (s.isNotEmpty()) {
-                                emit(SeedResult.Real(s))
-                            } else {
-                                var currentDelayMs = Constants.Flow.RETRY_DELAY_MS
-                                var attempt = 0
-                                while (attempt < MAX_SEED_RETRY) {
-                                    delay(currentDelayMs.milliseconds)
-                                    val retrySeed = generateSeedWithRetry()
-                                    if (retrySeed != null) {
-                                        emit(SeedResult.Real(retrySeed))
-                                        return@transformLatest
-                                    }
-                                    currentDelayMs = (currentDelayMs * 2).coerceAtMost(MAX_SEED_DELAY_MS)
-                                    attempt++
-                                }
-                                // After exhausting retries, just wait for non-empty emit from seedFlow
-                            }
-                        },
+                        seedRepository.seedFlow
+                            .filter { it.isNotEmpty() }
+                            .map { SeedResult.Real(it) },
                     )
                 }
             }.distinctUntilChanged()
@@ -474,7 +457,5 @@ class SimIdentityRepositoryImpl
 
         companion object {
             private const val SEED_RETRY_ATTEMPTS = 2
-            private const val MAX_SEED_RETRY = 5
-            private const val MAX_SEED_DELAY_MS = 16_000L
         }
     }

@@ -127,7 +127,6 @@ class SimIdentityRepositorySeedTest {
                 }
 
             // Trigger fallback by advancing time past seed generation timeout
-            testScheduler.advanceTimeBy(30.seconds)
             advanceUntilIdle()
 
             // At this point, seedFlow should have emitted FALLBACK_SEED.
@@ -142,9 +141,6 @@ class SimIdentityRepositorySeedTest {
 
             // Now provide real seed
             storedSeed.emit("real_seed")
-            testScheduler.advanceUntilIdle()
-            // Just in case there are any debounces or delays in the chain
-            testScheduler.advanceTimeBy(1000)
             advanceUntilIdle()
 
             // It should now have emitted identities based on real_seed.

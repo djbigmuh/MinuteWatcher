@@ -10,11 +10,11 @@ import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -36,7 +36,7 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
-        private val lastSnapshotHash = AtomicReference<Int?>(null)
+        private val lastSnapshotHash = MutableStateFlow<Int?>(null)
 
         init {
             scope.launch {
@@ -46,11 +46,12 @@ class UpdateCoordinator
                     .distinctUntilChanged { old, new ->
                         SnapshotUtils.calculateContentHash(old) ==
                             SnapshotUtils.calculateContentHash(new)
-                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    }
+                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .collect { snapshot ->
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
-                        if (newHash != lastSnapshotHash.get()) {
-                            lastSnapshotHash.set(newHash)
+                        if (newHash != lastSnapshotHash.value) {
+                            lastSnapshotHash.value = newHash
                             // Обновление виджета при отсутствии активных SIM выполняется
                             // намеренно — виджет должен корректно отобразить состояние
                             // "No SIM" или "No Data".
@@ -67,7 +68,7 @@ class UpdateCoordinator
             if (updateWidget && force) {
                 val snapshot = usageStateRepository.observeSnapshot().value
                 if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                    lastSnapshotHash.set(SnapshotUtils.calculateContentHash(snapshot))
+                    lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
                 }
                 widgetUpdater.updateAll()
             }

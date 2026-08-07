@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
@@ -159,7 +158,7 @@ class MainViewModel
             if (result == null) return
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
-            val hasChanged = result is RefreshResult.Success && newHash != lastSnapshotHash
+            val hasChanged = newHash != lastSnapshotHash
             lastSnapshotHash = newHash
 
             /*

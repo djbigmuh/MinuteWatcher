@@ -1,8 +1,6 @@
 package com.example.minutewatcher.core.model.util
 
 import com.example.minutewatcher.core.model.GlobalSnapshot
-import com.example.minutewatcher.core.model.SemanticEntity
-import com.example.minutewatcher.core.model.SimSnapshot
 
 /**
  * Utility for GlobalSnapshot processing.
@@ -23,17 +21,17 @@ object SnapshotUtils {
      *   если числовые показатели не изменились.
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
-        var result = (snapshot.version as Any?).hashCode()
-        result = 31 * result + (snapshot.capabilities as Any?).hashCode()
+        var result = snapshot.version.hashCode()
+        result = 31 * result + snapshot.capabilities.hashCode()
 
         val content =
-            (snapshot.simSnapshots as List<SimSnapshot>?)
-                ?.filter { (it as Any?) != null && it.isActive }
-                ?.sortedBy { it.slot }
-                ?.map { sim ->
+            snapshot.simSnapshots
+                .filter { it.isActive }
+                .sortedBy { it.slot }
+                .map { sim ->
                     sim.slot to (
                         sim.autoResetDay to
-                            (sim.entities as Map<*, SemanticEntity>?)?.values?.filterNotNull()?.map { entity ->
+                            sim.entities.values.filterNotNull().map { entity ->
                                 // Исключаем operatorName и lastUpdateTime для стабильности хэша
                                 listOf(
                                     entity.id,

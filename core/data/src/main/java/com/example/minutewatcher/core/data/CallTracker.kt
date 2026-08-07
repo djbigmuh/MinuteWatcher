@@ -403,10 +403,14 @@ class CallTracker
                 }
 
                 val durationSeconds = (currentUptime - sessionData.savedUptime) / MILLIS_IN_SECOND
-                clearSession(subId)
 
                 if (durationSeconds > 0) {
-                    processCallDuration(durationSeconds.toInt(), subId, sessionData.savedIdentity, notify)
+                    val success = processCallDuration(durationSeconds.toInt(), subId, sessionData.savedIdentity, notify)
+                    if (success) {
+                        clearSession(subId)
+                    }
+                } else {
+                    clearSession(subId)
                 }
             }
         }
@@ -517,11 +521,11 @@ class CallTracker
             subId: Int,
             savedIdentity: String?,
             notify: Boolean = true,
-        ) {
-            if (durationSeconds < 0) return
+        ): Boolean {
+            if (durationSeconds < 0) return true
             if (!isCallTrackingEnabled()) {
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
-                return
+                return true
             }
             val durationMinutes = ((durationSeconds.toLong() + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE).toInt()
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
@@ -534,12 +538,13 @@ class CallTracker
             }
 
             if (targetIdentity != null) {
-                try {
+                return try {
                     simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
                     AppLogger.d("Added $durationMinutes min to identity $targetIdentity")
                     if (notify) {
                         dataChangeNotifier.notifyDataChanged()
                     }
+                    true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -549,11 +554,13 @@ class CallTracker
                         e,
                     )
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Write failed")
+                    false
                 }
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
                 _status.value =
                     TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
+                return false
             }
         }
 
