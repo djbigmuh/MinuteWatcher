@@ -130,17 +130,14 @@ class SimIdentityRepositorySeedTest {
             // Now provide real seed
             storedSeed.emit("real_seed")
             // Mock a subscription so we get an identity
-            whenever(permissionManager.getActiveSubscriptions()).thenReturn(
-                listOf(
-                    mock {
-                        on { subscriptionId } doReturn 1
-                        on { simSlotIndex } doReturn 0
-                        on { iccId } doReturn "icc_1"
-                        on { displayName } doReturn "SIM 1"
-                        on { carrierName } doReturn "Carrier 1"
-                    },
-                ),
-            )
+            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.iccId).thenReturn("icc_1")
+            whenever(mockSubInfo.displayName).thenReturn("SIM 1")
+            whenever(mockSubInfo.carrierName).thenReturn("Carrier 1")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
             advanceUntilIdle()
 
             // It should now have emitted identities based on real_seed.

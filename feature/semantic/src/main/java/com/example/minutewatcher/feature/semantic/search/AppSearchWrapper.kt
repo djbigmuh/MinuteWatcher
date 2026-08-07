@@ -1,10 +1,12 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
+import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.AppSearchSession
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
+import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
 import kotlinx.coroutines.guava.await
 import javax.inject.Inject
@@ -72,7 +74,10 @@ private class AppSearchSessionWrapperImpl(
         val result = session.putAsync(request).await()
         if (!result.isSuccess) {
             val firstError = result.failures.values.firstOrNull()
-            error("Failed to put documents: ${firstError?.errorMessage}")
+            throw AppSearchException(
+                AppSearchResult.RESULT_INTERNAL_ERROR,
+                "Failed to put documents: ${firstError?.errorMessage}",
+            )
         }
     }
 
@@ -80,7 +85,10 @@ private class AppSearchSessionWrapperImpl(
         val result = session.removeAsync(request).await()
         if (!result.isSuccess) {
             val firstError = result.failures.values.firstOrNull()
-            error("Failed to remove documents: ${firstError?.errorMessage}")
+            throw AppSearchException(
+                AppSearchResult.RESULT_INTERNAL_ERROR,
+                "Failed to remove documents: ${firstError?.errorMessage}",
+            )
         }
     }
 

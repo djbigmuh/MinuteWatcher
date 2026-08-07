@@ -434,5 +434,7 @@ class SimIdentityRepositoryImpl
         }
 
         companion object {
+            private const val FALLBACK_SEED = "MW_FALLBACK_SEED"
+            private const val MOCK_IDENTITY_PREFIX = "mock_"
         }
     }

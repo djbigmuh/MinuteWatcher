@@ -59,7 +59,7 @@ class TrafficTracker
         private val trafficMutex = Mutex()
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
-        private val baselineNeedsRetry = java.util.concurrent.ConcurrentHashMap<String, Int>()
+        private val baselineNeedsRetry = mutableMapOf<String, Int>()
 
         private data class TargetInfo(
             val slot: Int,
@@ -486,6 +486,10 @@ class TrafficTracker
             )
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
+
+                // Record SIM change immediately so it can be detected if switched back
+                updateLastDataSubId(currentDataSubId)
+
                 baselineNeedsRetry.keys.removeAll { it != identity }
 
                 if (handleRetryLimitExceeded(identity, retryCount, currentDataSubId)) return
@@ -495,8 +499,6 @@ class TrafficTracker
 
                 if (statsResult is StatsResult.Success) {
                     resetStatsAfterSimChange(identity, statsResult)
-                    // Successfully reset baseline, now we can consume the SIM change
-                    updateLastDataSubId(currentDataSubId)
                     baselineNeedsRetry.remove(identity)
                 } else {
                     handleFailedSimChangeAttempt(identity, statsResult, retryCount)
@@ -520,7 +522,6 @@ class TrafficTracker
                 )
                 simUsageResetRepository.setLastTotalBytes(identity, -1L)
                 baselineNeedsRetry.remove(identity)
-                updateLastDataSubId(currentDataSubId)
                 return true
             }
             return false

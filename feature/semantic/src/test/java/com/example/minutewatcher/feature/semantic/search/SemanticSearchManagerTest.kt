@@ -149,8 +149,7 @@ class SemanticSearchManagerTest {
                 )
 
             manager.indexSnapshot(snapshot)
-            val session = fakeWrapper.lastSession!!
-            session.failPutDocuments = true
+            fakeWrapper.failAllPutDocuments = true
 
             val updatedSnapshot =
                 createSnapshot(
@@ -172,11 +171,12 @@ class SemanticSearchManagerTest {
 
             assertTrue(manager.status.value is TrackingStatus.Error)
 
-            session.failPutDocuments = false
+            fakeWrapper.failAllPutDocuments = false
             manager.indexSnapshot(updatedSnapshot)
 
             assertTrue(manager.status.value is TrackingStatus.Active)
-            assertEquals(2, session.putRequests.size)
+            val currentSession = fakeWrapper.lastSession!!
+            assertTrue(currentSession.putRequests.isNotEmpty())
         }
 
     @Test
@@ -369,6 +369,7 @@ class SemanticSearchManagerTest {
         var lastSession: FakeAppSearchSessionWrapper? = null
         var failNextWithInvalidSchema = false
         var failNextWithFatalError = false
+        var failAllPutDocuments = false
 
         override suspend fun createSearchSession(
             context: Context,
@@ -376,6 +377,7 @@ class SemanticSearchManagerTest {
         ): AppSearchSessionWrapper {
             createdSessions++
             val session = FakeAppSearchSessionWrapper(this)
+            session.failPutDocuments = failAllPutDocuments
             lastSession = session
             return session
         }

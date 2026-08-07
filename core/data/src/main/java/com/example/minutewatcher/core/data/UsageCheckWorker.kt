@@ -99,6 +99,11 @@ class UsageCheckWorker
                     }
                 }
             } else {
+                val snapshot = refreshResult.snapshot
+                if (snapshot.timestamp == 0L) {
+                    AppLogger.w("UsageCheckWorker: Data never loaded, requesting retry")
+                    return Result.retry()
+                }
                 AppLogger.w(
                     "UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.",
                 )

@@ -146,10 +146,11 @@ open class SemanticSearchManager
                             } catch (retryException: Exception) {
                                 AppLogger.e("AppSearch indexing failed again after retry", retryException)
                                 lastSnapshotHash = -1
-                                _status.value = TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                                    retryException.message,
-                                )
+                                _status.value =
+                                    TrackingStatus.Error(
+                                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                                        retryException.message,
+                                    )
                             }
                         }
                     } catch (e: Exception) {

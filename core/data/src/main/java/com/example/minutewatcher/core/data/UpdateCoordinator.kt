@@ -7,9 +7,11 @@ import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,13 +47,12 @@ class UpdateCoordinator
 
         private val forceUpdateFlow =
             MutableSharedFlow<Long>(
-                replay = 1,
                 extraBufferCapacity = 64,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
 
         init {
-            scope.launch {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 val startCount = forceCounter.get()
                 var lastProcessedHash: Int? = null
 
@@ -63,7 +64,7 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(old) ==
                                 SnapshotUtils.calculateContentHash(new)
                         }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                        .map { UpdateEvent.Snapshot(SnapshotUtils.calculateContentHash(it)) }
+                        .map { UpdateEvent.Snapshot(SnapshotUtils.calculateContentHash(it), it) }
 
                 val forceFlow =
                     forceUpdateFlow
@@ -72,8 +73,13 @@ class UpdateCoordinator
 
                 merge(snapshotFlow, forceFlow).collect { event ->
                     try {
-                        val currentSnapshot = usageStateRepository.observeSnapshot().value
-                        val currentHash = SnapshotUtils.calculateContentHash(currentSnapshot)
+                        val currentHash =
+                            when (event) {
+                                is UpdateEvent.Force ->
+                                    SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
+
+                                is UpdateEvent.Snapshot -> event.hash
+                            }
 
                         if (event is UpdateEvent.Force || currentHash != lastProcessedHash) {
                             widgetUpdater.updateAll()
@@ -93,6 +99,7 @@ class UpdateCoordinator
 
             data class Snapshot(
                 val hash: Int,
+                val snapshot: GlobalSnapshot,
             ) : UpdateEvent()
         }
 

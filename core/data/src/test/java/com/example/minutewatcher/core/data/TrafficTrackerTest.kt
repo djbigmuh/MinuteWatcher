@@ -371,7 +371,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `handleSimChange does not update lastDataSubId if stats are unavailable`() =
+    fun `handleSimChange updates lastDataSubId even if stats are unavailable`() =
         runTest(testDispatcher) {
             // 1. Initial state: SubId 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
@@ -386,9 +386,9 @@ class TrafficTrackerTest {
             // Act: First attempt at SIM change
             tracker.updateTrafficUsage()
 
-            // Assert: baseline not set, lastDataSubId NOT updated to 2
+            // Assert: baseline not set, BUT lastDataSubId UPDATED to 2
             verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
-            verify(callSessionRepository, times(0)).setLastDataSubId(2)
+            verify(callSessionRepository).setLastDataSubId(2)
 
             // 3. Stats become available
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
@@ -396,10 +396,8 @@ class TrafficTrackerTest {
             // Act: Second attempt at updateTrafficUsage
             tracker.updateTrafficUsage()
 
-            // Assert: SIM change is still detected (isSimChanged=true) because lastDataSubId was not updated
-            // Baseline is finally set for sim_1
+            // Assert: Baseline is finally set for sim_1
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(2000L))
-            verify(callSessionRepository).setLastDataSubId(2)
         }
 
     @Test

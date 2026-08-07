@@ -104,6 +104,7 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            testScheduler.advanceUntilIdle()
 
             coordinator.notifyDataChanged(updateWidget = true, force = true)
             testScheduler.advanceUntilIdle()
@@ -152,6 +153,7 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            testScheduler.advanceUntilIdle()
 
             // First force
             coordinator.notifyDataChanged(updateWidget = true, force = true)

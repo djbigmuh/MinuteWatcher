@@ -60,7 +60,14 @@ class WidgetSettingsRepository
                 val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
                 val allIdentities = (realIdentities + fallbackIdentities).distinct()
 
-                val batchSettings = simWidgetVisibilityRepository.getSimSettingsBatch(allIdentities).first()
+                val batchSettingsResult =
+                    simWidgetVisibilityRepository
+                        .getSimSettingsBatch(allIdentities)
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                if (batchSettingsResult == null) {
+                    AppLogger.e("WidgetSettingsRepository: failed to load SIM visibility settings after timeout")
+                }
+                val batchSettings = batchSettingsResult ?: emptyMap()
 
                 val simStates =
                     activeSims.associate { info ->
@@ -81,6 +88,7 @@ class WidgetSettingsRepository
                     callTrackingEnabled = settings.callTrackingEnabled,
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
+                    settingsLoadFailed = batchSettingsResult == null,
                 )
             }
 
