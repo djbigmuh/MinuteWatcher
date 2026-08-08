@@ -128,7 +128,6 @@ class WidgetUpdaterImpl
          * 1. [android.os.TransactionTooLargeException] в цепочке причин (наиболее надежный).
          * 2. Сообщение содержит подстроки "TransactionTooLarge" или "too large" в сочетании с "RemoteViews"
          *    (fallback для случаев, когда исходная причина была утеряна при пробросе).
-         * 3. Stack trace содержит [android.os.TransactionTooLargeException] в имени класса.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
@@ -143,13 +142,7 @@ class WidgetUpdaterImpl
                             message.contains("too large", ignoreCase = true)
                     )
 
-            // Проверяем stack trace на маркер TransactionTooLargeException
-            val isStackLimit =
-                e.stackTrace.any { frame ->
-                    frame.className.startsWith("android.os.TransactionTooLargeException")
-                }
-
-            val result = isTransactionTooLarge || isMessageRelated || isStackLimit
+            val result = isTransactionTooLarge || isMessageRelated
 
             if (result) {
                 AppLogger.w("RemoteViews size limit detection triggered (result=$result). Exception details: $e")

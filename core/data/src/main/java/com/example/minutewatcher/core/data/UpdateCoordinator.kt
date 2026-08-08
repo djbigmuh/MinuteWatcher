@@ -83,10 +83,15 @@ class UpdateCoordinator
         ) {
             if (updateWidget && force) {
                 val snapshot = usageStateRepository.observeSnapshot().value
-                if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                    lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
+                try {
+                    widgetUpdater.updateAll()
+                    if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                        lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    AppLogger.w("Force widget update failed, hash not updated", e)
                 }
-                widgetUpdater.updateAll()
             }
             if (updateWidget) {
                 dataRefreshNotifier.notifyRefresh(isManual = force)

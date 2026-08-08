@@ -28,17 +28,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -86,40 +87,40 @@ class SimIdentityRepositoryImpl
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         private val seedFlow: Flow<SeedResult> =
-            channelFlow {
-                val currentResult = AtomicReference<SeedResult?>(null)
-
-                launch {
-                    delay(SEED_TOTAL_TIMEOUT_MS.milliseconds)
-                    if (currentResult.compareAndSet(null, SeedResult.Fallback)) {
-                        send(SeedResult.Fallback)
+            merge(
+                seedRepository.seedFlow.map { s ->
+                    if (s.isNotEmpty()) {
+                        SeedResult.Real(s)
+                    } else {
+                        SeedResult.Fallback
                     }
-                }
-
-                seedRepository.seedFlow.collect { s ->
-                    // Если стабильный сид уже получен, игнорируем любые последующие эмиссии из DataStore
-                    if (currentResult.get() is SeedResult.Real) return@collect
-
-                    val nextResult =
-                        if (s.isNotEmpty()) {
-                            SeedResult.Real(s)
-                        } else {
+                }.flatMapConcat { result ->
+                    if (result is SeedResult.Fallback) {
+                        flow {
                             val generated = generateSeedWithRetry()
-                            if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
+                            if (generated != null) {
+                                emit(SeedResult.Real(generated))
+                            } else {
+                                emit(SeedResult.Fallback)
+                            }
                         }
-
-                    val current = currentResult.get()
-                    if (current !is SeedResult.Real &&
-                        current != nextResult &&
-                        currentResult.compareAndSet(current, nextResult)
-                    ) {
-                        send(nextResult)
+                    } else {
+                        flowOf(result)
                     }
+                },
+                flow {
+                    delay(SEED_TOTAL_TIMEOUT_MS.milliseconds)
+                    emit(SeedResult.Fallback)
+                },
+            ).scan<SeedResult, SeedResult?>(null) { acc, value ->
+                if (acc is SeedResult.Real) {
+                    acc
+                } else {
+                    value
                 }
-            }.catch { e ->
-                AppLogger.e("seedFlow upstream error, emitting Fallback", e)
-                emit(SeedResult.Fallback)
-            }.shareIn(scope, SharingStarted.Eagerly, replay = 1)
+            }.filterNotNull()
+                .distinctUntilChanged()
+                .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
@@ -373,7 +374,6 @@ class SimIdentityRepositoryImpl
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
             activeSimsCache
                 .filterNotNull()
-                .onStart { AppLogger.d("observeActiveSims: waiting for first emission") }
 
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val infoList =

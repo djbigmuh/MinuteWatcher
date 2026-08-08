@@ -16,6 +16,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -170,6 +172,52 @@ class UpdateCoordinatorTest {
 
             // Should be 2 calls
             verify(widgetUpdater, times(2)).updateAll()
+        }
+
+    @Test
+    fun `forced update failure does not update hash allowing subsequent reactive update`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Setup: init will call updateAll for first snapshot, let it succeed to set initial state
+            val coordinator = UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+            )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Emit meaningful snapshot s1
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Setup failure for NEXT update
+            doThrow(RuntimeException("Limit exceeded")).whenever(widgetUpdater).updateAll()
+
+            // 3. Emit NEW snapshot s2
+            val s2 = createSnapshot(timestamp = 2000L, content = "B")
+            snapshotFlow.tryEmit(s2)
+            // advanceTimeBy NOT yet to avoid reactive path triggering first
+
+            // 4. Trigger FORCED update for s2 (which fails)
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.advanceUntilIdle()
+
+            verify(widgetUpdater, times(2)).updateAll() // The forced one called and failed
+
+            // 5. Reset mock to succeed
+            doReturn(Unit).whenever(widgetUpdater).updateAll()
+
+            // 6. Advance time to let reactive path (debounce) trigger for s2.
+            // If forced update FAILED to update hash, reactive path should still see s2 as new.
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+
+            // Should call updateAll again (3rd time total: 1st for A, 2nd forced B (fail), 3rd reactive B)
+            verify(widgetUpdater, times(3)).updateAll()
         }
 
     private fun createEmptySnapshot() =

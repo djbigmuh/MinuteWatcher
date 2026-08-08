@@ -517,11 +517,7 @@ class CallTracker
         private suspend fun resolveIdentity(subId: Int): String? {
             val subInfoList = permissionManager.getActiveSubscriptions()
             val info = subInfoList.find { it.subscriptionId == subId }
-            return if (info != null) {
-                simIdentityRepository.getIdentity(info.simSlotIndex)
-            } else {
-                null
-            }
+            return info?.let { simIdentityRepository.getIdentity(it.simSlotIndex) }
         }
 
         /**

@@ -82,25 +82,11 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
-    fun `isRemoteViewsLimitException returns true when stack trace contains TransactionTooLargeException`() {
-        val e =
-            IllegalArgumentException(
-                "Fake exception",
-            )
-        e.stackTrace =
-            arrayOf(
-                StackTraceElement(
-                    "android.os.TransactionTooLargeException",
-                    "<init>",
-                    "TransactionTooLargeException.java",
-                    1,
-                ),
-            )
-        assertTrue(
-            updater.isRemoteViewsLimitException(
-                e,
-            ),
-        )
+    fun `isRemoteViewsLimitException returns true for deeply nested TransactionTooLargeException cause`() {
+        val cause = android.os.TransactionTooLargeException()
+        val wrapper = RuntimeException("Middle wrapper", cause)
+        val e = IllegalArgumentException("Top level", wrapper)
+        assertTrue(updater.isRemoteViewsLimitException(e))
     }
 
     @Test

@@ -8,8 +8,20 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Mappers for converting domain models (SimUsage) to UI models (SimCardUiModel).
+ *
+ * This object maintains a small internal cache [negativeLogged] to prevent log spamming
+ * when negative usage values are detected.
+ */
 object SimCardMapper {
+    /**
+     * Cache to track which SIM identities have already been logged for negative values in a slot.
+     * Prevents [AppLogger.e] from being called repeatedly for the same inaccurate state.
+     * The map size is limited to [MAX_LOGGED_SIZE] to prevent memory leaks.
+     */
     private val negativeLogged = ConcurrentHashMap<Int, String>()
+    private const val MAX_LOGGED_SIZE = 20
 
     fun map(
         context: Context,
@@ -30,6 +42,9 @@ object SimCardMapper {
                         "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
                         "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
                 )
+                if (negativeLogged.size >= MAX_LOGGED_SIZE) {
+                    negativeLogged.clear()
+                }
                 negativeLogged[slot] = usage.identity
             }
         }

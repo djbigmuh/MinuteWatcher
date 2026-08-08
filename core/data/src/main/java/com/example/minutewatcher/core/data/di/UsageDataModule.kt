@@ -32,6 +32,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
+// Hilt discovers this module via reflection at compile time; IDE marks it as unused.
 @Suppress("unused")
 abstract class UsageDataModule {
     @Binds

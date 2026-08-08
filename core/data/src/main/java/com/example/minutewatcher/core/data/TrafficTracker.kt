@@ -18,16 +18,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Tracks mobile traffic usage for the device.
@@ -163,7 +160,49 @@ class TrafficTracker
                         return@withLock
                     }
 
-                    processTrafficUpdate(target)
+                    val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+
+                    // Remove retry records for SIMs that are no longer targets.
+                    // TrafficTracker only cares about the current default data SIM.
+                    baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+
+                    val usage =
+                        simUsageRepository
+                            .getSimUsage(targetIdentity)
+                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+
+                    if (usage == null) {
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Timeout reading simUsage",
+                            )
+                        return@withLock
+                    }
+
+                    val statsResult = getCurrentMobileBytes(usage.lastResetDate)
+                    val isHandled = handleBaselineRetry(target, targetIdentity, statsResult)
+
+                    if (!isHandled) {
+                        if (statsResult is StatsResult.Success) {
+                            val lastTotalBytes =
+                                simUsageResetRepository
+                                    .getLastTotalBytes(targetIdentity)
+                                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+
+                            if (lastTotalBytes == null) {
+                                _status.value =
+                                    TrackingStatus.Error(
+                                        TrackingStatus.ErrorType.UNKNOWN,
+                                        "Timeout reading lastTotalBytes",
+                                    )
+                                return@withLock
+                            }
+                            executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes)
+                        } else {
+                            executeTrafficUpdate(target, targetIdentity, statsResult, -1L)
+                        }
+                    }
                 } catch (e: SecurityException) {
                     AppLogger.e("SecurityException in TrafficTracker", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
@@ -213,40 +252,11 @@ class TrafficTracker
             return error == null
         }
 
-        private suspend fun processTrafficUpdate(target: TargetInfo) {
-            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-
-            // Remove retry records for SIMs that are no longer targets.
-            // TrafficTracker only cares about the current default data SIM.
-            baselineNeedsRetry.keys.removeIf { it != targetIdentity }
-
-            val usage =
-                withTimeoutOrNull(
-                    Constants.Flow.LONG_TIMEOUT_MS.milliseconds,
-                ) {
-                    simUsageRepository.getSimUsage(targetIdentity).first()
-                }
-
-            if (usage == null) {
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Timeout reading simUsage",
-                    )
-            } else {
-                val statsResult = getCurrentMobileBytes(usage.lastResetDate)
-                val isHandled = handleBaselineRetry(target, targetIdentity, statsResult)
-
-                if (!isHandled) {
-                    executeTrafficUpdate(target, targetIdentity, statsResult)
-                }
-            }
-        }
-
         private suspend fun executeTrafficUpdate(
             target: TargetInfo,
             targetIdentity: String,
             statsResult: StatsResult,
+            lastTotalBytes: Long,
         ) {
             if (statsResult !is StatsResult.Success) {
                 val message =
@@ -261,30 +271,17 @@ class TrafficTracker
                 return
             }
 
-            val lastTotalBytes =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    simUsageResetRepository.getLastTotalBytes(targetIdentity).first()
-                }
-
-            if (lastTotalBytes == null) {
-                _status.value =
+            updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
+            updateLastDataSubId(target.dataSubId)
+            _status.value =
+                if (target.isFallback) {
                     TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Timeout reading lastTotalBytes",
+                        TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                        slotIndex = target.slot,
                     )
-            } else {
-                updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
-                updateLastDataSubId(target.dataSubId)
-                _status.value =
-                    if (target.isFallback) {
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                            slotIndex = target.slot,
-                        )
-                    } else {
-                        TrackingStatus.Active
-                    }
-            }
+                } else {
+                    TrackingStatus.Active
+                }
         }
 
         private suspend fun updateTrafficBaselineAndUsage(
@@ -573,8 +570,8 @@ class TrafficTracker
             retryCount: Int,
             currentDataSubId: Int,
             isLimitCheckOnly: Boolean = false,
-        ): Boolean {
-            return when {
+        ): Boolean =
+            when {
                 retryCount >= MAX_BASELINE_RETRIES -> {
                     AppLogger.w(
                         "Giving up baseline reset for $identity after $retryCount retries. " +
@@ -606,7 +603,6 @@ class TrafficTracker
                     true
                 }
             }
-        }
 
         private fun fetchStatsOnSimChange(usage: com.example.minutewatcher.core.model.SimUsage?): StatsResult =
             if (usage != null) {
