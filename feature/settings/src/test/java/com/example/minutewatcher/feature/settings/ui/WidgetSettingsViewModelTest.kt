@@ -113,8 +113,8 @@ class WidgetSettingsViewModelTest {
                         gate.await()
                     }
                 }
-            val blockingSaver = WidgetSettingsSaver(blockingLoader, mock())
-            val vm = WidgetSettingsViewModel(context, loader, blockingSaver, usageStateRepository)
+            val realSaver = WidgetSettingsSaver(blockingLoader, mock())
+            val vm = WidgetSettingsViewModel(context, loader, realSaver, usageStateRepository)
             testScheduler.advanceUntilIdle()
 
             var firstResult: Boolean? = null
@@ -124,7 +124,8 @@ class WidgetSettingsViewModelTest {
             assertTrue(vm.isSaving.value)
 
             vm.saveAndNotify { secondResult = it }
-            assertEquals(false, secondResult) // второй вызов отклонён tryLock и вернул false
+            // В новом варианте второй вызов игнорируется, onComplete не вызывается
+            assertEquals(null, secondResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()

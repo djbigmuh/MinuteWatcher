@@ -85,7 +85,7 @@ class MainViewModel
         }
 
         private fun initializeApp() {
-            if (isInitialized.get()) return
+            if (!isInitialized.compareAndSet(false, true)) return
             viewModelScope.launch(ioDispatcher) {
                 try {
                     val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
@@ -106,8 +106,6 @@ class MainViewModel
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
-                } finally {
-                    isInitialized.set(true)
                 }
             }
         }
@@ -161,16 +159,26 @@ class MainViewModel
 
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
-                controllers.refresh.refreshSimCardsInternal()
-                lastRefreshAt = SystemClock.elapsedRealtime()
-                onComplete()
+                try {
+                    controllers.refresh.refreshSimCardsInternal()
+                    lastRefreshAt = SystemClock.elapsedRealtime()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("refreshSimCardsNow failed", e)
+                } finally {
+                    onComplete()
+                }
             }
         }
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
             val result = controllers.refresh.refreshSimCardsInternal()
 
-            if (result == null) return
+            if (result == null) {
+                AppLogger.d("refreshAndNotify: refresh skipped (already in progress or failed)")
+                return
+            }
             lastRefreshAt = SystemClock.elapsedRealtime()
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)

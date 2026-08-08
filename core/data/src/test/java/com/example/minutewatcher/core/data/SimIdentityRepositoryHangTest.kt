@@ -211,4 +211,39 @@ class SimIdentityRepositoryHangTest {
             // Assert: it should have emitted (even if empty list)
             assertTrue("Flow should have emitted a value instead of hanging", result != null)
         }
+
+    @Test
+    fun `observeActiveSims emits empty list when seedFlow timeouts`() =
+        runTest {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository =
+                        mock {
+                            // Return flow that never emits
+                            on { seedFlow } doReturn MutableSharedFlow()
+                        },
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            // Act: wait for internal timeout (SEED_TOTAL_TIMEOUT_MS + 2000ms)
+            // SEED_TOTAL_TIMEOUT_MS is 13000ms
+            testScheduler.advanceTimeBy(15_100)
+            testScheduler.runCurrent()
+
+            val result = identityRepo.observeActiveSims().first()
+
+            // Assert: should be empty list, not hang
+            assertTrue("Result should be empty list after timeout", result.isEmpty())
+        }
 }

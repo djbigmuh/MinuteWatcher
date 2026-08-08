@@ -83,4 +83,13 @@ class WidgetUpdaterImplTest {
             ),
         )
     }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true for Binder related message`() {
+        val e = IllegalArgumentException("TransactionTooLargeException: Binder transaction failed")
+        assertTrue(updater.isRemoteViewsLimitException(e))
+
+        val e2 = IllegalArgumentException("The RemoteViews is too large to be sent")
+        assertTrue(updater.isRemoteViewsLimitException(e2))
+    }
 }

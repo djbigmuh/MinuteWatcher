@@ -116,9 +116,11 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
-                    val identities = simIdentityRepository.getActiveIdentities().firstWithTimeout()
-                    if (identities == null) {
-                        AppLogger.w("TrafficTracker: getActiveIdentities timed out, skipping update")
+                    if (!checkPermissions()) return@withLock
+
+                    val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout()
+                    if (activeSims == null) {
+                        AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
                         _status.value =
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.UNKNOWN,
@@ -126,17 +128,16 @@ class TrafficTracker
                             )
                         return@withLock
                     }
-                    val activeIdentities = identities.toSet()
+                    val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
                     baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
 
-                    if (!checkPermissions()) return@withLock
-
                     val target =
-                        getTargetSimInfo() ?: run {
-                            AppLogger.d("TrafficTracker: no active SIM detected for traffic tracking")
-                            _status.value = TrackingStatus.Idle
-                            return@withLock
-                        }
+                        getTargetSimInfo(activeSims)
+                            ?: run {
+                                AppLogger.d("TrafficTracker: no active SIM detected for traffic tracking")
+                                _status.value = TrackingStatus.Idle
+                                return@withLock
+                            }
 
                     if (target.skipDelta) {
                         AppLogger.d(
@@ -323,7 +324,11 @@ class TrafficTracker
                 }
             } else if (baselineNeedsRetry.containsKey(targetIdentity)) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
-                _status.value = TrackingStatus.Idle
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Stats unavailable, retry pending",
+                    )
                 handled = true
             }
             return handled
@@ -383,9 +388,7 @@ class TrafficTracker
                 )
         }
 
-        private suspend fun getTargetSimInfo(): TargetInfo? {
-            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
-
+        private suspend fun getTargetSimInfo(activeSims: List<ActiveSimInfo>): TargetInfo? {
             val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
 
             ensureInMemoryLastDataSubId()
@@ -516,7 +519,7 @@ class TrafficTracker
 
                 baselineNeedsRetry.keys.removeIf { it != identity }
 
-                if (handleRetryLimitExceeded(identity, retryCount)) return
+                if (handleRetryLimitExceeded(identity, retryCount, currentDataSubId)) return
 
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
                 val statsResult = fetchStatsOnSimChange(usage)
@@ -527,6 +530,7 @@ class TrafficTracker
                     // Фиксируем смену SIM ТОЛЬКО после успешного сброса baseline
                     updateLastDataSubId(currentDataSubId)
                 } else {
+                    simUsageResetRepository.setLastTotalBytes(identity, -1L)
                     handleFailedSimChangeAttempt(identity, statsResult, retryCount)
                     // При неудаче тоже фиксируем subId, чтобы при следующей итерации
                     // не пытаться сбросить baseline для уже неактуальной SIM,
@@ -543,6 +547,7 @@ class TrafficTracker
         private suspend fun handleRetryLimitExceeded(
             identity: String,
             retryCount: Int,
+            currentDataSubId: Int,
         ): Boolean {
             if (retryCount >= MAX_BASELINE_RETRIES) {
                 AppLogger.w(
@@ -551,6 +556,7 @@ class TrafficTracker
                 )
                 simUsageResetRepository.setLastTotalBytes(identity, -1L)
                 baselineNeedsRetry.remove(identity)
+                updateLastDataSubId(currentDataSubId)
                 return true
             }
             return false

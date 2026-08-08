@@ -73,6 +73,8 @@ object Constants {
         const val LONG_TIMEOUT_MS = 10_000L
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
+        const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
+        const val SEED_GRACE_PERIOD_MS = 2_000L
     }
 
     object Calls {

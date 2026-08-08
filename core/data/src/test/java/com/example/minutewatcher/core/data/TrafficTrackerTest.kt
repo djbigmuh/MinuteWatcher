@@ -8,7 +8,10 @@ import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -71,7 +74,30 @@ class TrafficTrackerTest {
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         }
 
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+        val activeSims =
+            listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    displayName = "SIM 1",
+                    carrierName = "Carrier 1",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                ),
+                ActiveSimInfo(
+                    identity = SimIdentity("sim_1", 2, 1, IdentitySource.ICCID),
+                    slotIndex = 1,
+                    subscriptionId = 2,
+                    displayName = "SIM 2",
+                    carrierName = "Carrier 2",
+                    mccMnc = "25002",
+                    isDefaultData = false,
+                    isDefaultVoice = false,
+                ),
+            )
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
 
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
@@ -257,7 +283,10 @@ class TrafficTrackerTest {
 
             // Attempt 1: Stats unavailable
             tracker.updateTrafficUsage()
-            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+            // Now we expect a baseline reset to -1L on failure
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            // skipDelta is true, so status is Active
+            assertEquals(TrackingStatus.Active, tracker.status.value)
 
             // Attempt 2: Stats finally available
             tracker.updateTrafficUsage()
@@ -289,11 +318,18 @@ class TrafficTrackerTest {
 
             // Attempt 1: Stats unavailable
             tracker.updateTrafficUsage()
-            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            // skipDelta is true, so status is Active
+            assertEquals(TrackingStatus.Active, tracker.status.value)
 
             // Attempt 2: Stats still unavailable
             tracker.updateTrafficUsage()
-            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+            // skipDelta is false now, so processTrafficUpdate -> handleBaselineRetry is called
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            assertEquals("Stats unavailable, retry pending", (tracker.status.value as TrackingStatus.Error).message)
+            // It should be Error status because it's in baselineNeedsRetry.
+            // But it won't call setLastTotalBytes again until stats are Success.
+            verify(simUsageResetRepository, times(1)).setLastTotalBytes(eq("sim_1"), eq(-1L))
 
             // Attempt 3: Stats finally become available
             tracker.updateTrafficUsage()
@@ -384,11 +420,12 @@ class TrafficTrackerTest {
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
 
-            // Act: First attempt at SIM change
+            // Attempt: Stats unavailable
             tracker.updateTrafficUsage()
 
-            // Assert: baseline not set, BUT lastDataSubId UPDATED to 2
-            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+            // Assert: baseline set to -1L, AND lastDataSubId UPDATED to 2
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            assertEquals(TrackingStatus.Active, tracker.status.value)
 
             val inOrder = inOrder(networkStatsProvider, callSessionRepository)
             // Должен быть вызов из updateTrafficUsage (initial)
@@ -455,6 +492,76 @@ class TrafficTrackerTest {
 
             // Assert: sim_1 should have been cleared even though it's still in "activeSims"
             assertFalse("sim_1 should be cleared from retry map", map.containsKey("sim_1"))
+        }
+
+    @Test
+    fun `handleSimChange forces baseline reset when stats are unavailable`() =
+        runTest(testDispatcher) {
+            // 1. Initial state: SubId 1
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+
+            // 2. SIM swap to SubId 2, stats unavailable
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
+
+            tracker.updateTrafficUsage()
+
+            // Verify setLastTotalBytes(sim_1, -1L) called AND updateLastDataSubId(2) called
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            verify(callSessionRepository).setLastDataSubId(2)
+        }
+
+    @Test
+    fun `handleSimChange breaks retry cycle when limit is exceeded`() =
+        runTest(testDispatcher) {
+            // 1. Initial state
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+
+            // 2. SIM swap to SubId 2
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
+
+            // Manually inject retry count to skip the 1..4 iterations
+            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            field.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val map = field.get(tracker) as MutableMap<String, Int>
+            map["sim_1"] = 5 // MAX_BASELINE_RETRIES
+
+            // Act
+            tracker.updateTrafficUsage()
+
+            // Assert: handleRetryLimitExceeded should have been called
+            // verify setLastTotalBytes(sim_1, -1L) and updateLastDataSubId(2)
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            verify(callSessionRepository).setLastDataSubId(2)
+
+            // Check that next update doesn't trigger SIM change again
+            tracker.updateTrafficUsage()
+            verify(callSessionRepository, times(1)).setLastDataSubId(2) // Still 1 total
+        }
+
+    @Test
+    fun `updateTrafficUsage calls observeActiveSims only once and checks permissions first`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+
+            tracker.updateTrafficUsage()
+
+            // observeActiveSims should NOT be called if permissions are missing (it's after checkPermissions)
+            verify(simIdentityRepository, never()).observeActiveSims()
+
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
+            tracker.updateTrafficUsage()
+
+            // Now it should be called exactly once
+            verify(simIdentityRepository, times(1)).observeActiveSims()
         }
 
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.

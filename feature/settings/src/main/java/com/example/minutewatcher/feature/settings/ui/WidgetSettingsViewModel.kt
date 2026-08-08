@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,8 +41,6 @@ class WidgetSettingsViewModel
 
         private val _isSaving = MutableStateFlow(false)
         val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
-
-        private val saveMutex = Mutex()
 
         val uiState: StateFlow<WidgetUiState?> =
             _settingsState
@@ -108,8 +105,8 @@ class WidgetSettingsViewModel
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
             viewModelScope.launch {
-                if (!saveMutex.tryLock()) {
-                    onComplete(false)
+                if (_isSaving.value) {
+                    // Сохранение уже идёт — не запускаем второе, но и не показываем ошибку
                     return@launch
                 }
                 _isSaving.value = true
@@ -123,9 +120,13 @@ class WidgetSettingsViewModel
 
                     val success = saver.save(currentState)
                     onComplete(success)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to save widget settings", e)
+                    onComplete(false)
                 } finally {
                     _isSaving.value = false
-                    saveMutex.unlock()
                 }
             }
         }

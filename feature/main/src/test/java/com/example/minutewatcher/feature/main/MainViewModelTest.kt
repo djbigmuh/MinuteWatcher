@@ -460,4 +460,17 @@ class MainViewModelTest {
                 .verify(usageStateRepository, org.mockito.kotlin.never())
                 .refresh()
         }
+
+    @Test
+    fun `refreshSimCardsNow calls onComplete even on failure`() =
+        runTest(testDispatcher) {
+            whenever(usageUseCase.refreshOperatorInfo()).thenThrow(RuntimeException("Fail"))
+            val viewModel = createViewModel(backgroundScope)
+
+            var completed = false
+            viewModel.refreshSimCardsNow { completed = true }
+            testScheduler.advanceUntilIdle()
+
+            assertTrue("onComplete should be called even on failure", completed)
+        }
 }

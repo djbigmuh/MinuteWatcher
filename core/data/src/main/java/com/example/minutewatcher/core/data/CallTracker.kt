@@ -146,9 +146,11 @@ class CallTracker
                     }
                 if (result != null) return result
                 if (attempt < attempts) {
+                    AppLogger.d("readWithRetry: attempt $attempt timed out, retrying in ${retryDelayMs}ms")
                     delay(retryDelayMs.milliseconds)
                 }
             }
+            AppLogger.w("readWithRetry: all $attempts attempts timed out")
             return null
         }
 
@@ -447,7 +449,13 @@ class CallTracker
                 AppLogger.e("Call session data read timeout for subId $subId, clearing session", null)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout loading session data")
                 // Очищаем сессию, чтобы избежать stale-данных
-                clearSession(subId)
+                try {
+                    clearSession(subId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to clear stale session for subId $subId after read timeout", e)
+                }
                 return null
             }
 

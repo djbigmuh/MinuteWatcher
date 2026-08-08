@@ -42,19 +42,22 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Singleton
 @Suppress("LongParameterList")
 class SimIdentityRepositoryImpl
@@ -92,19 +95,18 @@ class SimIdentityRepositoryImpl
 
         private val seedFlow: Flow<SeedResult> =
             channelFlow {
-                var currentResult: SeedResult? = null
+                val currentResult = AtomicReference<SeedResult?>(null)
 
                 launch {
                     delay(SEED_TOTAL_TIMEOUT_MS.milliseconds)
-                    if (currentResult == null) {
-                        currentResult = SeedResult.Fallback
+                    if (currentResult.compareAndSet(null, SeedResult.Fallback)) {
                         send(SeedResult.Fallback)
                     }
                 }
 
                 seedRepository.seedFlow.collect { s ->
                     // Если стабильный сид уже получен, игнорируем любые последующие эмиссии из DataStore
-                    if (currentResult is SeedResult.Real) return@collect
+                    if (currentResult.get() is SeedResult.Real) return@collect
 
                     val nextResult =
                         if (s.isNotEmpty()) {
@@ -114,9 +116,11 @@ class SimIdentityRepositoryImpl
                             if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
                         }
 
-                    // Эмитим только если состояние изменилось (аналог distinctUntilChanged)
-                    if (currentResult != nextResult) {
-                        currentResult = nextResult
+                    val current = currentResult.get()
+                    if (current !is SeedResult.Real &&
+                        current != nextResult &&
+                        currentResult.compareAndSet(current, nextResult)
+                    ) {
                         send(nextResult)
                     }
                 }
@@ -127,7 +131,9 @@ class SimIdentityRepositoryImpl
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
-                .flatMapLatest { seed ->
+                .timeout(
+                    (SEED_TOTAL_TIMEOUT_MS + SEED_GRACE_PERIOD_MS).milliseconds,
+                ).flatMapLatest { seed ->
                     callbackFlow {
                         val listener =
                             object : SubscriptionManager.OnSubscriptionsChangedListener() {
@@ -203,6 +209,12 @@ class SimIdentityRepositoryImpl
                             }
                         }
                     }
+                }.catch { e ->
+                    AppLogger.e(
+                        "physicalActiveSims: seed flow timeout, emitting empty list",
+                        e,
+                    )
+                    emit(emptyList())
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -252,11 +264,12 @@ class SimIdentityRepositoryImpl
             // If the seed is being generated, activeSimsCache (which depends on physicalActiveSims,
             // which depends on seedFlow) will not emit until the seed is ready.
             val currentSims: List<ActiveSimInfo> =
-                activeSimsCache.filterNotNull().firstWithTimeout(SEED_TOTAL_TIMEOUT_MS) ?: run {
-                    AppLogger
-                        .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
-                    emptyList()
-                }
+                activeSimsCache.filterNotNull().firstWithTimeout(SEED_TOTAL_TIMEOUT_MS)
+                    ?: run {
+                        AppLogger
+                            .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
+                        emptyList()
+                    }
             currentSims.find { it.slotIndex == slot }?.let {
                 return it.identity
             }
@@ -301,13 +314,14 @@ class SimIdentityRepositoryImpl
                 if (validIdentities.isEmpty()) return@withLock
 
                 val currentPrefs =
-                    dataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
-                        AppLogger.w(
-                            "saveSimIdentitiesInfo: DataStore read timed out, " +
-                                "skipping save to avoid redundant writes",
-                        )
-                        return@withLock
-                    }
+                    dataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                        ?: run {
+                            AppLogger.w(
+                                "saveSimIdentitiesInfo: DataStore read timed out, " +
+                                    "skipping save to avoid redundant writes",
+                            )
+                            return@withLock
+                        }
 
                 val toUpdate =
                     validIdentities.filter { identity ->
@@ -359,6 +373,7 @@ class SimIdentityRepositoryImpl
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
             activeSimsCache
                 .filterNotNull()
+                .onStart { AppLogger.d("observeActiveSims: waiting for first emission") }
 
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val infoList =
@@ -466,6 +481,8 @@ class SimIdentityRepositoryImpl
 
         internal companion object {
             internal const val SEED_TOTAL_TIMEOUT_MS =
-                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + 3_000L)
+                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
+
+            private const val SEED_GRACE_PERIOD_MS = Constants.Flow.SEED_GRACE_PERIOD_MS
         }
     }

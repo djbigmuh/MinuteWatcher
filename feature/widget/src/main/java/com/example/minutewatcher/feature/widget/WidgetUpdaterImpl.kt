@@ -121,11 +121,18 @@ class WidgetUpdaterImpl
          * при обновлении виджета превышением лимита размера Binder/RemoteViews
          * (TransactionTooLargeException).
          *
-         * Проверка основана на трех критериях:
+         * [!WARNING]
+         * Данная эвристика может не срабатывать на всех версиях Android или оболочках производителей.
+         * При ложном срабатывании виджет может переключиться в упрощенный режим (SIMPLE) без реальной
+         * необходимости.
+         *
+         * Проверка основана на четырех критериях:
          * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин
          *    (наиболее надежный способ).
          * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке.
          * 3. Наличие маркеров в stack trace (поиск конкретных системных классов).
+         * 4. Наличие упоминания "TransactionTooLarge" или "Binder" в сообщении об ошибке
+         *    (обработка случаев, когда исходное исключение было "завернуто" без сохранения причины).
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
@@ -142,7 +149,15 @@ class WidgetUpdaterImpl
                         cls.startsWith("android.os.TransactionTooLargeException")
                 }
 
-            return isTransactionTooLarge || isMessageRelated || isStackLimit
+            // Дополнительная проверка сообщения на Binder и лимиты
+            val isBinderRelated =
+                e.message?.let {
+                    it.contains("TransactionTooLarge", ignoreCase = true) ||
+                        it.contains("Binder", ignoreCase = true) ||
+                        it.contains("too large", ignoreCase = true)
+                } ?: false
+
+            return isTransactionTooLarge || isMessageRelated || isStackLimit || isBinderRelated
         }
 
         private fun hasCauseOfType(

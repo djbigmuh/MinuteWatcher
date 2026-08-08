@@ -532,4 +532,26 @@ class CallTrackerTest {
             assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
             assertTrue(status.message?.contains("Timeout") == true)
         }
+
+    @Test
+    fun `loadCallSessionData handle timeout with clearSession failure`() =
+        runTest(testDispatcher) {
+            // Arrange: Trigger timeout
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(MutableSharedFlow())
+
+            // Arrange: clearSession (setCallStartTime) throws exception
+            whenever(callSessionRepository.setCallStartTime(eq(1), any()))
+                .thenThrow(RuntimeException("DataStore crash"))
+
+            // Act: End call (which calls loadCallSessionData)
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            // Assert: status should be Error(Timeout) from loadCallSessionData
+            val status = callTracker.status.value as TrackingStatus.Error
+            assertEquals("Timeout loading session data", status.message)
+
+            // Verify clearSession (setCallStartTime) was indeed called and failed
+            verify(callSessionRepository).setCallStartTime(1, 0)
+        }
 }
