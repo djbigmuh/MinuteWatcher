@@ -6,7 +6,6 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -34,6 +33,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -91,30 +91,33 @@ class SimIdentityRepositoryImpl
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         private val seedFlow: Flow<SeedResult> =
-            flow {
+            channelFlow {
                 var currentResult: SeedResult? = null
+
+                launch {
+                    delay(SEED_TOTAL_TIMEOUT_MS.milliseconds)
+                    if (currentResult == null) {
+                        currentResult = SeedResult.Fallback
+                        send(SeedResult.Fallback)
+                    }
+                }
+
                 seedRepository.seedFlow.collect { s ->
                     // Если стабильный сид уже получен, игнорируем любые последующие эмиссии из DataStore
-                    if (currentResult is SeedResult.Real) {
-                        return@collect
-                    }
+                    if (currentResult is SeedResult.Real) return@collect
 
                     val nextResult =
                         if (s.isNotEmpty()) {
                             SeedResult.Real(s)
                         } else {
                             val generated = generateSeedWithRetry()
-                            if (generated != null) {
-                                SeedResult.Real(generated)
-                            } else {
-                                SeedResult.Fallback
-                            }
+                            if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
                         }
 
                     // Эмитим только если состояние изменилось (аналог distinctUntilChanged)
                     if (currentResult != nextResult) {
                         currentResult = nextResult
-                        emit(nextResult)
+                        send(nextResult)
                     }
                 }
             }.catch { e ->
@@ -297,7 +300,14 @@ class SimIdentityRepositoryImpl
                 val validIdentities = identities.filter { it.source != IdentitySource.SLOT_FALLBACK }
                 if (validIdentities.isEmpty()) return@withLock
 
-                val currentPrefs = dataStore.data.firstWithTimeout() ?: emptyPreferences()
+                val currentPrefs =
+                    dataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
+                        AppLogger.w(
+                            "saveSimIdentitiesInfo: DataStore read timed out, " +
+                                "skipping save to avoid redundant writes",
+                        )
+                        return@withLock
+                    }
 
                 val toUpdate =
                     validIdentities.filter { identity ->
@@ -310,7 +320,7 @@ class SimIdentityRepositoryImpl
 
                 toUpdate.forEach { identity ->
                     val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-                    if (currentSlot == null && migratedIdentities.add(identity.stableId)) {
+                    if ((currentSlot == null) && migratedIdentities.add(identity.stableId)) {
                         toMigrate.add(identity)
                     }
                 }
@@ -368,7 +378,7 @@ class SimIdentityRepositoryImpl
                     }
                 }
 
-            val currentIdentities = identities.map { it.stableId }.toSet()
+            val currentIdentities = identities.asSequence().map { it.stableId }.toSet()
             migratedIdentities.retainAll(currentIdentities)
 
             if (infoList.isEmpty()) return emptyList()
@@ -449,24 +459,13 @@ class SimIdentityRepositoryImpl
             dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
         }
 
-        private suspend fun generateSeedWithRetry(): String? {
-            for (attempt in 1..SEED_RETRY_ATTEMPTS) {
-                val result =
-                    withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                        seedRepository.getOrCreateSeed { UUID.randomUUID().toString() }
-                    }
-                if (result != null) return result
-                if (attempt < SEED_RETRY_ATTEMPTS) {
-                    AppLogger.w("Identity seed generation timeout, retrying ($attempt/$SEED_RETRY_ATTEMPTS)...")
-                    delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
-                }
+        private suspend fun generateSeedWithRetry(): String? =
+            withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                seedRepository.getOrCreateSeed { UUID.randomUUID().toString() }
             }
-            return null
-        }
 
         internal companion object {
-            private const val SEED_RETRY_ATTEMPTS = 2
             internal const val SEED_TOTAL_TIMEOUT_MS =
-                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS * SEED_RETRY_ATTEMPTS + 2_000L)
+                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + 3_000L)
         }
     }

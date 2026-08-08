@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.common.util
 
 import android.content.Context
+import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
 import java.io.File
 import java.io.FileWriter
@@ -76,7 +77,6 @@ object AppLogger {
      * replacing any existing "logs.old.txt". This limits the total log storage to
      * approximately 2 * [MAX_FILE_SIZE].
      */
-    @Suppress("SwallowedException")
     private fun logToFile(
         level: String,
         message: String,
@@ -98,8 +98,12 @@ object AppLogger {
                 FileWriter(logFile, true).use { writer ->
                     writer.write(entry)
                 }
-            } catch (_: Exception) {
-                // Fail silently for file logging to avoid recursive errors
+            } catch (e: Exception) {
+                // Fail silently for file logging to avoid recursive errors,
+                // but at least log to system Log in debug.
+                if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "File logging failed", e)
+                }
             }
         }
     }

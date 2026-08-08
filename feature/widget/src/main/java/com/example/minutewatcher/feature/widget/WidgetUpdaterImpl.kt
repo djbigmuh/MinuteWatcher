@@ -55,7 +55,7 @@ class WidgetUpdaterImpl
                                 )
                             }
                             is UpdateResult.GenericFailure -> {
-                                AppLogger.e("Widget update failed after $MAX_UPDATE_RETRIES attempts")
+                                AppLogger.e("Widget update failed after $MAX_UPDATE_ATTEMPTS attempts")
                             }
                         }
                     } catch (e: CancellationException) {
@@ -69,16 +69,19 @@ class WidgetUpdaterImpl
 
         private suspend fun attemptUpdateWithRetry(context: Context): UpdateResult {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
-            repeat(MAX_UPDATE_RETRIES) { attempt ->
-                val result = safeUpdateAll(context)
-                if (result is UpdateResult.Success || result is UpdateResult.LimitExceeded) {
-                    return result
+            var lastResult: UpdateResult = UpdateResult.GenericFailure
+            for (attempt in 1..MAX_UPDATE_ATTEMPTS) {
+                lastResult = safeUpdateAll(context)
+                if (lastResult is UpdateResult.Success || lastResult is UpdateResult.LimitExceeded) {
+                    return lastResult
                 }
-                AppLogger.w("Widget update attempt ${attempt + 1} failed, retrying in ${delayMs}ms")
-                delay(delayMs.milliseconds)
-                delayMs *= 2
+                if (attempt < MAX_UPDATE_ATTEMPTS) {
+                    AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
+                    delay(delayMs.milliseconds)
+                    delayMs *= 2
+                }
             }
-            return safeUpdateAll(context) // последняя попытка
+            return lastResult
         }
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {
@@ -86,10 +89,10 @@ class WidgetUpdaterImpl
                 appSettingsRepository.updateAppSettings {
                     it.copy(widgetLimitExceeded = value)
                 }
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (ex: Exception) {
-                AppLogger.e("Failed to set widget limit exceeded flag to $value", ex)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
             }
         }
 
@@ -155,6 +158,6 @@ class WidgetUpdaterImpl
         }
 
         companion object {
-            private const val MAX_UPDATE_RETRIES = 3
+            private const val MAX_UPDATE_ATTEMPTS = 4
         }
     }

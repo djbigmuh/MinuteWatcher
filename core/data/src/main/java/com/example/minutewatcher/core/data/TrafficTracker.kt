@@ -116,11 +116,17 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
-                    val activeIdentities =
-                        simIdentityRepository
-                            .getActiveIdentities()
-                            .firstWithTimeout()
-                            ?.toSet() ?: return@withLock
+                    val identities = simIdentityRepository.getActiveIdentities().firstWithTimeout()
+                    if (identities == null) {
+                        AppLogger.w("TrafficTracker: getActiveIdentities timed out, skipping update")
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Identity read timeout",
+                            )
+                        return@withLock
+                    }
+                    val activeIdentities = identities.toSet()
                     baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
 
                     if (!checkPermissions()) return@withLock
@@ -407,7 +413,7 @@ class TrafficTracker
             )
         }
 
-        private suspend fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
+        private fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
             var targetSim = -1
             var currentDataSubId = -1
             var isFallback = false

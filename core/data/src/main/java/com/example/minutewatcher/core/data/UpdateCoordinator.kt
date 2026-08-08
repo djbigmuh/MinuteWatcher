@@ -1,12 +1,14 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -51,10 +53,16 @@ class UpdateCoordinator
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
                         if (newHash != lastSnapshotHash.value) {
                             lastSnapshotHash.value = newHash
-                            // Обновление виджета при отсутствии активных SIM выполняется
-                            // намеренно — виджет должен корректно отобразить состояние
-                            // "No SIM" или "No Data".
-                            widgetUpdater.updateAll()
+                            try {
+                                // Обновление виджета при отсутствии активных SIM выполняется
+                                // намеренно — виджет должен корректно отобразить состояние
+                                // "No SIM" или "No Data".
+                                widgetUpdater.updateAll()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Widget update failed", e)
+                            }
                         }
                     }
             }

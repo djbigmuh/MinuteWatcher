@@ -101,7 +101,7 @@ private fun SimCardListContent(
     when (uiState) {
         is SimCardListState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         is SimCardListState.Empty -> EmptyState(onGrantPhonePermission)
-        is SimCardListState.Error -> ErrorState(uiState.message)
+        is SimCardListState.Error -> ErrorState(uiState.message, onRetry = { viewModel.refreshSimCardsNow() })
         is SimCardListState.Success -> {
             SimCardList(
                 simCards = uiState.simCards,

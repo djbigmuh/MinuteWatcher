@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,7 +36,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainSimDataController
     @Inject
     constructor(
-        private val usageStateRepository: UsageStateRepository,
+        usageStateRepository: UsageStateRepository,
         private val trackingRecoveryController: TrackingRecoveryController,
         private val simIdentityRepository: SimIdentityRepository,
         private val simLimitsRepository: SimLimitsRepository,
@@ -50,7 +51,10 @@ class MainSimDataController
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
                 }.onStart { emit(SimCardListState.Loading) }
-                .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
+                .retry(MAX_RETRY_ATTEMPTS) {
+                    delay(1000.milliseconds)
+                    true
+                }.catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
                 .stateIn(
                     scope = scope,
                     started = SharingStarted.Eagerly,
@@ -152,8 +156,6 @@ class MainSimDataController
 
         fun retryTraffic(onRefresh: suspend () -> Unit) = trackingRecoveryController.retryTraffic(scope, onRefresh)
 
-        fun getSnapshot() = usageStateRepository.observeSnapshot().value
-
         fun notifyDataChanged(
             updateWidget: Boolean = true,
             force: Boolean = false,
@@ -161,5 +163,9 @@ class MainSimDataController
             scope.launch(ioDispatcher) {
                 dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
             }
+        }
+
+        private companion object {
+            private const val MAX_RETRY_ATTEMPTS = 3L
         }
     }

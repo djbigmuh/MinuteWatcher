@@ -50,7 +50,6 @@ object SimUtils {
     private const val MAX_OPERATOR_NAME_LENGTH = 20
     private const val TRUNCATED_OPERATOR_NAME_LENGTH = 17
 
-    @Suppress("SwallowedException")
     private fun getStringSafe(
         context: Context,
         resId: Int,
@@ -60,8 +59,8 @@ object SimUtils {
             context.getString(resId)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            AppLogger.w("Resource not found or failed to load: $resId. Using default: $default")
+        } catch (e: Exception) {
+            AppLogger.w("Resource not found or failed to load: $resId. Using default: $default", e)
             default
         }
 

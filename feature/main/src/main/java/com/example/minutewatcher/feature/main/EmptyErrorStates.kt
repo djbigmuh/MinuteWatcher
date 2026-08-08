@@ -40,7 +40,10 @@ fun EmptyState(onGrantPermission: () -> Unit) {
 }
 
 @Composable
-fun ErrorState(message: String) {
+fun ErrorState(
+    message: String,
+    onRetry: () -> Unit = {},
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -53,5 +56,9 @@ fun ErrorState(message: String) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = message, style = MaterialTheme.typography.bodyMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text(text = stringResource(id = R.string.action_retry))
+        }
     }
 }

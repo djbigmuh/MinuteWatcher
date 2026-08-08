@@ -59,8 +59,7 @@ class UsageCheckWorker
 
             if (!tryPerformAutoReset()) return Result.retry()
 
-            val refreshResult = deps.usageStateRepository.refresh()
-            return when (refreshResult) {
+            return when (val refreshResult = deps.usageStateRepository.refresh()) {
                 is RefreshResult.Timeout -> handleRefreshTimeout(refreshResult)
                 else -> {
                     processSuccessfulRefresh(refreshResult.snapshot)
@@ -170,7 +169,7 @@ class UsageCheckWorker
         ) {
             if ((entity.limit <= 0) || !appSettings.notifyLowMinutes) return
 
-            val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
+            val usagePercentage = ((entity.used.toDouble() * HUNDRED) / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
 
             val notifiedExhausted =
@@ -189,7 +188,7 @@ class UsageCheckWorker
                 }
             } else {
                 if (notifiedExhausted) {
-                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, false)
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = false)
                 }
                 handleLowMinutesAlert(
                     entity,
@@ -214,7 +213,7 @@ class UsageCheckWorker
                 deps.simNotificationFlagsRepository
                     .getNotifiedLowMinutes(identity)
                     .firstWithTimeout() ?: false
-            if (usagePct > monthProg && !notifiedLow) {
+            if ((usagePct > monthProg) && !notifiedLow) {
                 val levelRes =
                     if (remPct < CRITICAL_THRESHOLD) {
                         R.string.usage_level_critical
@@ -235,7 +234,7 @@ class UsageCheckWorker
                     )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_MINUTES)
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
-            } else if (usagePct <= monthProg && notifiedLow) {
+            } else if ((usagePct <= monthProg) && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
             }
         }
@@ -275,7 +274,7 @@ class UsageCheckWorker
         ) {
             if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) return
 
-            val usagePercentage = (entity.used.toDouble() * HUNDRED / entity.limit).toInt()
+            val usagePercentage = ((entity.used.toDouble() * HUNDRED) / entity.limit).toInt()
             val remainingPercentage = HUNDRED - usagePercentage
             val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
 
@@ -325,7 +324,7 @@ class UsageCheckWorker
                 deps.simNotificationFlagsRepository
                     .getNotifiedLowTraffic(identity)
                     .firstWithTimeout() ?: false
-            if (usagePct > monthProg && !notifiedLow) {
+            if ((usagePct > monthProg) && !notifiedLow) {
                 val levelRes =
                     if (remPct < CRITICAL_THRESHOLD) {
                         R.string.usage_level_critical
@@ -344,7 +343,7 @@ class UsageCheckWorker
                     )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_TRAFFIC)
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
-            } else if (usagePct <= monthProg && notifiedLow) {
+            } else if ((usagePct <= monthProg) && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)
             }
         }

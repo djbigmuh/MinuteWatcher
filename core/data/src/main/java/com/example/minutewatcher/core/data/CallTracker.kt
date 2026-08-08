@@ -141,7 +141,7 @@ class CallTracker
         ): T? {
             for (attempt in 1..attempts) {
                 val result =
-                    withTimeoutOrNull<T>(timeoutMs.milliseconds) {
+                    withTimeoutOrNull(timeoutMs.milliseconds) {
                         reader().first()
                     }
                 if (result != null) return result
@@ -156,9 +156,9 @@ class CallTracker
             val startTime = readWithRetry { callSessionRepository.getCallStartTime(subId) }
             val savedBootTime = readWithRetry { callSessionRepository.getBootTime(subId) }
 
-            if (startTime == null || savedBootTime == null) {
+            if ((startTime == null) || (savedBootTime == null)) {
                 val field = if (startTime == null) "startTime" else "bootTime"
-                AppLogger.w("Call start event dropped due to DataStore timeout for subId $subId ($field)")
+                AppLogger.e("Call start event dropped due to DataStore timeout for subId $subId ($field)", null)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading $field")
                 return false
             }
@@ -256,7 +256,6 @@ class CallTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
         }
 
-        @SuppressLint("MissingPermission")
         private suspend fun handleUnknownSubIdEnd() {
             if (!permissionManager.hasPhoneStatePermission()) return
             val activeSubIds =
@@ -287,7 +286,8 @@ class CallTracker
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 activeSubIds.all { id ->
-                    telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() ==
+                    if (!permissionManager.hasPhoneStatePermission()) return@all true
+                    telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
                         TelephonyManager.CALL_STATE_IDLE
                 }
             } else {
@@ -347,16 +347,17 @@ class CallTracker
         @SuppressLint("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
             if (!permissionManager.hasPhoneStatePermission()) return null
-            if (activeSubIds.size == 1) return activeSubIds.first()
 
             return when {
+                activeSubIds.size == 1 -> activeSubIds.first()
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                    val idleSubs =
-                        activeSubIds.filter { id ->
-                            telephonyManager.createForSubscriptionId(id).getCallStateForSubscription() ==
+                    activeSubIds
+                        .asSequence()
+                        .filter { id ->
+                            if (!permissionManager.hasPhoneStatePermission()) return@filter false
+                            telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
                                 TelephonyManager.CALL_STATE_IDLE
-                        }
-                    if (idleSubs.size == 1) idleSubs.first() else null
+                        }.singleOrNull()
                 }
                 else -> null
             }
@@ -443,7 +444,7 @@ class CallTracker
                 }
 
             if (startTime == null || savedBootTime == null || savedUptime == null) {
-                AppLogger.w("Call end event attribution failed due to DataStore timeout for subId $subId")
+                AppLogger.e("Call session data read timeout for subId $subId, clearing session", null)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout loading session data")
                 // Очищаем сессию, чтобы избежать stale-данных
                 clearSession(subId)

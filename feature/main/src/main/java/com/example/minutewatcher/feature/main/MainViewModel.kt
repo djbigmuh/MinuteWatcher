@@ -70,7 +70,7 @@ class MainViewModel
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
 
         fun completeOnboarding() {
-            controllers.dialog.setShowOnboardingDialog(false)
+            controllers.dialog.setShowOnboardingDialog(show = false)
             controllers.settings.completeOnboarding()
         }
 
@@ -90,7 +90,7 @@ class MainViewModel
                 try {
                     val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
                     if (settings?.onboardingCompleted == false) {
-                        controllers.dialog.setShowOnboardingDialog(true)
+                        controllers.dialog.setShowOnboardingDialog(show = true)
                     }
 
                     checkAutoResetOnStart()
@@ -118,10 +118,10 @@ class MainViewModel
                 val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
                 val now = System.currentTimeMillis()
 
-                if (now - lastResetCheck > AUTO_RESET_CHECK_INTERVAL_MS) {
+                if ((now - lastResetCheck) > AUTO_RESET_CHECK_INTERVAL_MS) {
                     // Сброс счётчика после длительного перерыва (24ч)
                     val effectiveFailCount =
-                        if (now - lastResetCheck > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+                        if ((now - lastResetCheck) > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
 
                     if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                         autoResetUseCase.performAutoReset(shouldNotify = false)
@@ -169,9 +169,9 @@ class MainViewModel
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
             val result = controllers.refresh.refreshSimCardsInternal()
-            lastRefreshAt = SystemClock.elapsedRealtime()
 
             if (result == null) return
+            lastRefreshAt = SystemClock.elapsedRealtime()
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
             val hasChanged = newHash != lastSnapshotHash.get()
@@ -252,19 +252,12 @@ class MainViewModel
             if (!isInitialized.get()) return
 
             val last = lastRefreshAt
-            // Если last == 0L, это первый запуск в текущем сеансе.
-            // Просто фиксируем время без немедленного обновления.
-            if (last == 0L) {
-                lastRefreshAt = nowElapsed
-                return
-            }
             val elapsed = nowElapsed - last
             // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt из SavedState может быть больше.
             // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
-            val isStale = elapsed < 0 || elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS
+            val isStale = (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
 
             if (isStale) {
-                lastRefreshAt = nowElapsed
                 resumeRefreshJob?.cancel()
                 resumeRefreshJob = viewModelScope.launch { refreshAndNotify(force = false) }
             }

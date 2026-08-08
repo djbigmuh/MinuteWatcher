@@ -84,59 +84,56 @@ open class SemanticSearchManager
         }
 
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
-            if (session != null && !session!!.isClosed && !forceOverride) return true
+            val s = session
+            if ((s != null) && (!s.isClosed) && (!forceOverride)) return true
 
             session?.close()
             session = null
 
-            var success = false
             var shouldForce = forceOverride
-            var attempt = 0
-            var isTerminalError = false
-            while (attempt < SCHEMA_RETRY_ATTEMPTS && !success && !isTerminalError) {
+            repeat(SCHEMA_RETRY_ATTEMPTS) {
                 var newSession: AppSearchSessionWrapper? = null
                 try {
                     newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
-                    val request = appSearchWrapper.createSchemaRequest(shouldForce)
-                    newSession.setSchema(request)
+                    newSession.setSchema(appSearchWrapper.createSchemaRequest(shouldForce))
                     session = newSession
                     _status.value = TrackingStatus.Active
-                    success = true
+                    return true
                 } catch (e: AppSearchException) {
                     newSession?.close()
-                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce) {
-                        AppLogger.w("AppSearch schema mismatch, retrying with force override")
+                    if ((e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) && !shouldForce) {
                         shouldForce = true
                     } else {
                         AppLogger.e("Fatal AppSearch error", e)
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                        isTerminalError = true
+                        return false
                     }
                 } catch (e: CancellationException) {
                     newSession?.close()
                     throw e
                 } catch (e: Exception) {
                     newSession?.close()
-
-                    // Check if the error is due to lack of AppSearch support on the device
-                    val isUnsupported =
-                        e is IllegalStateException ||
-                            e.message?.contains("AppSearch", ignoreCase = true) == true ||
-                            e.message?.contains("Service not found", ignoreCase = true) == true
-
-                    if (isUnsupported) {
-                        AppLogger.w("AppSearch is not supported on this device. Disabling indexing gracefully.")
-                        _status.value = TrackingStatus.Idle
-                        isTerminalError = true
-                    } else {
-                        AppLogger.e("Fatal AppSearch initialization error", e)
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                        isTerminalError = true
-                    }
+                    return handleInitializationError(e)
                 }
-                attempt++
             }
-            return success
+            return false
+        }
+
+        private fun handleInitializationError(e: Exception): Boolean {
+            val isUnsupported =
+                (e is IllegalStateException) ||
+                    (e.message?.contains("AppSearch", ignoreCase = true) == true) ||
+                    (e.message?.contains("Service not found", ignoreCase = true) == true)
+
+            return if (isUnsupported) {
+                AppLogger.w("AppSearch is not supported on this device. Disabling indexing gracefully.")
+                _status.value = TrackingStatus.Idle
+                true
+            } else {
+                AppLogger.e("Fatal AppSearch initialization error", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                true
+            }
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
@@ -144,8 +141,8 @@ open class SemanticSearchManager
             val currentHash =
                 if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
             return sessionMutex.withLock {
-                if (hasActiveSims && currentHash == lastSnapshotHash) return@withLock true
-                if (!hasActiveSims && lastSnapshotHash == null) return@withLock true
+                if (hasActiveSims && (currentHash == lastSnapshotHash)) return@withLock true
+                if (!hasActiveSims && (lastSnapshotHash == null)) return@withLock true
 
                 var result = false
                 if (ensureSession()) {
@@ -195,7 +192,7 @@ open class SemanticSearchManager
             withContext(ioDispatcher) {
                 try {
                     withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
-                        val documents = convertSnapshotToDocuments(snapshot)
+                        val documents = UsageDocument.fromGlobalSnapshot(snapshot)
                         performIndexUpdate(documents)
                         lastSnapshotHash = currentHash
                         _status.value = TrackingStatus.Active
@@ -214,19 +211,8 @@ open class SemanticSearchManager
                 }
             }
 
-        private fun convertSnapshotToDocuments(snapshot: GlobalSnapshot): List<UsageDocument> {
-            val documents = mutableListOf<UsageDocument>()
-            for (sim in snapshot.simSnapshots) {
-                if (!sim.isActive) continue
-                for (entity in sim.entities.values) {
-                    documents.add(UsageDocument.fromSemanticEntity(entity))
-                }
-            }
-            return documents
-        }
-
         private suspend fun performIndexUpdate(documents: List<UsageDocument>) {
-            val currentIds = documents.map { it.id }.toSet()
+            val currentIds = documents.asSequence().map { it.id }.toSet()
 
             val staleIds = mutableSetOf<String>()
             SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->

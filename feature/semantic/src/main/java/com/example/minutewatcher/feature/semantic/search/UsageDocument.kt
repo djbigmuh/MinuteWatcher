@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.semantic.search
 
 import androidx.appsearch.annotation.Document
 import androidx.appsearch.app.AppSearchSchema
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.util.ColorProvider
 
@@ -55,6 +56,17 @@ data class UsageDocument(
                 slot = entity.simSlot.toLong(),
                 status = usageStatus.name,
             )
+        }
+
+        fun fromGlobalSnapshot(snapshot: GlobalSnapshot): List<UsageDocument> {
+            val documents = mutableListOf<UsageDocument>()
+            for (sim in snapshot.simSnapshots) {
+                if (!sim.isActive) continue
+                for (entity in sim.entities.values) {
+                    documents.add(fromSemanticEntity(entity))
+                }
+            }
+            return documents
         }
     }
 }

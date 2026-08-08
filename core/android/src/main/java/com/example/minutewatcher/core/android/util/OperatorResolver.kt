@@ -146,38 +146,34 @@ object OperatorResolver {
             "2degrees" to "operator_2degrees",
         )
 
-    @Suppress("ReturnCount")
-    private fun loadDb(context: Context): Map<String, String> {
-        db?.let { return it }
-
-        synchronized(this) {
-            db?.let { return it }
-
-            return try {
-                val inputStream = context.assets.open("mcc_mnc_db.json")
-                val reader = BufferedReader(InputStreamReader(inputStream))
-                val jsonString = reader.use { it.readText() }
-                val jsonObject = JSONObject(jsonString)
-                val map = mutableMapOf<String, String>()
-                val keys = jsonObject.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    map[key] = jsonObject.getString(key)
-                }
-                db = map
-                map
-            } catch (e: IOException) {
-                AppLogger.e("Failed to load MCC/MNC database from assets", e)
-                emptyMap()
-            } catch (e: JSONException) {
-                AppLogger.e("Malformed MCC/MNC database JSON", e)
-                emptyMap()
-            } catch (e: Exception) {
-                AppLogger.e("Unexpected error loading MCC/MNC database", e)
-                emptyMap()
-            }
+    private fun loadDb(context: Context): Map<String, String> =
+        db ?: synchronized(this) {
+            db ?: loadDbInternal(context).also { db = it }
         }
-    }
+
+    private fun loadDbInternal(context: Context): Map<String, String> =
+        try {
+            val inputStream = context.assets.open("mcc_mnc_db.json")
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            val jsonString = reader.use { it.readText() }
+            val jsonObject = JSONObject(jsonString)
+            val map = mutableMapOf<String, String>()
+            val keys = jsonObject.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = jsonObject.getString(key)
+            }
+            map
+        } catch (e: IOException) {
+            AppLogger.e("Failed to load MCC/MNC database from assets", e)
+            emptyMap()
+        } catch (e: JSONException) {
+            AppLogger.e("Malformed MCC/MNC database JSON", e)
+            emptyMap()
+        } catch (e: Exception) {
+            AppLogger.e("Unexpected error loading MCC/MNC database", e)
+            emptyMap()
+        }
 
     fun resolve(
         context: Context,
@@ -209,20 +205,12 @@ object OperatorResolver {
             !genericSimRegex.matches(name.trim()) &&
             !SimUtils.isInactiveSim(name)
 
-    @Suppress("ReturnCount")
     private fun resolveFromDbKey(
         context: Context,
         resKey: String,
-    ): String? {
-        val resId = operatorResourceMap[resKey]
-        if (resId != null) {
-            return context.getString(resId)
-        }
-        if (!resKey.startsWith("operator_")) {
-            return resKey
-        }
-        return null
-    }
+    ): String? =
+        operatorResourceMap[resKey]?.let { context.getString(it) }
+            ?: resKey.takeIf { !it.startsWith("operator_") }
 
     private fun fallbackResolution(
         context: Context,
@@ -250,10 +238,10 @@ object OperatorResolver {
     private const val MCC_LENGTH = 3
     private const val MIN_MCC_MNC_LENGTH = 5
 
-    fun getOperatorResourceId(operatorName: String): Int? {
-        val entry = tokenToResKey.entries.find { (token, _) -> operatorName.hasToken(token) }
-        return entry?.let { operatorResourceMap[it.value] }
-    }
+    fun getOperatorResourceId(operatorName: String): Int? =
+        tokenToResKey.entries
+            .find { (token, _) -> operatorName.hasToken(token) }
+            ?.let { operatorResourceMap[it.value] }
 
     private fun String.hasToken(token: String): Boolean {
         val normalized = lowercase(Locale.ROOT)
