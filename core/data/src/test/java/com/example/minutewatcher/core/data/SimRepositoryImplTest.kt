@@ -99,16 +99,16 @@ class SimRepositoryImplTest {
         runTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
             val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
 
@@ -136,16 +136,16 @@ class SimRepositoryImplTest {
         runTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             val mockInfo = mock<android.telephony.SubscriptionInfo>()
@@ -235,16 +235,16 @@ class SimRepositoryImplTest {
         runTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
@@ -267,16 +267,16 @@ class SimRepositoryImplTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    mockDataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = mockDataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             val mockInfo = mock<android.telephony.SubscriptionInfo>()

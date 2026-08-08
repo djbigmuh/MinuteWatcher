@@ -89,23 +89,33 @@ class SimIdentityRepositoryImpl
                 .newKeySet<String>()
 
         private val seedFlow: Flow<SeedResult> =
-            seedRepository.seedFlow
-                .flatMapLatest { s ->
-                    flow {
+            flow {
+                var currentResult: SeedResult? = null
+                seedRepository.seedFlow.collect { s ->
+                    // Если стабильный сид уже получен, игнорируем любые последующие эмиссии из DataStore
+                    if (currentResult is SeedResult.Real) {
+                        return@collect
+                    }
+
+                    val nextResult =
                         if (s.isNotEmpty()) {
-                            emit(SeedResult.Real(s))
+                            SeedResult.Real(s)
                         } else {
                             val generated = generateSeedWithRetry()
                             if (generated != null) {
-                                emit(SeedResult.Real(generated))
+                                SeedResult.Real(generated)
                             } else {
-                                AppLogger.e("Failed to generate identity seed. Using slot-based fallback.")
-                                emit(SeedResult.Fallback)
+                                SeedResult.Fallback
                             }
                         }
+
+                    // Эмитим только если состояние изменилось (аналог distinctUntilChanged)
+                    if (currentResult != nextResult) {
+                        currentResult = nextResult
+                        emit(nextResult)
                     }
-                }.distinctUntilChanged()
-                .shareIn(scope, SharingStarted.Eagerly, replay = 1)
+                }
+            }.shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow

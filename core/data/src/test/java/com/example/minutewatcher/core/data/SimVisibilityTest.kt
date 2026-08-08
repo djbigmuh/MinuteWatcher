@@ -100,23 +100,22 @@ class SimVisibilityTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             val repository =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             val simsList = mutableListOf<List<ActiveSimInfo>>()
-            val job =
-                launch {
-                    repository.observeActiveSims().collect { simsList.add(it) }
-                }
+            backgroundScope.launch {
+                repository.observeActiveSims().collect { simsList.add(it) }
+            }
 
             // Initial value from StateFlow (initialValue = emptyList())
             runCurrent()
@@ -139,7 +138,5 @@ class SimVisibilityTest {
 
             // Should have emitted again with the new SIM
             assertTrue("Last emission should contain the SIM", simsList.last().isNotEmpty())
-
-            job.cancel()
         }
 }

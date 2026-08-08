@@ -86,16 +86,16 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    seedRepository,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             // Mock seedRepository.seedFlow to return a flow that never emits,
@@ -136,16 +136,16 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    hangingSeedRepo,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = hangingSeedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             // Act: Try to get identity.
@@ -190,16 +190,16 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
-                    dataStore,
-                    hangingSeedRepo,
-                    appSettingsRepository,
-                    migrationService,
-                    mockSimProvider,
-                    backgroundScope,
+                    context = context,
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                    dataStore = dataStore,
+                    seedRepository = hangingSeedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
                 )
 
             // Act: observeActiveSims().first() should complete due to fallback seed
