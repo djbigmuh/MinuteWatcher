@@ -67,6 +67,7 @@ object WidgetUiMapper {
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
             settingsLoadFailed = state.settingsLoadFailed,
             refreshFailed = refreshFailed,
+            isSnapshotEmpty = snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP,
         )
     }
 }

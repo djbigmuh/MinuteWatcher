@@ -125,8 +125,8 @@ class WidgetSettingsViewModelTest {
             assertTrue(vm.isSaving.value)
 
             vm.saveAndNotify { secondResult = it }
-            // В новом варианте второй вызов игнорируется, onComplete не вызывается
-            assertEquals(null, secondResult)
+            // В новом варианте второй вызов возвращает успех сразу (оптимистично)
+            assertEquals(true, secondResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()

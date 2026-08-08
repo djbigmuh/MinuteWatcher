@@ -112,6 +112,7 @@ class WidgetSettingsViewModel
             viewModelScope.launch {
                 if (_isSaving.value) {
                     // Сохранение уже идёт — не запускаем второе, но и не показываем ошибку
+                    onComplete(true)
                     return@launch
                 }
                 _isSaving.value = true

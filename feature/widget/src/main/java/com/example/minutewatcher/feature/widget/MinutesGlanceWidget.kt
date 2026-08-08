@@ -128,7 +128,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val refreshResult = getSnapshot(usageRepository)
         val snapshot = refreshResult.snapshot
         val refreshFailed =
-            refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout && snapshot.timestamp == 0L
+            refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout
 
         val settingsState =
             try {
@@ -248,7 +248,7 @@ private fun WidgetMainContent(
     val simUiStates = uiState.simUiStates.filter { it.showSim }
 
     when {
-        uiState.refreshFailed -> {
+        uiState.refreshFailed && uiState.isSnapshotEmpty -> {
             WidgetMessage(context.getString(R.string.refresh_error), noDataColor)
         }
 
@@ -257,12 +257,51 @@ private fun WidgetMainContent(
         }
 
         simUiStates.isNotEmpty() -> {
-            MultiSimLayout(simUiStates, uiState)
+            Column(
+                modifier = GlanceModifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (uiState.refreshFailed) {
+                    StaleDataIndicator(noDataColor)
+                }
+                Box(
+                    modifier = GlanceModifier.defaultWeight(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MultiSimLayout(simUiStates, uiState)
+                }
+            }
         }
 
         else -> {
             WidgetMessage(context.getString(R.string.no_sim_found), noDataColor)
         }
+    }
+}
+
+@Composable
+private fun StaleDataIndicator(color: IColorProvider) {
+    val context = LocalContext.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = GlanceModifier.padding(top = 4.dp),
+    ) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_warning_amber),
+            contentDescription = null,
+            modifier = GlanceModifier.size(12.dp),
+            colorFilter = androidx.glance.ColorFilter.tint(color),
+        )
+        Spacer(modifier = GlanceModifier.width(4.dp))
+        Text(
+            text = context.getString(R.string.stale_data_warning),
+            style =
+                TextStyle(
+                    fontSize = 10.sp,
+                    color = color,
+                ),
+        )
     }
 }
 

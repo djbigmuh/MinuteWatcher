@@ -88,8 +88,14 @@ object AppLogger {
                 val logFile = File(dir, LOG_FILE_NAME)
                 if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
                     val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                    if (oldFile.exists()) oldFile.delete()
-                    logFile.renameTo(oldFile)
+                    if (oldFile.exists() && !oldFile.delete()) {
+                        // Не удалось удалить старый файл — пропускаем ротацию в этот раз
+                        return@execute
+                    }
+                    if (!logFile.renameTo(oldFile)) {
+                        // Не удалось переименовать — продолжаем писать в текущий файл
+                        return@execute
+                    }
                 }
 
                 val timestamp = dateFormat.format(Instant.now())

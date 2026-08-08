@@ -42,6 +42,7 @@ class UpdateCoordinator
         @ApplicationScope private val scope: CoroutineScope,
     ) : DataChangeNotifier {
         private val lastSnapshotHash = MutableStateFlow<Int?>(null)
+        private var consecutiveErrors = 0
 
         init {
             scope.launch {
@@ -55,6 +56,7 @@ class UpdateCoordinator
                                     SnapshotUtils.calculateContentHash(new)
                             }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                             .collect { snapshot ->
+                                consecutiveErrors = 0
                                 val newHash = SnapshotUtils.calculateContentHash(snapshot)
                                 if (newHash != lastSnapshotHash.value) {
                                     lastSnapshotHash.value = newHash
@@ -73,8 +75,17 @@ class UpdateCoordinator
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        AppLogger.e("UpdateCoordinator: snapshot observation failed, restarting in 5s", e)
-                        delay(5.seconds)
+                        consecutiveErrors++
+                        val delaySeconds =
+                            minOf(
+                                INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(consecutiveErrors, MAX_RETRY_EXPONENT)),
+                                MAX_RETRY_DELAY_SECONDS,
+                            )
+                        AppLogger.e(
+                            "UpdateCoordinator: observation failed ($consecutiveErrors), retry in ${delaySeconds}s",
+                            e,
+                        )
+                        delay(delaySeconds.seconds)
                     }
                 }
             }
@@ -109,5 +120,11 @@ class UpdateCoordinator
             if (updateWidget) {
                 dataRefreshNotifier.notifyRefresh(isManual = force)
             }
+        }
+
+        companion object {
+            private const val INITIAL_RETRY_DELAY_SECONDS = 5L
+            private const val MAX_RETRY_EXPONENT = 6
+            private const val MAX_RETRY_DELAY_SECONDS = 300L
         }
     }

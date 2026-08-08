@@ -81,9 +81,7 @@ class SimIdentityRepositoryImpl
         }
 
         private val saveMutex = Mutex()
-        private val migratedIdentities =
-            ConcurrentHashMap
-                .newKeySet<String>()
+        private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         private val seedFlow: Flow<SeedResult> =
@@ -351,9 +349,8 @@ class SimIdentityRepositoryImpl
                         }
                     }
                 }
+                performMigrations(toMigrate)
             }
-
-            performMigrations(toMigrate)
         }
 
         private suspend fun performMigrations(toMigrate: List<SimIdentity>) {

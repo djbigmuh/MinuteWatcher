@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -32,7 +34,8 @@ class MainBannerController
         }
 
         private val _isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
-        val isNotificationPermissionPermanentlyDenied: StateFlow<Boolean> = _isNotificationPermissionPermanentlyDenied.asStateFlow()
+        val isNotificationPermissionPermanentlyDenied: StateFlow<Boolean> =
+            _isNotificationPermissionPermanentlyDenied.asStateFlow()
 
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
             _isNotificationPermissionPermanentlyDenied.value = denied
@@ -84,6 +87,9 @@ class MainBannerController
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
                 )
+            }.catch { e ->
+                AppLogger.e("Failed to compute banner state", e)
+                emit(TrackingBannerState())
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,

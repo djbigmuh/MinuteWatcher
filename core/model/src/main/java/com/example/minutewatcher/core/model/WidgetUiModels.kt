@@ -11,6 +11,7 @@ data class WidgetUiState(
     val useSystemColors: Boolean = false,
     val settingsLoadFailed: Boolean = false,
     val refreshFailed: Boolean = false,
+    val isSnapshotEmpty: Boolean = false,
 )
 
 data class SimUiState(

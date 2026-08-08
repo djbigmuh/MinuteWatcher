@@ -423,13 +423,9 @@ class CallTracker
                 val durationSeconds = (currentUptime - sessionData.savedUptime) / MILLIS_IN_SECOND
 
                 if (durationSeconds > 0) {
-                    val success = processCallDuration(durationSeconds.toInt(), subId, sessionData.savedIdentity, notify)
-                    if (success) {
-                        clearSession(subId)
-                    }
-                } else {
-                    clearSession(subId)
+                    processCallDuration(durationSeconds.toInt(), subId, sessionData.savedIdentity, notify)
                 }
+                clearSession(subId)
             }
         }
 
@@ -456,7 +452,13 @@ class CallTracker
                     callSessionRepository.getCallIdentity(subId).map { Box(it) }
                 }
 
-            if (startTimeResult.isFailure || savedBootTimeResult.isFailure || savedUptimeResult.isFailure || savedIdentityBoxResult.isFailure) {
+            val isAnyLoadFailed =
+                startTimeResult.isFailure ||
+                    savedBootTimeResult.isFailure ||
+                    savedUptimeResult.isFailure ||
+                    savedIdentityBoxResult.isFailure
+
+            if (isAnyLoadFailed) {
                 val field =
                     when {
                         startTimeResult.isFailure -> "startTime"

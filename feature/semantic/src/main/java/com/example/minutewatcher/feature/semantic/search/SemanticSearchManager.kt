@@ -116,6 +116,8 @@ open class SemanticSearchManager
                     return handleInitializationError(e)
                 }
             }
+            _status.value =
+                TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "Schema setup failed after retries")
             return false
         }
 

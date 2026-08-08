@@ -115,30 +115,16 @@ class TrafficTracker
             try {
                 if (!checkPermissions()) return
 
-                val activeSims = getActiveSimsAndCleanup() ?: return
-                val target = getTargetSimInfo(activeSims) ?: return
+                val target = findTarget() ?: return
 
                 if (target.skipDelta) {
-                    AppLogger.d(
-                        "Traffic delta skipped due to SIM change " +
-                            "(slot=${target.slot}, retryCount=${target.retryCount})",
-                    )
-                    _status.value =
-                        if (target.isFallback) {
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                                slotIndex = target.slot,
-                            )
-                        } else {
-                            TrackingStatus.Active
-                        }
-                    return
-                }
-
-                trafficMutex.withLock {
-                    val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                    baselineNeedsRetry.keys.removeIf { it != targetIdentity }
-                    performTrafficUpdate(target, targetIdentity)
+                    handleSkipDelta(target)
+                } else {
+                    trafficMutex.withLock {
+                        val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                        baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+                        performTrafficUpdate(target, targetIdentity)
+                    }
                 }
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException in TrafficTracker", e)
@@ -162,6 +148,27 @@ class TrafficTracker
             val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
             baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
             return activeSims
+        }
+
+        private suspend fun findTarget(): TargetInfo? {
+            val activeSims = getActiveSimsAndCleanup() ?: return null
+            return getTargetSimInfo(activeSims)
+        }
+
+        private fun handleSkipDelta(target: TargetInfo) {
+            AppLogger.d(
+                "Traffic delta skipped due to SIM change " +
+                    "(slot=${target.slot}, retryCount=${target.retryCount})",
+            )
+            _status.value =
+                if (target.isFallback) {
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                        slotIndex = target.slot,
+                    )
+                } else {
+                    TrackingStatus.Active
+                }
         }
 
         private suspend fun performTrafficUpdate(

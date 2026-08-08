@@ -22,6 +22,8 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltWorker
 @Suppress("TooManyFunctions")
@@ -102,8 +104,25 @@ class UsageCheckWorker
             val appSettings = fetchAppSettingsWithRetry()
             for (simSnapshot in snapshot.simSnapshots) {
                 if (simSnapshot.isActive) {
-                    processSimSnapshot(simSnapshot, appSettings)
+                    processActiveSimSnapshot(simSnapshot, appSettings)
                 }
+            }
+        }
+
+        private suspend fun processActiveSimSnapshot(
+            simSnapshot: SimSnapshot,
+            appSettings: AppSettings,
+        ) {
+            try {
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    processSimSnapshot(simSnapshot, appSettings)
+                } ?: run {
+                    AppLogger.w("UsageCheckWorker: timeout processing SIM slot ${simSnapshot.slot}, skipping")
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UsageCheckWorker: error processing SIM slot ${simSnapshot.slot}", e)
             }
         }
 

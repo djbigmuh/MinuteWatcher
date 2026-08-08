@@ -111,16 +111,14 @@ class MainViewModel
         }
 
         private suspend fun checkAutoResetOnStart() {
+            val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
+            val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+            val now = System.currentTimeMillis()
+            val effectiveFailCount =
+                if ((now - lastResetCheck) > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+
             try {
-                val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
-                val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
-                val now = System.currentTimeMillis()
-
                 if ((now - lastResetCheck) > AUTO_RESET_CHECK_INTERVAL_MS) {
-                    // Сброс счётчика после длительного перерыва (24ч)
-                    val effectiveFailCount =
-                        if ((now - lastResetCheck) > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
-
                     if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                         autoResetUseCase.performAutoReset(shouldNotify = false)
                         savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
@@ -135,8 +133,7 @@ class MainViewModel
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Auto-reset failed during initialization", e)
-                val currentFails = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
-                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = currentFails + 1
+                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
                 savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = System.currentTimeMillis()
             }
         }
