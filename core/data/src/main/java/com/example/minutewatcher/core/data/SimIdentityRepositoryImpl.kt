@@ -88,6 +88,7 @@ class SimIdentityRepositoryImpl
         private val migratedIdentities =
             ConcurrentHashMap
                 .newKeySet<String>()
+        private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         private val seedFlow: Flow<SeedResult> =
             flow {
@@ -326,17 +327,21 @@ class SimIdentityRepositoryImpl
                 }
             }
 
-            // Миграция вне мьютекса
+            performMigrations(toMigrate)
+        }
+
+        private suspend fun performMigrations(toMigrate: List<SimIdentity>) {
             toMigrate.forEach { identity ->
-                try {
-                    migrationService.migrateLegacyData(identity)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e(
-                        "Failed to migrate legacy data for identity: ${identity.stableId}",
-                        e,
-                    )
+                if (migratingIdentities.add(identity.stableId)) {
+                    try {
+                        migrationService.migrateLegacyData(identity)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to migrate legacy data for identity: ${identity.stableId}", e)
+                    } finally {
+                        migratingIdentities.remove(identity.stableId)
+                    }
                 }
             }
         }

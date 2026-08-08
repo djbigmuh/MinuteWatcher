@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.android.ui.SimLayoutRender
+import com.example.minutewatcher.core.android.util.WidgetColorResolver
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
@@ -79,10 +80,7 @@ private fun getNoDataColor(uiState: WidgetUiState): Color =
     if (uiState.useSystemColors) {
         MaterialTheme.colorScheme.onSurface
     } else {
-        val luminance =
-            androidx.core.graphics.ColorUtils
-                .calculateLuminance(uiState.backgroundColor)
-        if (luminance > Constants.UI.LUMINANCE_THRESHOLD) Color.Black else Color.White
+        Color(WidgetColorResolver.resolveNoDataColor(uiState.backgroundColor))
     }
 
 @Composable

@@ -35,6 +35,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.minutewatcher.core.android.ui.SimLayoutRender
+import com.example.minutewatcher.core.android.util.WidgetColorResolver
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
@@ -207,18 +208,7 @@ private fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
         return GlanceTheme.colors.onSurface
     }
 
-    val luminance =
-        androidx.core.graphics.ColorUtils
-            .calculateLuminance(uiState.backgroundColor)
-
-    val colorInt =
-        if (luminance >
-            Constants.UI.LUMINANCE_THRESHOLD
-        ) {
-            android.graphics.Color.BLACK
-        } else {
-            android.graphics.Color.WHITE
-        }
+    val colorInt = WidgetColorResolver.resolveNoDataColor(uiState.backgroundColor)
     val composeColor =
         androidx.compose.ui.graphics
             .Color(colorInt)

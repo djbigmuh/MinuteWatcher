@@ -10,7 +10,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+
+@Composable
+fun enabledContentColor(enabled: Boolean): Color =
+    if (enabled) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
 
 @Composable
 fun SettingLabel(text: String) {
@@ -40,12 +49,7 @@ fun CheckboxSetting(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color =
-                if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                },
+            color = enabledContentColor(enabled),
         )
     }
 }

@@ -163,13 +163,13 @@ private fun BackgroundColorSetting(
                     .size(40.dp)
                     .background(
                         color = Color(state.backgroundColor).copy(alpha = if (enabled) 1f else 0.5f),
-                        shape = RoundedCornerShape(4.dp)
+                        shape = RoundedCornerShape(4.dp),
                     ),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = stringResource(id = R.string.custom_color),
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            color = enabledContentColor(enabled),
         )
     }
 }

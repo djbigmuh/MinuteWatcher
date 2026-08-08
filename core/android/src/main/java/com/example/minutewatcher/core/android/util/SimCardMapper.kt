@@ -13,7 +13,13 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
-        if (usage.minutesUsed < 0 || usage.minutesLimit < 0 || usage.trafficUsedMb < 0f || usage.trafficLimitMb < 0) {
+        val hasNegativeValues =
+            usage.minutesUsed < 0 ||
+                usage.minutesLimit < 0 ||
+                usage.trafficUsedMb < 0f ||
+                usage.trafficLimitMb < 0
+
+        if (hasNegativeValues) {
             AppLogger.w(
                 "SimCardMapper: Detected negative usage/limit values for slot $slot: " +
                     "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +

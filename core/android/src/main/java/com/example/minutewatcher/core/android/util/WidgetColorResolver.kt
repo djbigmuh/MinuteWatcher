@@ -26,4 +26,15 @@ object WidgetColorResolver {
         val isDark = backgroundLuminance < Constants.UI.LUMINANCE_THRESHOLD
         return UsageColors.get(status, isDark)
     }
+
+    fun resolveNoDataColor(backgroundColor: Int): Int {
+        val luminance =
+            androidx.core.graphics.ColorUtils
+                .calculateLuminance(backgroundColor)
+        return if (luminance > Constants.UI.LUMINANCE_THRESHOLD) {
+            Color.BLACK
+        } else {
+            Color.WHITE
+        }
+    }
 }

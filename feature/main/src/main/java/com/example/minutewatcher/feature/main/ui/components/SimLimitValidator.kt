@@ -26,32 +26,42 @@ object SimLimitValidator {
         val min = minutesText.toIntOrNull()
         val trafGb = trafficText.toFloatOrNull()
 
-        var minErr: String? = null
-        if (minutesText.isEmpty()) {
-            minErr = fieldRequiredMsg
-        } else if (min == null) {
-            minErr = invalidNumberMsg
-        } else if (min < 0 || min > Constants.MAX_MINUTES_LIMIT) {
-            minErr = minutesRangeMsg
-        }
+        val minErr = validateMinutes(minutesText, min, fieldRequiredMsg, invalidNumberMsg, minutesRangeMsg)
+        val trafErr = validateTraffic(trafficText, trafGb, fieldRequiredMsg, invalidNumberMsg, trafficRangeMsg)
 
-        var trafErr: String? = null
-        if (trafficText.isEmpty()) {
-            trafErr = fieldRequiredMsg
-        } else if (trafGb == null) {
-            trafErr = invalidNumberMsg
-        } else if (trafGb.isNaN() || trafGb.isInfinite()) {
-            trafErr = invalidNumberMsg
-        } else if (trafGb < 0 || trafGb > Constants.MAX_TRAFFIC_LIMIT_GB) {
-            trafErr = trafficRangeMsg
-        }
-
-        val isInputValid = minErr == null && trafErr == null
-        val areValuesNotNull = min != null && trafGb != null
-        return if (isInputValid && areValuesNotNull) {
+        val isValid = minErr == null && trafErr == null
+        return if (isValid && min != null && trafGb != null) {
             SimLimitValidationResult.Valid(min, trafGb)
         } else {
             SimLimitValidationResult.Invalid(minErr, trafErr)
         }
     }
+
+    private fun validateMinutes(
+        text: String,
+        value: Int?,
+        fieldRequiredMsg: String,
+        invalidNumberMsg: String,
+        rangeMsg: String,
+    ): String? =
+        when {
+            text.isEmpty() -> fieldRequiredMsg
+            value == null -> invalidNumberMsg
+            value < 0 || value > Constants.MAX_MINUTES_LIMIT -> rangeMsg
+            else -> null
+        }
+
+    private fun validateTraffic(
+        text: String,
+        value: Float?,
+        fieldRequiredMsg: String,
+        invalidNumberMsg: String,
+        rangeMsg: String,
+    ): String? =
+        when {
+            text.isEmpty() -> fieldRequiredMsg
+            value == null || value.isNaN() || value.isInfinite() -> invalidNumberMsg
+            value < 0 || value > Constants.MAX_TRAFFIC_LIMIT_GB -> rangeMsg
+            else -> null
+        }
 }

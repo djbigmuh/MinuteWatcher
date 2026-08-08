@@ -119,7 +119,6 @@ private fun WidgetSettingsContent(
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val scrollState = rememberScrollState()
     var showColorPicker by remember { mutableStateOf(false) }
 
     if (showColorPicker) {
@@ -148,41 +147,58 @@ private fun WidgetSettingsContent(
             )
         },
     ) { paddingValues ->
-        Column(
-            modifier =
-                Modifier
-                    .padding(paddingValues)
-                    .verticalScroll(scrollState)
-                    .padding(16.dp),
-        ) {
-            GeneralSettingsSection(
-                state = state,
-                enabled = true, // state is non-null here
-                onUpdateLayoutMode = { mode -> viewModel.updateSettings { it.copy(layoutMode = mode) } },
-                onUpdateSimArrangement = { arr -> viewModel.updateSettings { it.copy(simArrangement = arr) } },
-                onUpdateTransparency = { tr -> viewModel.updateSettings { it.copy(transparency = tr) } },
-                onUpdateFontSize = { fs -> viewModel.updateSettings { it.copy(fontSize = fs) } },
-                onShowColorPicker = { showColorPicker = true },
-            )
+        WidgetSettingsList(
+            modifier = Modifier.padding(paddingValues),
+            state = state,
+            uiState = uiState,
+            viewModel = viewModel,
+            onShowColorPicker = { showColorPicker = true },
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun WidgetSettingsList(
+    modifier: Modifier = Modifier,
+    state: WidgetSettingsState,
+    uiState: WidgetUiState?,
+    viewModel: WidgetSettingsViewModel,
+    onShowColorPicker: () -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier =
+            modifier
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+    ) {
+        GeneralSettingsSection(
+            state = state,
+            enabled = true,
+            onUpdateLayoutMode = { mode -> viewModel.updateSettings { it.copy(layoutMode = mode) } },
+            onUpdateSimArrangement = { arr -> viewModel.updateSettings { it.copy(simArrangement = arr) } },
+            onUpdateTransparency = { tr -> viewModel.updateSettings { it.copy(transparency = tr) } },
+            onUpdateFontSize = { fs -> viewModel.updateSettings { it.copy(fontSize = fs) } },
+            onShowColorPicker = onShowColorPicker,
+        )
 
-            NotificationSettingsSection(
-                state = state,
-                enabled = true, // state is non-null here
-                onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
-                onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
-                onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
-            )
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+        NotificationSettingsSection(
+            state = state,
+            enabled = true,
+            onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
+            onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
+            onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
+        )
 
-            SimCardsSettingsSection(
-                state = state,
-                uiState = uiState,
-                enabled = true, // state is non-null here
-                onUpdateSimSettings = viewModel::updateSimSettings,
-            )
-        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SimCardsSettingsSection(
+            state = state,
+            uiState = uiState,
+            enabled = true,
+            onUpdateSimSettings = viewModel::updateSimSettings,
+        )
     }
 }
