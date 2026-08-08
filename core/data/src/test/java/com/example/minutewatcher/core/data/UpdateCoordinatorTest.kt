@@ -181,12 +181,13 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             // Setup: init will call updateAll for first snapshot, let it succeed to set initial state
-            val coordinator = UpdateCoordinator(
-                dataRefreshNotifier,
-                widgetUpdater,
-                usageStateRepository,
-                backgroundScope,
-            )
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
             testScheduler.advanceUntilIdle()
 
             // 1. Emit meaningful snapshot s1

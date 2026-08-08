@@ -12,14 +12,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Единый механизм обновления.
@@ -42,29 +45,38 @@ class UpdateCoordinator
 
         init {
             scope.launch {
-                usageStateRepository
-                    .observeSnapshot()
-                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                    .distinctUntilChanged { old, new ->
-                        SnapshotUtils.calculateContentHash(old) ==
-                            SnapshotUtils.calculateContentHash(new)
-                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                    .collect { snapshot ->
-                        val newHash = SnapshotUtils.calculateContentHash(snapshot)
-                        if (newHash != lastSnapshotHash.value) {
-                            lastSnapshotHash.value = newHash
-                            try {
-                                // Обновление виджета при отсутствии активных SIM выполняется
-                                // намеренно — виджет должен корректно отобразить состояние
-                                // "No SIM" или "No Data".
-                                widgetUpdater.updateAll()
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Widget update failed", e)
+                while (isActive) {
+                    try {
+                        usageStateRepository
+                            .observeSnapshot()
+                            .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                            .distinctUntilChanged { old, new ->
+                                SnapshotUtils.calculateContentHash(old) ==
+                                    SnapshotUtils.calculateContentHash(new)
+                            }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                            .collect { snapshot ->
+                                val newHash = SnapshotUtils.calculateContentHash(snapshot)
+                                if (newHash != lastSnapshotHash.value) {
+                                    lastSnapshotHash.value = newHash
+                                    try {
+                                        // Обновление виджета при отсутствии активных SIM выполняется
+                                        // намеренно — виджет должен корректно отобразить состояние
+                                        // "No SIM" или "No Data".
+                                        widgetUpdater.updateAll()
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        AppLogger.e("Widget update failed", e)
+                                    }
+                                }
                             }
-                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("UpdateCoordinator: snapshot observation failed, restarting in 5s", e)
+                        delay(5.seconds)
                     }
+                }
             }
         }
 
@@ -88,8 +100,9 @@ class UpdateCoordinator
                     if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
                         lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
-                    if (e is CancellationException) throw e
                     AppLogger.w("Force widget update failed, hash not updated", e)
                 }
             }

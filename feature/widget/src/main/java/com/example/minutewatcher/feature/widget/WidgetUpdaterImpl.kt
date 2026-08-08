@@ -117,17 +117,21 @@ class WidgetUpdaterImpl
             }
 
         /**
-         * Эвристически определяет, вызвана ли ошибка [IllegalArgumentException]
-         * при обновлении виджета превышением лимита размера Binder/RemoteViews
-         * (TransactionTooLargeException).
+         * Эвристически определяет, вызвано ли [IllegalArgumentException] превышением лимита
+         * Binder/RemoteViews (TransactionTooLargeException).
          *
-         * Данная эвристика используется для автоматического переключения виджета в упрощенный режим (SIMPLE),
-         * если текущая разметка слишком велика для передачи в системный процесс.
+         * Критерии срабатывания (любой из):
+         * 1. В cause-цепочке присутствует [android.os.TransactionTooLargeException].
+         * 2. Сообщение содержит "RemoteViews" И ("TransactionTooLarge" ИЛИ "too large").
          *
-         * Критерии срабатывания:
-         * 1. [android.os.TransactionTooLargeException] в цепочке причин (наиболее надежный).
-         * 2. Сообщение содержит подстроки "TransactionTooLarge" или "too large" в сочетании с "RemoteViews"
-         *    (fallback для случаев, когда исходная причина была утеряна при пробросе).
+         * Ограничения:
+         * - Критерий 2 может дать ложноположительный результат, если сообщение содержит
+         *   подстроку "too large" по другой причине. Вероятность низка, т.к. метод
+         *   вызывается только при обновлении виджета.
+         * - Если в будущих версиях Android текст ошибки изменится, критерий 2 перестанет
+         *   работать, но критерий 1 (cause-цепочка) останется надёжным.
+         *
+         * При срабатывании эвристики виджет переключается в упрощённый режим (SIMPLE).
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {

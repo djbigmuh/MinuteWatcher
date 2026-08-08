@@ -176,7 +176,7 @@ class MainViewModel
             val result = controllers.refresh.refreshSimCardsInternal()
 
             if (result == null) {
-                AppLogger.d("refreshAndNotify: refresh skipped (already in progress or failed)")
+                AppLogger.w("refreshAndNotify: refresh returned null (in progress or error), widget not notified")
                 return
             }
             lastRefreshAt = SystemClock.elapsedRealtime()

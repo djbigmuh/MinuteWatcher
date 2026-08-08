@@ -138,33 +138,35 @@ class CallTracker
             timeoutMs: Long = Constants.Flow.SHORT_TIMEOUT_MS,
             retryDelayMs: Long = Constants.Flow.RETRY_DELAY_MS,
             reader: () -> Flow<T>,
-        ): T? {
+        ): Result<T> {
             for (attempt in 1..attempts) {
                 val result =
                     withTimeoutOrNull(timeoutMs.milliseconds) {
                         reader().first()
                     }
-                if (result != null) return result
+                if (result != null) return Result.success(result)
                 if (attempt < attempts) {
                     AppLogger.d("readWithRetry: attempt $attempt timed out, retrying in ${retryDelayMs}ms")
                     delay(retryDelayMs.milliseconds)
                 }
             }
             AppLogger.w("readWithRetry: all $attempts attempts timed out")
-            return null
+            return Result.failure(java.util.concurrent.TimeoutException("readWithRetry timed out"))
         }
 
         private suspend fun handleCallStartInternal(subId: Int): Boolean {
-            val startTime = readWithRetry { callSessionRepository.getCallStartTime(subId) }
-            val savedBootTime = readWithRetry { callSessionRepository.getBootTime(subId) }
+            val startTimeResult = readWithRetry { callSessionRepository.getCallStartTime(subId) }
+            val savedBootTimeResult = readWithRetry { callSessionRepository.getBootTime(subId) }
 
-            if ((startTime == null) || (savedBootTime == null)) {
-                val field = if (startTime == null) "startTime" else "bootTime"
+            if (startTimeResult.isFailure || savedBootTimeResult.isFailure) {
+                val field = if (startTimeResult.isFailure) "startTime" else "bootTime"
                 AppLogger.e("Call start event dropped due to DataStore timeout for subId $subId ($field)", null)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading $field")
                 return false
             }
 
+            val startTime = startTimeResult.getOrThrow()
+            val savedBootTime = savedBootTimeResult.getOrThrow()
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 
@@ -375,11 +377,18 @@ class CallTracker
                     var minSubId: Int? = null
                     var minTime = Long.MAX_VALUE
                     for (subId in activeSubIds) {
-                        val t = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: 0L
+                        val t = callSessionRepository.getCallStartTime(subId).firstWithTimeout() ?: Long.MAX_VALUE
                         if (t < minTime) {
                             minTime = t
                             minSubId = subId
                         }
+                    }
+                    if (minTime == Long.MAX_VALUE) {
+                        AppLogger.w(
+                            "fallbackAttribution: all callStartTime reads timed out, " +
+                                "cannot attribute IDLE event",
+                        )
+                        return null
                     }
                     minSubId
                 }
@@ -439,16 +448,23 @@ class CallTracker
         )
 
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
-            val startTime = readWithRetry { callSessionRepository.getCallStartTime(subId) }
-            val savedBootTime = readWithRetry { callSessionRepository.getBootTime(subId) }
-            val savedUptime = readWithRetry { callSessionRepository.getUptime(subId) }
-            val savedIdentityBox =
+            val startTimeResult = readWithRetry { callSessionRepository.getCallStartTime(subId) }
+            val savedBootTimeResult = readWithRetry { callSessionRepository.getBootTime(subId) }
+            val savedUptimeResult = readWithRetry { callSessionRepository.getUptime(subId) }
+            val savedIdentityBoxResult =
                 readWithRetry {
                     callSessionRepository.getCallIdentity(subId).map { Box(it) }
                 }
 
-            if (startTime == null || savedBootTime == null || savedUptime == null) {
-                AppLogger.e("Call session data read timeout for subId $subId, clearing session", null)
+            if (startTimeResult.isFailure || savedBootTimeResult.isFailure || savedUptimeResult.isFailure || savedIdentityBoxResult.isFailure) {
+                val field =
+                    when {
+                        startTimeResult.isFailure -> "startTime"
+                        savedBootTimeResult.isFailure -> "savedBootTime"
+                        savedUptimeResult.isFailure -> "savedUptime"
+                        else -> "savedIdentity"
+                    }
+                AppLogger.e("Call session data read timeout for subId $subId ($field), clearing session", null)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout loading session data")
                 // Очищаем сессию, чтобы избежать stale-данных
                 try {
@@ -462,10 +478,10 @@ class CallTracker
             }
 
             return CallSessionData(
-                startTime = startTime,
-                savedBootTime = savedBootTime,
-                savedUptime = savedUptime,
-                savedIdentity = savedIdentityBox?.value,
+                startTime = startTimeResult.getOrThrow(),
+                savedBootTime = savedBootTimeResult.getOrThrow(),
+                savedUptime = savedUptimeResult.getOrThrow(),
+                savedIdentity = savedIdentityBoxResult.getOrThrow().value,
             )
         }
 

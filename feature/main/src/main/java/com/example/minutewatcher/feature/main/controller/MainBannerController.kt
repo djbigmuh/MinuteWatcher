@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -23,16 +24,18 @@ class MainBannerController
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-        private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
+        private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
+        val isPhonePermissionPermanentlyDenied: StateFlow<Boolean> = _isPhonePermissionPermanentlyDenied.asStateFlow()
 
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
-            isPhonePermissionPermanentlyDenied.value = denied
+            _isPhonePermissionPermanentlyDenied.value = denied
         }
 
-        private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
+        private val _isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
+        val isNotificationPermissionPermanentlyDenied: StateFlow<Boolean> = _isNotificationPermissionPermanentlyDenied.asStateFlow()
 
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
-            isNotificationPermissionPermanentlyDenied.value = denied
+            _isNotificationPermissionPermanentlyDenied.value = denied
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -47,8 +50,8 @@ class MainBannerController
         private val bannerExtraData:
             StateFlow<Triple<Boolean, Boolean, com.example.minutewatcher.core.model.AppSettings>> =
             combine(
-                isPhonePermissionPermanentlyDenied,
-                isNotificationPermissionPermanentlyDenied,
+                _isPhonePermissionPermanentlyDenied,
+                _isNotificationPermissionPermanentlyDenied,
                 appSettingsRepository.observeAppSettings(),
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)

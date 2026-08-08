@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import android.os.Build
 import android.telephony.SubscriptionManager
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -48,7 +49,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -88,26 +88,27 @@ class SimIdentityRepositoryImpl
 
         private val seedFlow: Flow<SeedResult> =
             merge(
-                seedRepository.seedFlow.map { s ->
-                    if (s.isNotEmpty()) {
-                        SeedResult.Real(s)
-                    } else {
-                        SeedResult.Fallback
-                    }
-                }.flatMapConcat { result ->
-                    if (result is SeedResult.Fallback) {
-                        flow {
-                            val generated = generateSeedWithRetry()
-                            if (generated != null) {
-                                emit(SeedResult.Real(generated))
-                            } else {
-                                emit(SeedResult.Fallback)
-                            }
+                seedRepository.seedFlow
+                    .map { s ->
+                        if (s.isNotEmpty()) {
+                            SeedResult.Real(s)
+                        } else {
+                            SeedResult.Fallback
                         }
-                    } else {
-                        flowOf(result)
-                    }
-                },
+                    }.flatMapConcat { result ->
+                        if (result is SeedResult.Fallback) {
+                            flow {
+                                val generated = generateSeedWithRetry()
+                                if (generated != null) {
+                                    emit(SeedResult.Real(generated))
+                                } else {
+                                    emit(SeedResult.Fallback)
+                                }
+                            }
+                        } else {
+                            flowOf(result)
+                        }
+                    },
                 flow {
                     delay(SEED_TOTAL_TIMEOUT_MS.milliseconds)
                     emit(SeedResult.Fallback)
@@ -480,6 +481,7 @@ class SimIdentityRepositoryImpl
             }
 
         internal companion object {
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
         }

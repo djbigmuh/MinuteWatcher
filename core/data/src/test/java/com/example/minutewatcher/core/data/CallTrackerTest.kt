@@ -554,4 +554,29 @@ class CallTrackerTest {
             // Verify clearSession (setCallStartTime) was indeed called and failed
             verify(callSessionRepository).setCallStartTime(1, 0)
         }
+
+    @Test
+    fun `fallbackAttribution returns null when all reads time out`() =
+        runTest(testDispatcher) {
+            // Arrange: Two active calls
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+            // No default voice subId
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
+            // Telephony state OFFHOOK to trigger handleAmbiguousIdle
+            @Suppress("DEPRECATION")
+            whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+            whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+
+            // Trigger timeout for all reads
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
+
+            // Act
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: No minutes incremented
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            // No calls cleared
+            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+        }
 }

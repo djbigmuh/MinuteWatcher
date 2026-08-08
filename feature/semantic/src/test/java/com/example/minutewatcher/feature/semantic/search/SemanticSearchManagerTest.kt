@@ -253,6 +253,24 @@ class SemanticSearchManagerTest {
             assertTrue("Session should be closed after generic exception", session!!.isClosed)
         }
 
+    @Test
+    fun `indexSnapshot puts new documents before removing stale ones`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // Setup failure for putDocuments
+            fakeWrapper.failAllPutDocuments = true
+
+            // Act: try indexing
+            manager.indexSnapshot(snapshot)
+
+            // Assert: verify put was attempted but failed, and remove was NOT called
+            val session = fakeWrapper.lastSession!!
+            assertTrue("putDocuments should have failed (no requests recorded)", session.putRequests.isEmpty())
+            assertTrue("removeByDocumentId should not have been called", session.removeRequests.isEmpty())
+        }
+
     private fun createManager(scope: CoroutineScope) =
         object : SemanticSearchManager(
             context = context,

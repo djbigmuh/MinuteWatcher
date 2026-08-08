@@ -214,6 +214,12 @@ open class SemanticSearchManager
         private suspend fun performIndexUpdate(documents: List<UsageDocument>) {
             val currentIds = documents.asSequence().map { it.id }.toSet()
 
+            // Сначала добавляем/обновляем актуальные документы
+            if (documents.isNotEmpty()) {
+                session?.putDocuments(createPutRequest(documents))
+            }
+
+            // Затем удаляем устаревшие
             val staleIds = mutableSetOf<String>()
             SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
                 val possibleIds =
@@ -226,10 +232,6 @@ open class SemanticSearchManager
 
             if (staleIds.isNotEmpty()) {
                 session?.removeByDocumentId(createRemoveRequest(staleIds))
-            }
-
-            if (documents.isNotEmpty()) {
-                session?.putDocuments(createPutRequest(documents))
             }
         }
 

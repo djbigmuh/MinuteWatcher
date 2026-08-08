@@ -140,6 +140,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                 WidgetSettingsState(settingsLoadFailed = true)
             }
 
+        if (refreshFailed && settingsState.settingsLoadFailed) {
+            AppLogger.w("Widget: both snapshot refresh and settings load failed")
+        }
+
         return WidgetUiMapper.mapFromSnapshot(
             context,
             snapshot,
@@ -244,16 +248,16 @@ private fun WidgetMainContent(
     val simUiStates = uiState.simUiStates.filter { it.showSim }
 
     when {
+        uiState.refreshFailed -> {
+            WidgetMessage(context.getString(R.string.refresh_error), noDataColor)
+        }
+
         uiState.settingsLoadFailed -> {
             WidgetMessage(context.getString(R.string.settings_load_error), noDataColor)
         }
 
         simUiStates.isNotEmpty() -> {
             MultiSimLayout(simUiStates, uiState)
-        }
-
-        uiState.refreshFailed -> {
-            WidgetMessage(context.getString(R.string.refresh_error), noDataColor)
         }
 
         else -> {
