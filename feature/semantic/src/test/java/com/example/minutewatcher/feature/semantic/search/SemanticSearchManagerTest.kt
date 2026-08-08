@@ -239,6 +239,20 @@ class SemanticSearchManagerTest {
             assertTrue(manager.status.value is TrackingStatus.Active)
         }
 
+    @Test
+    fun `ensureSession closes session on generic exception`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            fakeWrapper.failNextWithGenericError = true
+
+            val snapshot = createSnapshotWithOneSim()
+            manager.indexSnapshot(snapshot)
+
+            val session = fakeWrapper.lastSession
+            assertNotNull("Session should have been created", session)
+            assertTrue("Session should be closed after generic exception", session!!.isClosed)
+        }
+
     private fun createManager(scope: CoroutineScope) =
         object : SemanticSearchManager(
             context = context,
@@ -322,6 +336,7 @@ class SemanticSearchManagerTest {
         var lastSession: FakeAppSearchSessionWrapper? = null
         var failNextWithInvalidSchema = false
         var failNextWithFatalError = false
+        var failNextWithGenericError = false
         var failAllPutDocuments = false
 
         override suspend fun createSearchSession(
@@ -362,6 +377,10 @@ class SemanticSearchManagerTest {
             }
             if (wrapper.failNextWithFatalError) {
                 throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
+            }
+            if (wrapper.failNextWithGenericError) {
+                @Suppress("TooGenericExceptionThrown")
+                throw RuntimeException("Generic error")
             }
             schemaSet = true
             lastSchemaRequest = request

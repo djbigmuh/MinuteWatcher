@@ -83,11 +83,11 @@ private class AppSearchSessionWrapperImpl(
     override suspend fun putDocuments(request: PutDocumentsRequest) {
         val result = session.putAsync(request).await()
         if (!result.isSuccess) {
-            AppLogger.w("Partial put failure in AppSearch: ${result.failures}")
-            val firstError = result.failures.values.firstOrNull()
+            val details = result.failures.entries.joinToString("; ") { "${it.key}: ${it.value.errorMessage}" }
+            AppLogger.w("Partial put failure in AppSearch: $details")
             throw AppSearchException(
                 AppSearchResult.RESULT_INTERNAL_ERROR,
-                "Failed to put documents: ${firstError?.errorMessage}",
+                "Failed to put documents: $details",
             )
         }
     }

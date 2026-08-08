@@ -4,9 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -145,17 +143,7 @@ class SimUsageRepositoryImpl
             nowMillis: Long,
         ): Boolean =
             resetMutex.withLock {
-                val currentPrefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                if (currentPrefs == null) {
-                    AppLogger.w("resetSimUsageIfDue: DataStore read timeout for $identity, skipping reset")
-                    return@withLock false
-                }
-                val lastResetDate =
-                    currentPrefs[SimSettingsKeys.lastResetDateKey(identity)]
-                        ?: Constants.Data.EMPTY_TIMESTAMP
                 val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
-
-                if (lastResetDate >= periodStart) return@withLock false
 
                 var actuallyReset = false
                 dataStore.edit { prefs ->

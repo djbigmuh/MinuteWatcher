@@ -172,6 +172,39 @@ class BillingPeriodCalculatorTest {
         assertEquals(createMillis(2024, 3, 31), info.endDate)
     }
 
+    @Test
+    fun testCalculate_ResetDayZero() {
+        // resetDay = 0 should be treated as 1
+        val now = createMillis(2026, 1, 10)
+        val info = BillingPeriodCalculator.calculate(0, now, zoneId)
+
+        assertEquals(createMillis(2026, 1, 1), info.startDate)
+        assertEquals(createMillis(2026, 2, 1), info.endDate)
+    }
+
+    @Test
+    fun testCalculate_ResetDayNegative() {
+        // resetDay = -5 should be treated as 1
+        val now = createMillis(2026, 1, 10)
+        val info = BillingPeriodCalculator.calculate(-5, now, zoneId)
+
+        assertEquals(createMillis(2026, 1, 1), info.startDate)
+        assertEquals(createMillis(2026, 2, 1), info.endDate)
+    }
+
+    @Test
+    fun testCalculate_ResetDayTooHigh() {
+        // resetDay = 32 should be treated as 31
+        val now = createMillis(2026, 1, 10)
+        val info = BillingPeriodCalculator.calculate(32, now, zoneId)
+
+        // Jan has 31 days. resetDayActual = min(31, 31) = 31.
+        // 10 < 31 is true.
+        // Prev month Dec (31 days). prevResetDay = min(31, 31) = 31.
+        assertEquals(createMillis(2025, 12, 31), info.startDate)
+        assertEquals(createMillis(2026, 1, 31), info.endDate)
+    }
+
     private fun createMillis(
         year: Int,
         month: Int,

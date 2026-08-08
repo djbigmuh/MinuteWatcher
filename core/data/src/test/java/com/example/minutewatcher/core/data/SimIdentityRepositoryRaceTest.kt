@@ -43,6 +43,7 @@ class SimIdentityRepositoryRaceTest {
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var permissionManager: PermissionManager
     private lateinit var migrationService: IdentityMigrationService
+    private lateinit var discoveryDeps: SimDiscoveryDependencies
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -67,6 +68,14 @@ class SimIdentityRepositoryRaceTest {
             PreferenceDataStoreFactory.create(
                 produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
             )
+
+        discoveryDeps =
+            SimDiscoveryDependencies(
+                context = context,
+                subscriptionManager = subscriptionManager,
+                permissionManager = permissionManager,
+                permissionStateNotifier = permissionStateNotifier,
+            )
     }
 
     @Test
@@ -84,10 +93,7 @@ class SimIdentityRepositoryRaceTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,
                     appSettingsRepository = appSettingsRepository,
@@ -156,13 +162,16 @@ class SimIdentityRepositoryRaceTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = mock(),
-                    subscriptionManager = mock(),
-                    permissionManager = mock(),
-                    permissionStateNotifier =
-                        mock {
-                            on { changes } doReturn MutableSharedFlow()
-                        },
+                    discoveryDeps =
+                        SimDiscoveryDependencies(
+                            context = mock(),
+                            subscriptionManager = mock(),
+                            permissionManager = mock(),
+                            permissionStateNotifier =
+                                mock {
+                                    on { changes } doReturn MutableSharedFlow()
+                                },
+                        ),
                     dataStore = dataStore,
                     seedRepository = seedRepo,
                     appSettingsRepository =

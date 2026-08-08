@@ -19,16 +19,17 @@ object BillingPeriodCalculator {
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): PeriodInfo {
+        val safeDay = resetDay.coerceIn(1, MAX_DAYS_IN_MONTH)
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zoneId)
 
         val currentYearMonth = YearMonth.from(now)
 
-        val resetDayActual = minOf(resetDay, currentYearMonth.lengthOfMonth())
+        val resetDayActual = minOf(safeDay, currentYearMonth.lengthOfMonth())
         val startDate: ZonedDateTime
         if (now.dayOfMonth < resetDayActual) {
             // Period started last month
             val prevMonth = currentYearMonth.minusMonths(1)
-            val prevResetDay = minOf(resetDay, prevMonth.lengthOfMonth())
+            val prevResetDay = minOf(safeDay, prevMonth.lengthOfMonth())
             startDate = prevMonth.atDay(prevResetDay).atStartOfDay(zoneId)
         } else {
             // Period started this month
@@ -37,7 +38,7 @@ object BillingPeriodCalculator {
 
         // End date is exactly one month from start date, adjusted for month length
         val nextMonth = YearMonth.from(startDate).plusMonths(1)
-        val nextResetDay = minOf(resetDay, nextMonth.lengthOfMonth())
+        val nextResetDay = minOf(safeDay, nextMonth.lengthOfMonth())
         val endDate = nextMonth.atDay(nextResetDay).atStartOfDay(zoneId)
 
         val totalDuration = ChronoUnit.MILLIS.between(startDate, endDate)
@@ -56,4 +57,5 @@ object BillingPeriodCalculator {
     }
 
     private const val PERCENT_MAX = 100
+    private const val MAX_DAYS_IN_MONTH = 31
 }

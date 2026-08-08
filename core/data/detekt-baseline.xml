@@ -6,7 +6,6 @@
     <ID>CyclomaticComplexMethod:AppSettingsRepositoryImpl.kt$AppSettingsRepositoryImpl$private fun Preferences.toAppSettings(): AppSettings</ID>
     <ID>LongMethod:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$@Test fun `traffic critical notification uses critical level`()</ID>
     <ID>LongMethod:WidgetSettingsRepositoryTest.kt$WidgetSettingsRepositoryTest$@Test fun `load should return state populated from app settings`()</ID>
-    <ID>LongParameterList:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl$( @param:ApplicationContext private val context: Context, private val subscriptionManager: SubscriptionManager, private val permissionManager: PermissionManager, permissionStateNotifier: PermissionStateNotifier, @SimDataStore dataStore: DataStore&lt;Preferences&gt;, seedRepository: SimIdentitySeedRepository, appSettingsRepository: AppSettingsRepository, private val migrationService: IdentityMigrationService, private val mockSimProvider: MockSimProvider, @ApplicationScope private val scope: CoroutineScope, )</ID>
     <ID>MagicNumber:CallTracker.kt$CallTracker$10000L</ID>
     <ID>MagicNumber:CallTracker.kt$CallTracker$5000L</ID>
     <ID>MagicNumber:InitialSetupWorker.kt$InitialSetupWorker$15000L</ID>

@@ -57,6 +57,7 @@ object Constants {
 
     object Data {
         const val SNAPSHOT_TIMEOUT_MS = 2000L
+        const val STALE_SNAPSHOT_THRESHOLD_MS = 60_000L
         const val EMPTY_TIMESTAMP = 0L
     }
 
@@ -74,7 +75,6 @@ object Constants {
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
-        const val SEED_GRACE_PERIOD_MS = 2_000L
     }
 
     object Calls {

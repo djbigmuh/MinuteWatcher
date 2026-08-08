@@ -45,6 +45,7 @@ class SimIdentityRepositorySeedTest {
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var permissionManager: PermissionManager
     private lateinit var migrationService: IdentityMigrationService
+    private lateinit var discoveryDeps: SimDiscoveryDependencies
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -66,6 +67,14 @@ class SimIdentityRepositorySeedTest {
         whenever(permissionStateNotifier.changes).doReturn(permissionChanges)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+        discoveryDeps =
+            SimDiscoveryDependencies(
+                context = context,
+                subscriptionManager = subscriptionManager,
+                permissionManager = permissionManager,
+                permissionStateNotifier = permissionStateNotifier,
+            )
     }
 
     @Test
@@ -106,10 +115,7 @@ class SimIdentityRepositorySeedTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,
                     appSettingsRepository = appSettingsRepository,

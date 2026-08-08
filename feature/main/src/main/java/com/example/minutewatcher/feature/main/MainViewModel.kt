@@ -272,9 +272,9 @@ class MainViewModel
         }
 
         companion object {
-            private const val KEY_LAST_REFRESH_AT = "last_refresh_at"
-            private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
-            private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
+            const val KEY_LAST_REFRESH_AT = "last_refresh_at"
+            const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+            const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
             private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
             private const val MAX_AUTO_RESET_RETRIES = 3
             private const val FAIL_COUNT_RESET_INTERVAL_MS = 24 * 3_600_000L // 24 hours

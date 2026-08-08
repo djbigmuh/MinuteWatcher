@@ -7,8 +7,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class WidgetUpdaterImplTest {
     private val context: Context = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -55,13 +60,11 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
-    fun `isRemoteViewsLimitException returns true when stack trace contains markers`() {
+    fun `isRemoteViewsLimitException returns false when stack trace contains only RemoteViews without exception`() {
         val e =
             IllegalArgumentException(
                 "Fake exception",
             )
-        // We can't easily mock stackTraceToString() as it's an extension function,
-        // but we can set the stack trace of the exception.
         e.stackTrace =
             arrayOf(
                 StackTraceElement(
@@ -70,6 +73,22 @@ class WidgetUpdaterImplTest {
                     "RemoteViews.java",
                     100,
                 ),
+            )
+        assertFalse(
+            updater.isRemoteViewsLimitException(
+                e,
+            ),
+        )
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true when stack trace contains TransactionTooLargeException`() {
+        val e =
+            IllegalArgumentException(
+                "Fake exception",
+            )
+        e.stackTrace =
+            arrayOf(
                 StackTraceElement(
                     "android.os.TransactionTooLargeException",
                     "<init>",
@@ -85,11 +104,17 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
-    fun `isRemoteViewsLimitException returns true for Binder related message`() {
-        val e = IllegalArgumentException("TransactionTooLargeException: Binder transaction failed")
+    fun `isRemoteViewsLimitException returns true for RemoteViews and large related message`() {
+        val e = IllegalArgumentException("RemoteViews: TransactionTooLargeException during update")
         assertTrue(updater.isRemoteViewsLimitException(e))
 
         val e2 = IllegalArgumentException("The RemoteViews is too large to be sent")
         assertTrue(updater.isRemoteViewsLimitException(e2))
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns false for generic Binder failure`() {
+        val e = IllegalArgumentException("Binder call failed")
+        assertFalse(updater.isRemoteViewsLimitException(e))
     }
 }

@@ -39,6 +39,7 @@ class SimIdentitySeedRaceTest {
     private lateinit var seedRepository: SimIdentitySeedRepository
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var migrationService: IdentityMigrationService
+    private lateinit var discoveryDeps: SimDiscoveryDependencies
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -61,6 +62,14 @@ class SimIdentitySeedRaceTest {
             }
         seedRepository = mock()
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
+
+        discoveryDeps =
+            SimDiscoveryDependencies(
+                context = context,
+                subscriptionManager = subscriptionManager,
+                permissionManager = permissionManager,
+                permissionStateNotifier = permissionStateNotifier,
+            )
     }
 
     @Test
@@ -75,10 +84,7 @@ class SimIdentitySeedRaceTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
@@ -113,10 +119,7 @@ class SimIdentitySeedRaceTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,

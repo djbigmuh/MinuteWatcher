@@ -6,8 +6,11 @@ import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
+import java.util.concurrent.ConcurrentHashMap
 
 object SimCardMapper {
+    private val negativeLogged = ConcurrentHashMap<Int, String>()
+
     fun map(
         context: Context,
         slot: Int,
@@ -20,11 +23,15 @@ object SimCardMapper {
                 usage.trafficLimitMb < 0
 
         if (hasNegativeValues) {
-            AppLogger.w(
-                "SimCardMapper: Detected negative usage/limit values for slot $slot: " +
-                    "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
-                    "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
-            )
+            val lastLoggedIdentity = negativeLogged[slot]
+            if (lastLoggedIdentity != usage.identity) {
+                AppLogger.e(
+                    "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
+                        "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
+                        "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
+                )
+                negativeLogged[slot] = usage.identity
+            }
         }
 
         val safeMinutesUsed = usage.minutesUsed.coerceAtLeast(0)

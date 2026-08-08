@@ -430,7 +430,7 @@ class MainViewModelTest {
             org.mockito.kotlin.clearInvocations(usageStateRepository)
 
             // ВАЖНО: Устанавливаем симуляцию состояния "до перезагрузки" ПОСЛЕ initializeApp()
-            savedStateHandle["last_refresh_at"] = 500_000L
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_AT] = 500_000L
 
             // nowElapsed = 1000L (SystemClock.elapsedRealtime() после перезагрузки)
             viewModel.onActivityResume(1000L)

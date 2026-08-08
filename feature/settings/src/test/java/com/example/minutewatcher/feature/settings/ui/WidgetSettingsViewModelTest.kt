@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -140,5 +141,46 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(fontSize = 10) }
             assertEquals(10, viewModel.settingsState.value?.fontSize)
+        }
+
+    @Test
+    fun `retryLoad cancels previous load job`() =
+        runTest {
+            val firstLoadDeferred = CompletableDeferred<WidgetSettingsState>()
+            val secondLoadState = WidgetSettingsState(fontSize = 20)
+
+            val fakeLoader =
+                object : WidgetSettingsLoader {
+                    var callCount = 0
+
+                    override suspend fun load(): WidgetSettingsState {
+                        callCount++
+                        return if (callCount == 1) {
+                            firstLoadDeferred.await()
+                        } else {
+                            secondLoadState
+                        }
+                    }
+
+                    override suspend fun save(state: WidgetSettingsState) {
+                        // Empty for mock
+                    }
+                }
+
+            // 1. Create VM (triggers first load in init)
+            val vm = WidgetSettingsViewModel(context, fakeLoader, saver, usageStateRepository)
+            runCurrent()
+
+            // 2. Trigger second load while first is still pending
+            vm.retryLoad()
+            runCurrent()
+
+            // 3. Complete first load (it should be cancelled)
+            firstLoadDeferred.complete(WidgetSettingsState(fontSize = 10))
+            testScheduler.advanceUntilIdle()
+
+            // 4. Assert state contains result from second load
+            assertEquals(20, vm.settingsState.value?.fontSize)
+            assertEquals(2, fakeLoader.callCount)
         }
 }

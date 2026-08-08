@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
 import android.os.Build
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
@@ -8,12 +7,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -21,7 +18,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,7 +41,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -59,18 +54,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Singleton
-@Suppress("LongParameterList")
 class SimIdentityRepositoryImpl
     @Inject
     constructor(
-        /**
-         * Context used for obtaining [Context.getMainExecutor] when registering
-         * subscription change listeners on Android R+.
-         */
-        @param:ApplicationContext private val context: Context,
-        private val subscriptionManager: SubscriptionManager,
-        private val permissionManager: PermissionManager,
-        permissionStateNotifier: PermissionStateNotifier,
+        private val discoveryDeps: SimDiscoveryDependencies,
         @SimDataStore dataStore: DataStore<Preferences>,
         private val seedRepository: SimIdentitySeedRepository,
         appSettingsRepository: AppSettingsRepository,
@@ -79,6 +66,11 @@ class SimIdentityRepositoryImpl
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
+        private val context get() = discoveryDeps.context
+        private val subscriptionManager get() = discoveryDeps.subscriptionManager
+        private val permissionManager get() = discoveryDeps.permissionManager
+        private val permissionStateNotifier get() = discoveryDeps.permissionStateNotifier
+
         private sealed interface SeedResult {
             data class Real(
                 val value: String,
@@ -131,9 +123,7 @@ class SimIdentityRepositoryImpl
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
-                .timeout(
-                    (SEED_TOTAL_TIMEOUT_MS + SEED_GRACE_PERIOD_MS).milliseconds,
-                ).flatMapLatest { seed ->
+                .flatMapLatest { seed ->
                     callbackFlow {
                         val listener =
                             object : SubscriptionManager.OnSubscriptionsChangedListener() {
@@ -209,12 +199,6 @@ class SimIdentityRepositoryImpl
                             }
                         }
                     }
-                }.catch { e ->
-                    AppLogger.e(
-                        "physicalActiveSims: seed flow timeout, emitting empty list",
-                        e,
-                    )
-                    emit(emptyList())
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -258,42 +242,58 @@ class SimIdentityRepositoryImpl
                 return createFallbackIdentity(slot, "sim_$slot")
             }
 
-            val seed = getSeed()
+            try {
+                val seed = getSeed()
 
-            // Wait for activeSimsCache with a timeout that covers the potential seed generation time.
-            // If the seed is being generated, activeSimsCache (which depends on physicalActiveSims,
-            // which depends on seedFlow) will not emit until the seed is ready.
-            val currentSims: List<ActiveSimInfo> =
-                activeSimsCache.filterNotNull().firstWithTimeout(SEED_TOTAL_TIMEOUT_MS)
-                    ?: run {
-                        AppLogger
-                            .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
-                        emptyList()
-                    }
-            currentSims.find { it.slotIndex == slot }?.let {
-                return it.identity
+                // Wait for activeSimsCache with a timeout that covers the potential seed generation time.
+                // If the seed is being generated, activeSimsCache (which depends on physicalActiveSims,
+                // which depends on seedFlow) will not emit until the seed is ready.
+                val currentSims: List<ActiveSimInfo> =
+                    activeSimsCache.filterNotNull().firstWithTimeout(SEED_TOTAL_TIMEOUT_MS)
+                        ?: run {
+                            AppLogger.w(
+                                "SimIdentityRepository: Timeout waiting for activeSimsCache, " +
+                                    "using fallback discovery",
+                            )
+                            emptyList()
+                        }
+                currentSims.find { it.slotIndex == slot }?.let {
+                    return it.identity
+                }
+
+                // If not found in cache, try direct resolution
+                return findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("getSimIdentity failed for slot $slot", e)
+                return createFallbackIdentity(slot, "sim_$slot")
             }
-
-            // If not found in cache, try direct resolution
-            return findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
         }
 
         private suspend fun findActiveIdentityInternal(
             slot: Int,
             seed: SeedResult,
         ): SimIdentity? =
-            permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                val resolved =
-                    when (seed) {
-                        is SeedResult.Fallback -> {
-                            createFallbackIdentity(slot, "sim_$slot")
+            try {
+                permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                    val resolved =
+                        when (seed) {
+                            is SeedResult.Fallback -> {
+                                createFallbackIdentity(slot, "sim_$slot")
+                            }
+                            is SeedResult.Real -> {
+                                SimIdentityUtils.createIdentityFromInfo(it, seed.value)
+                            }
                         }
-                        is SeedResult.Real -> {
-                            SimIdentityUtils.createIdentityFromInfo(it, seed.value)
-                        }
-                    }
-                saveSimIdentitiesInfo(listOf(resolved))
-                resolved
+                    saveSimIdentitiesInfo(listOf(resolved))
+                    resolved
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("findActiveIdentityInternal failed for slot $slot", e)
+                null
             }
 
         private fun createFallbackIdentity(
@@ -482,7 +482,5 @@ class SimIdentityRepositoryImpl
         internal companion object {
             internal const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
-
-            private const val SEED_GRACE_PERIOD_MS = Constants.Flow.SEED_GRACE_PERIOD_MS
         }
     }

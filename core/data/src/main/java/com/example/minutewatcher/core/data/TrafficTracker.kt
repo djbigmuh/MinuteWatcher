@@ -121,6 +121,11 @@ class TrafficTracker
                     val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout()
                     if (activeSims == null) {
                         AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
+
+                        // Reset in-memory cache on timeout. This ensures that a subsequent successful run
+                        // won't compare a fresh subId against a potentially stale cached one (causing false skipDelta).
+                        inMemoryLastDataSubId.set(-1)
+
                         _status.value =
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.UNKNOWN,
@@ -129,6 +134,8 @@ class TrafficTracker
                         return@withLock
                     }
                     val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
+                    // Remove retry records for SIMs that are no longer active to keep the memory clean.
+                    // This is important because TrafficTracker only tracks traffic for the CURRENT default data SIM.
                     baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
 
                     val target =
@@ -504,6 +511,18 @@ class TrafficTracker
             }
         }
 
+        /**
+         * Handles default data SIM change.
+         *
+         * Scenarios:
+         * 1. Success: Current mobile stats are available. We reset the baseline to the current value
+         *    and update [inMemoryLastDataSubId]. Future updates will track delta from this point.
+         * 2. Retry: Stats are temporarily unavailable (e.g., system busy). We record the attempt
+         *    in [baselineNeedsRetry]. The next [updateTrafficUsage] call will retry the reset.
+         * 3. Exhaustion: After [MAX_BASELINE_RETRIES], we give up on fetching previous stats.
+         *    We force [simUsageResetRepository.setLastTotalBytes] to -1, which triggers a fresh
+         *    baseline initialization on the next successful update.
+         */
         private suspend fun handleSimChange(
             targetSim: Int,
             currentDataSubId: Int,
@@ -517,9 +536,18 @@ class TrafficTracker
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
 
+                // Ensure we only track retry for the current target.
                 baselineNeedsRetry.keys.removeIf { it != identity }
 
-                if (handleRetryLimitExceeded(identity, retryCount, currentDataSubId)) return
+                val shouldReturn =
+                    handleSimChangeFailure(
+                        identity,
+                        StatsResult.Unavailable,
+                        retryCount,
+                        currentDataSubId,
+                        isLimitCheckOnly = true,
+                    )
+                if (shouldReturn) return
 
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
                 val statsResult = fetchStatsOnSimChange(usage)
@@ -527,15 +555,10 @@ class TrafficTracker
                 if (statsResult is StatsResult.Success) {
                     resetStatsAfterSimChange(identity, statsResult)
                     baselineNeedsRetry.remove(identity)
-                    // Фиксируем смену SIM ТОЛЬКО после успешного сброса baseline
+                    // Update subId ONLY after successful baseline reset to ensure no delta is lost
                     updateLastDataSubId(currentDataSubId)
                 } else {
-                    simUsageResetRepository.setLastTotalBytes(identity, -1L)
-                    handleFailedSimChangeAttempt(identity, statsResult, retryCount)
-                    // При неудаче тоже фиксируем subId, чтобы при следующей итерации
-                    // не пытаться сбросить baseline для уже неактуальной SIM,
-                    // но baseline остаётся прежним (-1 или retry)
-                    updateLastDataSubId(currentDataSubId)
+                    handleSimChangeFailure(identity, statsResult, retryCount, currentDataSubId)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -544,22 +567,45 @@ class TrafficTracker
             }
         }
 
-        private suspend fun handleRetryLimitExceeded(
+        private suspend fun handleSimChangeFailure(
             identity: String,
+            statsResult: StatsResult,
             retryCount: Int,
             currentDataSubId: Int,
+            isLimitCheckOnly: Boolean = false,
         ): Boolean {
-            if (retryCount >= MAX_BASELINE_RETRIES) {
-                AppLogger.w(
-                    "Giving up baseline reset for $identity after $retryCount retries. " +
-                        "Forcing baseline re-initialization on next update.",
-                )
-                simUsageResetRepository.setLastTotalBytes(identity, -1L)
-                baselineNeedsRetry.remove(identity)
-                updateLastDataSubId(currentDataSubId)
-                return true
+            return when {
+                retryCount >= MAX_BASELINE_RETRIES -> {
+                    AppLogger.w(
+                        "Giving up baseline reset for $identity after $retryCount retries. " +
+                            "Forcing baseline re-initialization on next update.",
+                    )
+                    simUsageResetRepository.setLastTotalBytes(identity, -1L)
+                    baselineNeedsRetry.remove(identity)
+                    updateLastDataSubId(currentDataSubId)
+                    true
+                }
+
+                isLimitCheckOnly -> false
+
+                else -> {
+                    val reason =
+                        if (statsResult is StatsResult.Error) {
+                            AppLogger.e("Traffic stats query failed on SIM change", statsResult.exception)
+                            statsResult.exception.message
+                        } else {
+                            "Stats unavailable"
+                        }
+                    AppLogger.w(
+                        "Stats unavailable on SIM change for $identity: $reason. " +
+                            "Baseline reset will be retried (attempt ${retryCount + 1}).",
+                    )
+                    simUsageResetRepository.setLastTotalBytes(identity, -1L)
+                    baselineNeedsRetry[identity] = retryCount + 1
+                    updateLastDataSubId(currentDataSubId)
+                    true
+                }
             }
-            return false
         }
 
         private fun fetchStatsOnSimChange(usage: com.example.minutewatcher.core.model.SimUsage?): StatsResult =
@@ -572,29 +618,6 @@ class TrafficTracker
             } else {
                 StatsResult.Unavailable
             }
-
-        private fun handleFailedSimChangeAttempt(
-            identity: String,
-            statsResult: StatsResult,
-            retryCount: Int,
-        ) {
-            if (retryCount >= MAX_BASELINE_RETRIES) {
-                AppLogger.w("Baseline retry limit reached for $identity, will force reset on next SIM change")
-                return
-            }
-            val reason =
-                if (statsResult is StatsResult.Error) {
-                    AppLogger.e("Traffic stats query failed on SIM change", statsResult.exception)
-                    statsResult.exception.message
-                } else {
-                    "Stats unavailable"
-                }
-            AppLogger.w(
-                "Stats unavailable on SIM change for $identity: $reason. " +
-                    "Baseline reset will be retried (attempt ${retryCount + 1}).",
-            )
-            baselineNeedsRetry[identity] = retryCount + 1
-        }
 
         companion object {
             private const val MAX_BASELINE_RETRIES = 5

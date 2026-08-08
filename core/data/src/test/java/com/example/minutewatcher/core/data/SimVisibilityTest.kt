@@ -60,6 +60,7 @@ class SimVisibilityTest {
         mock {
             on { getMockSims(any()) }.thenReturn(null)
         }
+    private lateinit var discoveryDeps: SimDiscoveryDependencies
 
     private val permissionChanges = MutableSharedFlow<Int>(replay = 1)
 
@@ -67,6 +68,14 @@ class SimVisibilityTest {
     fun setup() {
         whenever(permissionStateNotifier.changes).thenReturn(permissionChanges.map { })
         permissionChanges.tryEmit(0)
+
+        discoveryDeps =
+            SimDiscoveryDependencies(
+                context = context,
+                subscriptionManager = subscriptionManager,
+                permissionManager = permissionManager,
+                permissionStateNotifier = permissionStateNotifier,
+            )
     }
 
     @Test
@@ -77,10 +86,7 @@ class SimVisibilityTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    context,
-                    subscriptionManager,
-                    permissionManager,
-                    permissionStateNotifier,
+                    discoveryDeps,
                     dataStore,
                     seedRepository,
                     appSettingsRepository,
@@ -100,10 +106,7 @@ class SimVisibilityTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             val repository =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,

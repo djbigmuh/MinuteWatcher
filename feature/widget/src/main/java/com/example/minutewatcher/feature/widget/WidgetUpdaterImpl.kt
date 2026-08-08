@@ -121,43 +121,41 @@ class WidgetUpdaterImpl
          * при обновлении виджета превышением лимита размера Binder/RemoteViews
          * (TransactionTooLargeException).
          *
-         * [!WARNING]
-         * Данная эвристика может не срабатывать на всех версиях Android или оболочках производителей.
-         * При ложном срабатывании виджет может переключиться в упрощенный режим (SIMPLE) без реальной
-         * необходимости.
+         * Данная эвристика используется для автоматического переключения виджета в упрощенный режим (SIMPLE),
+         * если текущая разметка слишком велика для передачи в системный процесс.
          *
-         * Проверка основана на четырех критериях:
-         * 1. Наличие [android.os.TransactionTooLargeException] в цепочке причин
-         *    (наиболее надежный способ).
-         * 2. Наличие упоминания "RemoteViews" в сообщении об ошибке.
-         * 3. Наличие маркеров в stack trace (поиск конкретных системных классов).
-         * 4. Наличие упоминания "TransactionTooLarge" или "Binder" в сообщении об ошибке
-         *    (обработка случаев, когда исходное исключение было "завернуто" без сохранения причины).
+         * Критерии срабатывания:
+         * 1. [android.os.TransactionTooLargeException] в цепочке причин (наиболее надежный).
+         * 2. Сообщение содержит подстроки "TransactionTooLarge" или "too large" в сочетании с "RemoteViews"
+         *    (fallback для случаев, когда исходная причина была утеряна при пробросе).
+         * 3. Stack trace содержит [android.os.TransactionTooLargeException] в имени класса.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
             val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
 
-            // Проверяем сообщение исключения на упоминание RemoteViews.
-            val isMessageRelated = e.message?.contains("RemoteViews", ignoreCase = true) == true
+            val message = e.message ?: ""
+            // Проверяем сообщение исключения на упоминание RemoteViews и лимитов.
+            val isMessageRelated =
+                message.contains("RemoteViews", ignoreCase = true) &&
+                    (
+                        message.contains("TransactionTooLarge", ignoreCase = true) ||
+                            message.contains("too large", ignoreCase = true)
+                    )
 
-            // Проверяем stack trace на маркеры RemoteViews / TransactionTooLargeException
+            // Проверяем stack trace на маркер TransactionTooLargeException
             val isStackLimit =
                 e.stackTrace.any { frame ->
-                    val cls = frame.className
-                    cls.startsWith("android.widget.RemoteViews") ||
-                        cls.startsWith("android.os.TransactionTooLargeException")
+                    frame.className.startsWith("android.os.TransactionTooLargeException")
                 }
 
-            // Дополнительная проверка сообщения на Binder и лимиты
-            val isBinderRelated =
-                e.message?.let {
-                    it.contains("TransactionTooLarge", ignoreCase = true) ||
-                        it.contains("Binder", ignoreCase = true) ||
-                        it.contains("too large", ignoreCase = true)
-                } ?: false
+            val result = isTransactionTooLarge || isMessageRelated || isStackLimit
 
-            return isTransactionTooLarge || isMessageRelated || isStackLimit || isBinderRelated
+            if (result) {
+                AppLogger.w("RemoteViews size limit detection triggered (result=$result). Exception details: $e")
+            }
+
+            return result
         }
 
         private fun hasCauseOfType(

@@ -564,6 +564,49 @@ class TrafficTrackerTest {
             verify(simIdentityRepository, times(1)).observeActiveSims()
         }
 
+    @Test
+    fun `updateTrafficUsage does not skip delta after identity timeout`() =
+        runTest(testDispatcher) {
+            // 1. Successful first run to set initial state
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            tracker.updateTrafficUsage()
+            verify(callSessionRepository).setLastDataSubId(1)
+
+            // 2. Second run: observeActiveSims times out
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow()) // Never emits
+            tracker.updateTrafficUsage()
+
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            assertEquals("Identity read timeout", (tracker.status.value as TrackingStatus.Error).message)
+
+            // 3. Third run: observeActiveSims succeeds, same SIM
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        displayName = "SIM 1",
+                        carrierName = "Carrier 1",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(50000L))
+
+            tracker.updateTrafficUsage()
+
+            // Verify skipDelta did NOT trigger: usage should be incremented (50000 - 1000 = 49000)
+            val deltaMb = (49000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
+            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(50000L))
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+        }
+
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.
     private fun createSimUsage(
         id: String,

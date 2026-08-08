@@ -153,7 +153,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     ): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         val now = System.currentTimeMillis()
-        val isStale = (now - initialSnapshot.timestamp) > STALE_THRESHOLD_MS
+        val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
         if (initialSnapshot.timestamp != 0L && !isStale) {
             return com.example.minutewatcher.core.domain.RefreshResult
@@ -173,10 +173,6 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             com.example.minutewatcher.core.domain.RefreshResult
                 .Timeout(initialSnapshot)
         }
-    }
-
-    companion object {
-        private const val STALE_THRESHOLD_MS = 60_000L
     }
 }
 

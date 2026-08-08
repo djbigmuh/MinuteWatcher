@@ -48,6 +48,7 @@ class SimIdentityRepositoryHangTest {
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var permissionManager: PermissionManager
     private lateinit var migrationService: IdentityMigrationService
+    private lateinit var discoveryDeps: SimDiscoveryDependencies
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -76,6 +77,14 @@ class SimIdentityRepositoryHangTest {
             PreferenceDataStoreFactory.create(
                 produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
             )
+
+        discoveryDeps =
+            SimDiscoveryDependencies(
+                context = context,
+                subscriptionManager = subscriptionManager,
+                permissionManager = permissionManager,
+                permissionStateNotifier = permissionStateNotifier,
+            )
     }
 
     @Test
@@ -86,10 +95,7 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
@@ -136,10 +142,7 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = hangingSeedRepo,
                     appSettingsRepository = appSettingsRepository,
@@ -190,10 +193,7 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = hangingSeedRepo,
                     appSettingsRepository = appSettingsRepository,
@@ -220,10 +220,7 @@ class SimIdentityRepositoryHangTest {
 
             val identityRepo =
                 SimIdentityRepositoryImpl(
-                    context = context,
-                    subscriptionManager = subscriptionManager,
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = permissionStateNotifier,
+                    discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository =
                         mock {

@@ -182,6 +182,8 @@ class CallTracker
                 callSessionRepository.setUptime(subId, currentUptime)
                 callSessionRepository.setCallIdentity(subId, identity)
                 AppLogger.d("Call started for subId $subId")
+            } else {
+                AppLogger.d("Duplicate OFFHOOK for subId $subId, session already active, skipping")
             }
             return true
         }
