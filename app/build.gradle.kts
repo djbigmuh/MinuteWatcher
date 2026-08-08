@@ -21,8 +21,8 @@ configure<ApplicationExtension> {
         applicationId = "com.example.minutewatcher"
         minSdk = 26
         targetSdk = 37
-        versionCode = 290
-        versionName = "2.9.0"
+        versionCode = 300
+        versionName = "3.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true

@@ -11,9 +11,10 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -27,7 +28,7 @@ class WidgetUpdaterImpl
         private val appSettingsRepository: AppSettingsRepository,
     ) : WidgetUpdater {
         private val widget = MinutesGlanceWidget()
-        private var updateJob: Job? = null
+        private val updateMutex = Mutex()
 
         private sealed class UpdateResult {
             object Success : UpdateResult()
@@ -38,9 +39,8 @@ class WidgetUpdaterImpl
         }
 
         override fun updateAll() {
-            updateJob?.cancel()
-            updateJob =
-                scope.launch {
+            scope.launch {
+                updateMutex.withLock {
                     try {
                         val result = safeUpdateAll(context)
                         when (result) {
@@ -77,6 +77,7 @@ class WidgetUpdaterImpl
                         AppLogger.e("Unexpected error updating widgets", e)
                     }
                 }
+            }
         }
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {

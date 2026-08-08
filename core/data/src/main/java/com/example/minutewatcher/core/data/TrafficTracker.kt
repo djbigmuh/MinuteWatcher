@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.HashMap
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,8 +61,7 @@ class TrafficTracker
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
 
-        /** Доступ только под [trafficMutex]. */
-        private val baselineNeedsRetry = HashMap<String, Int>()
+        private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
         private data class TargetInfo(
             val slot: Int,
@@ -122,7 +121,7 @@ class TrafficTracker
                             .getActiveIdentities()
                             .firstWithTimeout()
                             ?.toSet() ?: return@withLock
-                    baselineNeedsRetry.keys.removeAll { it !in activeIdentities }
+                    baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
 
                     if (!checkPermissions()) return@withLock
 
@@ -505,10 +504,7 @@ class TrafficTracker
             try {
                 val identity = simIdentityRepository.getIdentity(targetSim)
 
-                // Record SIM change immediately so it can be detected if switched back
-                updateLastDataSubId(currentDataSubId)
-
-                baselineNeedsRetry.keys.removeAll { it != identity }
+                baselineNeedsRetry.keys.removeIf { it != identity }
 
                 if (handleRetryLimitExceeded(identity, retryCount)) return
 
@@ -518,8 +514,14 @@ class TrafficTracker
                 if (statsResult is StatsResult.Success) {
                     resetStatsAfterSimChange(identity, statsResult)
                     baselineNeedsRetry.remove(identity)
+                    // Фиксируем смену SIM ТОЛЬКО после успешного сброса baseline
+                    updateLastDataSubId(currentDataSubId)
                 } else {
                     handleFailedSimChangeAttempt(identity, statsResult, retryCount)
+                    // При неудаче тоже фиксируем subId, чтобы при следующей итерации
+                    // не пытаться сбросить baseline для уже неактуальной SIM,
+                    // но baseline остаётся прежним (-1 или retry)
+                    updateLastDataSubId(currentDataSubId)
                 }
             } catch (e: CancellationException) {
                 throw e

@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -115,6 +116,9 @@ class SimIdentityRepositoryImpl
                         emit(nextResult)
                     }
                 }
+            }.catch { e ->
+                AppLogger.e("seedFlow upstream error, emitting Fallback", e)
+                emit(SeedResult.Fallback)
             }.shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
@@ -180,10 +184,7 @@ class SimIdentityRepositoryImpl
                         if (permissionManager.hasPhoneStatePermission()) {
                             try {
                                 val initialSims = getActiveSimsInternal(seed)
-                                val result = trySend(initialSims)
-                                if (result.isFailure) {
-                                    launch { send(initialSims) }
-                                }
+                                send(initialSims)
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
@@ -223,7 +224,10 @@ class SimIdentityRepositoryImpl
             )
 
         private suspend fun getSeed(): SeedResult {
-            val seed = seedFlow.firstOrNull()
+            val seed =
+                withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                    seedFlow.firstOrNull()
+                }
             if (seed == null) {
                 AppLogger.e("Identity seed unavailable, using slot-based fallback")
             }
@@ -233,7 +237,11 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            require(slot >= 0) { "Slot index must be non-negative, got $slot" }
+            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
+                return createFallbackIdentity(slot, "sim_$slot")
+            }
+
             val seed = getSeed()
 
             val currentSims: List<ActiveSimInfo> =
@@ -244,11 +252,6 @@ class SimIdentityRepositoryImpl
                 }
             currentSims.find { it.slotIndex == slot }?.let {
                 return it.identity
-            }
-
-            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
-                return createFallbackIdentity(slot, "sim_$slot")
             }
 
             // If not found in cache, try direct resolution
@@ -283,7 +286,9 @@ class SimIdentityRepositoryImpl
             source = IdentitySource.SLOT_FALLBACK,
         )
 
-        private suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) =
+        private suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) {
+            val toMigrate = mutableListOf<SimIdentity>()
+
             saveMutex.withLock {
                 val validIdentities = identities.filter { it.source != IdentitySource.SLOT_FALLBACK }
                 if (validIdentities.isEmpty()) return@withLock
@@ -299,7 +304,6 @@ class SimIdentityRepositoryImpl
 
                 if (toUpdate.isEmpty()) return@withLock
 
-                val toMigrate = mutableListOf<SimIdentity>()
                 toUpdate.forEach { identity ->
                     val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
                     if (currentSlot == null && migratedIdentities.add(identity.stableId)) {
@@ -317,20 +321,22 @@ class SimIdentityRepositoryImpl
                         }
                     }
                 }
+            }
 
-                toMigrate.forEach { identity ->
-                    try {
-                        migrationService.migrateLegacyData(identity)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e(
-                            "Failed to migrate legacy data for identity: ${identity.stableId}",
-                            e,
-                        )
-                    }
+            // Миграция вне мьютекса
+            toMigrate.forEach { identity ->
+                try {
+                    migrationService.migrateLegacyData(identity)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e(
+                        "Failed to migrate legacy data for identity: ${identity.stableId}",
+                        e,
+                    )
                 }
             }
+        }
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
             activeSimsCache
@@ -452,5 +458,7 @@ class SimIdentityRepositoryImpl
 
         companion object {
             private const val SEED_RETRY_ATTEMPTS = 2
+            private val SEED_TOTAL_TIMEOUT_MS =
+                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS * SEED_RETRY_ATTEMPTS + 2_000L)
         }
     }

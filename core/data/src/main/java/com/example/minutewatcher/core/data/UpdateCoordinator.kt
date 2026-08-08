@@ -60,6 +60,15 @@ class UpdateCoordinator
             }
         }
 
+        /**
+         * Уведомляет об изменении данных.
+         *
+         * @param updateWidget если true и [force] = true — виджет обновляется немедленно.
+         *   Если [force] = false — обновление виджета происходит реактивно через
+         *   [com.example.minutewatcher.core.domain.UsageStateRepository.observeSnapshot] при изменении хэша снапшота.
+         * @param force если true — принудительное немедленное обновление виджета
+         *   и пометка refresh как ручного.
+         */
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,
             force: Boolean,

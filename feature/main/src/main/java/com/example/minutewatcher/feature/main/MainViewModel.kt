@@ -21,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,7 +35,7 @@ class MainViewModel
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val isInitialized = AtomicBoolean(false)
-        private var lastSnapshotHash: Int = -1
+        private val lastSnapshotHash = AtomicInteger(-1)
         private var resumeRefreshJob: Job? = null
 
         // Dialog States
@@ -94,13 +95,20 @@ class MainViewModel
                         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
                         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
                         val now = System.currentTimeMillis()
+
                         if (now - lastResetCheck > AUTO_RESET_CHECK_INTERVAL_MS) {
-                            if (failCount <= MAX_AUTO_RESET_RETRIES) {
+                            // Сброс счётчика после длительного перерыва (24ч)
+                            val effectiveFailCount =
+                                if (now - lastResetCheck > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+
+                            if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                                 autoResetUseCase.performAutoReset(shouldNotify = false)
                                 savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
                                 savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
                             } else {
-                                AppLogger.e("Auto-reset skipped after $failCount consecutive failures")
+                                AppLogger.e("Auto-reset skipped after $effectiveFailCount consecutive failures")
+                                // Обновляем время, чтобы не спамить на каждом запуске
+                                savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
                             }
                         }
                     } catch (e: CancellationException) {
@@ -112,7 +120,7 @@ class MainViewModel
                     }
                     val result = controllers.refresh.refreshSimCardsInternal()
                     result?.let {
-                        lastSnapshotHash = SnapshotUtils.calculateContentHash(it.snapshot)
+                        lastSnapshotHash.set(SnapshotUtils.calculateContentHash(it.snapshot))
                     }
                     if (lastRefreshAt == 0L) {
                         lastRefreshAt = SystemClock.elapsedRealtime()
@@ -158,8 +166,8 @@ class MainViewModel
             if (result == null) return
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
-            val hasChanged = newHash != lastSnapshotHash
-            lastSnapshotHash = newHash
+            val hasChanged = newHash != lastSnapshotHash.get()
+            lastSnapshotHash.set(newHash)
 
             /*
              * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).
@@ -260,5 +268,6 @@ class MainViewModel
             private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
             private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
             private const val MAX_AUTO_RESET_RETRIES = 3
+            private const val FAIL_COUNT_RESET_INTERVAL_MS = 24 * 3_600_000L // 24 hours
         }
     }

@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -388,7 +389,14 @@ class TrafficTrackerTest {
 
             // Assert: baseline not set, BUT lastDataSubId UPDATED to 2
             verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
-            verify(callSessionRepository).setLastDataSubId(2)
+
+            val inOrder = inOrder(networkStatsProvider, callSessionRepository)
+            // Должен быть вызов из updateTrafficUsage (initial)
+            inOrder.verify(networkStatsProvider).queryMobileBytes(any(), any())
+            inOrder.verify(callSessionRepository).setLastDataSubId(1)
+            // Затем вызов из handleSimChange (swap attempt)
+            inOrder.verify(networkStatsProvider).queryMobileBytes(any(), any())
+            inOrder.verify(callSessionRepository).setLastDataSubId(2)
 
             // 3. Stats become available
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))

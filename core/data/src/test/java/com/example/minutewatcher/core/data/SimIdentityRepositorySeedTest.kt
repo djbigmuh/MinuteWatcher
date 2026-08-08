@@ -11,14 +11,14 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.IdentitySource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -66,16 +66,17 @@ class SimIdentityRepositorySeedTest {
         whenever(permissionStateNotifier.changes).doReturn(permissionChanges)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
-
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
-            )
     }
 
     @Test
     fun `seedFlow recovers from fallback when seed eventually becomes available`() =
         runTest {
+            dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
+                )
+
             // Mock a subscription info beforehand
             val mockSubInfo = mock<SubscriptionInfo>()
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
@@ -116,39 +117,31 @@ class SimIdentityRepositorySeedTest {
                     mockSimProvider = mockSimProvider,
                     scope = backgroundScope,
                 )
+
+            // Ждём, пока seedFlow перейдет в Fallback естественным путем (2 попытки по 10с + задержка)
+            testScheduler.advanceTimeBy(25_000)
             testScheduler.advanceUntilIdle()
 
-            val identitiesList = mutableListOf<List<String>>()
-            backgroundScope.launch {
-                identityRepo.getActiveIdentities().collect {
-                    identitiesList.add(it)
-                }
-            }
-
-            // Trigger fallback by advancing time past seed generation timeout
-            advanceUntilIdle()
-
-            // At this point, seedFlow should have emitted FALLBACK_SEED.
-            // Since getActiveSubscriptions() now returns our mock, identitiesList should have an entry.
+            // Проверяем fallback состояние через прямой вызов
+            val fallbackIdentity = identityRepo.getSimIdentity(0)
             assertTrue(
-                "Expected fallback identity emission. List: $identitiesList",
-                identitiesList.isNotEmpty() && identitiesList.any { it.isNotEmpty() },
+                "Expected fallback identity, got: ${fallbackIdentity.stableId}",
+                fallbackIdentity.stableId.startsWith("sim_"),
             )
+            assertEquals(IdentitySource.SLOT_FALLBACK, fallbackIdentity.source)
 
-            val fallbackIdentity = identitiesList.last().first()
-            assertTrue("Expected fallback identity format", fallbackIdentity.startsWith("sim_"))
-
-            // Now provide real seed
+            // Теперь предоставляем реальный сид
             storedSeed.emit("real_seed")
-            advanceUntilIdle()
+            // Даем время на распространение сигнала по цепочке Flow и обновление кэша (stateIn)
+            testScheduler.advanceTimeBy(1_000)
+            testScheduler.advanceUntilIdle()
 
-            // It should now have emitted identities based on real_seed.
+            // Проверяем восстановление
+            val realIdentity = identityRepo.getSimIdentity(0)
             assertTrue(
-                "Expected identities based on real_seed in $identitiesList. " +
-                    "Last emission: ${identitiesList.lastOrNull()}",
-                identitiesList.isNotEmpty() &&
-                    identitiesList.last().isNotEmpty() &&
-                    identitiesList.last().first() != fallbackIdentity,
+                "Expected identity based on real_seed, got: ${realIdentity.stableId}",
+                realIdentity.stableId.startsWith("icc_"),
             )
+            assertEquals(IdentitySource.ICCID, realIdentity.source)
         }
 }
