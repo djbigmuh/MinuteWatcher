@@ -88,6 +88,7 @@ desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", versi
 androidxWorkRuntimeKtx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 androidxHiltWorker = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
 androidxHiltCompilerWorker = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltWork" }
+androidxHiltNavigationCompose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltWork" }
 androidxWorkTesting = { group = "androidx.work", name = "work-testing", version.ref = "work" }
 mockingCore = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 mockingKotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }

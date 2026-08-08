@@ -117,6 +117,7 @@ dependencies {
     ksp(libs.daggerHiltCompiler)
     implementation(libs.androidxHiltWorker)
     ksp(libs.androidxHiltCompilerWorker)
+    implementation(libs.androidxHiltNavigationCompose)
 
     // WorkManager
     implementation(libs.androidxWorkRuntimeKtx)

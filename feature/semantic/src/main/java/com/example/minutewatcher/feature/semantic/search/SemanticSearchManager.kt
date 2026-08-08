@@ -117,9 +117,22 @@ open class SemanticSearchManager
                     throw e
                 } catch (e: Exception) {
                     newSession?.close()
-                    AppLogger.e("Failed to initialize AppSearch session", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    isTerminalError = true
+
+                    // Check if the error is due to lack of AppSearch support on the device
+                    val isUnsupported =
+                        e is IllegalStateException ||
+                            e.message?.contains("AppSearch", ignoreCase = true) == true ||
+                            e.message?.contains("Service not found", ignoreCase = true) == true
+
+                    if (isUnsupported) {
+                        AppLogger.w("AppSearch is not supported on this device. Disabling indexing gracefully.")
+                        _status.value = TrackingStatus.Idle
+                        isTerminalError = true
+                    } else {
+                        AppLogger.e("Fatal AppSearch initialization error", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                        isTerminalError = true
+                    }
                 }
                 attempt++
             }
