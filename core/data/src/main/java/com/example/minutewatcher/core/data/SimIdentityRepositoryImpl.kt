@@ -244,8 +244,11 @@ class SimIdentityRepositoryImpl
 
             val seed = getSeed()
 
+            // Wait for activeSimsCache with a timeout that covers the potential seed generation time.
+            // If the seed is being generated, activeSimsCache (which depends on physicalActiveSims,
+            // which depends on seedFlow) will not emit until the seed is ready.
             val currentSims: List<ActiveSimInfo> =
-                activeSimsCache.filterNotNull().firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS) ?: run {
+                activeSimsCache.filterNotNull().firstWithTimeout(SEED_TOTAL_TIMEOUT_MS) ?: run {
                     AppLogger
                         .w("SimIdentityRepository: Timeout waiting for activeSimsCache, using fallback discovery")
                     emptyList()
@@ -456,9 +459,9 @@ class SimIdentityRepositoryImpl
             return null
         }
 
-        companion object {
+        internal companion object {
             private const val SEED_RETRY_ATTEMPTS = 2
-            private val SEED_TOTAL_TIMEOUT_MS =
+            internal const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS * SEED_RETRY_ATTEMPTS + 2_000L)
         }
     }

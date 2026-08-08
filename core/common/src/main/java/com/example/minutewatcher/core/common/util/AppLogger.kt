@@ -40,9 +40,18 @@ object AppLogger {
         logToFile("D", message)
     }
 
-    fun w(message: String) {
-        logger.w(TAG, message)
-        logToFile("W", message)
+    fun w(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
+        logger.w(TAG, message, throwable)
+        val fullMessage =
+            if (throwable != null) {
+                "$message\n${throwable.stackTraceToString()}"
+            } else {
+                message
+            }
+        logToFile("W", fullMessage)
     }
 
     fun e(

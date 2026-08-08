@@ -100,7 +100,6 @@ class WidgetUpdaterImpl
                 val isLimit = isRemoteViewsLimitException(e)
                 if (isLimit) {
                     AppLogger.e("Widget update failed due to size limit. Detection confirmed.", e)
-                    setWidgetLimitExceeded(true)
                     UpdateResult.LimitExceeded
                 } else {
                     AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)

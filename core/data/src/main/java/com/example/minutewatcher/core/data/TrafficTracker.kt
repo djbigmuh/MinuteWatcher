@@ -202,6 +202,10 @@ class TrafficTracker
         private suspend fun processTrafficUpdate(target: TargetInfo) {
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
+            // Remove retry records for SIMs that are no longer targets.
+            // TrafficTracker only cares about the current default data SIM.
+            baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+
             val usage =
                 withTimeoutOrNull(
                     Constants.Flow.LONG_TIMEOUT_MS.milliseconds,

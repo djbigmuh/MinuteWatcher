@@ -40,6 +40,8 @@ object SimLimitValidator {
             trafErr = fieldRequiredMsg
         } else if (trafGb == null) {
             trafErr = invalidNumberMsg
+        } else if (trafGb.isNaN() || trafGb.isInfinite()) {
+            trafErr = invalidNumberMsg
         } else if (trafGb < 0 || trafGb > Constants.MAX_TRAFFIC_LIMIT_GB) {
             trafErr = trafficRangeMsg
         }

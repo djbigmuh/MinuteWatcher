@@ -61,4 +61,32 @@ class SimLimitValidatorTest {
         assertEquals(100, valid.minutes)
         assertEquals(1.5f, valid.trafficGb)
     }
+
+    @Test
+    fun `validate rejects NaN input`() {
+        val result =
+            SimLimitValidator.validate(
+                "100",
+                "NaN",
+                required,
+                invalid,
+                range,
+                range,
+            ) as SimLimitValidationResult.Invalid
+        assertEquals(invalid, result.trafficError)
+    }
+
+    @Test
+    fun `validate rejects Infinity input`() {
+        val result =
+            SimLimitValidator.validate(
+                "100",
+                "Infinity",
+                required,
+                invalid,
+                range,
+                range,
+            ) as SimLimitValidationResult.Invalid
+        assertEquals(invalid, result.trafficError)
+    }
 }

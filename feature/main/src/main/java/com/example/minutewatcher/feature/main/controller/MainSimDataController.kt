@@ -154,8 +154,11 @@ class MainSimDataController
 
         fun getSnapshot() = usageStateRepository.observeSnapshot().value
 
-        fun notifyDataChanged(updateWidget: Boolean = true, force: Boolean = false) {
-            scope.launch {
+        fun notifyDataChanged(
+            updateWidget: Boolean = true,
+            force: Boolean = false,
+        ) {
+            scope.launch(ioDispatcher) {
                 dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
             }
         }

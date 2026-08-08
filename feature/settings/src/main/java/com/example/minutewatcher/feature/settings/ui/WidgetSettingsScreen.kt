@@ -157,6 +157,7 @@ private fun WidgetSettingsContent(
         ) {
             GeneralSettingsSection(
                 state = state,
+                enabled = true, // state is non-null here
                 onUpdateLayoutMode = { mode -> viewModel.updateSettings { it.copy(layoutMode = mode) } },
                 onUpdateSimArrangement = { arr -> viewModel.updateSettings { it.copy(simArrangement = arr) } },
                 onUpdateTransparency = { tr -> viewModel.updateSettings { it.copy(transparency = tr) } },
@@ -168,6 +169,7 @@ private fun WidgetSettingsContent(
 
             NotificationSettingsSection(
                 state = state,
+                enabled = true, // state is non-null here
                 onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
                 onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
                 onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
@@ -178,6 +180,7 @@ private fun WidgetSettingsContent(
             SimCardsSettingsSection(
                 state = state,
                 uiState = uiState,
+                enabled = true, // state is non-null here
                 onUpdateSimSettings = viewModel::updateSimSettings,
             )
         }

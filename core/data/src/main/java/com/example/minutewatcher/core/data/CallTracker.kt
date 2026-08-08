@@ -111,7 +111,8 @@ class CallTracker
                             if (_status.value !is TrackingStatus.Error) {
                                 refreshStatus()
                             }
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
+                            AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                         }
                     }
                 }
@@ -200,8 +201,11 @@ class CallTracker
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            refreshStatus()
-                        } catch (_: Exception) {
+                            if (_status.value !is TrackingStatus.Error) {
+                                refreshStatus()
+                            }
+                        } catch (e: Exception) {
+                            AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
                         }
                     }
                 }

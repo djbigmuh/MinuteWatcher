@@ -79,14 +79,23 @@ class WidgetSettingsViewModel
         }
 
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            _settingsState.value = _settingsState.value?.let(transform)
+            val current = _settingsState.value
+            if (current == null) {
+                AppLogger.w("WidgetSettingsViewModel: updateSettings called before settings loaded, ignoring")
+                return
+            }
+            _settingsState.value = transform(current)
         }
 
         fun updateSimSettings(
             slot: Int,
             update: (SimSettingsState) -> SimSettingsState,
         ) {
-            val currentState = _settingsState.value ?: return
+            val currentState = _settingsState.value
+            if (currentState == null) {
+                AppLogger.w("WidgetSettingsViewModel: updateSimSettings called before settings loaded, ignoring")
+                return
+            }
             val currentSims = currentState.simStates.toMutableMap()
             val simState =
                 currentSims[slot] ?: run {

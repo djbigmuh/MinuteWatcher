@@ -63,9 +63,9 @@ class UpdateCoordinator
         /**
          * Уведомляет об изменении данных.
          *
-         * @param updateWidget если true и [force] = true — виджет обновляется немедленно.
-         *   Если [force] = false — обновление виджета происходит реактивно через
-         *   [com.example.minutewatcher.core.domain.UsageStateRepository.observeSnapshot] при изменении хэша снапшота.
+         * @param updateWidget если true — инициирует обновление данных через [DataRefreshNotifier].
+         *   Если также [force] = true — виджет обновляется немедленно.
+         *   Если [force] = false — обновление виджета происходит реактивно при изменении данных.
          * @param force если true — принудительное немедленное обновление виджета
          *   и пометка refresh как ручного.
          */
@@ -80,6 +80,8 @@ class UpdateCoordinator
                 }
                 widgetUpdater.updateAll()
             }
-            dataRefreshNotifier.notifyRefresh(isManual = force)
+            if (updateWidget) {
+                dataRefreshNotifier.notifyRefresh(isManual = force)
+            }
         }
     }

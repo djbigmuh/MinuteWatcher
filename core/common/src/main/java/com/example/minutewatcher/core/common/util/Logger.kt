@@ -15,6 +15,7 @@ interface Logger {
     fun w(
         tag: String,
         message: String,
+        throwable: Throwable? = null,
     )
 
     fun e(
@@ -43,10 +44,12 @@ class AndroidLogger : Logger {
     override fun w(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
         Log.w(
             tag,
             message,
+            throwable,
         )
     }
 
@@ -77,6 +80,7 @@ class NoOpLogger : Logger {
     override fun w(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
     }
 

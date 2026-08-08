@@ -34,28 +34,30 @@ import com.example.minutewatcher.core.resources.R
 @Composable
 fun GeneralSettingsSection(
     state: WidgetSettingsState,
+    enabled: Boolean = true,
     onUpdateLayoutMode: (Int) -> Unit,
     onUpdateSimArrangement: (Int) -> Unit,
     onUpdateTransparency: (Int) -> Unit,
     onUpdateFontSize: (Int) -> Unit,
     onShowColorPicker: () -> Unit,
 ) {
-    LayoutModeSetting(state, onUpdateLayoutMode)
+    LayoutModeSetting(state, enabled, onUpdateLayoutMode)
 
-    SimArrangementSetting(state, onUpdateSimArrangement)
+    SimArrangementSetting(state, enabled, onUpdateSimArrangement)
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    TransparencySetting(state, onUpdateTransparency)
+    TransparencySetting(state, enabled, onUpdateTransparency)
 
-    FontSizeSetting(state, onUpdateFontSize)
+    FontSizeSetting(state, enabled, onUpdateFontSize)
 
-    BackgroundColorSetting(state, onShowColorPicker)
+    BackgroundColorSetting(state, enabled, onShowColorPicker)
 }
 
 @Composable
 private fun LayoutModeSetting(
     state: WidgetSettingsState,
+    enabled: Boolean,
     onUpdateLayoutMode: (Int) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.layout_mode_title))
@@ -65,10 +67,11 @@ private fun LayoutModeSetting(
         OutlinedButton(
             onClick = { layoutExpanded = true },
             modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
         ) {
             Text(text = layoutModes.getOrNull(state.layoutMode) ?: "")
         }
-        DropdownMenu(expanded = layoutExpanded, onDismissRequest = { layoutExpanded = false }) {
+        DropdownMenu(expanded = layoutExpanded && enabled, onDismissRequest = { layoutExpanded = false }) {
             layoutModes.forEachIndexed { index, name ->
                 DropdownMenuItem(
                     text = { Text(text = name) },
@@ -76,6 +79,7 @@ private fun LayoutModeSetting(
                         onUpdateLayoutMode(index)
                         layoutExpanded = false
                     },
+                    enabled = enabled,
                 )
             }
         }
@@ -85,6 +89,7 @@ private fun LayoutModeSetting(
 @Composable
 private fun SimArrangementSetting(
     state: WidgetSettingsState,
+    enabled: Boolean,
     onUpdateSimArrangement: (Int) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.sim_arrangement_prompt))
@@ -95,6 +100,7 @@ private fun SimArrangementSetting(
             onUpdateSimArrangement(next)
         },
         modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
     ) {
         Text(
             text = arrangements.getOrNull(state.simArrangement) ?: "",
@@ -106,6 +112,7 @@ private fun SimArrangementSetting(
 @Composable
 private fun TransparencySetting(
     state: WidgetSettingsState,
+    enabled: Boolean,
     onUpdateTransparency: (Int) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.background_transparency))
@@ -114,12 +121,14 @@ private fun TransparencySetting(
         onValueChange = { onUpdateTransparency(it.toInt()) },
         valueRange = 0f..100f,
         steps = 99,
+        enabled = enabled,
     )
 }
 
 @Composable
 private fun FontSizeSetting(
     state: WidgetSettingsState,
+    enabled: Boolean,
     onUpdateFontSize: (Int) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.font_size))
@@ -128,12 +137,14 @@ private fun FontSizeSetting(
         onValueChange = { onUpdateFontSize(it.toInt()) },
         valueRange = 0f..4f,
         steps = 3,
+        enabled = enabled,
     )
 }
 
 @Composable
 private fun BackgroundColorSetting(
     state: WidgetSettingsState,
+    enabled: Boolean,
     onShowColorPicker: () -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.color_background))
@@ -142,7 +153,7 @@ private fun BackgroundColorSetting(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable {
+                .clickable(enabled = enabled) {
                     onShowColorPicker()
                 }.padding(vertical = 8.dp),
     ) {
@@ -150,9 +161,15 @@ private fun BackgroundColorSetting(
             modifier =
                 Modifier
                     .size(40.dp)
-                    .background(Color(state.backgroundColor), RoundedCornerShape(4.dp)),
+                    .background(
+                        color = Color(state.backgroundColor).copy(alpha = if (enabled) 1f else 0.5f),
+                        shape = RoundedCornerShape(4.dp)
+                    ),
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(stringResource(id = R.string.custom_color))
+        Text(
+            text = stringResource(id = R.string.custom_color),
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
     }
 }

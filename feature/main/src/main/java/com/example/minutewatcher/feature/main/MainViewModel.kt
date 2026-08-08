@@ -117,6 +117,7 @@ class MainViewModel
                         AppLogger.e("Auto-reset failed during initialization", e)
                         val currentFails = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
                         savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = currentFails + 1
+                        savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = System.currentTimeMillis()
                     }
                     val result = controllers.refresh.refreshSimCardsInternal()
                     result?.let {

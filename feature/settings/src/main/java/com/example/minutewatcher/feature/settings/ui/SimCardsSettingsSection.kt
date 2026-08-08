@@ -20,6 +20,7 @@ import com.example.minutewatcher.core.resources.R
 fun SimCardsSettingsSection(
     state: WidgetSettingsState,
     uiState: WidgetUiState?,
+    enabled: Boolean = true,
     onUpdateSimSettings: (Int, (SimSettingsState) -> SimSettingsState) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.sim_cards_title))
@@ -39,6 +40,7 @@ fun SimCardsSettingsSection(
                     slot = simUi.slot,
                     operatorName = simUi.operatorName,
                     sim = simState,
+                    enabled = enabled,
                     onUpdate = { update -> onUpdateSimSettings(simUi.slot, update) },
                 )
             }
@@ -51,6 +53,7 @@ fun SimSettingsSection(
     slot: Int,
     operatorName: String,
     sim: SimSettingsState,
+    enabled: Boolean,
     onUpdate: ((SimSettingsState) -> SimSettingsState) -> Unit,
 ) {
     Card(
@@ -63,11 +66,13 @@ fun SimSettingsSection(
             Text(
                 text = "${stringResource(id = R.string.sim_card_generic, slot + 1)} ($operatorName)",
                 style = MaterialTheme.typography.titleSmall,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
 
             CheckboxSetting(
                 label = stringResource(id = R.string.show_sim_checkbox),
                 checked = sim.showSim,
+                enabled = enabled,
                 onCheckedChange = { v -> onUpdate { it.copy(showSim = v) } },
             )
 
@@ -76,37 +81,37 @@ fun SimSettingsSection(
             CheckboxSetting(
                 label = stringResource(id = R.string.display_name),
                 checked = sim.showName,
-                enabled = sim.showSim,
+                enabled = enabled && sim.showSim,
                 onCheckedChange = { v -> onUpdate { it.copy(showName = v) } },
             )
             CheckboxSetting(
                 label = stringResource(id = R.string.display_icon),
                 checked = sim.showIcon,
-                enabled = sim.showSim,
+                enabled = enabled && sim.showSim,
                 onCheckedChange = { v -> onUpdate { it.copy(showIcon = v) } },
             )
             CheckboxSetting(
                 label = stringResource(id = R.string.display_minutes),
                 checked = sim.showMinutes,
-                enabled = sim.showSim,
+                enabled = enabled && sim.showSim,
                 onCheckedChange = { v -> onUpdate { it.copy(showMinutes = v) } },
             )
             CheckboxSetting(
                 label = stringResource(id = R.string.display_minutes_limit),
                 checked = sim.showMinutesLimit,
-                enabled = sim.showSim,
+                enabled = enabled && sim.showSim,
                 onCheckedChange = { v -> onUpdate { it.copy(showMinutesLimit = v) } },
             )
             CheckboxSetting(
                 label = stringResource(id = R.string.display_traffic),
                 checked = sim.showTraffic,
-                enabled = sim.showSim,
+                enabled = enabled && sim.showSim,
                 onCheckedChange = { v -> onUpdate { it.copy(showTraffic = v) } },
             )
             CheckboxSetting(
                 label = stringResource(id = R.string.display_traffic_limit),
                 checked = sim.showTrafficLimit,
-                enabled = sim.showSim,
+                enabled = enabled && sim.showSim,
                 onCheckedChange = { v -> onUpdate { it.copy(showTrafficLimit = v) } },
             )
         }
