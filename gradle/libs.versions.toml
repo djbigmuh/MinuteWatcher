@@ -112,6 +112,7 @@ kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-p
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 androidTest = { id = "com.android.test", version.ref = "agp" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinComposePlugin" }
 hiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersion" }
 kotlinKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
