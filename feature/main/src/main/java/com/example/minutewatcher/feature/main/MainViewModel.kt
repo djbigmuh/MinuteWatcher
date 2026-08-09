@@ -21,6 +21,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -37,6 +39,7 @@ class MainViewModel
     ) : ViewModel() {
         private val isInitialized = AtomicBoolean(false)
         private val lastSnapshotHash = AtomicInteger(-1)
+        private val hashMutex = Mutex()
         private var resumeRefreshJob: Job? = null
 
         // Dialog States
@@ -98,7 +101,10 @@ class MainViewModel
 
                     val result = controllers.refresh.refreshSimCardsInternal()
                     result?.let {
-                        lastSnapshotHash.set(SnapshotUtils.calculateContentHash(it.snapshot))
+                        val newHash = SnapshotUtils.calculateContentHash(it.snapshot)
+                        hashMutex.withLock {
+                            lastSnapshotHash.set(newHash)
+                        }
                         if (it is RefreshResult.Success && lastRefreshAt == 0L) {
                             lastRefreshAt = SystemClock.elapsedRealtime()
                         }
@@ -158,10 +164,7 @@ class MainViewModel
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
                 try {
-                    val result = controllers.refresh.refreshSimCardsInternal()
-                    if (result is RefreshResult.Success) {
-                        lastRefreshAt = SystemClock.elapsedRealtime()
-                    }
+                    refreshAndNotify(force = false)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -186,8 +189,12 @@ class MainViewModel
             }
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
-            val hasChanged = newHash != lastSnapshotHash.get()
-            lastSnapshotHash.set(newHash)
+            val hasChanged =
+                hashMutex.withLock {
+                    val changed = newHash != lastSnapshotHash.get()
+                    lastSnapshotHash.set(newHash)
+                    changed
+                }
 
             /*
              * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).

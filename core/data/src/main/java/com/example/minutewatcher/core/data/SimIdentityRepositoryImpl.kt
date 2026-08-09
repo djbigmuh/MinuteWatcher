@@ -324,43 +324,76 @@ class SimIdentityRepositoryImpl
                 val validIdentities = identities.filter { it.source != IdentitySource.SLOT_FALLBACK }
                 if (validIdentities.isEmpty()) return@withLock
 
-                val currentPrefs =
-                    dataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-                        ?: run {
-                            AppLogger.w(
-                                "saveSimIdentitiesInfo: DataStore read timed out, " +
-                                    "skipping save to avoid redundant writes",
-                            )
-                            return@withLock
-                        }
+                val currentPrefs = fetchCurrentPrefs() ?: return@withLock
 
                 val toUpdate =
                     validIdentities.filter { identity ->
-                        val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-                        val currentSub = currentPrefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
-                        (currentSlot != identity.slotIndex) || (currentSub != identity.subscriptionId)
+                        isIdentityUpdateRequired(identity, currentPrefs)
                     }
 
                 if (toUpdate.isEmpty()) return@withLock
 
                 toUpdate.forEach { identity ->
-                    val currentSlot = currentPrefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-                    if ((currentSlot == null) && migratedIdentities.add(identity.stableId)) {
+                    if (isMigrationRequired(identity, currentPrefs)) {
                         toMigrate.add(identity)
                     }
                 }
 
-                dataStore.edit { prefs ->
-                    toUpdate.forEach { identity ->
-                        identity.slotIndex?.let { slot ->
-                            prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = slot
-                        }
-                        identity.subscriptionId?.let { subId ->
-                            prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = subId
-                        }
+                updatePrefsWithIdentities(toUpdate)
+            }
+
+            performMigrationsIfNeeded(toMigrate)
+        }
+
+        private suspend fun fetchCurrentPrefs(): Preferences? =
+            dataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                ?: run {
+                    AppLogger.w(
+                        "saveSimIdentitiesInfo: DataStore read timed out, " +
+                            "skipping save to avoid redundant writes",
+                    )
+                    null
+                }
+
+        private fun isIdentityUpdateRequired(
+            identity: SimIdentity,
+            prefs: Preferences,
+        ): Boolean {
+            val currentSlot = prefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+            val currentSub = prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
+            return (currentSlot != identity.slotIndex) || (currentSub != identity.subscriptionId)
+        }
+
+        private fun isMigrationRequired(
+            identity: SimIdentity,
+            prefs: Preferences,
+        ): Boolean {
+            val currentSlot = prefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+            return (currentSlot == null) && migratedIdentities.add(identity.stableId)
+        }
+
+        private suspend fun updatePrefsWithIdentities(toUpdate: List<SimIdentity>) {
+            dataStore.edit { prefs ->
+                toUpdate.forEach { identity ->
+                    identity.slotIndex?.let { slot ->
+                        prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = slot
+                    }
+                    identity.subscriptionId?.let { subId ->
+                        prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = subId
                     }
                 }
-                performMigrations(toMigrate)
+            }
+        }
+
+        private suspend fun performMigrationsIfNeeded(toMigrate: List<SimIdentity>) {
+            if (toMigrate.isNotEmpty()) {
+                try {
+                    performMigrations(toMigrate)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Migration failed in saveSimIdentitiesInfo", e)
+                }
             }
         }
 

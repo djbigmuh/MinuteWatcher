@@ -17,6 +17,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -626,6 +627,77 @@ class TrafficTrackerTest {
 
             // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
             assertEquals("inMemoryLastDataSubId should NOT be reset on timeout", 1, atomicId.get())
+        }
+
+    @Test
+    fun `updateTrafficUsage reads fresh lastTotalBytes after resetBaseline due to serialization`() =
+        runTest(testDispatcher) {
+            var currentStoredValue = 1000L
+
+            // Mock repository to reflect updates in-memory
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenAnswer {
+                flowOf(currentStoredValue)
+            }
+            whenever(simUsageResetRepository.setLastTotalBytes(eq("sim_0"), any())).thenAnswer {
+                currentStoredValue = it.getArgument(1)
+                Unit
+            }
+
+            // Mock network stats: first call sets 5000, second call adds 100000 (total 105000)
+            var queryCount = 0
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
+                queryCount++
+                StatsResult.Success(if (queryCount == 1) 5000L else 105000L)
+            }
+
+            // Launch both. simChangeMutex ensures they don't race.
+            // resetBaseline will take the lock first and update baseline to 5000.
+            // updateTrafficUsage will wait, then read 5000 as baseline, and calculate delta (105000 - 5000 = 100000).
+            launch { tracker.resetBaseline("sim_0") }
+            launch { tracker.updateTrafficUsage() }
+
+            advanceUntilIdle()
+
+            // Verify delta was calculated from 5000, not the initial 1000
+            val expectedDeltaMb = (100000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
+            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(expectedDeltaMb))
+            assertEquals(105000L, currentStoredValue)
+        }
+
+    @Test
+    fun `ensureInMemoryLastDataSubId avoids redundant DataStore reads`() =
+        runTest(testDispatcher) {
+            // Setup: initial state with sim_0
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            // Mock DataStore read for lastDataSubId
+            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
+
+            // First call: should read from DataStore
+            tracker.updateTrafficUsage()
+            verify(callSessionRepository, times(1)).getLastDataSubId()
+
+            // Second call: should NOT read from DataStore again
+            tracker.updateTrafficUsage()
+            verify(callSessionRepository, times(1)).getLastDataSubId()
+        }
+
+    @Test
+    fun `resetBaseline initializes inMemoryLastDataSubId and avoids subsequent DataStore read`() =
+        runTest(testDispatcher) {
+            // Setup: sim_0 is active default data SIM (subId 1)
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
+
+            // resetBaseline will call updateLastDataSubId(1) which sets inMemoryLastDataSubId
+            tracker.resetBaseline("sim_0")
+
+            // updateTrafficUsage should now see it's initialized and NOT read from DataStore
+            tracker.updateTrafficUsage()
+
+            verify(callSessionRepository, never()).getLastDataSubId()
         }
 
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.

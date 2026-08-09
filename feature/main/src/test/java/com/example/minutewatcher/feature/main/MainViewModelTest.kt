@@ -43,7 +43,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
@@ -419,9 +424,7 @@ class MainViewModelTest {
             runCurrent()
             advanceUntilIdle()
 
-            org.mockito.kotlin
-                .verify(settingsUseCase)
-                .setTheme(theme)
+            verify(settingsUseCase).setTheme(theme)
         }
 
     @Test
@@ -429,7 +432,7 @@ class MainViewModelTest {
         runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle() // Даем initializeApp() завершиться
-            org.mockito.kotlin.clearInvocations(usageStateRepository)
+            clearInvocations(usageStateRepository)
 
             // ВАЖНО: Устанавливаем симуляцию состояния "до перезагрузки" ПОСЛЕ initializeApp()
             savedStateHandle[MainViewModel.KEY_LAST_REFRESH_AT] = 500_000L
@@ -439,9 +442,7 @@ class MainViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // Проверяем, что обновление было вызвано
-            org.mockito.kotlin
-                .verify(usageStateRepository)
-                .refresh()
+            verify(usageStateRepository).refresh()
         }
 
     @Test
@@ -451,16 +452,14 @@ class MainViewModelTest {
 
             val viewModel = createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle() // Let initializeApp() finish its refresh
-            org.mockito.kotlin.clearInvocations(usageStateRepository)
+            clearInvocations(usageStateRepository)
 
             // first call to onActivityResume
             viewModel.onActivityResume(1000L)
             testScheduler.advanceUntilIdle()
 
             // Verify that NO data refresh was triggered
-            org.mockito.kotlin
-                .verify(usageStateRepository, org.mockito.kotlin.never())
-                .refresh()
+            verify(usageStateRepository, never()).refresh()
         }
 
     @Test
@@ -499,5 +498,95 @@ class MainViewModelTest {
             testScheduler.advanceUntilIdle()
 
             assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_AT))
+        }
+
+    @Test
+    fun `onActivityResume does not trigger refresh after recent manual pull-to-refresh`() =
+        runTest(testDispatcher) {
+            val initialSnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 1000L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(initialSnapshot))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Manual refresh sets lastRefreshAt and lastSnapshotHash
+            viewModel.refreshSimCardsNow()
+            testScheduler.advanceUntilIdle()
+
+            // Verification: lastRefreshAt is set to something non-zero (mock SystemClock.elapsedRealtime if needed,
+            // but Robolectric handles it).
+            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_AT) ?: 0L
+            assertTrue("lastRefreshAt should be set after pull-to-refresh", lastRefresh > 0)
+
+            clearInvocations(usageStateRepository)
+
+            // Activity resume within threshold (20s)
+            val now = lastRefresh + 5000L
+            viewModel.onActivityResume(now)
+            testScheduler.advanceUntilIdle()
+
+            // Should NOT trigger another refresh
+            verify(usageStateRepository, never()).refresh()
+        }
+
+    @Test
+    fun `refreshAndNotify handles concurrent calls consistently`() =
+        runTest(testDispatcher) {
+            val snapshot1 =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 1L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            val snapshot2 =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 2L,
+                    simSnapshots =
+                        listOf(
+                            com.example.minutewatcher.core.model.SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "Test",
+                                isActive = true,
+                                entities = emptyMap(),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            // initializeApp returns snapshot1
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot1))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Reset after initializeApp
+            clearInvocations(dataChangeNotifier)
+
+            // Setup next refresh to return snapshot2
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot2))
+
+            // Launch concurrent refreshes
+            launch { viewModel.refreshSimCardsNow() }
+            launch { viewModel.refreshSimCardsNow() }
+
+            testScheduler.advanceUntilIdle()
+
+            // Even if multiple calls started, only one should have resulted in notifyDataChanged(true, false)
+            // due to the hash change check being atomic with the update.
+            // Note: the controller mutex handles the sequential execution of refreshSimCardsInternal,
+            // but the hash check in ViewModel is what we're testing atomicity for.
+            verify(dataChangeNotifier, times(1)).notifyDataChanged(eq(true), eq(false))
         }
 }

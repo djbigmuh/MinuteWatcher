@@ -54,7 +54,6 @@ class TrafficTracker
             }
         }
 
-        private val trafficMutex = Mutex()
         private val simChangeMutex = Mutex()
 
         private val inMemoryLastDataSubId = AtomicInteger(-1)
@@ -69,7 +68,7 @@ class TrafficTracker
         )
 
         suspend fun resetBaseline(identity: String) {
-            trafficMutex.withLock {
+            simChangeMutex.withLock {
                 try {
                     if (!checkPermissions()) return@withLock
 
@@ -126,11 +125,9 @@ class TrafficTracker
                         handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, target.retryCount)
                         handleSkipDelta(target)
                     } else {
-                        trafficMutex.withLock {
-                            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                            baselineNeedsRetry.keys.removeIf { it != targetIdentity }
-                            performTrafficUpdate(target, targetIdentity)
-                        }
+                        val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                        baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+                        performTrafficUpdate(target, targetIdentity)
                     }
                 }
             } catch (e: SecurityException) {
@@ -485,10 +482,10 @@ class TrafficTracker
         }
 
         private suspend fun ensureInMemoryLastDataSubId() {
-            if (inMemoryLastDataSubId.get() == -1) {
-                val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
-                inMemoryLastDataSubId.compareAndSet(-1, savedId)
-            }
+            if (inMemoryLastDataSubId.get() != -1) return
+
+            val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
+            inMemoryLastDataSubId.compareAndSet(-1, savedId)
         }
 
         private suspend fun resetStatsAfterSimChange(

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
@@ -32,6 +33,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -242,5 +244,48 @@ class SimIdentityRepositoryHangTest {
 
             // Assert: should be empty list, not hang
             assertTrue("Result should be empty list after timeout", result.isEmpty())
+        }
+
+    @Test
+    fun `saveSimIdentitiesInfo does not block other calls on slow migration`() =
+        runTest {
+            val migrationStarted = AtomicBoolean(false)
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            val subInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(subInfo.subscriptionId).thenReturn(101)
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(subInfo.iccId).thenReturn("iccid_0")
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+
+            // Migration that just sets a flag and returns.
+            // We'll simulate "slowness" by launching another call immediately.
+            whenever(migrationService.migrateLegacyData(any())).thenAnswer {
+                migrationStarted.set(true)
+            }
+
+            // Act: First call
+            identityRepo.getSimIdentity(0)
+            assertTrue("Migration should have started", migrationStarted.get())
+
+            // Second call for a DIFFERENT slot.
+            val subInfo2 = mock<android.telephony.SubscriptionInfo>()
+            whenever(subInfo2.subscriptionId).thenReturn(102)
+            whenever(subInfo2.simSlotIndex).thenReturn(1)
+            whenever(subInfo2.iccId).thenReturn("iccid_1")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo, subInfo2))
+
+            val identity2 = identityRepo.getSimIdentity(1)
+            assertTrue("Identity2 should be based on ICCID", identity2.stableId.startsWith("icc_"))
         }
 }

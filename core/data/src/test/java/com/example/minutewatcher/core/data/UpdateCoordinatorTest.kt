@@ -8,20 +8,24 @@ import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -36,10 +40,8 @@ class UpdateCoordinatorTest {
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
         snapshotFlow.tryEmit(createEmptySnapshot())
-
-        runTest {
-            whenever(dataRefreshNotifier.notifyRefresh(any())).thenAnswer { }
-        }
+        // notifyRefresh is a suspend function returning Unit.
+        // Mockito handles it automatically (returns immediately).
     }
 
     @Test
@@ -118,7 +120,7 @@ class UpdateCoordinatorTest {
             testScheduler.advanceUntilIdle()
 
             verify(widgetUpdater).updateAll()
-            verify(dataRefreshNotifier).notifyRefresh(isManual = true)
+            verify(dataRefreshNotifier).notifyRefresh(isManual = true, suppressWidgetUpdate = true)
         }
 
     @Test
@@ -261,6 +263,155 @@ class UpdateCoordinatorTest {
 
             // Total updateAll calls: 1 (fail) + 1 (success on retry) = 2
             verify(widgetUpdater, times(2)).updateAll()
+        }
+
+    @Test
+    fun `observation resumes after repository failure`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+            )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Emit s1, success
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Setup next collect to fail
+            // We can't easily make the flow itself fail if it's a StateFlow,
+            // but we can make the next onEach call fail.
+            var shouldFail = true
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                if (shouldFail) {
+                    shouldFail = false
+                    error("Downstream failure")
+                }
+                Unit
+            }
+
+            // 3. Emit s2, onEach fails, retryWhen should catch and delay
+            val s2 = createSnapshot(timestamp = 2000L, content = "B")
+            snapshotFlow.tryEmit(s2)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+
+            // Retry delay is 5s (attempt 0)
+            testScheduler.advanceTimeBy(6.seconds)
+
+            // Debounce after retry
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+
+            // Should have called updateAll for B (second time, now success)
+            verify(widgetUpdater, times(3)).updateAll() // 1 (A) + 1 (B fail) + 1 (B success)
+        }
+
+    @Test
+    fun `forced update suppresses reactive update for the same snapshot`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Emit snapshot s1 and let reactive update finish
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Perform forced update for a NEW snapshot s2
+            val s2 = createSnapshot(timestamp = 2000L, content = "B")
+            snapshotFlow.tryEmit(s2)
+
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.advanceUntilIdle()
+
+            // Should call updateAll immediately
+            verify(widgetUpdater, times(2)).updateAll()
+
+            // 3. Setup the s2 snapshot with suppressWidgetUpdate=true as if it came from repository after notifyRefresh
+            val s2Suppressed = s2.copy(suppressWidgetUpdate = true)
+            snapshotFlow.tryEmit(s2Suppressed)
+
+            // 4. Advance time to let reactive path trigger
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+
+            // Should NOT call updateAll again (count should remain 2)
+            verify(widgetUpdater, times(2)).updateAll()
+        }
+
+    @Test
+    fun `concurrent force and reactive updates are deduplicated by mutex`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Setup a fake that suspends until we say so
+            val migrationStarted = AtomicBoolean(false)
+            val canFinish = CompletableDeferred<Unit>()
+            var callCount = 0
+
+            val fakeWidgetUpdater =
+                object : WidgetUpdater {
+                    override suspend fun updateAll() {
+                        callCount++
+                        migrationStarted.set(true)
+                        canFinish.await()
+                        migrationStarted.set(false)
+                    }
+                }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    fakeWidgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Trigger reactive update
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+
+            // Advance time to allow reactive coroutine to pick up snapshot and enter updateAll
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            runCurrent()
+
+            assertTrue("Reactive update should be in progress", migrationStarted.get())
+            assertEquals(1, callCount)
+
+            // 2. Trigger forced update immediately while reactive is still running
+            // This should tryLock() and skip because reactive is holding the lock.
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+            runCurrent()
+
+            // 3. Let reactive update finish
+            canFinish.complete(Unit)
+            testScheduler.advanceUntilIdle()
+
+            // 4. Verification:
+            // updateAll should have been called only ONCE because the forced one was skipped.
+            assertEquals("Should only call updateAll once due to mutex deduplication", 1, callCount)
         }
 
     private fun createEmptySnapshot() =

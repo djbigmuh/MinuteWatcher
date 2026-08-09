@@ -20,7 +20,10 @@ class DataRefreshNotifierImpl
 
         override val refreshFlow = _refreshFlow.asSharedFlow()
 
-        override suspend fun notifyRefresh(isManual: Boolean) {
-            _refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual))
+        override suspend fun notifyRefresh(
+            isManual: Boolean,
+            suppressWidgetUpdate: Boolean,
+        ) {
+            _refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual, suppressWidgetUpdate))
         }
     }

@@ -170,7 +170,18 @@ class CallTracker
             if (startTimeResult.isFailure || savedBootTimeResult.isFailure) {
                 val field = if (startTimeResult.isFailure) "startTime" else "bootTime"
                 AppLogger.e("Call start event dropped due to DataStore timeout for subId $subId ($field)", null)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading $field")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Timeout reading $field for subId $subId",
+                    )
+                try {
+                    clearSession(subId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to clear session for subId $subId after start timeout", e)
+                }
                 return false
             }
 
@@ -476,7 +487,11 @@ class CallTracker
                         else -> "savedIdentity"
                     }
                 AppLogger.e("Call session data read timeout for subId $subId ($field), clearing session", null)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout loading session data")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Timeout loading session data for subId $subId",
+                    )
                 // Очищаем сессию, чтобы избежать stale-данных
                 try {
                     clearSession(subId)
@@ -484,11 +499,6 @@ class CallTracker
                     throw e
                 } catch (e: Exception) {
                     AppLogger.w("Failed to clear stale session for subId $subId after read timeout", e)
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Failed to clear stale session after timeout",
-                        )
                 }
                 return null
             }

@@ -160,6 +160,7 @@ class UsageStateRepositoryImpl
                 simSnapshots = simSnapshots,
                 capabilities = semanticCapabilities.getCapabilities(),
                 isManualUpdate = event.isManual,
+                suppressWidgetUpdate = event.suppressWidgetUpdate,
             )
         }
 
@@ -170,6 +171,7 @@ class UsageStateRepositoryImpl
                 simSnapshots = emptyList(),
                 capabilities = semanticCapabilities.getCapabilities(),
                 isManualUpdate = false,
+                suppressWidgetUpdate = false,
             )
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow

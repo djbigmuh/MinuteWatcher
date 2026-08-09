@@ -85,4 +85,5 @@ data class GlobalSnapshot(
     val simSnapshots: List<SimSnapshot>,
     val capabilities: List<AppCapability>,
     val isManualUpdate: Boolean = false,
+    val suppressWidgetUpdate: Boolean = false,
 )

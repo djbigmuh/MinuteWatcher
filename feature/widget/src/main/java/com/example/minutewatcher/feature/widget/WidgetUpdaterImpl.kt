@@ -3,16 +3,13 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.glance.appwidget.updateAll
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -24,7 +21,6 @@ class WidgetUpdaterImpl
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        @ApplicationScope private val scope: CoroutineScope,
         private val appSettingsRepository: AppSettingsRepository,
     ) : WidgetUpdater {
         private val widget = MinutesGlanceWidget()
@@ -38,31 +34,29 @@ class WidgetUpdaterImpl
             object GenericFailure : UpdateResult()
         }
 
-        override fun updateAll() {
-            scope.launch {
-                updateMutex.withLock {
-                    try {
-                        val result = attemptUpdateWithRetry(context)
-                        when (result) {
-                            is UpdateResult.Success -> {
-                                setWidgetLimitExceeded(false)
-                            }
-                            is UpdateResult.LimitExceeded -> {
-                                setWidgetLimitExceeded(true)
-                                AppLogger.w(
-                                    "Widget update failed due to size limit. " +
-                                        "Flag set to trigger simplified layout on next update.",
-                                )
-                            }
-                            is UpdateResult.GenericFailure -> {
-                                AppLogger.e("Widget update failed after $MAX_UPDATE_ATTEMPTS attempts")
-                            }
+        override suspend fun updateAll() {
+            updateMutex.withLock {
+                try {
+                    val result = attemptUpdateWithRetry(context)
+                    when (result) {
+                        is UpdateResult.Success -> {
+                            setWidgetLimitExceeded(false)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Unexpected error updating widgets", e)
+                        is UpdateResult.LimitExceeded -> {
+                            setWidgetLimitExceeded(true)
+                            AppLogger.w(
+                                "Widget update failed due to size limit. " +
+                                    "Flag set to trigger simplified layout on next update.",
+                            )
+                        }
+                        is UpdateResult.GenericFailure -> {
+                            AppLogger.e("Widget update failed after $MAX_UPDATE_ATTEMPTS attempts")
+                        }
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Unexpected error updating widgets", e)
                 }
             }
         }

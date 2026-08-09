@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import kotlinx.coroutines.CoroutineScope
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -17,7 +16,6 @@ import org.robolectric.annotation.Config
 class WidgetUpdaterImplTest {
     private val context: Context = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
-    private val scope: CoroutineScope = mock()
 
     private lateinit var updater: WidgetUpdaterImpl
 
@@ -26,7 +24,6 @@ class WidgetUpdaterImplTest {
         updater =
             WidgetUpdaterImpl(
                 context = context,
-                scope = scope,
                 appSettingsRepository = appSettingsRepository,
             )
     }

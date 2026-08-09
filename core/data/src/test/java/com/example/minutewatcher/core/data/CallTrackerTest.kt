@@ -221,10 +221,10 @@ class CallTrackerTest {
             // Assert
             val status = callTracker.status.first()
             assertTrue(status is TrackingStatus.Error)
-            assertEquals("Timeout reading startTime", (status as TrackingStatus.Error).message)
+            assertTrue((status as TrackingStatus.Error).message?.contains("Timeout reading startTime") == true)
 
-            // Verify session was NOT cleared (setCallStartTime(1, 0) was NOT called)
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(0L))
+            // Verify session WAS cleared for safety
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
         }
 
     @Test
@@ -534,7 +534,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `loadCallSessionData handle timeout with clearSession failure`() =
+    fun `loadCallSessionData handle timeout with clearSession failure keeps original cause`() =
         runTest(testDispatcher) {
             // Arrange: Trigger timeout
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(MutableSharedFlow())
@@ -547,11 +547,12 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            // Assert: status should contain the final failure message from clearSession catch block
+            // Assert: status should contain the ORIGINAL timeout message,
+            // not the "DataStore crash" or intermediate error
             val status = callTracker.status.value as TrackingStatus.Error
             assertTrue(
-                "Expected status to contain 'Failed to clear stale session', but was: ${status.message}",
-                status.message?.contains("Failed to clear stale session") == true,
+                "Expected status to contain timeout info, but was: ${status.message}",
+                status.message?.contains("Timeout loading session data") == true,
             )
 
             // Verify clearSession (setCallStartTime) was indeed called and failed
