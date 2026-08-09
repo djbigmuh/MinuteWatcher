@@ -61,6 +61,7 @@
     <string name="tracking_banner_inaccurate_calls">检测到多个活动通话。分钟数归属可能不准确。</string>
     <string name="settings_load_error">设置加载错误</string>
     <string name="refresh_error">数据刷新错误</string>
+    <string name="stale_data_warning">数据可能已过时</string>
     <string name="notification_permission_permanent_denial">通知已禁用。请在应用设置中开启以接收提醒。</string>
     <string name="action_grant">授予</string>
     <string name="action_settings">设置</string>

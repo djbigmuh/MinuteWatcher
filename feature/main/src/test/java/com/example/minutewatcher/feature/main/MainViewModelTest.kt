@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionRepository
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
@@ -36,6 +37,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -472,5 +474,30 @@ class MainViewModelTest {
             testScheduler.advanceUntilIdle()
 
             assertTrue("onComplete should be called even on failure", completed)
+        }
+
+    @Test
+    fun `refreshAndNotify does not update lastRefreshAt on Timeout`() =
+        runTest(testDispatcher) {
+            val initialSnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { }
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Timeout(initialSnapshot))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Reset after initializeApp
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_AT] = 0L
+
+            viewModel.refreshSimCardsNow()
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_AT))
         }
 }

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -81,38 +82,31 @@ class WidgetSettingsViewModel
         }
 
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            val current = _settingsState.value
-            if (current == null) {
-                AppLogger.w("WidgetSettingsViewModel: updateSettings called before settings loaded, ignoring")
-                return
+            _settingsState.update { current ->
+                current?.let(transform) ?: current
             }
-            _settingsState.value = transform(current)
         }
 
         fun updateSimSettings(
             slot: Int,
             update: (SimSettingsState) -> SimSettingsState,
         ) {
-            val currentState = _settingsState.value
-            if (currentState == null) {
-                AppLogger.w("WidgetSettingsViewModel: updateSimSettings called before settings loaded, ignoring")
-                return
+            _settingsState.update { currentState ->
+                if (currentState == null) return@update null
+
+                val currentSims = currentState.simStates.toMutableMap()
+                val simState = currentSims[slot] ?: SimSettingsState()
+                currentSims[slot] = update(simState)
+                currentState.copy(simStates = currentSims)
             }
-            val currentSims = currentState.simStates.toMutableMap()
-            val simState =
-                currentSims[slot] ?: run {
-                    AppLogger.w("updateSimSettings: slot $slot not found in simStates. Creating default.")
-                    SimSettingsState()
-                }
-            currentSims[slot] = update(simState)
-            _settingsState.value = currentState.copy(simStates = currentSims)
         }
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
             viewModelScope.launch {
                 if (_isSaving.value) {
-                    // Сохранение уже идёт — не запускаем второе, но и не показываем ошибку
-                    onComplete(true)
+                    // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
+                    // UI должен проигнорировать отказ или показать "подождите"
+                    onComplete(false)
                     return@launch
                 }
                 _isSaving.value = true

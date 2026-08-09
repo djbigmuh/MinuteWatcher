@@ -10,6 +10,8 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -125,8 +127,8 @@ class WidgetSettingsViewModelTest {
             assertTrue(vm.isSaving.value)
 
             vm.saveAndNotify { secondResult = it }
-            // В новом варианте второй вызов возвращает успех сразу (оптимистично)
-            assertEquals(true, secondResult)
+            // В новом варианте второй вызов возвращает отказ сразу, так как сохранение уже в процессе
+            assertEquals(false, secondResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
@@ -182,5 +184,27 @@ class WidgetSettingsViewModelTest {
             // 4. Assert state contains result from second load
             assertEquals(20, vm.settingsState.value?.fontSize)
             assertEquals(2, fakeLoader.callCount)
+        }
+
+    @Test
+    fun `concurrent updateSettings does not lose updates`() =
+        runTest {
+            testScheduler.advanceUntilIdle()
+            val totalUpdates = 10
+            val deferreds =
+                List(totalUpdates) { i ->
+                    async {
+                        // Use values distinct from default (2)
+                        viewModel.updateSettings { it.copy(fontSize = i + 100) }
+                    }
+                }
+            deferreds.awaitAll()
+
+            val finalFontSize = viewModel.settingsState.value?.fontSize
+            assertNotNull(finalFontSize)
+            assertTrue(
+                "FontSize should be one of the updated values and not default",
+                finalFontSize!! in 100 until (100 + totalUpdates),
+            )
         }
 }

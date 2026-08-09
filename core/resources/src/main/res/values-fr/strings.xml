@@ -61,6 +61,7 @@
     <string name="tracking_banner_inaccurate_calls">Plusieurs appels actifs détectés. Les minutes peuvent être attribuées de manière inexacte.</string>
     <string name="settings_load_error">Erreur de chargement des paramètres</string>
     <string name="refresh_error">Erreur de rafraîchissement des données</string>
+    <string name="stale_data_warning">Données potentiellement obsolètes</string>
     <string name="notification_permission_permanent_denial">Les notifications sont désactivées. Veuillez les activer dans les paramètres de l\'application pour recevoir des alertes.</string>
     <string name="action_grant">Accorder</string>
     <string name="action_settings">Paramètres</string>

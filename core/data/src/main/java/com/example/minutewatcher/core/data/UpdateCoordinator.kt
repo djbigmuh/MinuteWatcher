@@ -60,21 +60,16 @@ class UpdateCoordinator
                                 val newHash = SnapshotUtils.calculateContentHash(snapshot)
                                 if (newHash != lastSnapshotHash.value) {
                                     lastSnapshotHash.value = newHash
-                                    try {
-                                        // Обновление виджета при отсутствии активных SIM выполняется
-                                        // намеренно — виджет должен корректно отобразить состояние
-                                        // "No SIM" или "No Data".
-                                        widgetUpdater.updateAll()
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        AppLogger.e("Widget update failed", e)
-                                    }
+                                    // Обновление виджета при отсутствии активных SIM выполняется
+                                    // намеренно — виджет должен корректно отобразить состояние
+                                    // "No SIM" или "No Data".
+                                    widgetUpdater.updateAll()
                                 }
                             }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        lastSnapshotHash.value = null
                         consecutiveErrors++
                         val delaySeconds =
                             minOf(

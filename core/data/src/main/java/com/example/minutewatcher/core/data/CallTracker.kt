@@ -475,6 +475,11 @@ class CallTracker
                     throw e
                 } catch (e: Exception) {
                     AppLogger.w("Failed to clear stale session for subId $subId after read timeout", e)
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Failed to clear stale session after timeout",
+                        )
                 }
                 return null
             }

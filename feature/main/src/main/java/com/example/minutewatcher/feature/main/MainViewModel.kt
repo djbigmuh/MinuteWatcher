@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
@@ -98,9 +99,9 @@ class MainViewModel
                     val result = controllers.refresh.refreshSimCardsInternal()
                     result?.let {
                         lastSnapshotHash.set(SnapshotUtils.calculateContentHash(it.snapshot))
-                    }
-                    if (lastRefreshAt == 0L) {
-                        lastRefreshAt = SystemClock.elapsedRealtime()
+                        if (it is RefreshResult.Success && lastRefreshAt == 0L) {
+                            lastRefreshAt = SystemClock.elapsedRealtime()
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -157,8 +158,10 @@ class MainViewModel
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
                 try {
-                    controllers.refresh.refreshSimCardsInternal()
-                    lastRefreshAt = SystemClock.elapsedRealtime()
+                    val result = controllers.refresh.refreshSimCardsInternal()
+                    if (result is RefreshResult.Success) {
+                        lastRefreshAt = SystemClock.elapsedRealtime()
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -176,7 +179,10 @@ class MainViewModel
                 AppLogger.w("refreshAndNotify: refresh returned null (in progress or error), widget not notified")
                 return
             }
-            lastRefreshAt = SystemClock.elapsedRealtime()
+
+            if (result is RefreshResult.Success) {
+                lastRefreshAt = SystemClock.elapsedRealtime()
+            }
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
             val hasChanged = newHash != lastSnapshotHash.get()

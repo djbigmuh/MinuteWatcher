@@ -22,6 +22,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UpdateCoordinatorTest {
@@ -219,6 +220,47 @@ class UpdateCoordinatorTest {
 
             // Should call updateAll again (3rd time total: 1st for A, 2nd forced B (fail), 3rd reactive B)
             verify(widgetUpdater, times(3)).updateAll()
+        }
+
+    @Test
+    fun `widget update failure resets hash and allows retry`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            var failCount = 0
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                if (failCount == 0) {
+                    failCount++
+                    error("Temporary update failure")
+                }
+                Unit
+            }
+
+            UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+            )
+
+            // 1. Emit snapshot s1. First attempt will fail and trigger retry loop.
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+
+            // Wait for failure and retry delay (coordinator has 5s initial delay)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+
+            // consecutiveErrors becomes 1, delay is 5 * (2^1) = 10 seconds.
+            testScheduler.advanceTimeBy(12.seconds)
+
+            // The retry happens, it collects s1 again.
+            // debounce on the new collection
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            testScheduler.advanceUntilIdle()
+
+            // Total updateAll calls: 1 (fail) + 1 (success on retry) = 2
+            verify(widgetUpdater, times(2)).updateAll()
         }
 
     private fun createEmptySnapshot() =

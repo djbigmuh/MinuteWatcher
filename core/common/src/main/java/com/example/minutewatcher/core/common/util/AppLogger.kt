@@ -8,7 +8,9 @@ import java.io.FileWriter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * Централизованное логирование.
@@ -18,11 +20,20 @@ object AppLogger {
     private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
+    private const val LOG_QUEUE_CAPACITY = 1024
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG // Disabled in release for privacy and security
 
     private var logDir: File? = null
     private var logger: Logger = AndroidLogger()
-    private val executor = Executors.newSingleThreadExecutor()
+    private val executor =
+        ThreadPoolExecutor(
+            1,
+            1,
+            0L,
+            TimeUnit.MILLISECONDS,
+            LinkedBlockingQueue(LOG_QUEUE_CAPACITY),
+            ThreadPoolExecutor.DiscardOldestPolicy(),
+        )
     private val dateFormat =
         DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")

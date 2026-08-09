@@ -547,9 +547,12 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            // Assert: status should be Error(Timeout) from loadCallSessionData
+            // Assert: status should contain the final failure message from clearSession catch block
             val status = callTracker.status.value as TrackingStatus.Error
-            assertEquals("Timeout loading session data", status.message)
+            assertTrue(
+                "Expected status to contain 'Failed to clear stale session', but was: ${status.message}",
+                status.message?.contains("Failed to clear stale session") == true,
+            )
 
             // Verify clearSession (setCallStartTime) was indeed called and failed
             verify(callSessionRepository).setCallStartTime(1, 0)

@@ -43,24 +43,19 @@ fun SimLimitComposeDialog(
     onReset: () -> Unit,
 ) {
     val state = rememberSimLimitState(initialMinutes, initialTrafficMb, initialRolloverEnabled)
+    var showResetConfirm by remember { mutableStateOf(false) }
 
-    val validationMessages =
-        ValidationMessages(
-            required = stringResource(id = R.string.validation_error_field_required),
-            invalidNumber = stringResource(id = R.string.validation_error_invalid_number),
-            minutesRange =
-                stringResource(
-                    id = R.string.validation_error_invalid_range,
-                    "0",
-                    Constants.MAX_MINUTES_LIMIT.toString(),
-                ),
-            trafficRange =
-                stringResource(
-                    id = R.string.validation_error_invalid_range,
-                    "0",
-                    Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString(),
-                ),
+    if (showResetConfirm) {
+        ResetConfirmationDialog(
+            onConfirm = {
+                onReset()
+                showResetConfirm = false
+            },
+            onDismiss = { showResetConfirm = false },
         )
+    }
+
+    val validationMessages = rememberValidationMessages()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -78,13 +73,32 @@ fun SimLimitComposeDialog(
                         )
                     }
                 },
-                onReset = onReset,
+                onReset = { showResetConfirm = true },
                 onDismiss = onDismiss,
             )
         },
         dismissButton = null,
     )
 }
+
+@Composable
+private fun rememberValidationMessages(): ValidationMessages =
+    ValidationMessages(
+        required = stringResource(id = R.string.validation_error_field_required),
+        invalidNumber = stringResource(id = R.string.validation_error_invalid_number),
+        minutesRange =
+            stringResource(
+                id = R.string.validation_error_invalid_range,
+                "0",
+                Constants.MAX_MINUTES_LIMIT.toString(),
+            ),
+        trafficRange =
+            stringResource(
+                id = R.string.validation_error_invalid_range,
+                "0",
+                Constants.MAX_TRAFFIC_LIMIT_GB.toInt().toString(),
+            ),
+    )
 
 private data class ValidationMessages(
     val required: String,

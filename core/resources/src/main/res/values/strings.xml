@@ -61,7 +61,7 @@
     <string name="tracking_banner_inaccurate_calls">Multiple active calls detected. Minutes might be attributed inaccurately.</string>
     <string name="settings_load_error">Settings load error</string>
     <string name="refresh_error">Data refresh error</string>
-    <string name="stale_data_warning" tools:ignore="MissingTranslation">Data might be outdated</string>
+    <string name="stale_data_warning">Data might be outdated</string>
     <string name="notification_permission_permanent_denial">Notifications are disabled. Please enable them in App Settings to receive alerts.</string>
     <string name="action_grant">Grant</string>
     <string name="action_settings">Settings</string>

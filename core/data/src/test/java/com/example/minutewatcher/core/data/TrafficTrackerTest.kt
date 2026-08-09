@@ -607,6 +607,27 @@ class TrafficTrackerTest {
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
+    @Test
+    fun `getActiveSimsAndCleanup timeout does not reset inMemoryLastDataSubId`() =
+        runTest(testDispatcher) {
+            // 1. Initial success to set inMemoryLastDataSubId to 1
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+
+            val field = TrafficTracker::class.java.getDeclaredField("inMemoryLastDataSubId")
+            field.isAccessible = true
+            val atomicId = field.get(tracker) as java.util.concurrent.atomic.AtomicInteger
+            assertEquals(1, atomicId.get())
+
+            // 2. Timeout on observeActiveSims
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+            tracker.updateTrafficUsage()
+
+            // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
+            assertEquals("inMemoryLastDataSubId should NOT be reset on timeout", 1, atomicId.get())
+        }
+
     @Suppress("SameParameterValue") // Helper for creating test data with defaults.
     private fun createSimUsage(
         id: String,

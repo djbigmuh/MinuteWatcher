@@ -21,10 +21,8 @@ object SimCardMapper {
      * The map size is limited to [MAX_LOGGED_SIZE] to prevent memory leaks.
      */
     private val negativeLogged =
-        synchronized(this) {
-            object : LinkedHashMap<Int, String>(MAX_LOGGED_SIZE, LOAD_FACTOR, true) {
-                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?) = size > MAX_LOGGED_SIZE
-            }
+        object : LinkedHashMap<Int, String>(MAX_LOGGED_SIZE, LOAD_FACTOR, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?) = size > MAX_LOGGED_SIZE
         }
     private const val MAX_LOGGED_SIZE = 20
     private const val LOAD_FACTOR = 0.75f

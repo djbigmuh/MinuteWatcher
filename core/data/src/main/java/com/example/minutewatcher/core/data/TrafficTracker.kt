@@ -141,7 +141,6 @@ class TrafficTracker
             val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout()
             if (activeSims == null) {
                 AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
-                inMemoryLastDataSubId.set(-1)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Identity read timeout")
                 return null
             }
