@@ -26,7 +26,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
         getByName("debug") { }
@@ -66,7 +66,7 @@ tasks.withType<Test>().configureEach {
         "--add-opens=java.base/java.text=ALL-UNNAMED",
         "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
         "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
-        "--add-opens=java.base/java.nio=ALL-UNNAMED"
+        "--add-opens=java.base/java.nio=ALL-UNNAMED",
     )
 }
 

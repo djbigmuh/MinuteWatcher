@@ -119,7 +119,9 @@ class TrafficTracker
                     ensureInMemoryLastDataSubId()
                     val savedLastDataSubId = inMemoryLastDataSubId.get()
                     val isSimChanged =
-                        (savedLastDataSubId != -1) && (target.dataSubId != -1) && (savedLastDataSubId != target.dataSubId)
+                        (savedLastDataSubId != -1) &&
+                            (target.dataSubId != -1) &&
+                            (savedLastDataSubId != target.dataSubId)
 
                     if (isSimChanged) {
                         handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, target.retryCount)

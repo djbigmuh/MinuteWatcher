@@ -576,7 +576,8 @@ class TrafficTrackerTest {
             verify(callSessionRepository).setLastDataSubId(1)
 
             // 2. Second run: observeActiveSims times out
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow<List<ActiveSimInfo>>()) // Never emits
+            whenever(simIdentityRepository.observeActiveSims())
+                .thenReturn(MutableSharedFlow<List<ActiveSimInfo>>()) // Never emits
             tracker.updateTrafficUsage()
 
             assertTrue(tracker.status.value is TrackingStatus.Error)
@@ -622,7 +623,8 @@ class TrafficTrackerTest {
             assertEquals(1, atomicId.get())
 
             // 2. Timeout on observeActiveSims
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow<List<ActiveSimInfo>>())
+            whenever(simIdentityRepository.observeActiveSims())
+                .thenReturn(MutableSharedFlow<List<ActiveSimInfo>>())
             tracker.updateTrafficUsage()
 
             // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
