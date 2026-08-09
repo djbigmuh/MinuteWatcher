@@ -510,7 +510,7 @@ class TrafficTracker
          * 2. Retry: Stats are temporarily unavailable (e.g., system busy). We record the attempt
          *    in [baselineNeedsRetry]. The next [updateTrafficUsage] call will retry the reset.
          * 3. Exhaustion: After [MAX_BASELINE_RETRIES], we give up on fetching previous stats.
-         *    We force [SimUsageResetRepository#setLastTotalBytes] to -1, which triggers a fresh
+         *    We force [SimUsageResetRepository.setLastTotalBytes] to -1, which triggers a fresh
          *    baseline initialization on the next successful update.
          */
         private suspend fun handleSimChange(

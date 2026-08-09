@@ -155,7 +155,7 @@ class TrafficTrackerTest {
     fun `processTrafficUpdate handles timeout reading simUsage`() =
         runTest(testDispatcher) {
             // simUsage never emits
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow<SimUsage>())
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
 
             tracker.updateTrafficUsage()
 
@@ -557,7 +557,7 @@ class TrafficTrackerTest {
             verify(simIdentityRepository, never()).observeActiveSims()
 
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf<List<ActiveSimInfo>>(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
             tracker.updateTrafficUsage()
 
@@ -577,7 +577,7 @@ class TrafficTrackerTest {
 
             // 2. Second run: observeActiveSims times out
             whenever(simIdentityRepository.observeActiveSims())
-                .thenReturn(MutableSharedFlow<List<ActiveSimInfo>>()) // Never emits
+                .thenReturn(MutableSharedFlow()) // Never emits
             tracker.updateTrafficUsage()
 
             assertTrue(tracker.status.value is TrackingStatus.Error)
@@ -624,7 +624,7 @@ class TrafficTrackerTest {
 
             // 2. Timeout on observeActiveSims
             whenever(simIdentityRepository.observeActiveSims())
-                .thenReturn(MutableSharedFlow<List<ActiveSimInfo>>())
+                .thenReturn(MutableSharedFlow())
             tracker.updateTrafficUsage()
 
             // 3. Verify inMemoryLastDataSubId is STILL 1, not -1

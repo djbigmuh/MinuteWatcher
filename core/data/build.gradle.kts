@@ -39,9 +39,11 @@ android {
     sourceSets {
         getByName("debug") {
             java.directories.add("src/mock/java")
+            kotlin.directories.add("src/mock/java")
         }
         getByName("benchmark") {
             java.directories.add("src/mock/java")
+            kotlin.directories.add("src/mock/java")
         }
     }
 
