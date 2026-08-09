@@ -22,16 +22,16 @@ android {
     }
 
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
+                "proguard-rules.pro"
             )
         }
-        debug { }
+        getByName("debug") { }
         create("benchmark") {
-            initWith(getByName("release"))
+            initWith(buildTypes.getByName("release"))
             matchingFallbacks += listOf("release")
         }
     }
@@ -39,11 +39,9 @@ android {
     sourceSets {
         getByName("debug") {
             java.srcDirs("src/mock/java")
-            kotlin.srcDirs("src/mock/java")
         }
         getByName("benchmark") {
             java.srcDirs("src/mock/java")
-            kotlin.srcDirs("src/mock/java")
         }
     }
 
@@ -68,7 +66,7 @@ tasks.withType<Test>().configureEach {
         "--add-opens=java.base/java.text=ALL-UNNAMED",
         "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
         "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
-        "--add-opens=java.base/java.nio=ALL-UNNAMED",
+        "--add-opens=java.base/java.nio=ALL-UNNAMED"
     )
 }
 
