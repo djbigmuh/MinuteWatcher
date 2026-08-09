@@ -13,7 +13,6 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetStrings
-import com.example.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
