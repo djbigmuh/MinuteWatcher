@@ -109,6 +109,7 @@ class TrafficTracker
             }
         }
 
+        @Suppress("ReturnCount")
         suspend fun updateTrafficUsage() {
             try {
                 if (!checkPermissions()) return

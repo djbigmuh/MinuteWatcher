@@ -133,8 +133,7 @@ class SimIdentityRepositoryImpl
                 .transformWhile {
                     emit(it)
                     it !is SeedResult.Real
-                }
-                .distinctUntilChanged()
+                }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =

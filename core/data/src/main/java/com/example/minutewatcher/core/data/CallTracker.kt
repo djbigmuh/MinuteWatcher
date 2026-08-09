@@ -274,7 +274,8 @@ class CallTracker
                 _status.value = error
             } else if (_status.value is TrackingStatus.Error) {
                 // Разрешения восстановлены — сбрасываем ошибку.
-                // Реактивное обновление статуса (Active/Idle) произойдет в конце вызывающей функции через refreshStatus().
+                // Реактивное обновление статуса (Active/Idle) произойдет
+                // в конце вызывающей функции через refreshStatus().
                 _status.value = TrackingStatus.Idle
             }
 
@@ -451,7 +452,7 @@ class CallTracker
                     subId = subId,
                     savedIdentity = sessionData.savedIdentity,
                     savedUptime = sessionData.savedUptime,
-                    notify = notify
+                    notify = notify,
                 )
                 clearSession(subId)
             }
