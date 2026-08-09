@@ -119,7 +119,7 @@ class TrafficTracker
                     ensureInMemoryLastDataSubId()
                     val savedLastDataSubId = inMemoryLastDataSubId.get()
                     val isSimChanged =
-                        savedLastDataSubId != -1 && target.dataSubId != -1 && savedLastDataSubId != target.dataSubId
+                        (savedLastDataSubId != -1) && (target.dataSubId != -1) && (savedLastDataSubId != target.dataSubId)
 
                     if (isSimChanged) {
                         handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, target.retryCount)
@@ -148,7 +148,7 @@ class TrafficTracker
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Identity read timeout")
                 return null
             }
-            val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
+            val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
             baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
             return activeSims
         }
@@ -253,10 +253,7 @@ class TrafficTracker
                     else -> null
                 }
 
-            if (error != null) {
-                _status.value = error
-            }
-
+            error?.let { _status.value = it }
             return error == null
         }
 
@@ -298,7 +295,7 @@ class TrafficTracker
             lastTotalBytes: Long,
             target: TargetInfo,
         ) {
-            if (lastTotalBytes == -1L || (currentBytes < lastTotalBytes)) {
+            if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
                 simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
                 AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
             } else {
@@ -511,7 +508,7 @@ class TrafficTracker
          * 2. Retry: Stats are temporarily unavailable (e.g., system busy). We record the attempt
          *    in [baselineNeedsRetry]. The next [updateTrafficUsage] call will retry the reset.
          * 3. Exhaustion: After [MAX_BASELINE_RETRIES], we give up on fetching previous stats.
-         *    We force [simUsageResetRepository.setLastTotalBytes] to -1, which triggers a fresh
+         *    We force [SimUsageResetRepository#setLastTotalBytes] to -1, which triggers a fresh
          *    baseline initialization on the next successful update.
          */
         private suspend fun handleSimChange(

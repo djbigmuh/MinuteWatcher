@@ -38,10 +38,10 @@ android {
 
     sourceSets {
         getByName("debug") {
-            java.srcDirs("src/mock/java")
+            java.directories.add("src/mock/java")
         }
         getByName("benchmark") {
-            java.srcDirs("src/mock/java")
+            java.directories.add("src/mock/java")
         }
     }
 

@@ -155,7 +155,7 @@ class TrafficTrackerTest {
     fun `processTrafficUpdate handles timeout reading simUsage`() =
         runTest(testDispatcher) {
             // simUsage never emits
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow<SimUsage>())
 
             tracker.updateTrafficUsage()
 
@@ -482,7 +482,7 @@ class TrafficTrackerTest {
             // Verify sim_1 is in baselineNeedsRetry
             val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
             field.isAccessible = true
-            val map = field.get(tracker) as Map<*, *>
+            val map = field[tracker] as Map<*, *>
             assertTrue("sim_1 should be in retry map", map.containsKey("sim_1"))
 
             // 3. SIM swap back to SubId 1 (sim_0)
@@ -530,7 +530,7 @@ class TrafficTrackerTest {
             val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
             field.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val map = field.get(tracker) as MutableMap<String, Int>
+            val map = field[tracker] as MutableMap<String, Int>
             map["sim_1"] = 5 // MAX_BASELINE_RETRIES
 
             // Act
@@ -557,7 +557,7 @@ class TrafficTrackerTest {
             verify(simIdentityRepository, never()).observeActiveSims()
 
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf<List<ActiveSimInfo>>(emptyList()))
 
             tracker.updateTrafficUsage()
 
@@ -576,7 +576,7 @@ class TrafficTrackerTest {
             verify(callSessionRepository).setLastDataSubId(1)
 
             // 2. Second run: observeActiveSims times out
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow()) // Never emits
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow<List<ActiveSimInfo>>()) // Never emits
             tracker.updateTrafficUsage()
 
             assertTrue(tracker.status.value is TrackingStatus.Error)
@@ -618,11 +618,11 @@ class TrafficTrackerTest {
 
             val field = TrafficTracker::class.java.getDeclaredField("inMemoryLastDataSubId")
             field.isAccessible = true
-            val atomicId = field.get(tracker) as java.util.concurrent.atomic.AtomicInteger
+            val atomicId = field[tracker] as java.util.concurrent.atomic.AtomicInteger
             assertEquals(1, atomicId.get())
 
             // 2. Timeout on observeActiveSims
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow<List<ActiveSimInfo>>())
             tracker.updateTrafficUsage()
 
             // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
@@ -640,7 +640,6 @@ class TrafficTrackerTest {
             }
             whenever(simUsageResetRepository.setLastTotalBytes(eq("sim_0"), any())).thenAnswer {
                 currentStoredValue = it.getArgument(1)
-                Unit
             }
 
             // Mock network stats: first call sets 5000, second call adds 100000 (total 105000)
