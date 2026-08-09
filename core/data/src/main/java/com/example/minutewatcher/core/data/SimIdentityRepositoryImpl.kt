@@ -24,7 +24,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,31 +31,24 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Singleton
 class SimIdentityRepositoryImpl
     @Inject
@@ -84,58 +76,28 @@ class SimIdentityRepositoryImpl
         }
 
         private val saveMutex = Mutex()
-        private val seedGenerationInProgress = AtomicBoolean(false)
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
-        private val seedFlow: Flow<SeedResult> =
-            merge(
-                seedRepository.seedFlow
-                    .map { s ->
-                        if (s.isNotEmpty()) {
-                            SeedResult.Real(s)
-                        } else {
-                            SeedResult.Fallback
-                        }
-                    }.flatMapConcat { result ->
-                        if (result is SeedResult.Fallback) {
-                            if (!seedGenerationInProgress.compareAndSet(false, true)) {
-                                emptyFlow()
-                            } else {
-                                flow {
-                                    try {
-                                        val generated = generateSeedWithRetry()
-                                        if (generated != null) {
-                                            emit(SeedResult.Real(generated))
-                                        } else {
-                                            emit(SeedResult.Fallback)
-                                        }
-                                    } finally {
-                                        seedGenerationInProgress.set(false)
-                                    }
-                                }
-                            }
-                        } else {
-                            flowOf(result)
-                        }
-                    },
-                flow {
-                    delay(SEED_TOTAL_TIMEOUT_MS.milliseconds)
-                    emit(SeedResult.Fallback)
-                },
-            ).scan<SeedResult, SeedResult?>(null) { acc, value ->
-                if (acc is SeedResult.Real) {
-                    acc
+        private val seedFlow: Flow<SeedResult> = flow {
+            val result = withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                val currentSeed = seedRepository.seedFlow.first()
+                if (currentSeed.isNotEmpty()) {
+                    SeedResult.Real(currentSeed)
                 } else {
-                    value
+                    val generated = generateSeedWithRetry()
+                    if (generated != null) {
+                        SeedResult.Real(generated)
+                    } else {
+                        SeedResult.Fallback
+                    }
                 }
-            }.filterNotNull()
-                .transformWhile {
-                    emit(it)
-                    it !is SeedResult.Real
-                }.distinctUntilChanged()
-                .shareIn(scope, SharingStarted.Eagerly, replay = 1)
+            } ?: SeedResult.Fallback
+            emit(result)
+        }.distinctUntilChanged()
+            .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
+        @OptIn(ExperimentalCoroutinesApi::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
                 .flatMapLatest { seed ->
@@ -475,7 +437,7 @@ class SimIdentityRepositoryImpl
                     sims.map { it.identity.stableId }
                 }.distinctUntilChanged()
 
-        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+        @OptIn(FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =
             getActiveIdentities()
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)

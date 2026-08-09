@@ -87,12 +87,12 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
-    fun `isRemoteViewsLimitException returns true for RemoteViews and large related message`() {
+    fun `isRemoteViewsLimitException returns true for RemoteViews and TransactionTooLarge`() {
         val e = IllegalArgumentException("RemoteViews: TransactionTooLargeException during update")
         assertTrue(updater.isRemoteViewsLimitException(e))
 
         val e2 = IllegalArgumentException("The RemoteViews is too large to be sent")
-        assertTrue(updater.isRemoteViewsLimitException(e2))
+        assertFalse(updater.isRemoteViewsLimitException(e2))
     }
 
     @Test

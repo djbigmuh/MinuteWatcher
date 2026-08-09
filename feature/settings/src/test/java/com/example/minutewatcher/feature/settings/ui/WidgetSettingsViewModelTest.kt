@@ -1,7 +1,5 @@
 package com.example.minutewatcher.feature.settings.ui
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -37,7 +35,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsViewModelTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -55,7 +52,7 @@ class WidgetSettingsViewModelTest {
             // Default: successful immediate save
             whenever(saver.save(any())).thenReturn(true)
 
-            viewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
+            viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
         }
 
     @After
@@ -78,7 +75,7 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
 
             // Initial load in init
-            val initialViewModel = WidgetSettingsViewModel(context, loader, saver, usageStateRepository)
+            val initialViewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             testScheduler.advanceUntilIdle()
             assertTrue(initialViewModel.loadError.value)
 
@@ -117,7 +114,7 @@ class WidgetSettingsViewModelTest {
                     }
                 }
             val realSaver = WidgetSettingsSaver(blockingLoader, mock())
-            val vm = WidgetSettingsViewModel(context, loader, realSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             testScheduler.advanceUntilIdle()
 
             var firstResult: Boolean? = null
@@ -170,7 +167,7 @@ class WidgetSettingsViewModelTest {
                 }
 
             // 1. Create VM (triggers first load in init)
-            val vm = WidgetSettingsViewModel(context, fakeLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(fakeLoader, saver, usageStateRepository)
             runCurrent()
 
             // 2. Trigger second load while first is still pending

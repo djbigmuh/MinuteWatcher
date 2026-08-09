@@ -33,7 +33,7 @@ class MainViewModel
     constructor(
         private val controllers: MainViewModelControllers,
         private val appSettingsRepository: AppSettingsRepository,
-        private val autoResetUseCase: AutoResetUseCase,
+        autoResetUseCase: AutoResetUseCase,
         private val savedStateHandle: SavedStateHandle,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
@@ -41,6 +41,8 @@ class MainViewModel
         private val lastSnapshotHash = AtomicInteger(-1)
         private val hashMutex = Mutex()
         private var resumeRefreshJob: Job? = null
+
+        private val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase)
 
         // Dialog States
         val showLimitDialog = controllers.dialog.showLimitDialog
@@ -85,15 +87,7 @@ class MainViewModel
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
 
         init {
-            // Явная инициализация ключей в SavedStateHandle.
-            // Примечание: значения в SavedStateHandle гарантированно переживают только смерть процесса (Process Death),
-            // но не принудительную остановку приложения пользователем.
-            if (!savedStateHandle.contains(KEY_LAST_AUTO_RESET_CHECK)) {
-                savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = 0L
-            }
-            if (!savedStateHandle.contains(KEY_AUTO_RESET_FAIL_COUNT)) {
-                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
-            }
+            autoResetScheduler.setup()
             initializeApp()
         }
 
@@ -106,7 +100,7 @@ class MainViewModel
                         controllers.dialog.setShowOnboardingDialog(show = true)
                     }
 
-                    checkAutoResetOnStart()
+                    autoResetScheduler.checkOnStart()
 
                     val result = controllers.refresh.refreshSimCardsInternal()
                     result?.let {
@@ -123,34 +117,6 @@ class MainViewModel
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
                 }
-            }
-        }
-
-        private suspend fun checkAutoResetOnStart() {
-            val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
-            val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
-            val now = System.currentTimeMillis()
-            val effectiveFailCount =
-                if ((now - lastResetCheck) > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
-
-            try {
-                if ((now - lastResetCheck) > AUTO_RESET_CHECK_INTERVAL_MS) {
-                    if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
-                        autoResetUseCase.performAutoReset(shouldNotify = false)
-                        savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
-                        savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
-                    } else {
-                        AppLogger.e("Auto-reset skipped after $effectiveFailCount consecutive failures")
-                        // Обновляем время, чтобы не спамить на каждом запуске
-                        savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
-                    }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Auto-reset failed during initialization", e)
-                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
-                savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = System.currentTimeMillis()
             }
         }
 
@@ -188,8 +154,7 @@ class MainViewModel
             val result = controllers.refresh.refreshSimCardsInternal()
 
             if (result == null) {
-                AppLogger.w("refreshAndNotify: refresh already in progress, notifying widget only")
-                controllers.simData.notifyDataChanged(force = force)
+                AppLogger.w("refreshAndNotify: refresh already in progress, skipping widget notification")
                 return
             }
 
@@ -293,10 +258,59 @@ class MainViewModel
 
         companion object {
             const val KEY_LAST_REFRESH_AT = "last_refresh_at"
-            const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
-            const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
-            private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
-            private const val MAX_AUTO_RESET_RETRIES = 3
-            private const val FAIL_COUNT_RESET_INTERVAL_MS = 24 * 3_600_000L // 24 hours
         }
     }
+
+/**
+ * Вспомогательный класс для планирования автоматического сброса при старте приложения.
+ * Вынесен из [MainViewModel] для инкапсуляции логики работы с интервалами и SavedStateHandle.
+ */
+internal class AutoResetScheduler(
+    private val savedStateHandle: SavedStateHandle,
+    private val autoResetUseCase: AutoResetUseCase,
+) {
+    fun setup() {
+        if (!savedStateHandle.contains(KEY_LAST_AUTO_RESET_CHECK)) {
+            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = 0L
+        }
+        if (!savedStateHandle.contains(KEY_AUTO_RESET_FAIL_COUNT)) {
+            savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
+        }
+    }
+
+    suspend fun checkOnStart() {
+        val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
+        val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+        val now = System.currentTimeMillis()
+        val effectiveFailCount =
+            if ((now - lastResetCheck) > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+
+        try {
+            if ((now - lastResetCheck) > AUTO_RESET_CHECK_INTERVAL_MS) {
+                if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
+                    autoResetUseCase.performAutoReset(shouldNotify = false)
+                    savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                    savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
+                } else {
+                    AppLogger.e("Auto-reset skipped after $effectiveFailCount consecutive failures")
+                    // Обновляем время, чтобы не спамить на каждом запуске
+                    savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Auto-reset failed during initialization", e)
+            savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
+            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = System.currentTimeMillis()
+        }
+    }
+
+    companion object {
+        private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+        private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
+        private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
+        private const val MAX_AUTO_RESET_RETRIES = 3
+        private const val FAIL_COUNT_RESET_INTERVAL_MS = 24 * 3_600_000L // 24 hours
+    }
+}

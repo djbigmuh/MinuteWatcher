@@ -272,30 +272,12 @@ class SemanticSearchManagerTest {
         }
 
     private fun createManager(scope: CoroutineScope) =
-        object : SemanticSearchManager(
+        SemanticSearchManager(
             context = context,
             scope = scope,
             appSearchWrapper = fakeWrapper,
             ioDispatcher = testDispatcher,
-        ) {
-            override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
-                val builder = PutDocumentsRequest.Builder()
-                documents.forEach { doc ->
-                    val genericDoc =
-                        androidx.appsearch.app.GenericDocument
-                            .Builder<androidx.appsearch.app.GenericDocument.Builder<*>>(
-                                doc.namespace,
-                                doc.id,
-                                "UsageDocument",
-                            ).build()
-                    builder.addGenericDocuments(genericDoc)
-                }
-                return builder.build()
-            }
-
-            override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-                RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
-        }
+        )
 
     private fun createEntity(
         slot: Int,
@@ -374,6 +356,24 @@ class SemanticSearchManagerTest {
                 .setForceOverride(forceOverride)
                 .addSchemas(AppSearchSchema.Builder("UsageDocument").build())
                 .build()
+
+        override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
+            val builder = PutDocumentsRequest.Builder()
+            documents.forEach { doc ->
+                val genericDoc =
+                    androidx.appsearch.app.GenericDocument
+                        .Builder<androidx.appsearch.app.GenericDocument.Builder<*>>(
+                            doc.namespace,
+                            doc.id,
+                            "UsageDocument",
+                        ).build()
+                builder.addGenericDocuments(genericDoc)
+            }
+            return builder.build()
+        }
+
+        override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
+            RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
     }
 
     private class FakeAppSearchSessionWrapper(

@@ -1,27 +1,19 @@
 package com.example.minutewatcher.feature.settings.ui
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
-import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
-import com.example.minutewatcher.core.model.WidgetUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -31,7 +23,6 @@ import javax.inject.Inject
 class WidgetSettingsViewModel
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
@@ -48,16 +39,7 @@ class WidgetSettingsViewModel
 
         private var loadJob: Job? = null
 
-        val uiState: StateFlow<WidgetUiState?> =
-            _settingsState
-                .filterNotNull()
-                .combine(usageStateRepository.observeSnapshot()) { state, snapshot ->
-                    WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
-                }.stateIn(
-                    viewModelScope,
-                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
-                    null,
-                )
+        val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
         init {
             loadSettings()

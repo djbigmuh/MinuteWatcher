@@ -1,19 +1,20 @@
 package com.example.minutewatcher.core.android.util
 
-import android.content.Context
 import androidx.core.graphics.ColorUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.model.util.FontScaleProvider
 
 object WidgetUiMapper {
     fun mapFromSnapshot(
-        context: Context,
+        strings: WidgetStrings,
         snapshot: GlobalSnapshot,
         state: WidgetSettingsState,
+        operatorNames: Map<Int, String>,
         refreshFailed: Boolean = false,
     ): WidgetUiState {
         val luminance = ColorUtils.calculateLuminance(state.backgroundColor)
@@ -41,9 +42,10 @@ object WidgetUiMapper {
                     val simConfig = state.simStates[sim.slot]
                     val simUiState =
                         WidgetSimUiFactory.createSimUiState(
-                            context,
+                            strings,
                             sim,
                             simConfig,
+                            operatorNames[sim.slot] ?: sim.operator,
                             luminance,
                             textColor,
                             secondaryTextColor,

@@ -118,12 +118,9 @@ class WidgetUpdaterImpl
          *
          * Критерии срабатывания (любой из):
          * 1. В cause-цепочке присутствует [android.os.TransactionTooLargeException].
-         * 2. Сообщение содержит "RemoteViews" И ("TransactionTooLarge" ИЛИ "too large").
+         * 2. Сообщение содержит "RemoteViews" И "TransactionTooLarge".
          *
          * Ограничения:
-         * - Критерий 2 может дать ложноположительный результат, если сообщение содержит
-         *   подстроку "too large" по другой причине. Вероятность низка, т.к. метод
-         *   вызывается только при обновлении виджета.
          * - Если в будущих версиях Android текст ошибки изменится, критерий 2 перестанет
          *   работать, но критерий 1 (cause-цепочка) останется надёжным.
          *
@@ -137,10 +134,7 @@ class WidgetUpdaterImpl
             // Проверяем сообщение исключения на упоминание RemoteViews и лимитов.
             val isMessageRelated =
                 message.contains("RemoteViews", ignoreCase = true) &&
-                    (
-                        message.contains("TransactionTooLarge", ignoreCase = true) ||
-                            message.contains("too large", ignoreCase = true)
-                    )
+                    message.contains("TransactionTooLarge", ignoreCase = true)
 
             val result = isTransactionTooLarge || isMessageRelated
 

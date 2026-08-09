@@ -60,12 +60,7 @@ class TrafficTracker
 
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
-        private data class TargetInfo(
-            val slot: Int,
-            val dataSubId: Int,
-            val isFallback: Boolean = false,
-            val retryCount: Int = 0,
-        )
+        private val targetResolver = TrafficTargetResolver(permissionManager)
 
         suspend fun resetBaseline(identity: String) {
             simChangeMutex.withLock {
@@ -117,7 +112,7 @@ class TrafficTracker
                 val activeSims = getActiveSimsAndCleanup()
                 if (activeSims == null) return
 
-                val target = getTargetSimInfo(activeSims)
+                val target = targetResolver.resolve(activeSims)
                 if (target == null) {
                     AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
                     _status.value = TrackingStatus.Idle
@@ -133,8 +128,10 @@ class TrafficTracker
                             (savedLastDataSubId != target.dataSubId)
 
                     if (isSimChanged) {
-                        handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, target.retryCount)
-                        handleSkipDelta(target)
+                        val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                        val retryCount = baselineNeedsRetry[targetIdentity] ?: 0
+                        handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, retryCount)
+                        handleSkipDelta(target, retryCount)
                     } else {
                         val targetIdentity = simIdentityRepository.getIdentity(target.slot)
                         baselineNeedsRetry.keys.removeIf { it != targetIdentity }
@@ -164,10 +161,13 @@ class TrafficTracker
             return activeSims
         }
 
-        private fun handleSkipDelta(target: TargetInfo) {
+        private fun handleSkipDelta(
+            target: TargetInfo,
+            retryCount: Int,
+        ) {
             AppLogger.d(
                 "Traffic delta skipped due to SIM change " +
-                    "(slot=${target.slot}, retryCount=${target.retryCount})",
+                    "(slot=${target.slot}, retryCount=$retryCount)",
             )
             _status.value =
                 if (target.isFallback) {
@@ -403,63 +403,6 @@ class TrafficTracker
                 )
         }
 
-        private suspend fun getTargetSimInfo(activeSims: List<ActiveSimInfo>): TargetInfo? {
-            val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
-
-            val identity = simIdentityRepository.getIdentity(targetSim)
-            val retryCount = baselineNeedsRetry[identity] ?: 0
-
-            return TargetInfo(
-                targetSim,
-                currentDataSubId,
-                isFallback = isFallback,
-                retryCount = retryCount,
-            )
-        }
-
-        private fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
-            var targetSim = -1
-            var currentDataSubId = -1
-            var isFallback = false
-            try {
-                currentDataSubId = permissionManager.getDefaultDataSubscriptionId()
-                if (currentDataSubId != -1) {
-                    val subInfoList = permissionManager.getActiveSubscriptions()
-                    targetSim = subInfoList.find { it.subscriptionId == currentDataSubId }?.simSlotIndex ?: -1
-                }
-            } catch (e: Exception) {
-                AppLogger.e("Error getting default data SIM", e)
-            }
-
-            if (targetSim == -1) {
-                val resolveResult = resolveTargetSimFromActiveSims(activeSims)
-                if (resolveResult != null) {
-                    targetSim = resolveResult.first
-                    currentDataSubId = resolveResult.second
-                    isFallback = resolveResult.third
-                }
-            }
-
-            return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
-        }
-
-        private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
-            val defaultDataSim = activeSims.find { it.isDefaultData }
-
-            return if (defaultDataSim != null) {
-                Triple(defaultDataSim.slotIndex, defaultDataSim.subscriptionId, false)
-            } else {
-                val activeSubs = permissionManager.getActiveSubscriptions()
-                activeSubs.minByOrNull { it.simSlotIndex }?.let { selected ->
-                    AppLogger.w(
-                        "No default data SIM identified for traffic tracking. " +
-                            "Using fallback heuristic: attributing all traffic to Slot ${selected.simSlotIndex}.",
-                    )
-                    Triple(selected.simSlotIndex, selected.subscriptionId, true)
-                }
-            }
-        }
-
         private suspend fun syncLastDataSubIdIfNeeded(identity: String) {
             // Sync in-memory last data subId if this identity is currently the default data SIM.
             // This prevents handleSimChange from triggering immediately after a manual reset.
@@ -538,10 +481,12 @@ class TrafficTracker
                         identity,
                         StatsResult.Unavailable,
                         retryCount,
-                        currentDataSubId,
                         isLimitCheckOnly = true,
                     )
-                if (shouldReturn) return
+                if (shouldReturn) {
+                    updateLastDataSubId(currentDataSubId)
+                    return
+                }
 
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
                 val statsResult = fetchStatsOnSimChange(usage)
@@ -552,7 +497,8 @@ class TrafficTracker
                     // Update subId ONLY after successful baseline reset to ensure no delta is lost
                     updateLastDataSubId(currentDataSubId)
                 } else {
-                    handleSimChangeFailure(identity, statsResult, retryCount, currentDataSubId)
+                    handleSimChangeFailure(identity, statsResult, retryCount)
+                    updateLastDataSubId(currentDataSubId)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -565,7 +511,6 @@ class TrafficTracker
             identity: String,
             statsResult: StatsResult,
             retryCount: Int,
-            currentDataSubId: Int,
             isLimitCheckOnly: Boolean = false,
         ): Boolean =
             when {
@@ -576,7 +521,6 @@ class TrafficTracker
                     )
                     simUsageResetRepository.setLastTotalBytes(identity, -1L)
                     baselineNeedsRetry.remove(identity)
-                    updateLastDataSubId(currentDataSubId)
                     true
                 }
 
@@ -596,7 +540,6 @@ class TrafficTracker
                     )
                     simUsageResetRepository.setLastTotalBytes(identity, -1L)
                     baselineNeedsRetry[identity] = retryCount + 1
-                    updateLastDataSubId(currentDataSubId)
                     true
                 }
             }
@@ -616,3 +559,70 @@ class TrafficTracker
             private const val MAX_BASELINE_RETRIES = 5
         }
     }
+
+internal data class TargetInfo(
+    val slot: Int,
+    val dataSubId: Int,
+    val isFallback: Boolean = false,
+)
+
+/**
+ * Вспомогательный класс для определения целевой SIM-карты для отслеживания трафика.
+ * Вынесен из [TrafficTracker] для упрощения основного класса.
+ */
+internal class TrafficTargetResolver(
+    private val permissionManager: PermissionManager,
+) {
+    fun resolve(activeSims: List<ActiveSimInfo>): TargetInfo? {
+        val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
+
+        return TargetInfo(
+            targetSim,
+            currentDataSubId,
+            isFallback = isFallback,
+        )
+    }
+
+    private fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
+        var targetSim = -1
+        var currentDataSubId = -1
+        var isFallback = false
+        try {
+            currentDataSubId = permissionManager.getDefaultDataSubscriptionId()
+            if (currentDataSubId != -1) {
+                val subInfoList = permissionManager.getActiveSubscriptions()
+                targetSim = subInfoList.find { it.subscriptionId == currentDataSubId }?.simSlotIndex ?: -1
+            }
+        } catch (e: Exception) {
+            AppLogger.e("Error getting default data SIM", e)
+        }
+
+        if (targetSim == -1) {
+            val resolveResult = resolveTargetSimFromActiveSims(activeSims)
+            if (resolveResult != null) {
+                targetSim = resolveResult.first
+                currentDataSubId = resolveResult.second
+                isFallback = resolveResult.third
+            }
+        }
+
+        return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
+    }
+
+    private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
+        val defaultDataSim = activeSims.find { it.isDefaultData }
+
+        return if (defaultDataSim != null) {
+            Triple(defaultDataSim.slotIndex, defaultDataSim.subscriptionId, false)
+        } else {
+            val activeSubs = permissionManager.getActiveSubscriptions()
+            activeSubs.minByOrNull { it.simSlotIndex }?.let { selected ->
+                AppLogger.w(
+                    "No default data SIM identified for traffic tracking. " +
+                        "Using fallback heuristic: attributing all traffic to Slot ${selected.simSlotIndex}.",
+                )
+                Triple(selected.simSlotIndex, selected.subscriptionId, true)
+            }
+        }
+    }
+}

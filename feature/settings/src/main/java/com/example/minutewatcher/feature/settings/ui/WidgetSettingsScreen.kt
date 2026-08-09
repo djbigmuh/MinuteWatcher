@@ -26,10 +26,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.minutewatcher.core.android.util.SimUtils
+import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
 
@@ -40,9 +44,34 @@ fun WidgetSettingsScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val loadError by viewModel.loadError.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    val strings =
+        WidgetStrings(
+            usedText = stringResource(R.string.used_text),
+            minutesAbbr = stringResource(R.string.minutes_abbr),
+            limitText = stringResource(R.string.limit_text),
+            gbAbbr = stringResource(R.string.gb_abbr),
+            fractionFormat = stringResource(R.string.fraction_format),
+        )
+
+    val uiState =
+        remember(state, snapshot, strings) {
+            val nonNullState = state ?: return@remember null
+            val operatorNames =
+                snapshot.simSnapshots.associate { sim ->
+                    sim.slot to SimUtils.getShortOperatorName(context, sim.operator)
+                }
+            WidgetUiMapper.mapFromSnapshot(
+                strings = strings,
+                snapshot = snapshot,
+                state = nonNullState,
+                operatorNames = operatorNames,
+            )
+        }
 
     if (loadError) {
         ErrorState(

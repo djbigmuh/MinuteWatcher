@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +33,6 @@ import kotlin.time.Duration.Companion.seconds
  * наблюдения за снимками состояния (observeSnapshot) живет в течение всего
  * времени работы приложения.
  */
-@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @Singleton
 class UpdateCoordinator
     @Inject
@@ -48,6 +46,11 @@ class UpdateCoordinator
         private val widgetUpdateMutex = Mutex()
 
         init {
+            startObservation()
+        }
+
+        @OptIn(FlowPreview::class)
+        private fun startObservation() {
             scope.launch {
                 usageStateRepository
                     .observeSnapshot()
@@ -75,6 +78,10 @@ class UpdateCoordinator
                         }
                     }.retryWhen { cause, attempt ->
                         if (cause is CancellationException) throw cause
+                        if (attempt >= MAX_RETRY_ATTEMPTS) {
+                            AppLogger.e("UpdateCoordinator: giving up after $MAX_RETRY_ATTEMPTS retries", cause)
+                            return@retryWhen false
+                        }
 
                         lastSnapshotHash.value = null
                         val delaySeconds =
@@ -97,10 +104,10 @@ class UpdateCoordinator
          *
          * При [force] = true выполняется немедленное обновление виджетов через [performForcedUpdate]
          * и запускается обновление данных. При этом обновление виджета в реактивном цикле
-         * подавляется ([suppressWidgetUpdate] = true), чтобы избежать дублирования.
+         * подавляется (через `suppressWidgetUpdate` = true), чтобы избежать дублирования.
          *
          * При [force] = false запускается только обновление данных. Виджет обновится
-         * реактивно через [init] блок только в том случае, если новые данные приведут
+         * реактивно через блок инициализации только в том случае, если новые данные приведут
          * к изменению хэша содержимого ([SnapshotUtils.calculateContentHash]).
          * Если данные не изменились, но требуется принудительное обновление (например,
          * при изменении настроек оформления), необходимо использовать [force] = true.
@@ -150,5 +157,6 @@ class UpdateCoordinator
             private const val INITIAL_RETRY_DELAY_SECONDS = 5L
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
+            private const val MAX_RETRY_ATTEMPTS = 10L
         }
     }

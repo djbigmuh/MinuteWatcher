@@ -6,7 +6,8 @@ import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
+import java.util.LinkedHashMap
 
 /**
  * Mappers for converting domain models (SimUsage) to UI models (SimCardUiModel).
@@ -20,7 +21,7 @@ object SimCardMapper {
      * Prevents [AppLogger.e] from being called repeatedly for the same inaccurate state.
      * The map size is limited to [MAX_LOGGED_SIZE] to prevent memory leaks.
      */
-    private val negativeLogged = ConcurrentHashMap<Int, String>()
+    private val negativeLogged = Collections.synchronizedMap(LinkedHashMap<Int, String>())
     private const val MAX_LOGGED_SIZE = 20
 
     fun map(
@@ -84,18 +85,20 @@ object SimCardMapper {
 
         if (!hasNegativeValues) return
 
-        val lastLoggedIdentity = negativeLogged[slot]
-        if (lastLoggedIdentity == usage.identity) return
+        synchronized(negativeLogged) {
+            val lastLoggedIdentity = negativeLogged[slot]
+            if (lastLoggedIdentity == usage.identity) return
 
-        AppLogger.e(
-            "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
-                "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
-                "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
-        )
-        negativeLogged[slot] = usage.identity
-        // Clean up when overflowing to maintain cache size limit
-        if (negativeLogged.size > MAX_LOGGED_SIZE) {
-            negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
+            AppLogger.e(
+                "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
+                    "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
+                    "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
+            )
+            negativeLogged[slot] = usage.identity
+            // Clean up when overflowing to maintain cache size limit
+            if (negativeLogged.size > MAX_LOGGED_SIZE) {
+                negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
+            }
         }
     }
 }

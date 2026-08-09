@@ -142,10 +142,25 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             AppLogger.w("Widget: both snapshot refresh and settings load failed")
         }
 
+        val strings =
+            com.example.minutewatcher.core.model.WidgetStrings(
+                usedText = context.getString(R.string.used_text),
+                minutesAbbr = context.getString(R.string.minutes_abbr),
+                limitText = context.getString(R.string.limit_text),
+                gbAbbr = context.getString(R.string.gb_abbr),
+                fractionFormat = context.getString(R.string.fraction_format),
+            )
+
+        val operatorNames =
+            snapshot.simSnapshots.associate { sim ->
+                sim.slot to com.example.minutewatcher.core.android.util.SimUtils.getShortOperatorName(context, sim.operator)
+            }
+
         return WidgetUiMapper.mapFromSnapshot(
-            context,
-            snapshot,
-            settingsState,
+            strings = strings,
+            snapshot = snapshot,
+            state = settingsState,
+            operatorNames = operatorNames,
             refreshFailed = refreshFailed,
         )
     }

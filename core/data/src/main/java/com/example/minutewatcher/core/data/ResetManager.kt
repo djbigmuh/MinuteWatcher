@@ -28,6 +28,11 @@ class ResetManager
         private val dataChangeNotifier: DataChangeNotifier,
         private val timeProvider: TimeProvider,
     ) : AutoResetUseCase {
+        /**
+         * High-level mutex to coordinate the overall auto-reset process across all SIMs.
+         * This complements the lower-level [SimUsageRepositoryImpl.resetMutex] which ensures
+         * atomicity for individual SIM reset operations.
+         */
         private val resetMutex = Mutex()
         private val lastResetCheck = ConcurrentHashMap<String, Long>()
 

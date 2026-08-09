@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.android.util
 
-import android.content.Context
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
@@ -9,14 +8,15 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUiState
+import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.util.ColorProvider
-import com.example.minutewatcher.core.resources.R
 
 object WidgetSimUiFactory {
     fun createSimUiState(
-        context: Context,
+        strings: WidgetStrings,
         sim: SimSnapshot,
         simConfig: SimSettingsState?,
+        operatorName: String,
         luminance: Double,
         textColor: Int,
         secondaryTextColor: Int,
@@ -25,12 +25,12 @@ object WidgetSimUiFactory {
         val minutesEntity = sim.entities[PackageType.MINUTES]
         val trafficEntity = sim.entities[PackageType.DATA]
 
-        val minData = mapMinutesData(context, minutesEntity, simConfig, luminance)
-        val trafData = mapTrafficData(context, trafficEntity, simConfig, luminance)
+        val minData = mapMinutesData(strings, minutesEntity, simConfig, luminance)
+        val trafData = mapTrafficData(strings, trafficEntity, simConfig, luminance)
 
         return SimUiState(
             slot = sim.slot,
-            operatorName = SimUtils.getShortOperatorName(context, sim.operator),
+            operatorName = operatorName,
             operatorIconRes = SimUtils.getOperatorIconResource(sim.operator),
             showSim = simConfig?.showSim ?: true,
             showIcon = simConfig?.showIcon ?: true,
@@ -67,7 +67,7 @@ object WidgetSimUiFactory {
     )
 
     private fun mapMinutesData(
-        context: Context,
+        strings: WidgetStrings,
         entity: SemanticEntity?,
         config: SimSettingsState?,
         luminance: Double,
@@ -90,19 +90,15 @@ object WidgetSimUiFactory {
                 },
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = (config?.showMinutesLimit ?: false) && limit > 0,
-            limitText = context.getString(R.string.fraction_format, limit.toString()),
+            limitText = strings.fractionFormat.format(limit.toString()),
             hasData = hasData,
-            usedFull =
-                "${context.getString(R.string.used_text)}: " +
-                    "$used${context.getString(R.string.minutes_abbr)}",
-            limitFull =
-                "${context.getString(R.string.limit_text)}: " +
-                    "$limit${context.getString(R.string.minutes_abbr)}",
+            usedFull = "${strings.usedText}: $used${strings.minutesAbbr}",
+            limitFull = "${strings.limitText}: $limit${strings.minutesAbbr}",
         )
     }
 
     private fun mapTrafficData(
-        context: Context,
+        strings: WidgetStrings,
         entity: SemanticEntity?,
         config: SimSettingsState?,
         luminance: Double,
@@ -126,14 +122,10 @@ object WidgetSimUiFactory {
             text = if (entity != null && limitGb > 0f) FormatUtils.formatTrafficGb(remGb) else "-",
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f,
-            limitText = context.getString(R.string.fraction_format, FormatUtils.formatTrafficGb(limitGb)),
+            limitText = strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb)),
             hasData = hasData,
-            usedFull =
-                "${context.getString(R.string.used_text)}: " +
-                    "${FormatUtils.formatTrafficGb(usedGb)}${context.getString(R.string.gb_abbr)}",
-            limitFull =
-                "${context.getString(R.string.limit_text)}: " +
-                    "${FormatUtils.formatTrafficGb(limitGb)}${context.getString(R.string.gb_abbr)}",
+            usedFull = "${strings.usedText}: ${FormatUtils.formatTrafficGb(usedGb)}${strings.gbAbbr}",
+            limitFull = "${strings.limitText}: ${FormatUtils.formatTrafficGb(limitGb)}${strings.gbAbbr}",
         )
     }
 }

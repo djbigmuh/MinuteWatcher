@@ -2,8 +2,6 @@ package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
 import androidx.appsearch.app.AppSearchResult
-import androidx.appsearch.app.PutDocumentsRequest
-import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -40,7 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Ensures that data is searchable via global system search.
  */
 @Singleton
-open class SemanticSearchManager
+class SemanticSearchManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
@@ -218,7 +216,7 @@ open class SemanticSearchManager
 
             // Сначала добавляем/обновляем актуальные документы
             if (documents.isNotEmpty()) {
-                session?.putDocuments(createPutRequest(documents))
+                session?.putDocuments(appSearchWrapper.createPutRequest(documents))
             }
 
             // Затем удаляем устаревшие
@@ -233,21 +231,9 @@ open class SemanticSearchManager
             }
 
             if (staleIds.isNotEmpty()) {
-                session?.removeByDocumentId(createRemoveRequest(staleIds))
+                session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
             }
         }
-
-        protected open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
-            PutDocumentsRequest
-                .Builder()
-                .addDocuments(documents)
-                .build()
-
-        protected open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-            RemoveByDocumentIdRequest
-                .Builder(NAMESPACE)
-                .addIds(ids)
-                .build()
 
         companion object {
             private const val DATABASE_NAME = "usage"

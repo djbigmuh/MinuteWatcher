@@ -9,6 +9,7 @@ import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager.Companion.NAMESPACE
 import kotlinx.coroutines.guava.await
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -24,6 +25,10 @@ interface AppSearchWrapper {
     ): AppSearchSessionWrapper
 
     fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest
+
+    fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest
+
+    fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest
 }
 
 /**
@@ -59,6 +64,18 @@ class AppSearchWrapperImpl
                 .Builder()
                 .setForceOverride(forceOverride)
                 .addDocumentClasses(UsageDocument::class.java)
+                .build()
+
+        override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
+            PutDocumentsRequest
+                .Builder()
+                .addDocuments(documents)
+                .build()
+
+        override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
+            RemoveByDocumentIdRequest
+                .Builder(NAMESPACE)
+                .addIds(ids)
                 .build()
     }
 

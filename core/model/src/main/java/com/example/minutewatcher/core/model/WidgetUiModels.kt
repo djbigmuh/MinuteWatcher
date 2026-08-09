@@ -14,6 +14,14 @@ data class WidgetUiState(
     val isSnapshotEmpty: Boolean = false,
 )
 
+data class WidgetStrings(
+    val usedText: String,
+    val minutesAbbr: String,
+    val limitText: String,
+    val gbAbbr: String,
+    val fractionFormat: String,
+)
+
 data class SimUiState(
     val slot: Int,
     val operatorName: String,
