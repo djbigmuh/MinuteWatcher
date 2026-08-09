@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,6 +42,7 @@ class WidgetSettingsViewModel
         private val _loadError = MutableStateFlow(false)
         val loadError: StateFlow<Boolean> = _loadError.asStateFlow()
 
+        private val saveMutex = Mutex()
         private val _isSaving = MutableStateFlow(false)
         val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
@@ -103,7 +105,7 @@ class WidgetSettingsViewModel
 
         fun saveAndNotify(onComplete: (Boolean) -> Unit) {
             viewModelScope.launch {
-                if (_isSaving.value) {
+                if (!saveMutex.tryLock()) {
                     // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
                     // UI должен проигнорировать отказ или показать "подождите"
                     onComplete(false)
@@ -127,6 +129,7 @@ class WidgetSettingsViewModel
                     onComplete(false)
                 } finally {
                     _isSaving.value = false
+                    saveMutex.unlock()
                 }
             }
         }

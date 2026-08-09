@@ -85,6 +85,15 @@ class MainViewModel
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
 
         init {
+            // Явная инициализация ключей в SavedStateHandle.
+            // Примечание: значения в SavedStateHandle гарантированно переживают только смерть процесса (Process Death),
+            // но не принудительную остановку приложения пользователем.
+            if (!savedStateHandle.contains(KEY_LAST_AUTO_RESET_CHECK)) {
+                savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = 0L
+            }
+            if (!savedStateHandle.contains(KEY_AUTO_RESET_FAIL_COUNT)) {
+                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
+            }
             initializeApp()
         }
 

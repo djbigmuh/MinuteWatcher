@@ -14,8 +14,6 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +27,6 @@ class SimUsageRepositoryImpl
         SimUsageRepository,
         SimUsageAdjustmentRepository,
         SimUsageResetRepository {
-        private val resetMutex = Mutex()
 
         override fun getSimUsage(identity: String): Flow<SimUsage> =
             dataStore.data.map { prefs ->
@@ -116,24 +113,20 @@ class SimUsageRepositoryImpl
         }
 
         override suspend fun resetSimUsage(identity: String) {
-            resetMutex.withLock {
-                dataStore.edit { prefs ->
-                    prefs.applyResetWithRollover(identity, timeProvider.now())
-                }
+            dataStore.edit { prefs ->
+                prefs.applyResetWithRollover(identity, timeProvider.now())
             }
         }
 
         override suspend fun resetSimUsageManual(identity: String) {
-            resetMutex.withLock {
-                dataStore.edit { prefs ->
-                    prefs[SimSettingsKeys.minutesUsedKey(identity)] = 0
-                    prefs[SimSettingsKeys.trafficUsedKey(identity)] = 0f
-                    prefs[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
-                    prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
-                    prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
+            dataStore.edit { prefs ->
+                prefs[SimSettingsKeys.minutesUsedKey(identity)] = 0
+                prefs[SimSettingsKeys.trafficUsedKey(identity)] = 0f
+                prefs[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
+                prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
+                prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
 
-                    prefs.resetNotificationFlags(identity)
-                }
+                prefs.resetNotificationFlags(identity)
             }
         }
 
@@ -141,22 +134,21 @@ class SimUsageRepositoryImpl
             identity: String,
             autoResetDay: Int,
             nowMillis: Long,
-        ): Boolean =
-            resetMutex.withLock {
-                val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
+        ): Boolean {
+            val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
 
-                var actuallyReset = false
-                dataStore.edit { prefs ->
-                    val innerLastResetDate =
-                        prefs[SimSettingsKeys.lastResetDateKey(identity)]
-                            ?: Constants.Data.EMPTY_TIMESTAMP
-                    if (innerLastResetDate < periodStart) {
-                        prefs.applyResetWithRollover(identity, nowMillis)
-                        actuallyReset = true
-                    }
+            var actuallyReset = false
+            dataStore.edit { prefs ->
+                val innerLastResetDate =
+                    prefs[SimSettingsKeys.lastResetDateKey(identity)]
+                        ?: Constants.Data.EMPTY_TIMESTAMP
+                if (innerLastResetDate < periodStart) {
+                    prefs.applyResetWithRollover(identity, nowMillis)
+                    actuallyReset = true
                 }
-                actuallyReset
             }
+            return actuallyReset
+        }
 
         private fun MutablePreferences.applyResetWithRollover(
             identity: String,

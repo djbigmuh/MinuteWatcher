@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -129,6 +130,10 @@ class SimIdentityRepositoryImpl
                     value
                 }
             }.filterNotNull()
+                .transformWhile {
+                    emit(it)
+                    it !is SeedResult.Real
+                }
                 .distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 

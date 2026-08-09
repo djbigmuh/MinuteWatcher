@@ -272,6 +272,10 @@ class CallTracker
 
             if (error != null) {
                 _status.value = error
+            } else if (_status.value is TrackingStatus.Error) {
+                // Разрешения восстановлены — сбрасываем ошибку.
+                // Реактивное обновление статуса (Active/Idle) произойдет в конце вызывающей функции через refreshStatus().
+                _status.value = TrackingStatus.Idle
             }
 
             return error == null
@@ -442,9 +446,13 @@ class CallTracker
 
                 val durationSeconds = (currentUptime - sessionData.savedUptime) / MILLIS_IN_SECOND
 
-                if (durationSeconds > 0) {
-                    processCallDuration(durationSeconds.toInt(), subId, sessionData.savedIdentity, notify)
-                }
+                processCallDuration(
+                    durationSeconds = durationSeconds.toInt(),
+                    subId = subId,
+                    savedIdentity = sessionData.savedIdentity,
+                    savedUptime = sessionData.savedUptime,
+                    notify = notify
+                )
                 clearSession(subId)
             }
         }
@@ -574,9 +582,18 @@ class CallTracker
             durationSeconds: Int,
             subId: Int,
             savedIdentity: String?,
+            savedUptime: Long,
             notify: Boolean = true,
         ): Boolean {
-            if (durationSeconds < 0) return true
+            if (durationSeconds < 0) {
+                AppLogger.w(
+                    "CallTracker: negative call duration detected " +
+                        "(currentUptime=${timeProvider.uptimeMillis()}, " +
+                        "savedUptime=$savedUptime). Skipping update.",
+                )
+                return false
+            }
+            if (durationSeconds == 0) return true
             if (!isCallTrackingEnabled()) {
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 return true

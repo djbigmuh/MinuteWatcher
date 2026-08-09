@@ -120,6 +120,18 @@ class TrafficTrackerTest {
     }
 
     @Test
+    fun `updateTrafficUsage sets Idle when no active SIM`() =
+        runTest(testDispatcher) {
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+            tracker.updateTrafficUsage()
+
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+        }
+
+    @Test
     fun `updateTrafficUsage initializes baseline on first run`() =
         runTest(testDispatcher) {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))

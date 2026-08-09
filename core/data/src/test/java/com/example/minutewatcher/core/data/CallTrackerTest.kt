@@ -274,6 +274,27 @@ class CallTrackerTest {
         }
 
     @Test
+    fun `checkPermissions clears Error status when permission is restored`() =
+        runTest(testDispatcher) {
+            // 1. Устанавливаем статус ошибки из-за отсутствия разрешения
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
+            callTracker.onCallStarted(1)
+            advanceUntilIdle()
+
+            assertTrue(callTracker.status.value is TrackingStatus.Error)
+
+            // 2. Восстанавливаем разрешение
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            // Инициируем вызов, который проверит разрешения
+            callTracker.onCallStarted(1)
+            advanceUntilIdle()
+
+            // 3. Статус больше не должен быть Error
+            val status = callTracker.status.value
+            assertTrue("Status should not be Error, but was $status", status !is TrackingStatus.Error)
+        }
+
+    @Test
     fun `processCallDuration sets active status on success`() =
         runTest(testDispatcher) {
             val startTime = 1000L
@@ -512,6 +533,24 @@ class CallTrackerTest {
 
             // activeSubId should NOT be cleared yet as it's not stale and we don't know which one ended
             verify(callSessionRepository, never()).setCallStartTime(activeSubId, 0)
+        }
+
+    @Test
+    fun `processCallDuration returns false on negative duration`() =
+        runTest(testDispatcher) {
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(2000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // currentUptime = 1000L (via advance)
+            timeProvider.advance(1000L)
+            // currentRealtime = 501000L > savedBootTime = 100L -> valid
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
         }
 
     @Test

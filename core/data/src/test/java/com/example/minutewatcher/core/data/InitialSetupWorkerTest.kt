@@ -196,4 +196,43 @@ class InitialSetupWorkerTest {
             verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
             verify(migrationService).markSchemaCurrent()
         }
+
+    @Test
+    fun `doWork resets baseline only for default data SIM`() =
+        runTest {
+            val identity1 = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID)
+            val activeSim1 =
+                ActiveSimInfo(
+                    identity1,
+                    0,
+                    1,
+                    "MTS",
+                    "MTS",
+                    "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+
+            val identity2 = SimIdentity("icc_2", 2, 1, IdentitySource.ICCID)
+            val activeSim2 =
+                ActiveSimInfo(
+                    identity2,
+                    1,
+                    2,
+                    "MegaFon",
+                    "MegaFon",
+                    "25002",
+                    isDefaultData = false,
+                    isDefaultVoice = false,
+                )
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim1, activeSim2)))
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(trafficTracker).resetBaseline(eq("icc_1"))
+            verify(trafficTracker, never()).resetBaseline(eq("icc_2"))
+        }
 }

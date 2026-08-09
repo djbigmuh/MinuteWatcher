@@ -113,7 +113,15 @@ class TrafficTracker
             try {
                 if (!checkPermissions()) return
 
-                val target = findTarget() ?: return
+                val activeSims = getActiveSimsAndCleanup()
+                if (activeSims == null) return
+
+                val target = getTargetSimInfo(activeSims)
+                if (target == null) {
+                    AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
+                    _status.value = TrackingStatus.Idle
+                    return
+                }
 
                 simChangeMutex.withLock {
                     ensureInMemoryLastDataSubId()
@@ -153,11 +161,6 @@ class TrafficTracker
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
             baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
             return activeSims
-        }
-
-        private suspend fun findTarget(): TargetInfo? {
-            val activeSims = getActiveSimsAndCleanup() ?: return null
-            return getTargetSimInfo(activeSims)
         }
 
         private fun handleSkipDelta(target: TargetInfo) {

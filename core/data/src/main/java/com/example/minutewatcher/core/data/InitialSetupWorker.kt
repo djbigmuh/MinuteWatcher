@@ -34,11 +34,14 @@ class InitialSetupWorker
                 // Perform auto-reset immediately after boot/migration. Skip internal notify as we do it at the end.
                 deps.autoResetUseCase.performAutoReset(shouldNotify = false)
 
-                // Reset traffic baseline after reboot for active SIMs
+                // Reset traffic baseline after reboot for the current default data SIM
                 val activeSimsForTraffic = getActiveSimsWithRetry()
-                activeSimsForTraffic.forEach { info ->
-                    deps.trafficTracker.resetBaseline(info.identity.stableId)
-                }
+                val defaultDataSubId = deps.permissionManager.getDefaultDataSubscriptionId()
+                activeSimsForTraffic
+                    .filter { it.subscriptionId == defaultDataSubId || it.isDefaultData }
+                    .forEach { info ->
+                        deps.trafficTracker.resetBaseline(info.identity.stableId)
+                    }
 
                 // Final refresh after all changes to capture results of auto-reset
                 deps.usageStateRepository.refresh()

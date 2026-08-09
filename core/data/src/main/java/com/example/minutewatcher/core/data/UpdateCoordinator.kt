@@ -95,24 +95,33 @@ class UpdateCoordinator
         /**
          * Уведомляет об изменении данных.
          *
-         * @param updateWidget если true — инициирует обновление данных через [DataRefreshNotifier].
-         *   Если также [force] = true — виджет обновляется немедленно.
-         *   Если [force] = false — обновление виджета происходит реактивно при изменении данных.
-         * @param force если true — принудительное немедленное обновление виджета
-         *   и пометка refresh как ручного.
+         * При [force] = true выполняется немедленное обновление виджетов через [performForcedUpdate]
+         * и запускается обновление данных. При этом обновление виджета в реактивном цикле
+         * подавляется ([suppressWidgetUpdate] = true), чтобы избежать дублирования.
+         *
+         * При [force] = false запускается только обновление данных. Виджет обновится
+         * реактивно через [init] блок только в том случае, если новые данные приведут
+         * к изменению хэша содержимого ([SnapshotUtils.calculateContentHash]).
+         * Если данные не изменились, но требуется принудительное обновление (например,
+         * при изменении настроек оформления), необходимо использовать [force] = true.
+         *
+         * @param updateWidget если true — инициирует обновление.
+         * @param force если true — принудительное немедленное обновление виджета.
          */
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,
             force: Boolean,
         ) {
-            if (updateWidget && force) {
+            if (!updateWidget) return
+
+            if (force) {
                 performForcedUpdate()
-            }
-            if (updateWidget) {
-                dataRefreshNotifier.notifyRefresh(
-                    isManual = force,
-                    suppressWidgetUpdate = force,
-                )
+                dataRefreshNotifier.notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+            } else {
+                dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
+                // Реактивный путь в init обработает обновление, если данные изменились.
+                // Если данные не изменились, но вызывающий явно запросил обновление,
+                // это покрывается только через force=true.
             }
         }
 
