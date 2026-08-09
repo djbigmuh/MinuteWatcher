@@ -176,7 +176,8 @@ class MainViewModel
             val result = controllers.refresh.refreshSimCardsInternal()
 
             if (result == null) {
-                AppLogger.w("refreshAndNotify: refresh returned null (in progress or error), widget not notified")
+                AppLogger.w("refreshAndNotify: refresh already in progress, notifying widget only")
+                controllers.simData.notifyDataChanged(force = force)
                 return
             }
 

@@ -86,6 +86,8 @@ class WidgetUpdaterImpl
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {
             try {
+                val current = appSettingsRepository.observeAppSettings().value
+                if (current.widgetLimitExceeded == value) return
                 appSettingsRepository.updateAppSettings {
                     it.copy(widgetLimitExceeded = value)
                 }

@@ -43,7 +43,7 @@ class WidgetSettingsRepository
                 // Eventual consistency is acceptable for widget settings UI.
                 val realIdentities = activeSims.map { it.identity.stableId }
                 val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
-                val allIdentities = (realIdentities + fallbackIdentities).distinct()
+                val allIdentities = (realIdentities + fallbackIdentities).toSet().toList()
 
                 val batchSettingsResult =
                     simWidgetVisibilityRepository
@@ -62,7 +62,12 @@ class WidgetSettingsRepository
                         val fallbackKey = "sim_${info.slotIndex}"
 
                         // Use default settings if specific settings for this identity are missing.
-                        val settings = batchSettings[identity] ?: batchSettings[fallbackKey] ?: SimSettingsState()
+                        val settings =
+                            if (identity == fallbackKey) {
+                                batchSettings[identity] ?: SimSettingsState()
+                            } else {
+                                batchSettings[identity] ?: batchSettings[fallbackKey] ?: SimSettingsState()
+                            }
                         info.slotIndex to settings
                     }
 

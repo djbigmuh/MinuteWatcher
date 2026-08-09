@@ -13,6 +13,10 @@ android {
     namespace = "com.example.minutewatcher.core.data"
     compileSdk = 37
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         minSdk = 26
     }

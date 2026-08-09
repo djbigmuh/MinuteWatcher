@@ -64,7 +64,6 @@ class TrafficTracker
         private data class TargetInfo(
             val slot: Int,
             val dataSubId: Int,
-            val skipDelta: Boolean,
             val isFallback: Boolean = false,
             val retryCount: Int = 0,
         )
@@ -117,13 +116,21 @@ class TrafficTracker
 
                 val target = findTarget() ?: return
 
-                if (target.skipDelta) {
-                    handleSkipDelta(target)
-                } else {
-                    trafficMutex.withLock {
-                        val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                        baselineNeedsRetry.keys.removeIf { it != targetIdentity }
-                        performTrafficUpdate(target, targetIdentity)
+                simChangeMutex.withLock {
+                    ensureInMemoryLastDataSubId()
+                    val savedLastDataSubId = inMemoryLastDataSubId.get()
+                    val isSimChanged =
+                        savedLastDataSubId != -1 && target.dataSubId != -1 && savedLastDataSubId != target.dataSubId
+
+                    if (isSimChanged) {
+                        handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, target.retryCount)
+                        handleSkipDelta(target)
+                    } else {
+                        trafficMutex.withLock {
+                            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                            baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+                            performTrafficUpdate(target, targetIdentity)
+                        }
                     }
                 }
             } catch (e: SecurityException) {
@@ -399,26 +406,12 @@ class TrafficTracker
         private suspend fun getTargetSimInfo(activeSims: List<ActiveSimInfo>): TargetInfo? {
             val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
 
-            ensureInMemoryLastDataSubId()
-
-            val savedLastDataSubId = inMemoryLastDataSubId.get()
-            val isSimChanged =
-                savedLastDataSubId != -1 && currentDataSubId != -1 && savedLastDataSubId != currentDataSubId
-
             val identity = simIdentityRepository.getIdentity(targetSim)
             val retryCount = baselineNeedsRetry[identity] ?: 0
-
-            if (isSimChanged) {
-                handleSimChange(targetSim, currentDataSubId, savedLastDataSubId, retryCount)
-                if (isFallback) {
-                    AppLogger.w("SIM change detected with fallback attribution to slot $targetSim")
-                }
-            }
 
             return TargetInfo(
                 targetSim,
                 currentDataSubId,
-                skipDelta = isSimChanged,
                 isFallback = isFallback,
                 retryCount = retryCount,
             )
@@ -530,43 +523,41 @@ class TrafficTracker
             savedLastDataSubId: Int,
             retryCount: Int,
         ) {
-            simChangeMutex.withLock {
-                AppLogger.d(
-                    "Default data SIM changed from $savedLastDataSubId to $currentDataSubId. " +
-                        "Resetting baseline.",
-                )
-                try {
-                    val identity = simIdentityRepository.getIdentity(targetSim)
+            AppLogger.d(
+                "Default data SIM changed from $savedLastDataSubId to $currentDataSubId. " +
+                    "Resetting baseline.",
+            )
+            try {
+                val identity = simIdentityRepository.getIdentity(targetSim)
 
-                    // Ensure we only track retry for the current target.
-                    baselineNeedsRetry.keys.removeIf { it != identity }
+                // Ensure we only track retry for the current target.
+                baselineNeedsRetry.keys.removeIf { it != identity }
 
-                    val shouldReturn =
-                        handleSimChangeFailure(
-                            identity,
-                            StatsResult.Unavailable,
-                            retryCount,
-                            currentDataSubId,
-                            isLimitCheckOnly = true,
-                        )
-                    if (shouldReturn) return
+                val shouldReturn =
+                    handleSimChangeFailure(
+                        identity,
+                        StatsResult.Unavailable,
+                        retryCount,
+                        currentDataSubId,
+                        isLimitCheckOnly = true,
+                    )
+                if (shouldReturn) return
 
-                    val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                    val statsResult = fetchStatsOnSimChange(usage)
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                val statsResult = fetchStatsOnSimChange(usage)
 
-                    if (statsResult is StatsResult.Success) {
-                        resetStatsAfterSimChange(identity, statsResult)
-                        baselineNeedsRetry.remove(identity)
-                        // Update subId ONLY after successful baseline reset to ensure no delta is lost
-                        updateLastDataSubId(currentDataSubId)
-                    } else {
-                        handleSimChangeFailure(identity, statsResult, retryCount, currentDataSubId)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to handle SIM change", e)
+                if (statsResult is StatsResult.Success) {
+                    resetStatsAfterSimChange(identity, statsResult)
+                    baselineNeedsRetry.remove(identity)
+                    // Update subId ONLY after successful baseline reset to ensure no delta is lost
+                    updateLastDataSubId(currentDataSubId)
+                } else {
+                    handleSimChangeFailure(identity, statsResult, retryCount, currentDataSubId)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to handle SIM change", e)
             }
         }
 

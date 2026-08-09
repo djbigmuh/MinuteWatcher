@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapConcat
@@ -49,6 +50,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -81,6 +83,7 @@ class SimIdentityRepositoryImpl
         }
 
         private val saveMutex = Mutex()
+        private val seedGenerationInProgress = AtomicBoolean(false)
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
@@ -95,12 +98,20 @@ class SimIdentityRepositoryImpl
                         }
                     }.flatMapConcat { result ->
                         if (result is SeedResult.Fallback) {
-                            flow {
-                                val generated = generateSeedWithRetry()
-                                if (generated != null) {
-                                    emit(SeedResult.Real(generated))
-                                } else {
-                                    emit(SeedResult.Fallback)
+                            if (!seedGenerationInProgress.compareAndSet(false, true)) {
+                                emptyFlow()
+                            } else {
+                                flow {
+                                    try {
+                                        val generated = generateSeedWithRetry()
+                                        if (generated != null) {
+                                            emit(SeedResult.Real(generated))
+                                        } else {
+                                            emit(SeedResult.Fallback)
+                                        }
+                                    } finally {
+                                        seedGenerationInProgress.set(false)
+                                    }
                                 }
                             }
                         } else {

@@ -88,6 +88,7 @@ class CallTracker
          */
         suspend fun onCallStarted(subId: Int) {
             callMutex.withLock {
+                var justStarted = false
                 try {
                     if (!isCallTrackingEnabled() || !checkPermissions()) return@withLock
 
@@ -96,6 +97,7 @@ class CallTracker
 
                     val started = handleCallStartInternal(effectiveSubId)
                     if (started) {
+                        justStarted = true
                         _status.value = TrackingStatus.Active
                     }
                 } catch (e: SecurityException) {
@@ -108,7 +110,7 @@ class CallTracker
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            if (_status.value !is TrackingStatus.Error) {
+                            if (_status.value !is TrackingStatus.Error && !justStarted) {
                                 refreshStatus()
                             }
                         } catch (e: Exception) {
@@ -133,12 +135,18 @@ class CallTracker
             return effective
         }
 
+        /**
+         * Reads a value from a Flow with a specified number of attempts and timeout.
+         * Uses exponential backoff between retries to increase reliability when DataStore
+         * or other reactive sources are temporarily under high load or locked.
+         */
         private suspend fun <T : Any> readWithRetry(
             attempts: Int = 2,
             timeoutMs: Long = Constants.Flow.SHORT_TIMEOUT_MS,
             retryDelayMs: Long = Constants.Flow.RETRY_DELAY_MS,
             reader: () -> Flow<T>,
         ): Result<T> {
+            var currentDelay = retryDelayMs
             for (attempt in 1..attempts) {
                 val result =
                     withTimeoutOrNull(timeoutMs.milliseconds) {
@@ -146,8 +154,9 @@ class CallTracker
                     }
                 if (result != null) return Result.success(result)
                 if (attempt < attempts) {
-                    AppLogger.d("readWithRetry: attempt $attempt timed out, retrying in ${retryDelayMs}ms")
-                    delay(retryDelayMs.milliseconds)
+                    AppLogger.d("readWithRetry: attempt $attempt timed out, retrying in ${currentDelay}ms")
+                    delay(currentDelay.milliseconds)
+                    currentDelay *= 2
                 }
             }
             AppLogger.w("readWithRetry: all $attempts attempts timed out")

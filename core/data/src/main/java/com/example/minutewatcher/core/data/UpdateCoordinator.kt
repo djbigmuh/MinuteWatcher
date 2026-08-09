@@ -110,6 +110,7 @@ class UpdateCoordinator
                     throw e
                 } catch (e: Exception) {
                     AppLogger.w("Force widget update failed, hash not updated", e)
+                    lastSnapshotHash.value = null
                 }
             }
             if (updateWidget) {

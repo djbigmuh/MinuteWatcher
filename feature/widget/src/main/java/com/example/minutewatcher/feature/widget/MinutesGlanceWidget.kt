@@ -51,8 +51,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.milliseconds
 import androidx.glance.color.ColorProvider as GlanceColorProvider
 import androidx.glance.unit.ColorProvider as IColorProvider
 
@@ -166,10 +164,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 
         // Attempt to force a refresh if the snapshot is empty or stale
         return try {
-            withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                usageRepository.refresh()
-            } ?: com.example.minutewatcher.core.domain.RefreshResult
-                .Timeout(initialSnapshot)
+            usageRepository.refresh()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
