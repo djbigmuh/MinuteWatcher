@@ -153,7 +153,12 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 
         val operatorNames =
             snapshot.simSnapshots.associate { sim ->
-                sim.slot to com.example.minutewatcher.core.android.util.SimUtils.getShortOperatorName(context, sim.operator)
+                sim.slot to
+                    com.example.minutewatcher.core.android.util.SimUtils
+                        .getShortOperatorName(
+                            context,
+                            sim.operator,
+                        )
             }
 
         return WidgetUiMapper.mapFromSnapshot(

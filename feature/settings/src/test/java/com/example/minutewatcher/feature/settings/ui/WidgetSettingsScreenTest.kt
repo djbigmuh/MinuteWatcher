@@ -52,18 +52,25 @@ class WidgetSettingsScreenTest {
     fun setup() {
         viewModel = mock()
         // Provide default stubs to avoid NPE on collectAsStateWithLifecycle
-        whenever(viewModel.settingsState).doReturn(MutableStateFlow(null))
-        whenever(viewModel.snapshot).doReturn(MutableStateFlow(createEmptySnapshot()))
-        whenever(viewModel.loadError).doReturn(MutableStateFlow(false))
-        whenever(viewModel.isSaving).doReturn(MutableStateFlow(false))
+        whenever(viewModel.settingsState)
+            .doReturn(MutableStateFlow(null))
+        whenever(viewModel.snapshot)
+            .doReturn(MutableStateFlow(createEmptySnapshot()))
+        whenever(viewModel.loadError)
+            .doReturn(MutableStateFlow(false))
+        whenever(viewModel.isSaving)
+            .doReturn(MutableStateFlow(false))
     }
 
-    private fun createEmptySnapshot() = com.example.minutewatcher.core.model.GlobalSnapshot(
-        version = com.example.minutewatcher.core.model.SchemaVersion(1, 0, 0),
-        timestamp = 0L,
-        simSnapshots = emptyList(),
-        capabilities = emptyList()
-    )
+    private fun createEmptySnapshot() =
+        com.example.minutewatcher.core.model.GlobalSnapshot(
+            version =
+                com.example.minutewatcher.core.model
+                    .SchemaVersion(1, 0, 0),
+            timestamp = 0L,
+            simSnapshots = emptyList(),
+            capabilities = emptyList(),
+        )
 
     @Test
     fun loadingState_isDisplayed() {

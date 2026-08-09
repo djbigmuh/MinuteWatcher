@@ -1,7 +1,5 @@
 package com.example.minutewatcher.core.android.util
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -12,22 +10,15 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class WidgetLayoutTest {
-    private lateinit var context: Context
-
-    @Before
-    fun setup() {
-        context = ApplicationProvider.getApplicationContext()
-    }
-
     @Test
     fun `generateLayoutSpec should produce 1 row for SINGLE_LINE mode`() {
         val uiState =
@@ -217,6 +208,20 @@ class WidgetLayoutTest {
                 callTrackingEnabled = true,
                 simStates = mapOf(0 to simSettings),
             )
-        return WidgetUiMapper.mapFromSnapshot(context, snapshot, state)
+
+        val widgetStrings =
+            WidgetStrings(
+                usedText = "Used",
+                minutesAbbr = "min.",
+                limitText = "Limit",
+                gbAbbr = "GB",
+                fractionFormat = "/%1\$s",
+            )
+        return WidgetUiMapper.mapFromSnapshot(
+            strings = widgetStrings,
+            snapshot = snapshot,
+            state = state,
+            operatorNames = mapOf(0 to "MTS"),
+        )
     }
 }

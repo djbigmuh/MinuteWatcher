@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -25,7 +26,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -48,7 +49,8 @@ class UpdateCoordinatorTest {
     fun `snapshot change triggers widget update with debounce`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -76,7 +78,8 @@ class UpdateCoordinatorTest {
     fun `identical content snapshots do not trigger redundant updates`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -105,7 +108,8 @@ class UpdateCoordinatorTest {
     fun `notifyDataChanged with force triggers immediate widget update`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -127,7 +131,8 @@ class UpdateCoordinatorTest {
     fun `notifyDataChanged without force does NOT trigger immediate widget update`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -154,7 +159,8 @@ class UpdateCoordinatorTest {
     fun `two consecutive forced updates both trigger widget update`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -181,7 +187,8 @@ class UpdateCoordinatorTest {
     fun `forced update failure does not update hash allowing subsequent reactive update`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             // Setup: init will call updateAll for first snapshot, let it succeed to set initial state
             val coordinator =
@@ -228,7 +235,8 @@ class UpdateCoordinatorTest {
     fun `widget update failure resets hash and allows retry`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             var failCount = 0
             whenever(widgetUpdater.updateAll()).thenAnswer {
@@ -269,7 +277,8 @@ class UpdateCoordinatorTest {
     fun `observation resumes after repository failure`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             UpdateCoordinator(
                 dataRefreshNotifier,
@@ -316,7 +325,8 @@ class UpdateCoordinatorTest {
     fun `forced update suppresses reactive update for the same snapshot`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -355,7 +365,7 @@ class UpdateCoordinatorTest {
         }
 
     @Test
-    fun `concurrent force and reactive updates are deduplicated by mutex`() =
+    fun `concurrent force and reactive updates are sequential due to mutex`() =
         runTest {
             val stateFlow =
                 snapshotFlow.stateIn(
@@ -363,20 +373,26 @@ class UpdateCoordinatorTest {
                     SharingStarted.Eagerly,
                     createEmptySnapshot(),
                 )
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
 
-            // Setup a fake that suspends until we say so
-            val migrationStarted = AtomicBoolean(false)
-            val canFinish = CompletableDeferred<Unit>()
-            var callCount = 0
+            val callCount = AtomicInteger(0)
+            val firstUpdateStarted = CompletableDeferred<Unit>()
+            val secondUpdateStarted = CompletableDeferred<Unit>()
+            val canFinishFirst = CompletableDeferred<Unit>()
+            val canFinishSecond = CompletableDeferred<Unit>()
 
             val fakeWidgetUpdater =
                 object : WidgetUpdater {
                     override suspend fun updateAll() {
-                        callCount++
-                        migrationStarted.set(true)
-                        canFinish.await()
-                        migrationStarted.set(false)
+                        val count = callCount.incrementAndGet()
+                        if (count == 1) {
+                            firstUpdateStarted.complete(Unit)
+                            canFinishFirst.await()
+                        } else if (count == 2) {
+                            secondUpdateStarted.complete(Unit)
+                            canFinishSecond.await()
+                        }
                     }
                 }
 
@@ -395,23 +411,34 @@ class UpdateCoordinatorTest {
 
             // Advance time to allow reactive coroutine to pick up snapshot and enter updateAll
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            firstUpdateStarted.await()
+
+            assertEquals(1, callCount.get())
+
+            // 2. Trigger forced update immediately while reactive is still running.
+            val forcedUpdateJob =
+                launch {
+                    coordinator.notifyDataChanged(updateWidget = true, force = true)
+                }
             runCurrent()
 
-            assertTrue("Reactive update should be in progress", migrationStarted.get())
-            assertEquals(1, callCount)
-
-            // 2. Trigger forced update immediately while reactive is still running
-            // This should tryLock() and skip because reactive is holding the lock.
-            coordinator.notifyDataChanged(updateWidget = true, force = true)
-            runCurrent()
+            // Still 1 call because forced is waiting for the lock
+            assertEquals(1, callCount.get())
 
             // 3. Let reactive update finish
-            canFinish.complete(Unit)
+            canFinishFirst.complete(Unit)
+
+            // Wait for forced update to acquire lock and start
+            secondUpdateStarted.await()
+            assertEquals(2, callCount.get())
+
+            // 4. Let forced update finish
+            canFinishSecond.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            // 4. Verification:
-            // updateAll should have been called only ONCE because the forced one was skipped.
-            assertEquals("Should only call updateAll once due to mutex deduplication", 1, callCount)
+            // 5. Verification:
+            assertEquals(2, callCount.get())
+            assertTrue(forcedUpdateJob.isCompleted)
         }
 
     private fun createEmptySnapshot() =

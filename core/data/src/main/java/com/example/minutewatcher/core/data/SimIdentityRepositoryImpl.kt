@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -79,23 +81,27 @@ class SimIdentityRepositoryImpl
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
-        private val seedFlow: Flow<SeedResult> = flow {
-            val result = withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
-                val currentSeed = seedRepository.seedFlow.first()
-                if (currentSeed.isNotEmpty()) {
-                    SeedResult.Real(currentSeed)
-                } else {
-                    val generated = generateSeedWithRetry()
-                    if (generated != null) {
-                        SeedResult.Real(generated)
-                    } else {
-                        SeedResult.Fallback
-                    }
-                }
-            } ?: SeedResult.Fallback
-            emit(result)
-        }.distinctUntilChanged()
-            .shareIn(scope, SharingStarted.Eagerly, replay = 1)
+        private val seedFlow: Flow<SeedResult> =
+            flow {
+                val initial =
+                    withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                        val current = seedRepository.seedFlow.first()
+                        if (current.isNotEmpty()) {
+                            SeedResult.Real(current)
+                        } else {
+                            val generated = generateSeedWithRetry()
+                            if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
+                        }
+                    } ?: SeedResult.Fallback
+                emit(initial)
+
+                emitAll(
+                    seedRepository.seedFlow
+                        .filter { it.isNotEmpty() }
+                        .map { SeedResult.Real(it) },
+                )
+            }.distinctUntilChanged()
+                .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =

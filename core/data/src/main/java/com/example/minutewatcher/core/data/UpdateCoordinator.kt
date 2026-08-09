@@ -133,23 +133,19 @@ class UpdateCoordinator
         }
 
         private suspend fun performForcedUpdate() {
-            if (!widgetUpdateMutex.tryLock()) {
-                AppLogger.d("UpdateCoordinator: skipping forced update, another update in progress")
-                return
-            }
-            try {
-                val snapshot = usageStateRepository.observeSnapshot().value
-                widgetUpdater.updateAll()
-                if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                    lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
+            widgetUpdateMutex.withLock {
+                try {
+                    val snapshot = usageStateRepository.observeSnapshot().value
+                    widgetUpdater.updateAll()
+                    if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                        lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("Force widget update failed, hash not updated", e)
+                    lastSnapshotHash.value = null
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("Force widget update failed, hash not updated", e)
-                lastSnapshotHash.value = null
-            } finally {
-                widgetUpdateMutex.unlock()
             }
         }
 

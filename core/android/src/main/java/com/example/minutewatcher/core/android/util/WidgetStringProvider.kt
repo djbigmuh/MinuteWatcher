@@ -11,19 +11,25 @@ import javax.inject.Singleton
  * Used to decouple ViewModel from Android Context.
  */
 interface WidgetStringProvider {
-    fun getString(@StringRes resId: Int, vararg formatArgs: Any): String
+    fun getString(
+        @StringRes resId: Int,
+        vararg formatArgs: Any,
+    ): String
+
     fun getShortOperatorName(operatorName: String): String
 }
 
 @Singleton
-class WidgetStringProviderImpl @Inject constructor(
-    @ApplicationContext private val context: Context
-) : WidgetStringProvider {
-    override fun getString(resId: Int, vararg formatArgs: Any): String {
-        return context.getString(resId, *formatArgs)
-    }
+class WidgetStringProviderImpl
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : WidgetStringProvider {
+        override fun getString(
+            @StringRes resId: Int,
+            vararg formatArgs: Any,
+        ): String = context.getString(resId, *formatArgs)
 
-    override fun getShortOperatorName(operatorName: String): String {
-        return SimUtils.getShortOperatorName(context, operatorName)
+        override fun getShortOperatorName(operatorName: String): String =
+            SimUtils.getShortOperatorName(context, operatorName)
     }
-}

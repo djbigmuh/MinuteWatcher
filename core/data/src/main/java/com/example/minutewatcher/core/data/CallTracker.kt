@@ -55,16 +55,17 @@ class CallTracker
 
         private val callMutex = Mutex()
 
-        private val callEndResolver = CallEndResolver(
-            callSessionRepository = callSessionRepository,
-            permissionManager = permissionManager,
-            telephonyManager = telephonyManager,
-            timeProvider = timeProvider,
-            dataChangeNotifier = dataChangeNotifier,
-            endCall = { subId, notify -> endCall(subId, notify) },
-            clearStaleSession = { subId -> clearStaleSession(subId) },
-            incrementInaccurateAttributions = { incrementInaccurateAttributions() }
-        )
+        private val callEndResolver =
+            CallEndResolver(
+                callSessionRepository = callSessionRepository,
+                permissionManager = permissionManager,
+                telephonyManager = telephonyManager,
+                timeProvider = timeProvider,
+                dataChangeNotifier = dataChangeNotifier,
+                endCall = { subId, notify -> endCall(subId, notify) },
+                clearStaleSession = { subId -> clearStaleSession(subId) },
+                incrementInaccurateAttributions = { incrementInaccurateAttributions() },
+            )
 
         override fun recover() {
             scope.launch {
@@ -492,7 +493,11 @@ class CallTracker
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 return true
             }
-            val durationMinutes = ((durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) / Constants.SECONDS_PER_MINUTE).toInt()
+            val durationMinutes =
+                (
+                    (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
+                        Constants.SECONDS_PER_MINUTE
+                ).toInt()
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 
             if (targetIdentity == null) {

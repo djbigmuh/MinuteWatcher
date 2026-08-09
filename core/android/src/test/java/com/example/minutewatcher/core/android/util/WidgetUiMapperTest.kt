@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.android.util
 
-import android.content.Context
 import android.graphics.Color
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -13,17 +12,25 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import com.example.minutewatcher.core.model.WidgetStrings
+import com.example.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class WidgetUiMapperTest {
-    private val context: Context = RuntimeEnvironment.getApplication()
+    private val widgetStrings =
+        WidgetStrings(
+            usedText = "Used",
+            minutesAbbr = "min.",
+            limitText = "Limit",
+            gbAbbr = "GB",
+            fractionFormat = "/%1\$s",
+        )
 
     @Test
     fun testSnapshotToUiState_Basic() {
@@ -87,7 +94,13 @@ class WidgetUiMapperTest {
                     ),
             )
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
 
         assertEquals(1, uiState.layoutMode)
         assertEquals(1, uiState.simUiStates.size)
@@ -108,7 +121,13 @@ class WidgetUiMapperTest {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
         val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, emptyMap())
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
 
         assertTrue(uiState.simUiStates.isEmpty())
     }
@@ -162,7 +181,13 @@ class WidgetUiMapperTest {
                 mapOf(0 to SimSettingsState(true, true, true, true, false, false, false)),
             )
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
         assertEquals("150", uiState.simUiStates[0].minutesText)
     }
 
@@ -192,7 +217,13 @@ class WidgetUiMapperTest {
                 simStates = emptyMap(),
             )
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
         val sim0 = uiState.simUiStates[0]
 
         assertEquals(Color.BLACK, sim0.textColor)
@@ -260,7 +291,13 @@ class WidgetUiMapperTest {
                     ),
             )
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
         val sim0 = uiState.simUiStates[0]
 
         // Should be hidden because limit and used are 0
@@ -294,11 +331,23 @@ class WidgetUiMapperTest {
                 simStates = emptyMap(),
             )
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
         assertTrue("useSystemColors should be true for transparency > 80", uiState.useSystemColors)
 
         val settingsOpaque = settings.copy(transparency = 80)
-        val uiStateOpaque = WidgetUiMapper.mapFromSnapshot(context, snapshot, settingsOpaque)
+        val uiStateOpaque =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settingsOpaque,
+                operatorNames = emptyMap(),
+            )
         assertFalse("useSystemColors should be false for transparency <= 80", uiStateOpaque.useSystemColors)
     }
 
@@ -322,7 +371,13 @@ class WidgetUiMapperTest {
                 simStates = emptyMap(),
             )
 
-        val uiState = WidgetUiMapper.mapFromSnapshot(context, snapshot, settings)
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
         assertEquals(WidgetLayoutMode.SIMPLE, WidgetLayoutMode.fromValue(uiState.layoutMode))
     }
 }

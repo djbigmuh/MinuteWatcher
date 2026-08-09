@@ -627,7 +627,13 @@ class CallTrackerTest {
     fun `onCallEnded with unknown subId and call tracking disabled does NOT clear other sessions`() =
         runTest(testDispatcher) {
             // Arrange: Call tracking disabled
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
+            whenever(
+                appSettingsRepository.getAppSettings(),
+            ).thenReturn(
+                flowOf(
+                    AppSettings(callTrackingEnabled = false),
+                ),
+            )
 
             // Multiple active calls
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))

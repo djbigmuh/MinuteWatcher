@@ -137,21 +137,22 @@ class SimUsageRepositoryImpl
             identity: String,
             autoResetDay: Int,
             nowMillis: Long,
-        ): Boolean = resetMutex.withLock {
-            val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
+        ): Boolean =
+            resetMutex.withLock {
+                val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
 
-            var actuallyReset = false
-            dataStore.edit { prefs ->
-                val innerLastResetDate =
-                    prefs[SimSettingsKeys.lastResetDateKey(identity)]
-                        ?: Constants.Data.EMPTY_TIMESTAMP
-                if (innerLastResetDate < periodStart) {
-                    prefs.applyResetWithRollover(identity, nowMillis)
-                    actuallyReset = true
+                var actuallyReset = false
+                dataStore.edit { prefs ->
+                    val innerLastResetDate =
+                        prefs[SimSettingsKeys.lastResetDateKey(identity)]
+                            ?: Constants.Data.EMPTY_TIMESTAMP
+                    if (innerLastResetDate < periodStart) {
+                        prefs.applyResetWithRollover(identity, nowMillis)
+                        actuallyReset = true
+                    }
                 }
+                actuallyReset
             }
-            actuallyReset
-        }
 
         private fun MutablePreferences.applyResetWithRollover(
             identity: String,
