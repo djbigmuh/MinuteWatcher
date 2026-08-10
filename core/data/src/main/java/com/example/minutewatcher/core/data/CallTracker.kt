@@ -121,7 +121,7 @@ class CallTracker
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            if (_status.value !is TrackingStatus.Error && !justStarted) {
+                            if ((_status.value !is TrackingStatus.Error) && !justStarted) {
                                 refreshStatus()
                             }
                         } catch (e: Exception) {
@@ -163,7 +163,7 @@ class CallTracker
                     withTimeoutOrNull(timeoutMs.milliseconds) {
                         reader().first()
                     }
-                if (result != null) return Result.success(result)
+                result?.let { return Result.success(it) }
                 if (attempt < attempts) {
                     AppLogger.d("readWithRetry: attempt $attempt timed out, retrying in ${currentDelay}ms")
                     delay(currentDelay.milliseconds)
@@ -360,7 +360,11 @@ class CallTracker
                             "Force clearing session.",
                     )
                     clearSession(subId)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Attribution failed for subId $subId",
+                        )
                     return
                 }
 
@@ -548,10 +552,11 @@ class CallTracker
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 return true
             }
-            val durationMinutes = (
-                (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
-                    Constants.SECONDS_PER_MINUTE
-            ).toInt()
+            val durationMinutes =
+                (
+                    (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
+                        Constants.SECONDS_PER_MINUTE
+                ).toInt()
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 
             if (targetIdentity == null) {

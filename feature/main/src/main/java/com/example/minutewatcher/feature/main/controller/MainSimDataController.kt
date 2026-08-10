@@ -148,13 +148,21 @@ class MainSimDataController
             }
         }
 
-        fun retryAppSearch() = trackingRecoveryController.retryAppSearch()
+        fun retryAppSearch() {
+            scope.launch { trackingRecoveryController.retryAppSearch() }
+        }
 
-        fun retryCalls() = trackingRecoveryController.retryCalls()
+        fun retryCalls() {
+            scope.launch { trackingRecoveryController.retryCalls() }
+        }
 
-        fun retryShortcuts() = trackingRecoveryController.retryShortcuts()
+        fun retryShortcuts() {
+            scope.launch { trackingRecoveryController.retryShortcuts() }
+        }
 
-        fun retryTraffic(onRefresh: suspend () -> Unit) = trackingRecoveryController.retryTraffic(scope, onRefresh)
+        fun retryTraffic(onRefresh: suspend () -> Unit) {
+            scope.launch { trackingRecoveryController.retryTraffic(onRefresh) }
+        }
 
         fun notifyDataChanged(
             updateWidget: Boolean = true,

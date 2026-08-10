@@ -120,8 +120,8 @@ class WidgetSettingsRepository
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
         }
 
-        private fun getFallbackWidgetSettings(settings: AppSettings): WidgetSettingsState {
-            return WidgetSettingsState(
+        private fun getFallbackWidgetSettings(settings: AppSettings): WidgetSettingsState =
+            WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,
                 simArrangement = settings.widgetSimArrangement,
                 transparency = settings.widgetTransparency,
@@ -134,5 +134,4 @@ class WidgetSettingsRepository
                 widgetLimitExceeded = settings.widgetLimitExceeded,
                 settingsLoadFailed = true,
             )
-        }
     }

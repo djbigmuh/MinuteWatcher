@@ -766,6 +766,6 @@ class TrafficTrackerTest {
             autoReset = true,
             autoResetDay = 1,
             lastResetDate = 0L,
-            rolloverEnabled = false
+            rolloverEnabled = false,
         )
 }

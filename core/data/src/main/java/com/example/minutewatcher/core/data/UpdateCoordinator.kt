@@ -88,8 +88,6 @@ class UpdateCoordinator
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
-            // Сбрасываем счетчик ошибок при любом успешном получении данных для самовосстановления.
-            observationRetryCount = 0
             val now = timeProvider.now()
             if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                 retryAttempt = 0
@@ -111,6 +109,9 @@ class UpdateCoordinator
                 widgetUpdateMutex.withLock {
                     widgetUpdater.updateAll()
                 }
+                // Сбрасываем счетчик ошибок только после успешного обновления.
+                // Это позволяет системе восстанавливаться после временных сбоев.
+                observationRetryCount = 0
             }
         }
 

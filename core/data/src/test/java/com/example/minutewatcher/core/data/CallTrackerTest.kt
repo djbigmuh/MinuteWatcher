@@ -45,7 +45,12 @@ class CallTrackerTest {
     private val permissionManager: PermissionManager = mock()
     private val telephonyManager: TelephonyManager = mock()
 
-    private val timeProvider = FixedTimeProvider(currentTime = 500000000L, currentRealtime = 500000000L)
+    private val timeProvider =
+        FixedTimeProvider(
+            currentTime = 500000000L,
+            currentRealtime = 500000000L,
+            currentUptime = 500000000L,
+        )
 
     private val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
 
@@ -65,7 +70,7 @@ class CallTrackerTest {
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
     }
 
-    private fun createTracker(scope: kotlinx.coroutines.CoroutineScope) =
+    private fun createTracker() =
         CallTracker(
             simIdentityRepository,
             simUsageRepository,
@@ -74,7 +79,6 @@ class CallTrackerTest {
             dataChangeNotifier,
             permissionManager,
             telephonyManager,
-            scope,
             timeProvider,
         )
 
@@ -82,13 +86,18 @@ class CallTrackerTest {
         whenever(simIdentityRepository.getIdentity(0)).thenReturn("id_0")
         whenever(simIdentityRepository.getIdentity(1)).thenReturn("id_1")
         whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+
+        val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+        whenever(mockSubInfo.subscriptionId).thenReturn(1)
+        whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
     }
 
     @Test
     fun `test call start saves state for specific subId`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
@@ -99,7 +108,7 @@ class CallTrackerTest {
     fun `test call end with same subId clears state`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
@@ -115,7 +124,7 @@ class CallTrackerTest {
     fun `test dual SIM concurrent call tracking`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Start call on subId 1
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
@@ -131,7 +140,7 @@ class CallTrackerTest {
     fun `onBoot clears all call sessions`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             callTracker.onBoot()
             advanceUntilIdle()
 
@@ -142,7 +151,7 @@ class CallTrackerTest {
     fun `onCallEnded with unknown subId and single active call attributes correctly`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             timeProvider.setTime(500000000L)
             val now = timeProvider.now()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
@@ -161,7 +170,7 @@ class CallTrackerTest {
     fun `onCallEnded with unknown subId and multiple calls uses default voice attribution`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
@@ -186,7 +195,7 @@ class CallTrackerTest {
     fun `onCallEnded with unknown subId and global IDLE cleans up all`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
@@ -211,7 +220,7 @@ class CallTrackerTest {
     fun `onCallStarted clears stale session if boot time is invalid`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: saved boot time is in the future relative to current
             timeProvider.setRealtime(5000L)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
@@ -230,7 +239,7 @@ class CallTrackerTest {
     fun `handleCallStartInternal sets error status on DataStore timeout`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: Flow that never emits triggers timeout in readWithRetry
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
 
@@ -251,7 +260,7 @@ class CallTrackerTest {
     fun `handleCallStartInternal sets error status on DataStore IOException`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange
             whenever(callSessionRepository.getCallStartTime(any()))
                 .thenReturn(
@@ -274,7 +283,7 @@ class CallTrackerTest {
     fun `onCallStarted sets permission missing status on SecurityException`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenThrow(SecurityException())
 
             callTracker.onCallStarted(-1)
@@ -288,7 +297,7 @@ class CallTrackerTest {
     fun `onCallEnded sets permission missing status on SecurityException`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             whenever(telephonyManager.getCallStateForSubscription()).thenThrow(SecurityException())
 
@@ -303,7 +312,7 @@ class CallTrackerTest {
     fun `checkPermissions clears Error status when permission is restored`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // 1. Устанавливаем статус ошибки из-за отсутствия разрешения
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             callTracker.onCallStarted(1)
@@ -326,7 +335,7 @@ class CallTrackerTest {
     fun `processCallDuration sets active status on success`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             val startTime = now - 1000L
             val bootTime = 500L
@@ -350,7 +359,7 @@ class CallTrackerTest {
     fun `test recover updates status from repository`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
 
@@ -377,7 +386,7 @@ class CallTrackerTest {
     fun `attribution failure keeps error status`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: Force attribution failure in processCallDuration
             val now = timeProvider.now()
             val startTime = now - 1000L
@@ -408,7 +417,7 @@ class CallTrackerTest {
     fun `recover clears error status`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(now - 1000L))
@@ -441,7 +450,7 @@ class CallTrackerTest {
             whenever(
                 appSettingsRepository.getAppSettings(),
             ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
 
             val now = timeProvider.now()
             val startTime = now - 1000L
@@ -467,7 +476,7 @@ class CallTrackerTest {
     fun `stale boot time does not increment minutes`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: saved boot time is in the future relative to current (impossible session)
             val now = timeProvider.now()
             val startTime = now - 1000L
@@ -491,7 +500,7 @@ class CallTrackerTest {
     fun `call duration excludes deep sleep`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             val currentRealtime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
@@ -516,7 +525,7 @@ class CallTrackerTest {
     fun `call tracking defaults to enabled on settings timeout`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: flow that never emits triggers firstWithTimeout to return null (on real timeout)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
 
@@ -532,7 +541,7 @@ class CallTrackerTest {
     fun `stale session cleanup does not increment minutes`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: Two active sessions, one is stale (> 12h)
             val staleSubId = 1
             val activeSubId = 2
@@ -578,14 +587,14 @@ class CallTrackerTest {
     fun `processCallDuration returns false on negative duration`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             val now = timeProvider.now()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(2000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(now + 2000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
-            // currentUptime = 1000L (via advance)
+            // currentUptime = now + 1000L (via advance)
             timeProvider.advance(1000L)
             // currentRealtime = 501000L > savedBootTime = 100L -> valid
 
@@ -599,7 +608,7 @@ class CallTrackerTest {
     fun `handleCallStartInternal timeout keeps Error status after onCallStarted even if active calls exist`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: flow that never emits causes timeout in readWithRetry
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
             // Simulate that there are active calls in the repository
@@ -620,7 +629,7 @@ class CallTrackerTest {
     fun `loadCallSessionData handle timeout with clearSession failure keeps original cause`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: Trigger timeout
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(MutableSharedFlow())
 
@@ -648,7 +657,7 @@ class CallTrackerTest {
     fun `fallbackAttribution returns null when all reads time out`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: Two active calls
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             // No default voice subId
@@ -675,7 +684,7 @@ class CallTrackerTest {
     fun `onCallEnded with unknown subId and call tracking disabled does NOT clear other sessions`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange: Call tracking disabled
             whenever(
                 appSettingsRepository.getAppSettings(),
@@ -700,7 +709,7 @@ class CallTrackerTest {
     fun `endCall preserves session on write failure`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange
             val subId = 1
             val identity = "id_1"
@@ -737,7 +746,7 @@ class CallTrackerTest {
     fun `resolveUnknownSubIdEnd handles permission revocation gracefully`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Setup: Active call exists
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
 
@@ -761,7 +770,7 @@ class CallTrackerTest {
     fun `endCall clears extremely long session even if attribution fails`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             // Arrange
             val subId = 1
             val now = timeProvider.now()

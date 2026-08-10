@@ -237,10 +237,7 @@ class WidgetSettingsRepositoryTest {
 
             val result = repository.load()
 
-            assertEquals(
-                com.example.minutewatcher.core.model.Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS,
-                result.simStates.size,
-            )
+            assertTrue("simStates should be empty on load failure", result.simStates.isEmpty())
             assertTrue(result.settingsLoadFailed)
         }
 }

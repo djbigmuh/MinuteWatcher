@@ -111,8 +111,7 @@ class SemanticSearchManager
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
                         return false
                     }
-                }
- catch (e: CancellationException) {
+                } catch (e: CancellationException) {
                     newSession?.close()
                     throw e
                 } catch (e: Exception) {

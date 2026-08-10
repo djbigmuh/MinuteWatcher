@@ -56,28 +56,28 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
-        private val bannerExtraData:
-            StateFlow<Triple<Boolean, Boolean, AppSettings>> =
+        private val bannerExtraData: StateFlow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
                 _isPhonePermissionPermanentlyDenied,
                 _isNotificationPermissionPermanentlyDenied,
-                appSettingsRepository.observeAppSettings()
+                appSettingsRepository
+                    .observeAppSettings()
                     .catch { e ->
                         AppLogger.e("Failed to observe AppSettings in MainBannerController", e)
                         emit(AppSettings())
                     },
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
-            }
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = Triple(
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue =
+                    Triple(
                         false,
                         false,
                         AppSettings(),
                     ),
-                )
+            )
 
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
@@ -96,18 +96,12 @@ class MainBannerController
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
                 )
-            }
-                .retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) { e ->
-                    AppLogger.e("Retrying banner state computation due to error", e)
-                    delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
-                    true
-                }
+            }.retry(Constants.Flow.BANNER_RETRY_ATTEMPTS)
                 .catch { e ->
                     // Вызывается, когда .retry() исчерпал лимит попыток и пробросил исключение.
                     AppLogger.e("CRITICAL: Failed to compute banner state after all retry attempts", e)
                     emit(TrackingBannerState())
-                }
-                .stateIn(
+                }.stateIn(
                     scope = scope,
                     started = SharingStarted.Eagerly,
                     initialValue = TrackingBannerState(),
@@ -118,8 +112,7 @@ class MainBannerController
                 .retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) {
                     delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
                     true
-                }
-                .catch { emit(false) }
+                }.catch { emit(false) }
 
         companion object
     }
