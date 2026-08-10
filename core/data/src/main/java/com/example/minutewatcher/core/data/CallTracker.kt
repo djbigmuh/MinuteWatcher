@@ -368,12 +368,9 @@ class CallTracker
                 if (success) {
                     clearSession(subId)
                 } else {
-                    AppLogger.e("Call duration write failed for subId $subId (duration: $durationSeconds s), session preserved")
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Call duration write failed, session preserved",
-                        )
+                    AppLogger.e(
+                        "Call duration write failed for subId $subId (duration: $durationSeconds s), session preserved",
+                    )
                 }
             }
         }
@@ -393,31 +390,12 @@ class CallTracker
         )
 
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
-            val startTimeResult =
-                readWithRetry(
-                    attempts = 2,
-                    timeoutMs = 5000,
-                    retryDelayMs = 1000,
-                ) { callSessionRepository.getCallStartTime(subId) }
-            val savedBootTimeResult =
-                readWithRetry(
-                    attempts = 2,
-                    timeoutMs = 5000,
-                    retryDelayMs = 1000,
-                ) { callSessionRepository.getBootTime(subId) }
-            val savedUptimeResult =
-                readWithRetry(
-                    attempts = 2,
-                    timeoutMs = 5000,
-                    retryDelayMs = 1000,
-                ) { callSessionRepository.getUptime(subId) }
+            val startTimeResult = readSessionField(subId) { callSessionRepository.getCallStartTime(it) }
+            val savedBootTimeResult = readSessionField(subId) { callSessionRepository.getBootTime(it) }
+            val savedUptimeResult = readSessionField(subId) { callSessionRepository.getUptime(it) }
             val savedIdentityBoxResult =
-                readWithRetry(
-                    attempts = 2,
-                    timeoutMs = 5000,
-                    retryDelayMs = 1000,
-                ) {
-                    callSessionRepository.getCallIdentity(subId).map { Box(it) }
+                readSessionField(subId) {
+                    callSessionRepository.getCallIdentity(it).map { id -> Box(id) }
                 }
 
             val isAnyLoadFailed =
@@ -458,6 +436,16 @@ class CallTracker
                 savedIdentity = savedIdentityBoxResult.getOrThrow().value,
             )
         }
+
+        private suspend fun <T : Any> readSessionField(
+            subId: Int,
+            block: (Int) -> kotlinx.coroutines.flow.Flow<T>,
+        ): Result<T> =
+            readWithRetry(
+                attempts = 2,
+                timeoutMs = 5000,
+                retryDelayMs = 1000,
+            ) { block(subId) }
 
         private suspend fun validateSession(
             subId: Int,
@@ -567,7 +555,11 @@ class CallTracker
                             "DataStore write failed.",
                         e,
                     )
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Write failed")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Call duration write failed, session preserved",
+                        )
                     false
                 }
             } else {
@@ -604,6 +596,8 @@ internal class CallEndResolver(
             try {
                 callSessionRepository.getActiveCallSubIds()
             } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to read active call sessions on unknown subId end", e)

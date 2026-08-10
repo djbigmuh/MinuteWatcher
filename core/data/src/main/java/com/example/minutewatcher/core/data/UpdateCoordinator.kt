@@ -169,7 +169,6 @@ class UpdateCoordinator
             private const val INITIAL_RETRY_DELAY_SECONDS = 5L
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
-            private const val MAX_RETRY_ATTEMPTS = 10L
             private const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
         }
     }

@@ -270,39 +270,39 @@ internal class AutoResetScheduler(
     private val autoResetUseCase: AutoResetUseCase,
 ) {
     fun setup() {
-        if (!savedStateHandle.contains(KEY_LAST_AUTO_RESET_CHECK)) {
-            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = 0L
-        }
         if (!savedStateHandle.contains(KEY_AUTO_RESET_FAIL_COUNT)) {
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
         }
     }
 
     suspend fun checkOnStart() {
-        val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
+        val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
 
-        // Используем SystemClock.elapsedRealtime() для измерения интервалов между проверками.
-        // Это обеспечивает монотонность и независимость от ручного изменения системных часов
-        // или NTP-синхронизации, в отличие от System.currentTimeMillis().
         val now = SystemClock.elapsedRealtime()
-        val elapsed = now - lastResetCheck
 
-        // Если elapsed < 0, это означает, что устройство было перезагружено и таймер сбросился.
-        // Перезагрузка является сигналом для обязательной проверки автосброса.
-        val isReboot = elapsed < 0
+        val isInitialOrReboot: Boolean
+        val elapsed: Long
+
+        if (lastResetCheck == null) {
+            isInitialOrReboot = true
+            elapsed = 0
+        } else {
+            elapsed = now - lastResetCheck
+            isInitialOrReboot = elapsed < 0
+        }
+
         val effectiveFailCount =
-            if (isReboot || elapsed > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+            if (isInitialOrReboot || elapsed > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
 
         try {
-            if (isReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
+            if (isInitialOrReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
                 if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                     autoResetUseCase.performAutoReset(shouldNotify = false)
                     savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
                     savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
                 } else {
                     AppLogger.e("Auto-reset skipped after $effectiveFailCount consecutive failures")
-                    // Обновляем время, чтобы не спамить на каждом запуске
                     savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
                 }
             }

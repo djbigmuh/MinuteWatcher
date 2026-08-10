@@ -173,6 +173,7 @@ class SettingsRepositoryImplTest {
                 launch {
                     repository.getAppSettings().take(2).toList(settingsList)
                 }
+            testScheduler.runCurrent()
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
 

@@ -593,7 +593,10 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             assertTrue(tracker.status.value is TrackingStatus.Error)
-            assertEquals("Identity read timeout in TrafficTracker", (tracker.status.value as TrackingStatus.Error).message)
+            assertEquals(
+                "Identity read timeout in TrafficTracker",
+                (tracker.status.value as TrackingStatus.Error).message,
+            )
 
             // 3. Third run: observeActiveSims succeeds, same SIM
             val activeSims =
@@ -732,7 +735,6 @@ class TrafficTrackerTest {
             // Assert
             assertTrue("baselineNeedsRetry should NOT be cleared on timeout", map.containsKey(identity))
         }
-
 
     @Test
     fun `resetBaseline initializes inMemoryLastDataSubId and avoids subsequent DataStore read`() =

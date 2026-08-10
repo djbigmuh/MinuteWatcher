@@ -511,7 +511,8 @@ class UsageCheckWorkerTest {
 
             // Mock timeout with a valid (stale) snapshot
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult.Timeout(snapshot),
+                com.example.minutewatcher.core.domain.RefreshResult
+                    .Timeout(snapshot),
             )
 
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
@@ -532,7 +533,8 @@ class UsageCheckWorkerTest {
         runTest(testDispatcher) {
             // Mock timeout with empty snapshot (timestamp = 0)
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult.Timeout(createEmptySnapshot()),
+                com.example.minutewatcher.core.domain.RefreshResult
+                    .Timeout(createEmptySnapshot()),
             )
 
             val result = worker.doWork()
@@ -540,6 +542,7 @@ class UsageCheckWorkerTest {
             assertEquals(ListenableWorker.Result.retry(), result)
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
+
     @Suppress("SameParameterValue")
     private fun createUtcMillis(
         year: Int,

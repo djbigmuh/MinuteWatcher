@@ -59,7 +59,10 @@ class MainBannerController
                 _isNotificationPermissionPermanentlyDenied,
                 appSettingsRepository.observeAppSettings().catch {
                     AppLogger.e("Failed to observe AppSettings in MainBannerController", it)
-                    emit(com.example.minutewatcher.core.model.AppSettings())
+                    emit(
+                        com.example.minutewatcher.core.model
+                            .AppSettings(),
+                    )
                 },
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
@@ -78,9 +81,9 @@ class MainBannerController
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
-                permissionRepository.phoneStatePermissionGranted.catch { emit(false) },
-                permissionRepository.usageStatsPermissionGranted.catch { emit(false) },
-                permissionRepository.notificationPermissionGranted.catch { emit(false) },
+                permissionRepository.phoneStatePermissionGranted,
+                permissionRepository.usageStatsPermissionGranted,
+                permissionRepository.notificationPermissionGranted,
                 bannerExtraData,
             ) { status, phone, usage, notif, extra ->
                 TrackingBannerMapper.mapToBannerState(

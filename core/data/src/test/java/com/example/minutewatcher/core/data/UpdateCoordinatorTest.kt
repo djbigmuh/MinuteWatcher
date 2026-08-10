@@ -261,6 +261,7 @@ class UpdateCoordinatorTest {
                 widgetUpdater,
                 usageStateRepository,
                 backgroundScope,
+                timeProvider,
             )
 
             // 1. Emit snapshot s1. First attempt will fail and trigger retry loop.
@@ -294,6 +295,7 @@ class UpdateCoordinatorTest {
                 widgetUpdater,
                 usageStateRepository,
                 backgroundScope,
+                timeProvider,
             )
             testScheduler.advanceUntilIdle()
 
@@ -495,7 +497,6 @@ class UpdateCoordinatorTest {
             // Total updateAll calls: 15 (fail) + 1 (success) = 16
             verify(widgetUpdater, times(16)).updateAll()
         }
-
 
     private fun createEmptySnapshot() =
         GlobalSnapshot(

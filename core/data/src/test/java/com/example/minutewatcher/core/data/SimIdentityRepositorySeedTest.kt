@@ -164,7 +164,9 @@ class SimIdentityRepositorySeedTest {
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
+
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
+
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
                         delay(60.seconds)
                         return "generated"
