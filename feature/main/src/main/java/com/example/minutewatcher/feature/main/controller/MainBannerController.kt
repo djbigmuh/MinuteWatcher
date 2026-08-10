@@ -81,9 +81,21 @@ class MainBannerController
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
-                permissionRepository.phoneStatePermissionGranted,
-                permissionRepository.usageStatsPermissionGranted,
-                permissionRepository.notificationPermissionGranted,
+                permissionRepository.phoneStatePermissionGranted
+                    .retry(MAX_BANNER_RETRY_ATTEMPTS) {
+                        delay(BANNER_RETRY_DELAY_MS)
+                        true
+                    }.catch { emit(false) },
+                permissionRepository.usageStatsPermissionGranted
+                    .retry(MAX_BANNER_RETRY_ATTEMPTS) {
+                        delay(BANNER_RETRY_DELAY_MS)
+                        true
+                    }.catch { emit(false) },
+                permissionRepository.notificationPermissionGranted
+                    .retry(MAX_BANNER_RETRY_ATTEMPTS) {
+                        delay(BANNER_RETRY_DELAY_MS)
+                        true
+                    }.catch { emit(false) },
                 bannerExtraData,
             ) { status, phone, usage, notif, extra ->
                 TrackingBannerMapper.mapToBannerState(

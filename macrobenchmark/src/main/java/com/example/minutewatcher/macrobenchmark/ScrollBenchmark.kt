@@ -29,7 +29,7 @@ class ScrollBenchmark {
             iterations = ITERATIONS,
             setupBlock = {
                 grantBenchmarkPermissions()
-                populateBenchmarkData(10)
+                populateBenchmarkData(SIM_COUNT)
             },
         ) {
             startActivityAndWait()
@@ -44,7 +44,7 @@ class ScrollBenchmark {
             val list = device.wait(Until.findObject(By.scrollable(true)), WAIT_TIMEOUT)
             assertNotNull("Scrollable list not found. Ensure more than 3-4 items are displayed.", list)
 
-            list.setGestureMargin(device.displayWidth / 5)
+            list.setGestureMargin(device.displayWidth / GESTURE_MARGIN_DIVISOR)
 
             list.fling(Direction.DOWN)
             device.waitForIdle()
@@ -53,6 +53,8 @@ class ScrollBenchmark {
         }
 
     companion object {
+        private const val SIM_COUNT = 10
+        private const val GESTURE_MARGIN_DIVISOR = 5
         private const val ITERATIONS = 5
         private const val WAIT_TIMEOUT = 5000L
     }

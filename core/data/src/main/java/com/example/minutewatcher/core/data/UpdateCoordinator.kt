@@ -8,12 +8,15 @@ import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -48,6 +51,7 @@ class UpdateCoordinator
         private val widgetUpdateMutex = Mutex()
 
         private var retryAttempt = 0L
+        private var observationRetryCount = 0L
         private var lastSuccessTime = 0L
 
         init {
@@ -56,7 +60,11 @@ class UpdateCoordinator
 
         @OptIn(FlowPreview::class)
         private fun startObservation() {
-            scope.launch {
+            val handler =
+                CoroutineExceptionHandler { _, cause ->
+                    AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+                }
+            scope.launch(handler) {
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
@@ -65,54 +73,76 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
-                        val now = timeProvider.now()
-                        if (now - lastSuccessTime > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                            retryAttempt = 0
-                        }
-                        lastSuccessTime = now
-
-                        val newHash = SnapshotUtils.calculateContentHash(snapshot)
-
-                        if (snapshot.suppressWidgetUpdate) {
-                            lastSnapshotHash.value = newHash
-                            return@onEach
-                        }
-
-                        if (newHash != lastSnapshotHash.value) {
-                            lastSnapshotHash.value = newHash
-                            // Обновление виджета при отсутствии активных SIM выполняется
-                            // намеренно — виджет должен корректно отобразить состояние
-                            // "No SIM" или "No Data".
-                            widgetUpdateMutex.withLock {
-                                widgetUpdater.updateAll()
-                            }
-                        }
+                        processSnapshot(snapshot)
                     }.retryWhen { cause, _ ->
-                        if (cause is CancellationException) throw cause
-
-                        val now = timeProvider.now()
-                        if (now - lastSuccessTime > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                            retryAttempt = 0
-                        }
-
-                        lastSnapshotHash.value = null
-                        val delaySeconds =
-                            minOf(
-                                INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
-                                MAX_RETRY_DELAY_SECONDS,
-                            )
-
-                        retryAttempt++
-
-                        AppLogger.e(
-                            "UpdateCoordinator: observation failed (attempt $retryAttempt), retry in ${delaySeconds}s",
-                            cause,
-                        )
-
-                        delay(delaySeconds.seconds)
-                        true
+                        handleObservationFailure(cause)
+                    }.catch { cause ->
+                        AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
                     }.collect {}
             }
+        }
+
+        private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+            val now = timeProvider.now()
+            if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                retryAttempt = 0
+            }
+            lastSuccessTime = now
+
+            val newHash = SnapshotUtils.calculateContentHash(snapshot)
+
+            if (snapshot.suppressWidgetUpdate) {
+                lastSnapshotHash.value = newHash
+                return
+            }
+
+            if (newHash != lastSnapshotHash.value) {
+                lastSnapshotHash.value = newHash
+                // Обновление виджета при отсутствии активных SIM выполняется
+                // намеренно — виджет должен корректно отобразить состояние
+                // "No SIM" или "No Data".
+                widgetUpdateMutex.withLock {
+                    widgetUpdater.updateAll()
+                }
+                observationRetryCount = 0
+            }
+        }
+
+        private suspend fun handleObservationFailure(cause: Throwable): Boolean {
+            if (cause is CancellationException) throw cause
+
+            observationRetryCount++
+            if (observationRetryCount > MAX_OBSERVATION_RETRIES) {
+                AppLogger.e(
+                    "UpdateCoordinator: observation stopped after $MAX_OBSERVATION_RETRIES " +
+                        "consecutive failures",
+                    cause,
+                )
+                return false
+            }
+
+            val now = timeProvider.now()
+            if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                retryAttempt = 0
+            }
+
+            lastSnapshotHash.value = null
+            val delaySeconds =
+                minOf(
+                    INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
+                    MAX_RETRY_DELAY_SECONDS,
+                )
+
+            retryAttempt++
+
+            AppLogger.e(
+                "UpdateCoordinator: observation failed (attempt $retryAttempt, " +
+                    "consecutive: $observationRetryCount), retry in ${delaySeconds}s",
+                cause,
+            )
+
+            delay(delaySeconds.seconds)
+            return true
         }
 
         /**
@@ -170,5 +200,6 @@ class UpdateCoordinator
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
             private const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
+            private const val MAX_OBSERVATION_RETRIES = 10L
         }
     }

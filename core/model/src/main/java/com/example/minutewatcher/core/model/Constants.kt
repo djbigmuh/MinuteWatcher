@@ -98,7 +98,9 @@ object Constants {
 
     const val MILLIS_PER_SECOND = 1000L
     const val SECONDS_PER_MINUTE = 60
-    const val MILLIS_PER_DAY = 24 * 60 * 60 * MILLIS_PER_SECOND
+    const val MILLIS_PER_MINUTE = SECONDS_PER_MINUTE * MILLIS_PER_SECOND
+    const val MILLIS_PER_HOUR = 60 * MILLIS_PER_MINUTE
+    const val MILLIS_PER_DAY = 24 * MILLIS_PER_HOUR
     const val BYTES_PER_MB = 1024L * 1024L
     const val BYTES_PER_GB = 1024L * 1024L * 1024L
     const val MB_PER_GB = 1024.0f

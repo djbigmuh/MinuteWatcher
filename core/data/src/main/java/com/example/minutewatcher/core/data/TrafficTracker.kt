@@ -56,6 +56,8 @@ class TrafficTracker
 
         private val simChangeMutex = Mutex()
 
+        private val trafficUpdateMutex = Mutex()
+
         private val inMemoryLastDataSubId = AtomicInteger(-1)
 
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
@@ -63,34 +65,91 @@ class TrafficTracker
         private val targetResolver = TrafficTargetResolver(permissionManager)
 
         suspend fun resetBaseline(identity: String) {
-            simChangeMutex.withLock {
+            trafficUpdateMutex.withLock {
+                simChangeMutex.withLock {
+                    try {
+                        if (!checkPermissions()) return@withLock
+
+                        val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return@withLock
+                        val statsResult = getCurrentMobileBytes(usage.lastResetDate)
+                        if (statsResult is StatsResult.Success) {
+                            val currentBytes = statsResult.bytes
+                            simUsageResetRepository.setLastTotalBytes(
+                                identity,
+                                currentBytes,
+                            )
+                            AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+
+                            syncLastDataSubIdIfNeeded(identity)
+
+                            baselineNeedsRetry.remove(identity)
+
+                            _status.value = TrackingStatus.Active
+                        } else {
+                            val message =
+                                if (statsResult is StatsResult.Error) {
+                                    AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
+                                    statsResult.exception.message
+                                } else {
+                                    "Stats unavailable"
+                                }
+                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+                        }
+                    } catch (e: SecurityException) {
+                        AppLogger.e("SecurityException in TrafficTracker", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Error in resetBaseline", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    }
+                }
+            }
+        }
+
+        @Suppress("ReturnCount")
+        suspend fun updateTrafficUsage() {
+            trafficUpdateMutex.withLock {
                 try {
-                    if (!checkPermissions()) return@withLock
+                    if (!checkPermissions()) return
 
-                    val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return@withLock
-                    val statsResult = getCurrentMobileBytes(usage.lastResetDate)
-                    if (statsResult is StatsResult.Success) {
-                        val currentBytes = statsResult.bytes
-                        simUsageResetRepository.setLastTotalBytes(
-                            identity,
-                            currentBytes,
-                        )
-                        AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                    val activeSims = getActiveSimsAndCleanup()
+                    if (activeSims == null) {
+                        AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Identity read timeout in TrafficTracker",
+                            )
+                        return
+                    }
 
-                        syncLastDataSubIdIfNeeded(identity)
+                    val target = targetResolver.resolve(activeSims)
+                    if (target == null) {
+                        AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
+                        _status.value = TrackingStatus.Idle
+                        return
+                    }
 
-                        baselineNeedsRetry.remove(identity)
+                    simChangeMutex.withLock {
+                        ensureInMemoryLastDataSubId()
+                        val savedLastDataSubId = inMemoryLastDataSubId.get()
+                        val isSimChanged =
+                            (savedLastDataSubId != -1) &&
+                                (target.dataSubId != -1) &&
+                                (savedLastDataSubId != target.dataSubId)
 
-                        _status.value = TrackingStatus.Active
-                    } else {
-                        val message =
-                            if (statsResult is StatsResult.Error) {
-                                AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
-                                statsResult.exception.message
-                            } else {
-                                "Stats unavailable"
-                            }
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+                        if (isSimChanged) {
+                            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                            val retryCount = baselineNeedsRetry.getOrDefault(targetIdentity, 0)
+                            handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, retryCount)
+                            handleSkipDelta(target, retryCount)
+                        } else {
+                            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                            baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+                            performTrafficUpdate(target, targetIdentity)
+                        }
                     }
                 } catch (e: SecurityException) {
                     AppLogger.e("SecurityException in TrafficTracker", e)
@@ -98,68 +157,14 @@ class TrafficTracker
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("Error in resetBaseline", e)
+                    AppLogger.e("Error updating traffic", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             }
         }
 
-        @Suppress("ReturnCount")
-        suspend fun updateTrafficUsage() {
-            try {
-                if (!checkPermissions()) return
-
-                val activeSims = getActiveSimsAndCleanup()
-                if (activeSims == null) {
-                    AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Identity read timeout in TrafficTracker",
-                        )
-                    return
-                }
-
-                val target = targetResolver.resolve(activeSims)
-                if (target == null) {
-                    AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
-                    _status.value = TrackingStatus.Idle
-                    return
-                }
-
-                simChangeMutex.withLock {
-                    ensureInMemoryLastDataSubId()
-                    val savedLastDataSubId = inMemoryLastDataSubId.get()
-                    val isSimChanged =
-                        (savedLastDataSubId != -1) &&
-                            (target.dataSubId != -1) &&
-                            (savedLastDataSubId != target.dataSubId)
-
-                    if (isSimChanged) {
-                        val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                        val retryCount = baselineNeedsRetry.getOrDefault(targetIdentity, 0)
-                        handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, retryCount)
-                        handleSkipDelta(target, retryCount)
-                    } else {
-                        val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                        baselineNeedsRetry.keys.removeIf { it != targetIdentity }
-                        performTrafficUpdate(target, targetIdentity)
-                    }
-                }
-            } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in TrafficTracker", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Error updating traffic", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            }
-        }
-
         private suspend fun getActiveSimsAndCleanup(): List<ActiveSimInfo>? {
-            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout()
-            if (activeSims == null) return null
+            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: return null
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
             baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
             return activeSims

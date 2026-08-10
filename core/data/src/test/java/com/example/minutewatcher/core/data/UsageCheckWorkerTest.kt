@@ -315,6 +315,62 @@ class UsageCheckWorkerTest {
         }
 
     @Test
+    fun `doWork sends notification when usage is high near the end of month`() =
+        runTest(testDispatcher) {
+            // Setup time: Oct 16
+            timeProvider.setTime(createUtcMillis(2027, 10, 16))
+            val identity = "sim_0"
+
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = timeProvider.now(),
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operator = "MTS",
+                                isActive = true,
+                                entities =
+                                    mapOf(
+                                        PackageType.MINUTES to
+                                            SemanticEntity(
+                                                id = "e1",
+                                                simSlot = 0,
+                                                operatorName = "MTS",
+                                                packageType = PackageType.MINUTES,
+                                                limit = 100,
+                                                used = 98,
+                                                remaining = 2,
+                                                unit = MeasurementUnit.MINUTES,
+                                                periodStart = 0,
+                                                periodEnd = 0,
+                                                lastUpdateTime = 0,
+                                                sourceType = DataSourceType.SYSTEM,
+                                            ),
+                                    ),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult
+                    .Success(snapshot),
+            )
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
+            whenever(
+                simUsageRepository.getSimUsage(identity),
+            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 98, minutesLimit = 100)))
+
+            worker.doWork()
+
+            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+        }
+
+    @Test
     fun `traffic critical notification uses critical level`() =
         runTest(testDispatcher) {
             val identity = "sim_0"
@@ -543,7 +599,6 @@ class UsageCheckWorkerTest {
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
-    @Suppress("SameParameterValue")
     private fun createUtcMillis(
         year: Int,
         month: Int,

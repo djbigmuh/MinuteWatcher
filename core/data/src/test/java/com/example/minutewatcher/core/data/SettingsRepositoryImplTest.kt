@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -26,14 +28,17 @@ class SettingsRepositoryImplTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
+    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
+
     private lateinit var dataStore: DataStore<Preferences>
 
     @Before
     fun setup() {
         dataStore =
             PreferenceDataStoreFactory.create(
-                produceFile = { tmpFolder.newFile("test_settings.preferences_pb") },
-            )
+                scope = testScope,
+            ) { tmpFolder.newFile("test_settings.preferences_pb") }
     }
 
     @Test
@@ -82,7 +87,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testDefaultValues() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             val settings = repository.getAppSettings().first()
 
             assertEquals(AppTheme.FOLLOW_SYSTEM, settings.theme)
@@ -96,7 +101,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_AtomicUpdate() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             repository.updateAppSettings { current ->
                 current.copy(
@@ -113,7 +118,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_PreservesOtherFields() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             dataStore.edit {
                 it[SettingsKeys.ONBOARDING_COMPLETED] = true
@@ -133,7 +138,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testUpdateAppSettings_SavesOnboardingCompleted() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
 
@@ -144,7 +149,7 @@ class SettingsRepositoryImplTest {
     @Test
     fun testConcurrentUpdates() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             val job1 =
                 launch {
@@ -166,14 +171,14 @@ class SettingsRepositoryImplTest {
     @Test
     fun testFlowEmitsUpdatedValue() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             val settingsList = mutableListOf<com.example.minutewatcher.core.model.AppSettings>()
 
             val job =
                 launch {
                     repository.getAppSettings().take(2).toList(settingsList)
                 }
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
 

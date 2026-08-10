@@ -1,9 +1,5 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
-  <CurrentIssues>
-    <ID>MagicNumber:BenchmarkExtensions.kt$33</ID>
-    <ID>MagicNumber:ScrollBenchmark.kt$ScrollBenchmark$10</ID>
-    <ID>MagicNumber:ScrollBenchmark.kt$ScrollBenchmark$5</ID>
-  </CurrentIssues>
+  <CurrentIssues/>
 </SmellBaseline>

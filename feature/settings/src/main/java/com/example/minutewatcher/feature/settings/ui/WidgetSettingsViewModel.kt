@@ -112,6 +112,7 @@ class WidgetSettingsViewModel
                     val success = saver.save(currentState)
                     onComplete(if (success) SaveResult.Success else SaveResult.Failed)
                 } catch (e: CancellationException) {
+                    onComplete(SaveResult.Failed)
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to save widget settings", e)

@@ -265,10 +265,65 @@ class SemanticSearchManagerTest {
             // Act: try indexing
             manager.indexSnapshot(snapshot)
 
-            // Assert: verify put was attempted but failed, and remove was NOT called
+            // Assert: verify put was attempted but failed, and remove WAS called now
+            // (due to new logic where we continue to removal even if put fails)
             val session = fakeWrapper.lastSession!!
-            assertTrue("putDocuments should have failed (no requests recorded)", session.putRequests.isEmpty())
-            assertTrue("removeByDocumentId should not have been called", session.removeRequests.isEmpty())
+            assertTrue(
+                "putDocuments should have failed (no successful requests recorded)",
+                session.putRequests.isEmpty(),
+            )
+            assertEquals("removeByDocumentId SHOULD have been called", 1, session.removeRequests.size)
+        }
+
+    @Test
+    fun `stale documents are removed even if putDocuments fails`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Initial indexing
+            manager.indexSnapshot(createSnapshotWithOneSim())
+            val session = fakeWrapper.lastSession!!
+
+            // 2. Setup failure for putDocuments
+            fakeWrapper.failAllPutDocuments = true
+
+            // 3. Emit empty snapshot (which will trigger removal of sim_0 docs)
+            // Wait, an empty snapshot results in `documents` being empty in performIndexUpdate.
+            // If `documents` is empty, `putDocuments` is not called.
+            // I need a snapshot that HAS some documents but also requires removal of others.
+
+            // Let's create a snapshot with SIM 1, while SIM 0 was previously indexed.
+            val snapshotWithSim1 =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            slot = 1,
+                            identity = "sim_1",
+                            operator = "B",
+                            isActive = true,
+                            entities =
+                                mapOf(
+                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50),
+                                ),
+                            autoResetDay = 1,
+                        ),
+                    ),
+                )
+
+            manager.indexSnapshot(snapshotWithSim1)
+
+            // 4. Assert: verify put was attempted but failed, and remove WAS called
+            // Total removeByDocumentId calls should be 2:
+            // 1st: initial index of SIM 0 (removes slot 1)
+            // 2nd: index of SIM 1 (removes slot 0)
+            assertEquals("Total removeByDocumentId calls should be 2", 2, session.removeRequests.size)
+
+            val lastRemove = session.removeRequests.last()
+            assertTrue("Should remove sim_0_minutes", lastRemove.ids.contains("sim_0_minutes"))
+            assertTrue("Should remove sim_0_data", lastRemove.ids.contains("sim_0_data"))
+
+            // Verify status is Error because put failed
+            assertTrue(manager.status.value is TrackingStatus.Error)
         }
 
     private fun createManager(scope: CoroutineScope) =

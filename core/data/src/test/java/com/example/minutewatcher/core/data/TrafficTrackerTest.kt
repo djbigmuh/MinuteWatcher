@@ -467,7 +467,7 @@ class TrafficTrackerTest {
             // Usage with lastResetDate = 0
             whenever(
                 simUsageRepository.getSimUsage("sim_0"),
-            ).thenReturn(flowOf(createSimUsage("sim_0", lastResetDate = 0L)))
+            ).thenReturn(flowOf(createSimUsage("sim_0")))
             whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(-1L))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(100L))
 
@@ -753,24 +753,21 @@ class TrafficTrackerTest {
             verify(callSessionRepository, never()).getLastDataSubId()
         }
 
-    @Suppress("SameParameterValue") // Helper for creating test data with defaults.
-    private fun createSimUsage(
-        id: String,
-        lastResetDate: Long = 0L,
-    ) = SimUsage(
-        identity = id,
-        slotIndex = 0,
-        subscriptionId = 1,
-        operator = "Test Operator",
-        minutesUsed = 0,
-        minutesLimit = 0,
-        trafficUsedMb = 0f,
-        trafficLimitMb = 0,
-        manualAdjustment = 0,
-        trafficAdjustmentGb = 0f,
-        autoReset = true,
-        autoResetDay = 1,
-        lastResetDate = lastResetDate,
-        rolloverEnabled = false,
-    )
+    private fun createSimUsage(id: String) =
+        SimUsage(
+            identity = id,
+            slotIndex = 0,
+            subscriptionId = 1,
+            operator = "Test Operator",
+            minutesUsed = 0,
+            minutesLimit = 0,
+            trafficUsedMb = 0f,
+            trafficLimitMb = 0,
+            manualAdjustment = 0,
+            trafficAdjustmentGb = 0f,
+            autoReset = true,
+            autoResetDay = 1,
+            lastResetDate = 0L,
+            rolloverEnabled = false,
+        )
 }

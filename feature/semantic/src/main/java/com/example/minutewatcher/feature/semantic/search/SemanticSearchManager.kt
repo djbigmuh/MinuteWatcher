@@ -214,9 +214,18 @@ class SemanticSearchManager
         private suspend fun performIndexUpdate(documents: List<UsageDocument>) {
             val currentIds = documents.asSequence().map { it.id }.toSet()
 
+            var putException: Exception? = null
+
             // Сначала добавляем/обновляем актуальные документы
             if (documents.isNotEmpty()) {
-                session?.putDocuments(appSearchWrapper.createPutRequest(documents))
+                try {
+                    session?.putDocuments(appSearchWrapper.createPutRequest(documents))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Partial failure during putDocuments, will proceed with removal", e)
+                    putException = e
+                }
             }
 
             // Затем удаляем устаревшие
@@ -233,6 +242,8 @@ class SemanticSearchManager
             if (staleIds.isNotEmpty()) {
                 session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
             }
+
+            putException?.let { throw it }
         }
 
         companion object {

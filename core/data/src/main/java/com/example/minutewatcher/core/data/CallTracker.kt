@@ -69,9 +69,11 @@ class CallTracker
 
         override fun recover() {
             scope.launch {
-                if (checkPermissions()) {
+                callMutex.withLock {
                     _status.value = TrackingStatus.Idle
-                    refreshStatus(force = true)
+                    if (checkPermissions()) {
+                        refreshStatus(force = true)
+                    }
                 }
             }
         }
@@ -89,9 +91,10 @@ class CallTracker
          */
         suspend fun onBoot() {
             callMutex.withLock {
+                val activeSessions = callSessionRepository.getActiveCallSubIds()
                 callSessionRepository.clearAllCallSessions()
                 _status.value = TrackingStatus.Idle
-                AppLogger.d("Cleared all stale call sessions on boot")
+                AppLogger.d("Cleared ${activeSessions.size} stale call sessions on boot")
             }
         }
 
@@ -306,9 +309,6 @@ class CallTracker
             if (error != null) {
                 _status.value = error
             } else if (_status.value is TrackingStatus.Error) {
-                // Разрешения восстановлены — сбрасываем ошибку.
-                // Реактивное обновление статуса (Active/Idle) произойдет
-                // в конце вызывающей функции через refreshStatus().
                 _status.value = TrackingStatus.Idle
             }
 
@@ -368,9 +368,20 @@ class CallTracker
                 if (success) {
                     clearSession(subId)
                 } else {
-                    AppLogger.e(
-                        "Call duration write failed for subId $subId (duration: $durationSeconds s), session preserved",
-                    )
+                    val now = timeProvider.now()
+                    if ((now - sessionData.startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
+                        AppLogger.w(
+                            "Call attribution failed for subId $subId and session exceeded " +
+                                "${Constants.Calls.MAX_CALL_DURATION_MS / Constants.MILLIS_PER_HOUR} hours. " +
+                                "Force clearing session.",
+                        )
+                        clearSession(subId)
+                    } else {
+                        AppLogger.e(
+                            "Call duration write failed for subId $subId (duration: $durationSeconds s), " +
+                                "session preserved",
+                        )
+                    }
                 }
             }
         }
@@ -486,9 +497,9 @@ class CallTracker
         }
 
         private suspend fun clearSession(subId: Int) {
-            callSessionRepository.setCallStartTime(subId, 0)
-            callSessionRepository.setBootTime(subId, 0)
-            callSessionRepository.setUptime(subId, 0)
+            callSessionRepository.setCallStartTime(subId, 0L)
+            callSessionRepository.setBootTime(subId, 0L)
+            callSessionRepository.setUptime(subId, 0L)
             callSessionRepository.setCallIdentity(subId, null)
         }
 

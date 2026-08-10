@@ -13,10 +13,12 @@ fun MacrobenchmarkScope.grantBenchmarkPermissions() {
     device.executeShellCommand("appops set $pkg GET_USAGE_STATS allow")
 
     // Grant Notifications for API 33+
-    if (Build.VERSION.SDK_INT >= 33) {
+    if (Build.VERSION.SDK_INT >= API_LEVEL_NOTIFICATIONS) {
         device.executeShellCommand("pm grant $pkg android.permission.POST_NOTIFICATIONS")
     }
 }
+
+private const val API_LEVEL_NOTIFICATIONS = 33
 
 fun MacrobenchmarkScope.populateBenchmarkData(simCount: Int) {
     // -W waits for the broadcast receiver to return, but it does NOT wait for

@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -215,5 +216,18 @@ class WidgetSettingsViewModelTest {
                 "FontSize should be one of the updated values and not default",
                 finalFontSize!! in 100 until (100 + totalUpdates),
             )
+        }
+
+    @Test
+    fun `saveAndNotify calls onComplete Failed on CancellationException`() =
+        runTest {
+            whenever(saver.save(any())).thenThrow(CancellationException("Test cancellation"))
+            testScheduler.advanceUntilIdle()
+
+            var result: WidgetSettingsViewModel.SaveResult? = null
+            viewModel.saveAndNotify { result = it }
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(WidgetSettingsViewModel.SaveResult.Failed, result)
         }
 }
