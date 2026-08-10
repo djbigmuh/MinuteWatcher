@@ -92,6 +92,8 @@ class MainViewModel
         }
 
         private fun initializeApp() {
+            // Защита от повторной инициализации при пересоздании View или повторных вызовах.
+            // isInitialized сбрасывается только при создании нового экземпляра ViewModel.
             if (isInitialized.get()) return
             viewModelScope.launch(ioDispatcher) {
                 try {
@@ -270,6 +272,8 @@ internal class AutoResetScheduler(
     private val savedStateHandle: SavedStateHandle,
     private val autoResetUseCase: AutoResetUseCase,
 ) {
+    private val isCheckStarted = AtomicBoolean(false)
+
     fun setup() {
         if (!savedStateHandle.contains(KEY_AUTO_RESET_FAIL_COUNT)) {
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
@@ -277,6 +281,8 @@ internal class AutoResetScheduler(
     }
 
     suspend fun checkOnStart() {
+        if (!isCheckStarted.compareAndSet(false, true)) return
+
         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
 
@@ -317,8 +323,12 @@ internal class AutoResetScheduler(
     }
 
     companion object {
-        private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
-        private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
+        /** Key for storing the last auto-reset check timestamp in SavedStateHandle. */
+        const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+
+        /** Key for storing the consecutive auto-reset failure count in SavedStateHandle. */
+        const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
+
         private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
         private const val MAX_AUTO_RESET_RETRIES = 3
         private const val FAIL_COUNT_RESET_INTERVAL_MS = 24 * 3_600_000L // 24 hours

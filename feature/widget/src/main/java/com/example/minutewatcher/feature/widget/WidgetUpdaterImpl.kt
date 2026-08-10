@@ -36,19 +36,19 @@ class WidgetUpdaterImpl
 
         override suspend fun updateAll() {
             updateMutex.withLock {
-                // Читаем текущее состояние флага внутри мьютекса для предотвращения гонки.
-                val wasExceeded = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
                 try {
                     val result = attemptUpdateWithRetry(context)
                     when (result) {
                         is UpdateResult.Success -> {
-                            if (wasExceeded) {
+                            val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
+                            if (current) {
                                 setWidgetLimitExceeded(false)
                             }
                         }
 
                         is UpdateResult.LimitExceeded -> {
-                            if (!wasExceeded) {
+                            val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
+                            if (!current) {
                                 setWidgetLimitExceeded(true)
                                 AppLogger.w(
                                     "Widget update failed due to size limit. " +

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.retry
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -63,9 +64,13 @@ class MainBannerController
                 appSettingsRepository.observeAppSettings(),
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
-            }.retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) {
-                delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
-                true
+            }.retryWhen { _, attempt ->
+                if (attempt < Constants.Flow.BANNER_RETRY_ATTEMPTS) {
+                    delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
+                    true
+                } else {
+                    false
+                }
             }
 
         val trackingBannerState: StateFlow<TrackingBannerState> =
@@ -98,9 +103,13 @@ class MainBannerController
 
         private fun Flow<Boolean>.withRetryAndFallback(): Flow<Boolean> =
             this
-                .retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) {
-                    delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
-                    true
+                .retryWhen { _, attempt ->
+                    if (attempt < Constants.Flow.BANNER_RETRY_ATTEMPTS) {
+                        delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
+                        true
+                    } else {
+                        false
+                    }
                 }.catch { emit(false) }
 
         companion object

@@ -119,11 +119,14 @@ class CallTracker
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
+                    @Suppress("ThrowingExceptionFromFinally")
                     withContext(NonCancellable) {
                         try {
                             if ((_status.value !is TrackingStatus.Error) && !justStarted) {
                                 refreshStatus()
                             }
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                         }
@@ -146,12 +149,12 @@ class CallTracker
             return effective
         }
 
-        @Suppress("LongParameterList", "MagicNumber")
+        @Suppress("LongParameterList")
         private suspend fun <T : Any> readWithRetry(
             label: String,
-            attempts: Int = 2,
+            attempts: Int = READ_RETRY_ATTEMPTS,
             timeoutMs: Long = Constants.Flow.SHORT_TIMEOUT_MS,
-            retryDelayMs: Long = 500L,
+            retryDelayMs: Long = READ_RETRY_DELAY_MS,
             reader: () -> Flow<T>,
         ): Result<T> {
             var currentDelay = retryDelayMs
@@ -176,16 +179,16 @@ class CallTracker
             val startTimeResult =
                 readWithRetry(
                     label = "callStartTime",
-                    attempts = 2,
+                    attempts = READ_RETRY_ATTEMPTS,
                     timeoutMs = Constants.Flow.SHORT_TIMEOUT_MS,
-                    retryDelayMs = Constants.Flow.RETRY_DELAY_MS,
+                    retryDelayMs = READ_RETRY_DELAY_MS,
                 ) { callSessionRepository.getCallStartTime(subId) }
             val savedBootTimeResult =
                 readWithRetry(
                     label = "bootTime",
-                    attempts = 2,
+                    attempts = READ_RETRY_ATTEMPTS,
                     timeoutMs = Constants.Flow.SHORT_TIMEOUT_MS,
-                    retryDelayMs = Constants.Flow.RETRY_DELAY_MS,
+                    retryDelayMs = READ_RETRY_DELAY_MS,
                 ) { callSessionRepository.getBootTime(subId) }
 
             if (startTimeResult.isFailure || savedBootTimeResult.isFailure) {
@@ -262,11 +265,14 @@ class CallTracker
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     errorSetInThisCall = true
                 } finally {
+                    @Suppress("ThrowingExceptionFromFinally")
                     withContext(NonCancellable) {
                         try {
                             if (!errorSetInThisCall) {
                                 refreshStatus()
                             }
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
                         }
@@ -378,8 +384,8 @@ class CallTracker
                 val durationSeconds = (currentUptime - sessionData.savedUptime) / Constants.MILLIS_PER_SECOND
                 if (durationSeconds < 0) {
                     AppLogger.w(
-                        "Negative call duration detected for subId $subId " +
-                            "(currentUptime=$currentUptime, savedUptime=${sessionData.savedUptime}). Clearing session.",
+                        "CallTracker: negative duration for subId $subId " +
+                            "(currentUptime=$currentUptime, savedUptime=${sessionData.savedUptime}), clearing session",
                     )
                     clearSession(subId)
                     return
@@ -475,9 +481,9 @@ class CallTracker
         ): Result<T> =
             readWithRetry(
                 label = label,
-                attempts = 2,
+                attempts = READ_RETRY_ATTEMPTS,
                 timeoutMs = Constants.Flow.SHORT_TIMEOUT_MS,
-                retryDelayMs = Constants.Flow.RETRY_DELAY_MS,
+                retryDelayMs = READ_RETRY_DELAY_MS,
             ) { block(subId) }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -556,7 +562,21 @@ class CallTracker
                 )
                 return false
             }
-            if (durationSeconds == 0) return true
+
+            var targetIdentity = savedIdentity ?: resolveIdentity(subId)
+
+            if (targetIdentity == null) {
+                val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
+                if (defaultVoiceSubId != -1) {
+                    targetIdentity = resolveIdentity(defaultVoiceSubId)
+                }
+            }
+
+            if (durationSeconds == 0) {
+                AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
+                return true
+            }
+
             if (!isCallTrackingEnabled()) {
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 return true
@@ -566,14 +586,6 @@ class CallTracker
                     (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
                         Constants.SECONDS_PER_MINUTE
                 ).toInt()
-            var targetIdentity = savedIdentity ?: resolveIdentity(subId)
-
-            if (targetIdentity == null) {
-                val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
-                if (defaultVoiceSubId != -1) {
-                    targetIdentity = resolveIdentity(defaultVoiceSubId)
-                }
-            }
 
             if (targetIdentity != null) {
                 return try {
@@ -606,7 +618,10 @@ class CallTracker
             }
         }
 
-        companion object
+        companion object {
+            private const val READ_RETRY_ATTEMPTS = 2
+            private const val READ_RETRY_DELAY_MS = 500L
+        }
     }
 
 /**

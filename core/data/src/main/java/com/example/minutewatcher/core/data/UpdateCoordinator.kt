@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
@@ -54,6 +55,7 @@ class UpdateCoordinator
         private var retryAttempt = 0L
         private var observationRetryCount = 0L
         private var lastSuccessTime = 0L
+        private var observationJob: Job? = null
 
         init {
             startObservation()
@@ -65,26 +67,36 @@ class UpdateCoordinator
                 CoroutineExceptionHandler { _, cause ->
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
-            scope.launch(handler) {
-                usageStateRepository
-                    .observeSnapshot()
-                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                    .distinctUntilChanged { old, new ->
-                        SnapshotUtils.calculateContentHash(old) ==
-                            SnapshotUtils.calculateContentHash(new)
-                    }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                    .onEach { snapshot ->
-                        processSnapshot(snapshot)
-                    }.retryWhen { cause, _ ->
-                        handleObservationFailure(cause)
-                    }.catch { cause ->
-                        AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
-                    }.onCompletion { cause ->
-                        if (cause == null && observationRetryCount > MAX_OBSERVATION_RETRIES) {
-                            AppLogger.e("UpdateCoordinator: observation stopped after $observationRetryCount retries")
-                        }
-                    }.collect {}
-            }
+            observationJob =
+                scope.launch(handler) {
+                    usageStateRepository
+                        .observeSnapshot()
+                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                        .distinctUntilChanged { old, new ->
+                            SnapshotUtils.calculateContentHash(old) ==
+                                SnapshotUtils.calculateContentHash(new)
+                        }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .onEach { snapshot ->
+                            processSnapshot(snapshot)
+                        }.retryWhen { cause, _ ->
+                            handleObservationFailure(cause)
+                        }.catch { cause ->
+                            AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
+                        }.onCompletion { cause ->
+                            if (cause == null && observationRetryCount > MAX_OBSERVATION_RETRIES) {
+                                AppLogger.e(
+                                    "UpdateCoordinator: observation stopped after " +
+                                        "$observationRetryCount retries",
+                                )
+                            }
+                        }.collect {}
+                }
+        }
+
+        fun restartObservation() {
+            observationJob?.cancel()
+            observationRetryCount = 0
+            startObservation()
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
@@ -98,6 +110,7 @@ class UpdateCoordinator
 
             if (snapshot.suppressWidgetUpdate) {
                 lastSnapshotHash.value = newHash
+                observationRetryCount = 0
                 return
             }
 
@@ -105,14 +118,20 @@ class UpdateCoordinator
                 // Обновление виджета при отсутствии активных SIM выполняется
                 // намеренно — виджет должен корректно отобразить состояние
                 // "No SIM" или "No Data".
-                widgetUpdateMutex.withLock {
-                    widgetUpdater.updateAll()
+                try {
+                    widgetUpdateMutex.withLock {
+                        widgetUpdater.updateAll()
+                    }
+                    lastSnapshotHash.value = newHash
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
                 }
-                lastSnapshotHash.value = newHash
-                // Сбрасываем счетчик ошибок только после успешного обновления.
-                // Это позволяет системе восстанавливаться после временных сбоев.
-                observationRetryCount = 0
             }
+            // Сбрасываем счетчик ошибок только после успешного получения снимка.
+            // Это позволяет системе восстанавливаться после временных сбоев.
+            observationRetryCount = 0
         }
 
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {

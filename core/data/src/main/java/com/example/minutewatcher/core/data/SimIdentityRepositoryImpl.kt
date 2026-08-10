@@ -272,8 +272,8 @@ class SimIdentityRepositoryImpl
                     activeSimsCache.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                         ?: run {
                             AppLogger.w(
-                                "SimIdentityRepository: Timeout waiting for activeSimsCache, " +
-                                    "using fallback discovery",
+                                "getSimIdentity: activeSimsCache timeout for slot $slot, " +
+                                    "using fallback identity",
                             )
                             emptyList()
                         }
@@ -306,6 +306,7 @@ class SimIdentityRepositoryImpl
                     val resolved =
                         when (seed) {
                             is SeedResult.Fallback -> {
+                                AppLogger.w("getSimIdentity: seed unavailable for slot $slot, using fallback identity")
                                 createFallbackIdentity(slot, "sim_$slot")
                             }
                             is SeedResult.Real -> {
@@ -314,6 +315,9 @@ class SimIdentityRepositoryImpl
                         }
                     saveSimIdentitiesInfo(listOf(resolved))
                     resolved
+                } ?: run {
+                    AppLogger.d("getSimIdentity: no active subscription found for slot $slot, using fallback identity")
+                    null
                 }
             } catch (e: CancellationException) {
                 throw e
