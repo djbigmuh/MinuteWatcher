@@ -102,13 +102,13 @@ class UpdateCoordinator
             }
 
             if (newHash != lastSnapshotHash.value) {
-                lastSnapshotHash.value = newHash
                 // Обновление виджета при отсутствии активных SIM выполняется
                 // намеренно — виджет должен корректно отобразить состояние
                 // "No SIM" или "No Data".
                 widgetUpdateMutex.withLock {
                     widgetUpdater.updateAll()
                 }
+                lastSnapshotHash.value = newHash
                 // Сбрасываем счетчик ошибок только после успешного обновления.
                 // Это позволяет системе восстанавливаться после временных сбоев.
                 observationRetryCount = 0

@@ -213,4 +213,64 @@ class SimIdentityRepositorySeedTest {
             val id3 = identityRepo.getSimIdentity(0)
             assertTrue("Should return real ID now, got ${id3.stableId}", id3.stableId.startsWith("icc_"))
         }
+
+    @Test
+    fun `migrationIsCalledWhenTransitioningFromFallbackToRealSeed`() =
+        runTest {
+            dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_sim_migration.preferences_pb") },
+                )
+
+            val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
+            val seedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = storedSeed
+
+                    override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
+
+                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                        delay(60.seconds)
+                        return "generated"
+                    }
+                }
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            // 1. Mock a subscription info
+            val mockSubInfo = mock<SubscriptionInfo>()
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.iccId).thenReturn("icc_1")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+            // 2. Advance to Fallback state and trigger cache population
+            testScheduler.advanceTimeBy(25_000)
+            testScheduler.advanceUntilIdle()
+            identityRepo.getSimIdentity(0) // Now sim_0 is in fallbackCache
+
+            // 3. Transition to Real seed
+            storedSeed.emit("real_seed")
+            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceUntilIdle()
+
+            // 4. Verify migration was called for the new identity
+            org.mockito.kotlin.verify(migrationService).migrateLegacyData(
+                org.mockito.kotlin.check { identity ->
+                    assertEquals(0, identity.slotIndex)
+                    assertTrue(identity.stableId.startsWith("icc_"))
+                    assertEquals(IdentitySource.ICCID, identity.source)
+                },
+            )
+        }
 }

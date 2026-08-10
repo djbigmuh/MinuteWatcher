@@ -92,7 +92,7 @@ class MainViewModel
         }
 
         private fun initializeApp() {
-            if (!isInitialized.compareAndSet(false, true)) return
+            if (isInitialized.get()) return
             viewModelScope.launch(ioDispatcher) {
                 try {
                     val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
@@ -112,6 +112,7 @@ class MainViewModel
                             lastRefreshAt = SystemClock.elapsedRealtime()
                         }
                     }
+                    isInitialized.compareAndSet(false, true)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

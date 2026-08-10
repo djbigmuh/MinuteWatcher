@@ -146,12 +146,9 @@ class CallTracker
             return effective
         }
 
-        /**
-         * Reads a value from a Flow with a specified number of attempts and timeout.
-         * Uses exponential backoff between retries to increase reliability when DataStore
-         * or other reactive sources are temporarily under high load or locked.
-         */
+        @Suppress("LongParameterList", "MagicNumber")
         private suspend fun <T : Any> readWithRetry(
+            label: String,
             attempts: Int = 2,
             timeoutMs: Long = Constants.Flow.SHORT_TIMEOUT_MS,
             retryDelayMs: Long = 500L,
@@ -165,27 +162,30 @@ class CallTracker
                     }
                 result?.let { return Result.success(it) }
                 if (attempt < attempts) {
-                    AppLogger.d("readWithRetry: attempt $attempt timed out, retrying in ${currentDelay}ms")
+                    AppLogger.d("readWithRetry($label): attempt $attempt timed out, retrying in ${currentDelay}ms")
                     delay(currentDelay.milliseconds)
                     currentDelay *= 2
                 }
             }
-            AppLogger.w("readWithRetry: all $attempts attempts timed out")
-            return Result.failure(java.util.concurrent.TimeoutException("readWithRetry timed out"))
+            AppLogger.w("readWithRetry($label): all $attempts attempts timed out")
+            return Result.failure(java.util.concurrent.TimeoutException("readWithRetry($label) timed out"))
         }
 
+        @Suppress("LongMethod", "ReturnCount")
         private suspend fun handleCallStartInternal(subId: Int): Boolean {
             val startTimeResult =
                 readWithRetry(
+                    label = "callStartTime",
                     attempts = 2,
-                    timeoutMs = 3000,
-                    retryDelayMs = 500,
+                    timeoutMs = Constants.Flow.SHORT_TIMEOUT_MS,
+                    retryDelayMs = Constants.Flow.RETRY_DELAY_MS,
                 ) { callSessionRepository.getCallStartTime(subId) }
             val savedBootTimeResult =
                 readWithRetry(
+                    label = "bootTime",
                     attempts = 2,
-                    timeoutMs = 3000,
-                    retryDelayMs = 500,
+                    timeoutMs = Constants.Flow.SHORT_TIMEOUT_MS,
+                    retryDelayMs = Constants.Flow.RETRY_DELAY_MS,
                 ) { callSessionRepository.getBootTime(subId) }
 
             if (startTimeResult.isFailure || savedBootTimeResult.isFailure) {
@@ -216,7 +216,14 @@ class CallTracker
             if (isStale) {
                 if (startTime != 0L || savedBootTime != 0L) {
                     AppLogger.d("Clearing stale call session for subId $subId")
-                    clearSession(subId)
+                    try {
+                        clearSession(subId)
+                    } catch (e: Exception) {
+                        AppLogger.w(
+                            "Failed to clear stale session for subId $subId, will overwrite with new values",
+                            e,
+                        )
+                    }
                 }
 
                 val identity = resolveIdentity(subId)
@@ -414,11 +421,11 @@ class CallTracker
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
-            val startTimeResult = readSessionField(subId) { callSessionRepository.getCallStartTime(it) }
-            val savedBootTimeResult = readSessionField(subId) { callSessionRepository.getBootTime(it) }
-            val savedUptimeResult = readSessionField(subId) { callSessionRepository.getUptime(it) }
+            val startTimeResult = readSessionField(subId, "startTime") { callSessionRepository.getCallStartTime(it) }
+            val savedBootTimeResult = readSessionField(subId, "savedBootTime") { callSessionRepository.getBootTime(it) }
+            val savedUptimeResult = readSessionField(subId, "savedUptime") { callSessionRepository.getUptime(it) }
             val savedIdentityBoxResult =
-                readSessionField(subId) {
+                readSessionField(subId, "savedIdentity") {
                     callSessionRepository.getCallIdentity(it).map { id -> Box(id) }
                 }
 
@@ -463,12 +470,14 @@ class CallTracker
 
         private suspend fun <T : Any> readSessionField(
             subId: Int,
-            block: (Int) -> kotlinx.coroutines.flow.Flow<T>,
+            label: String,
+            block: (Int) -> Flow<T>,
         ): Result<T> =
             readWithRetry(
+                label = label,
                 attempts = 2,
-                timeoutMs = 5000,
-                retryDelayMs = 1000,
+                timeoutMs = Constants.Flow.SHORT_TIMEOUT_MS,
+                retryDelayMs = Constants.Flow.RETRY_DELAY_MS,
             ) { block(subId) }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)

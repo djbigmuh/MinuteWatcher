@@ -56,28 +56,17 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
-        private val bannerExtraData: StateFlow<Triple<Boolean, Boolean, AppSettings>> =
+        private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
                 _isPhonePermissionPermanentlyDenied,
                 _isNotificationPermissionPermanentlyDenied,
-                appSettingsRepository
-                    .observeAppSettings()
-                    .catch { e ->
-                        AppLogger.e("Failed to observe AppSettings in MainBannerController", e)
-                        emit(AppSettings())
-                    },
+                appSettingsRepository.observeAppSettings(),
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
-            }.stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue =
-                    Triple(
-                        false,
-                        false,
-                        AppSettings(),
-                    ),
-            )
+            }.retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) {
+                delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
+                true
+            }
 
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(

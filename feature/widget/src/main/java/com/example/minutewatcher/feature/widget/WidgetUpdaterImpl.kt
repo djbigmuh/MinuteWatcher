@@ -121,34 +121,30 @@ class WidgetUpdaterImpl
                 UpdateResult.GenericFailure
             }
 
-        /**
-         * Эвристически определяет, вызвано ли [IllegalArgumentException] превышением лимита
-         * Binder/RemoteViews (TransactionTooLargeException).
-         *
-         * Критерии срабатывания (любой из):
-         * 1. В cause-цепочке присутствует [android.os.TransactionTooLargeException].
-         * 2. Сообщение содержит паттерны, указывающие на переполнение Binder или RemoteViews.
-         *
-         * При срабатывании эвристики виджет переключается в упрощённый режим (SIMPLE).
-         */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
-            val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
+            // Основной критерий: TransactionTooLargeException в cause-цепочке.
+            // Это единственный достоверный признак переполнения Binder-транзакции,
+            // гарантированный на всех версиях Android API 26–37.
+            if (hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)) {
+                AppLogger.w("RemoteViews size limit detected via TransactionTooLargeException", e)
+                return true
+            }
 
+            // Fallback: текстовые паттерны для случаев, когда система не обернула
+            // ошибку в TransactionTooLargeException. Это не гарантировано документацией,
+            // но расширяет покрытие на нестандартных прошивках.
             val message = e.message ?: ""
             val isMessageRelated =
                 LIMIT_EXCEPTION_PATTERNS.any { pattern ->
                     pattern.containsMatchIn(message)
                 }
 
-            val result = isTransactionTooLarge || isMessageRelated
-
-            if (result) {
-                AppLogger.w("RemoteViews size limit detection triggered (result=$result). Full exception details: $e")
-                AppLogger.d("Exception message for diagnostics: $message")
+            if (isMessageRelated) {
+                AppLogger.w("RemoteViews size limit detected via message pattern: $message", e)
             }
 
-            return result
+            return isMessageRelated
         }
 
         private fun hasCauseOfType(

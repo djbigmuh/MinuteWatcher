@@ -236,6 +236,28 @@ class CallTrackerTest {
         }
 
     @Test
+    fun `onCallStarted handles clearSession failure for stale session and continues`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            // Arrange: stale session
+            timeProvider.setRealtime(5000L)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(10000L))
+
+            // Arrange: clearSession (setCallStartTime) throws exception
+            whenever(callSessionRepository.setCallStartTime(eq(1), eq(0L)))
+                .thenThrow(RuntimeException("Clear failed"))
+
+            // Act
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Assert: verify that even with clearSession failure, new startTime was still set
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), argThat { this > 0L })
+        }
+
+    @Test
     fun `handleCallStartInternal sets error status on DataStore timeout`() =
         runTest(testDispatcher) {
             setupCommonMocks()

@@ -13,7 +13,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -38,7 +37,6 @@ class CallTrackerRaceTest {
     private val permissionManager: PermissionManager = mock()
     private val telephonyManager: TelephonyManager = mock()
     private val timeProvider: TimeProvider = mock()
-    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var tracker: CallTracker
 

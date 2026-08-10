@@ -77,6 +77,7 @@ class SimIdentityRepositoryImpl
         }
 
         private val saveMutex = Mutex()
+        private val fallbackMutex = Mutex()
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
         private val fallbackCache = ConcurrentHashMap<Int, SimIdentity>()
@@ -210,15 +211,29 @@ class SimIdentityRepositoryImpl
             scope.launch {
                 seedFlow.collect { result ->
                     if (result is SeedResult.Real) {
-                        fallbackCache.clear()
+                        fallbackMutex.withLock {
+                            val fallbacks = fallbackCache.entries.toList()
+                            fallbackCache.clear()
+
+                            if (fallbacks.isNotEmpty()) {
+                                val seedValue = result.value
+                                permissionManager.getActiveSubscriptions().forEach { sub ->
+                                    val slot = sub.simSlotIndex
+                                    if (fallbacks.any { it.key == slot }) {
+                                        val newIdentity = SimIdentityUtils.createIdentityFromInfo(sub, seedValue)
+                                        migrationService.migrateLegacyData(newIdentity)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        private suspend fun getSeed(): SeedResult {
+        private suspend fun getSeed(timeoutMs: Long = SEED_TOTAL_TIMEOUT_MS): SeedResult {
             val seed =
-                withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(timeoutMs.milliseconds) {
                     seedFlow.firstOrNull()
                 }
             if (seed == null) {
@@ -235,21 +250,26 @@ class SimIdentityRepositoryImpl
                 return createFallbackIdentity(slot, "sim_$slot")
             }
 
+            // Мгновенное чтение текущего значения StateFlow
+            val cached = activeSimsCache.value.find { it.slotIndex == slot }
+            if (cached != null) return cached.identity
+
             try {
-                val seed = getSeed()
+                // Используем уменьшенный таймаут для UI-операций
+                val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
-                    fallbackCache[slot]?.let {
-                        AppLogger.d("SimIdentityRepository: returning cached fallback for slot $slot")
-                        return it
+                    fallbackMutex.withLock {
+                        fallbackCache[slot]?.let {
+                            AppLogger.d("SimIdentityRepository: returning cached fallback for slot $slot")
+                            return it
+                        }
                     }
                 }
 
-                // Wait for activeSimsCache with a timeout that covers the potential seed generation time.
-                // If the seed is being generated, activeSimsCache (which depends on physicalActiveSims,
-                // which depends on seedFlow) will not emit until the seed is ready.
+                // Wait for activeSimsCache with a reduced timeout
                 val currentSims: List<ActiveSimInfo> =
-                    activeSimsCache.firstWithTimeout(SEED_TOTAL_TIMEOUT_MS)
+                    activeSimsCache.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                         ?: run {
                             AppLogger.w(
                                 "SimIdentityRepository: Timeout waiting for activeSimsCache, " +
@@ -264,7 +284,9 @@ class SimIdentityRepositoryImpl
                 // If not found in cache, try direct resolution
                 val resolved = findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
                 if (seed is SeedResult.Fallback) {
-                    fallbackCache[slot] = resolved
+                    fallbackMutex.withLock {
+                        fallbackCache[slot] = resolved
+                    }
                 }
                 return resolved
             } catch (e: CancellationException) {
