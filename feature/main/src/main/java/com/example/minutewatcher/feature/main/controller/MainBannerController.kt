@@ -5,11 +5,14 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
+import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainBannerController
     @Inject
@@ -53,49 +57,34 @@ class MainBannerController
                 )
 
         private val bannerExtraData:
-            StateFlow<Triple<Boolean, Boolean, com.example.minutewatcher.core.model.AppSettings>> =
+            StateFlow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
                 _isPhonePermissionPermanentlyDenied,
                 _isNotificationPermissionPermanentlyDenied,
-                appSettingsRepository.observeAppSettings().catch {
-                    AppLogger.e("Failed to observe AppSettings in MainBannerController", it)
-                    emit(
-                        com.example.minutewatcher.core.model
-                            .AppSettings(),
-                    )
-                },
+                appSettingsRepository.observeAppSettings()
+                    .catch { e ->
+                        AppLogger.e("Failed to observe AppSettings in MainBannerController", e)
+                        emit(AppSettings())
+                    },
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
-            }.stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue =
-                    Triple(
+            }
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.Eagerly,
+                    initialValue = Triple(
                         false,
                         false,
-                        com.example.minutewatcher.core.model
-                            .AppSettings(),
+                        AppSettings(),
                     ),
-            )
+                )
 
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
-                permissionRepository.phoneStatePermissionGranted
-                    .retry(MAX_BANNER_RETRY_ATTEMPTS) {
-                        delay(BANNER_RETRY_DELAY_MS)
-                        true
-                    }.catch { emit(false) },
-                permissionRepository.usageStatsPermissionGranted
-                    .retry(MAX_BANNER_RETRY_ATTEMPTS) {
-                        delay(BANNER_RETRY_DELAY_MS)
-                        true
-                    }.catch { emit(false) },
-                permissionRepository.notificationPermissionGranted
-                    .retry(MAX_BANNER_RETRY_ATTEMPTS) {
-                        delay(BANNER_RETRY_DELAY_MS)
-                        true
-                    }.catch { emit(false) },
+                permissionRepository.phoneStatePermissionGranted.withRetryAndFallback(),
+                permissionRepository.usageStatsPermissionGranted.withRetryAndFallback(),
+                permissionRepository.notificationPermissionGranted.withRetryAndFallback(),
                 bannerExtraData,
             ) { status, phone, usage, notif, extra ->
                 TrackingBannerMapper.mapToBannerState(
@@ -107,21 +96,30 @@ class MainBannerController
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
                 )
-            }.retry(MAX_BANNER_RETRY_ATTEMPTS) { e ->
-                AppLogger.e("Retrying banner state computation due to error", e)
-                delay(BANNER_RETRY_DELAY_MS)
-                true
-            }.catch { e ->
-                AppLogger.e("CRITICAL: Failed to compute banner state after retries", e)
-                emit(TrackingBannerState())
-            }.stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = TrackingBannerState(),
-            )
+            }
+                .retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) { e ->
+                    AppLogger.e("Retrying banner state computation due to error", e)
+                    delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
+                    true
+                }
+                .catch { e ->
+                    // Вызывается, когда .retry() исчерпал лимит попыток и пробросил исключение.
+                    AppLogger.e("CRITICAL: Failed to compute banner state after all retry attempts", e)
+                    emit(TrackingBannerState())
+                }
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.Eagerly,
+                    initialValue = TrackingBannerState(),
+                )
 
-        companion object {
-            private const val MAX_BANNER_RETRY_ATTEMPTS = 5L
-            private const val BANNER_RETRY_DELAY_MS = 1000L
-        }
+        private fun Flow<Boolean>.withRetryAndFallback(): Flow<Boolean> =
+            this
+                .retry(Constants.Flow.BANNER_RETRY_ATTEMPTS) {
+                    delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
+                    true
+                }
+                .catch { emit(false) }
+
+        companion object
     }

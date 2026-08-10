@@ -10,5 +10,5 @@ interface TrackingStatusProvider {
     /**
      * Attempts to recover from an error state.
      */
-    fun recover() {}
+    suspend fun recover() {}
 }

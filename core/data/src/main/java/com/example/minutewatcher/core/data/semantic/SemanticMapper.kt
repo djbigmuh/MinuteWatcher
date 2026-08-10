@@ -10,11 +10,13 @@ import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 
 object SemanticMapper {
+    @JvmStatic
     fun getDocumentId(
         slot: Int,
         type: PackageType,
     ): String = "sim_${slot}_${type.name.lowercase()}"
 
+    @JvmStatic
     fun mapMinutes(
         slot: Int,
         operator: String,
@@ -40,6 +42,7 @@ object SemanticMapper {
         )
     }
 
+    @JvmStatic
     fun mapTraffic(
         slot: Int,
         operator: String,

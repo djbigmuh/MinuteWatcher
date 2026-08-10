@@ -1,9 +1,9 @@
 package com.example.minutewatcher.feature.main
 
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.example.minutewatcher.core.model.AppTheme
 
-@Immutable
+@Stable
 data class SimCardScreenActions(
     val onOpenSettings: () -> Unit,
     val onAddWidget: () -> Unit,

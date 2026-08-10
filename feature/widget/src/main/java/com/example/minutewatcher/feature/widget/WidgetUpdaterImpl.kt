@@ -36,21 +36,29 @@ class WidgetUpdaterImpl
 
         override suspend fun updateAll() {
             updateMutex.withLock {
+                // Читаем текущее состояние флага внутри мьютекса для предотвращения гонки.
+                val wasExceeded = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
                 try {
                     val result = attemptUpdateWithRetry(context)
                     when (result) {
                         is UpdateResult.Success -> {
-                            setWidgetLimitExceeded(false)
+                            if (wasExceeded) {
+                                setWidgetLimitExceeded(false)
+                            }
                         }
+
                         is UpdateResult.LimitExceeded -> {
-                            setWidgetLimitExceeded(true)
-                            AppLogger.w(
-                                "Widget update failed due to size limit. " +
-                                    "Flag set to trigger simplified layout on next update.",
-                            )
+                            if (!wasExceeded) {
+                                setWidgetLimitExceeded(true)
+                                AppLogger.w(
+                                    "Widget update failed due to size limit. " +
+                                        "Flag set to trigger simplified layout on next update.",
+                                )
+                            }
                         }
+
                         is UpdateResult.GenericFailure -> {
-                            AppLogger.e("Widget update failed after $MAX_UPDATE_ATTEMPTS attempts")
+                            AppLogger.e("Widget update failed after ${Constants.Widget.MAX_UPDATE_ATTEMPTS} attempts")
                         }
                     }
                 } catch (e: CancellationException) {
@@ -64,12 +72,12 @@ class WidgetUpdaterImpl
         private suspend fun attemptUpdateWithRetry(context: Context): UpdateResult {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
             var lastResult: UpdateResult = UpdateResult.GenericFailure
-            for (attempt in 1..MAX_UPDATE_ATTEMPTS) {
+            for (attempt in 1..Constants.Widget.MAX_UPDATE_ATTEMPTS) {
                 lastResult = safeUpdateAll(context)
                 if (lastResult is UpdateResult.Success || lastResult is UpdateResult.LimitExceeded) {
                     return lastResult
                 }
-                if (attempt < MAX_UPDATE_ATTEMPTS) {
+                if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
                     AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
                     delay(delayMs.milliseconds)
                     delayMs *= 2
@@ -96,6 +104,9 @@ class WidgetUpdaterImpl
             try {
                 widget.updateAll(context)
                 UpdateResult.Success
+            } catch (e: CancellationException) {
+                // Должен перехватываться ПЕРВЫМ и пробрасываться дальше для корректной остановки корутин.
+                throw e
             } catch (e: IllegalArgumentException) {
                 val isLimit = isRemoteViewsLimitException(e)
                 if (isLimit) {
@@ -105,8 +116,6 @@ class WidgetUpdaterImpl
                     AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
                     UpdateResult.GenericFailure
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.e("Generic widget update failure", e)
                 UpdateResult.GenericFailure
@@ -155,8 +164,6 @@ class WidgetUpdaterImpl
         }
 
         companion object {
-            private const val MAX_UPDATE_ATTEMPTS = 4
-
             private val LIMIT_EXCEPTION_PATTERNS =
                 listOf(
                     // Оригинальный паттерн (RemoteViews + TransactionTooLarge)

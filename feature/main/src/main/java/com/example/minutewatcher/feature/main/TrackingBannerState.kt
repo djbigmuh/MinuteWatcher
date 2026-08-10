@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.example.minutewatcher.core.model.PermissionUiState
 
 @Immutable
@@ -18,7 +19,8 @@ data class TrackingBannerState(
     val notificationPermissionState: PermissionUiState = PermissionUiState.NOT_REQUESTED,
 )
 
-@Immutable
+@Stable
+// Используем @Stable вместо @Immutable для гарантированной стабильности лямбд в Compose.
 data class TrackingBannerCallbacks(
     val onGrantPhonePermission: () -> Unit,
     val onShowUsageAccessDialog: () -> Unit,

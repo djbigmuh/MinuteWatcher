@@ -57,7 +57,7 @@ class SemanticSearchManager
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        override fun recover() {
+        override suspend fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
         }
 
@@ -99,14 +99,20 @@ class SemanticSearchManager
                     return true
                 } catch (e: AppSearchException) {
                     newSession?.close()
-                    if ((e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) && !shouldForce) {
+                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce) {
                         shouldForce = true
+                        // Продолжаем retry
                     } else {
-                        AppLogger.e("Fatal AppSearch error", e)
+                        // Это действительно fatal или повторная неудача с force
+                        AppLogger.e(
+                            "AppSearch schema setup failed (force=$shouldForce, code=${e.resultCode})",
+                            e,
+                        )
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
                         return false
                     }
-                } catch (e: CancellationException) {
+                }
+ catch (e: CancellationException) {
                     newSession?.close()
                     throw e
                 } catch (e: Exception) {

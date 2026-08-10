@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
@@ -78,11 +79,17 @@ class UpdateCoordinator
                         handleObservationFailure(cause)
                     }.catch { cause ->
                         AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
+                    }.onCompletion { cause ->
+                        if (cause == null && observationRetryCount > MAX_OBSERVATION_RETRIES) {
+                            AppLogger.e("UpdateCoordinator: observation stopped after $observationRetryCount retries")
+                        }
                     }.collect {}
             }
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+            // Сбрасываем счетчик ошибок при любом успешном получении данных для самовосстановления.
+            observationRetryCount = 0
             val now = timeProvider.now()
             if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                 retryAttempt = 0
@@ -104,7 +111,6 @@ class UpdateCoordinator
                 widgetUpdateMutex.withLock {
                     widgetUpdater.updateAll()
                 }
-                observationRetryCount = 0
             }
         }
 
@@ -115,7 +121,7 @@ class UpdateCoordinator
             if (observationRetryCount > MAX_OBSERVATION_RETRIES) {
                 AppLogger.e(
                     "UpdateCoordinator: observation stopped after $MAX_OBSERVATION_RETRIES " +
-                        "consecutive failures",
+                        "consecutive failures. Restart the app to restore background updates.",
                     cause,
                 )
                 return false

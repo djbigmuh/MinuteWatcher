@@ -58,7 +58,7 @@ class CallTrackerTest {
         whenever(callSessionRepository.getUptime(any())).thenReturn(flowOf(0L))
 
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
-        @Suppress("DEPRECATION")
+        @Suppress("DEPRECATION") // Testing legacy API path for API < 31
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
         whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -558,7 +558,7 @@ class CallTrackerTest {
             whenever(callSessionRepository.getCallIdentity(activeSubId)).thenReturn(flowOf("id_2"))
 
             // Telephony state OFFHOOK to trigger handleAmbiguousIdle
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION") // Testing legacy API path for API < 31
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
             whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
@@ -654,7 +654,7 @@ class CallTrackerTest {
             // No default voice subId
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
             // Telephony state OFFHOOK to trigger handleAmbiguousIdle
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION") // Testing legacy API path for API < 31
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
             whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 

@@ -18,6 +18,7 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -37,6 +38,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
 class InitialSetupWorkerTest {
     private val callTracker: CallTracker = mock()
     private val trafficTracker: TrafficTracker = mock()

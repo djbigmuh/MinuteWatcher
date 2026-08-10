@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -23,6 +24,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsRepositoryTest {
     private lateinit var repository: WidgetSettingsRepository
     private val settingsRepository: AppSettingsRepository = mock()

@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.annotation.SuppressLint
 import android.os.Build
 import android.telephony.TelephonyManager
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -16,7 +17,6 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -45,7 +44,6 @@ class CallTracker
         private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
         private val telephonyManager: TelephonyManager,
-        @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
         override val key: String = "calls"
@@ -67,13 +65,11 @@ class CallTracker
                 incrementInaccurateAttributions = { incrementInaccurateAttributions() },
             )
 
-        override fun recover() {
-            scope.launch {
-                callMutex.withLock {
-                    _status.value = TrackingStatus.Idle
-                    if (checkPermissions()) {
-                        refreshStatus(force = true)
-                    }
+        override suspend fun recover() {
+            callMutex.withLock {
+                _status.value = TrackingStatus.Idle
+                if (checkPermissions()) {
+                    refreshStatus(force = true)
                 }
             }
         }
@@ -241,19 +237,27 @@ class CallTracker
          */
         suspend fun onCallEnded(subId: Int) {
             callMutex.withLock {
+                var errorSetInThisCall = false
                 try {
                     executeCallEnded(subId)
+                    if (_status.value is TrackingStatus.Error) {
+                        // Фиксируем, что была установлена ошибка (например, провал атрибуции),
+                        // чтобы блок finally не сбросил её в Idle/Active через refreshStatus().
+                        errorSetInThisCall = true
+                    }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
+                    errorSetInThisCall = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallEnded", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    errorSetInThisCall = true
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            if (_status.value !is TrackingStatus.Error) {
+                            if (!errorSetInThisCall) {
                                 refreshStatus()
                             }
                         } catch (e: Exception) {
@@ -346,6 +350,20 @@ class CallTracker
                     return
                 }
 
+                val now = timeProvider.now()
+                if ((now - sessionData.startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
+                    // Проверку на "протухшую" сессию (stale) выполняем ДО попытки атрибуции.
+                    // Это гарантирует очистку сессии даже при ошибке записи минут.
+                    AppLogger.w(
+                        "Call attribution failed for subId $subId and session exceeded " +
+                            "${Constants.Calls.MAX_CALL_DURATION_MS / Constants.MILLIS_PER_HOUR} hours. " +
+                            "Force clearing session.",
+                    )
+                    clearSession(subId)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
+                    return
+                }
+
                 val durationSeconds = (currentUptime - sessionData.savedUptime) / Constants.MILLIS_PER_SECOND
                 if (durationSeconds < 0) {
                     AppLogger.w(
@@ -368,20 +386,10 @@ class CallTracker
                 if (success) {
                     clearSession(subId)
                 } else {
-                    val now = timeProvider.now()
-                    if ((now - sessionData.startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
-                        AppLogger.w(
-                            "Call attribution failed for subId $subId and session exceeded " +
-                                "${Constants.Calls.MAX_CALL_DURATION_MS / Constants.MILLIS_PER_HOUR} hours. " +
-                                "Force clearing session.",
-                        )
-                        clearSession(subId)
-                    } else {
-                        AppLogger.e(
-                            "Call duration write failed for subId $subId (duration: $durationSeconds s), " +
-                                "session preserved",
-                        )
-                    }
+                    AppLogger.e(
+                        "Call duration write failed for subId $subId (duration: $durationSeconds s), " +
+                            "session preserved",
+                    )
                 }
             }
         }
@@ -400,6 +408,7 @@ class CallTracker
             val value: T,
         )
 
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
             val startTimeResult = readSessionField(subId) { callSessionRepository.getCallStartTime(it) }
             val savedBootTimeResult = readSessionField(subId) { callSessionRepository.getBootTime(it) }
@@ -458,6 +467,7 @@ class CallTracker
                 retryDelayMs = 1000,
             ) { block(subId) }
 
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun validateSession(
             subId: Int,
             data: CallSessionData,
@@ -480,6 +490,7 @@ class CallTracker
             return isValid
         }
 
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun refreshStatus(force: Boolean = false) {
             val current = _status.value
             val isIgnoredError =
@@ -517,6 +528,7 @@ class CallTracker
          * This follows the most common carrier billing practices.
          */
         @Suppress("ReturnCount")
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun processCallDuration(
             durationSeconds: Int,
             subId: Int,
@@ -536,11 +548,10 @@ class CallTracker
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 return true
             }
-            val durationMinutes =
-                (
-                    (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
-                        Constants.SECONDS_PER_MINUTE
-                ).toInt()
+            val durationMinutes = (
+                (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
+                    Constants.SECONDS_PER_MINUTE
+            ).toInt()
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 
             if (targetIdentity == null) {

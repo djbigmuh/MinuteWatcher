@@ -85,7 +85,7 @@ class ShortcutManager
                 }
         }
 
-        override fun recover() {
+        override suspend fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
         }
 

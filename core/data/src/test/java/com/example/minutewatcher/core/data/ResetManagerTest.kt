@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -24,6 +25,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class ResetManagerTest {
     private val trafficTracker: TrafficTracker = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()

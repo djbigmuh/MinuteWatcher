@@ -93,34 +93,29 @@ class WidgetSettingsViewModel
             }
         }
 
-        fun saveAndNotify(onComplete: (SaveResult) -> Unit) {
-            viewModelScope.launch {
-                if (!saveMutex.tryLock()) {
-                    // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
-                    onComplete(SaveResult.AlreadyInProgress)
-                    return@launch
-                }
-                _isSaving.value = true
-                try {
-                    val currentState = _settingsState.value
-                    if (currentState == null) {
-                        AppLogger.w("saveAndNotify called before settings were loaded")
-                        onComplete(SaveResult.Failed)
-                        return@launch
-                    }
-
+        suspend fun saveAndNotify(): SaveResult {
+            if (!saveMutex.tryLock()) {
+                // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
+                return SaveResult.AlreadyInProgress
+            }
+            _isSaving.value = true
+            return try {
+                val currentState = _settingsState.value
+                if (currentState == null) {
+                    AppLogger.w("saveAndNotify called before settings were loaded")
+                    SaveResult.Failed
+                } else {
                     val success = saver.save(currentState)
-                    onComplete(if (success) SaveResult.Success else SaveResult.Failed)
-                } catch (e: CancellationException) {
-                    onComplete(SaveResult.Failed)
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to save widget settings", e)
-                    onComplete(SaveResult.Failed)
-                } finally {
-                    _isSaving.value = false
-                    saveMutex.unlock()
+                    if (success) SaveResult.Success else SaveResult.Failed
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save widget settings", e)
+                SaveResult.Failed
+            } finally {
+                _isSaving.value = false
+                saveMutex.unlock()
             }
         }
     }

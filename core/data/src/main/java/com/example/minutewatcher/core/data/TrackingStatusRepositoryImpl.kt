@@ -15,7 +15,7 @@ class TrackingStatusRepositoryImpl
     constructor(
         private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
     ) : TrackingStatusRepository {
-        override fun recoverTracking(key: String) {
+        override suspend fun recoverTracking(key: String) {
             statusProviders.find { it.key == key }?.recover()
         }
 

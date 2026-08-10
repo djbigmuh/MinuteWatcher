@@ -310,6 +310,11 @@ class SimIdentityRepositoryImpl
             source = IdentitySource.SLOT_FALLBACK,
         )
 
+        /**
+         * Saves SIM identities to DataStore and performs migrations if needed.
+         * @throws java.io.IOException if DataStore write fails
+         * @throws SecurityException if permission is revoked during operation
+         */
         private suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) {
             val toMigrate = mutableListOf<SimIdentity>()
 
@@ -332,10 +337,10 @@ class SimIdentityRepositoryImpl
                     }
                 }
 
+                // Обновление настроек и запуск миграции выполняем атомарно под замком.
                 updatePrefsWithIdentities(toUpdate)
+                performMigrationsIfNeeded(toMigrate)
             }
-
-            performMigrationsIfNeeded(toMigrate)
         }
 
         private suspend fun fetchCurrentPrefs(): Preferences? =

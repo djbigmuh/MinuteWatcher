@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -18,7 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -41,17 +39,14 @@ class TrafficTracker
         private val permissionManager: PermissionManager,
         private val timeProvider: TimeProvider,
         private val networkStatsProvider: NetworkStatsProvider,
-        @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        override fun recover() {
-            scope.launch {
-                updateTrafficUsage()
-            }
+        override suspend fun recover() {
+            updateTrafficUsage()
         }
 
         private val simChangeMutex = Mutex()
@@ -64,6 +59,11 @@ class TrafficTracker
 
         private val targetResolver = TrafficTargetResolver(permissionManager)
 
+        /**
+         * Resets the traffic baseline for a specific identity.
+         * @throws java.io.IOException if DataStore write fails
+         * @throws SecurityException if permission is revoked during operation
+         */
         suspend fun resetBaseline(identity: String) {
             trafficUpdateMutex.withLock {
                 simChangeMutex.withLock {
@@ -108,6 +108,11 @@ class TrafficTracker
             }
         }
 
+        /**
+         * Checks and updates traffic usage for the current active SIM.
+         * @throws java.io.IOException if DataStore write fails
+         * @throws SecurityException if permission is revoked during operation
+         */
         @Suppress("ReturnCount")
         suspend fun updateTrafficUsage() {
             trafficUpdateMutex.withLock {
@@ -525,8 +530,8 @@ class TrafficTracker
             when {
                 retryCount >= MAX_BASELINE_RETRIES -> {
                     AppLogger.w(
-                        "Giving up baseline reset for $identity after $retryCount retries. " +
-                            "Forcing baseline re-initialization on next update.",
+                        "Baseline reset retries exhausted for $identity after $retryCount attempts. " +
+                            "Forcing baseline re-initialization.",
                     )
                     simUsageResetRepository.setLastTotalBytes(identity, -1L)
                     baselineNeedsRetry.remove(identity)

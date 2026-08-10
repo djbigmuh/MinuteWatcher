@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +38,11 @@ fun MainScreenContent(
         val state = uiState
         if (state is SimCardListState.Success) {
             val index = state.simCards.indexOfFirst { it.slot == slot }
-            if (index >= 0) listState.animateScrollToItem(index)
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
+        } else {
+            AppLogger.w("Cannot scroll to slot $slot: UI state is ${state::class.simpleName}")
         }
     }
 
@@ -81,13 +86,13 @@ private fun rememberTrackingBannerCallbacks(
             onGrantPhonePermission = actions.onGrantPhonePermission,
             onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
             onOpenAppSettings = actions.onOpenAppSettings,
-            onRetryAppSearch = { viewModel.retryAppSearch() },
-            onRetryCalls = { viewModel.retryCalls() },
-            onRetryShortcuts = { viewModel.retryShortcuts() },
-            onRetryTraffic = { viewModel.retryTraffic() },
+            onRetryAppSearch = viewModel::retryAppSearch,
+            onRetryCalls = viewModel::retryCalls,
+            onRetryShortcuts = viewModel::retryShortcuts,
+            onRetryTraffic = viewModel::retryTraffic,
             onGrantNotificationPermission = actions.onGrantNotificationPermission,
-            onDismissWidgetError = { viewModel.dismissWidgetError() },
-            onDismissInaccurateCalls = { viewModel.dismissInaccurateCalls() },
+            onDismissWidgetError = viewModel::dismissWidgetError,
+            onDismissInaccurateCalls = viewModel::dismissInaccurateCalls,
         )
     }
 

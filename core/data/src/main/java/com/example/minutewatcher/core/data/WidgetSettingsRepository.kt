@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.coroutineScope
@@ -49,10 +48,12 @@ class WidgetSettingsRepository
                     simWidgetVisibilityRepository
                         .getSimSettingsBatch(allIdentities)
                         .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+
                 if (batchSettingsResult == null) {
                     AppLogger.e("WidgetSettingsRepository: failed to load SIM visibility settings after timeout")
+                    return@coroutineScope getFallbackWidgetSettings(settings)
                 }
-                val batchSettings = batchSettingsResult ?: emptyMap()
+                val batchSettings = batchSettingsResult
 
                 // Map results back to the activeSims list we started with to ensure
                 // the returned state only contains data for SIMs that were active at the start of the call.
@@ -82,7 +83,7 @@ class WidgetSettingsRepository
                     callTrackingEnabled = settings.callTrackingEnabled,
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
-                    settingsLoadFailed = batchSettingsResult == null,
+                    settingsLoadFailed = false,
                 )
             }
 
@@ -120,7 +121,6 @@ class WidgetSettingsRepository
         }
 
         private fun getFallbackWidgetSettings(settings: AppSettings): WidgetSettingsState {
-            val fallbackSimStates = SimConstants.SUPPORTED_SLOT_INDICES.associateWith { SimSettingsState() }
             return WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,
                 simArrangement = settings.widgetSimArrangement,
@@ -130,7 +130,7 @@ class WidgetSettingsRepository
                 notifyLowMinutes = settings.notifyLowMinutes,
                 notifyLowTraffic = settings.notifyLowTraffic,
                 callTrackingEnabled = settings.callTrackingEnabled,
-                simStates = fallbackSimStates,
+                simStates = emptyMap(),
                 widgetLimitExceeded = settings.widgetLimitExceeded,
                 settingsLoadFailed = true,
             )

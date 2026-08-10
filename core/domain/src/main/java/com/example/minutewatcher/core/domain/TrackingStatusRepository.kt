@@ -7,7 +7,7 @@ interface TrackingStatusRepository {
     /**
      * Attempts to recover tracking for a specific component.
      */
-    fun recoverTracking(key: String)
+    suspend fun recoverTracking(key: String)
 
     /**
      * Observes the status of all tracking components.

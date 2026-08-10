@@ -12,6 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -91,10 +92,7 @@ class WidgetSettingsViewModelTest {
         runTest {
             whenever(saver.save(any())).thenReturn(true)
             testScheduler.advanceUntilIdle()
-            var result: WidgetSettingsViewModel.SaveResult? = null
-            viewModel.saveAndNotify { res ->
-                result = res
-            }
+            val result = viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
             assertEquals(WidgetSettingsViewModel.SaveResult.Success, result)
@@ -118,12 +116,13 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
 
             var firstResult: WidgetSettingsViewModel.SaveResult? = null
-            var secondResult: WidgetSettingsViewModel.SaveResult? = null
+            val secondResult: WidgetSettingsViewModel.SaveResult?
 
-            vm.saveAndNotify { firstResult = it }
+            launch { firstResult = vm.saveAndNotify() }
+            testScheduler.runCurrent()
             assertTrue(vm.isSaving.value)
 
-            vm.saveAndNotify { secondResult = it }
+            secondResult = vm.saveAndNotify()
             // В новом варианте второй вызов возвращает отказ сразу, так как сохранение уже в процессе
             assertEquals(WidgetSettingsViewModel.SaveResult.AlreadyInProgress, secondResult)
 
@@ -140,8 +139,7 @@ class WidgetSettingsViewModelTest {
             whenever(saver.save(any())).thenThrow(RuntimeException("Save failed"))
             testScheduler.advanceUntilIdle()
 
-            var result: WidgetSettingsViewModel.SaveResult? = null
-            viewModel.saveAndNotify { result = it }
+            val result = viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
             assertEquals(WidgetSettingsViewModel.SaveResult.Failed, result)
@@ -214,20 +212,16 @@ class WidgetSettingsViewModelTest {
             assertNotNull(finalFontSize)
             assertTrue(
                 "FontSize should be one of the updated values and not default",
-                finalFontSize!! in 100 until (100 + totalUpdates),
+                (finalFontSize!! in 100 until (100 + totalUpdates)),
             )
         }
 
-    @Test
-    fun `saveAndNotify calls onComplete Failed on CancellationException`() =
+    @Test(expected = CancellationException::class)
+    fun `saveAndNotify rethrows CancellationException`() =
         runTest {
             whenever(saver.save(any())).thenThrow(CancellationException("Test cancellation"))
             testScheduler.advanceUntilIdle()
 
-            var result: WidgetSettingsViewModel.SaveResult? = null
-            viewModel.saveAndNotify { result = it }
-            testScheduler.advanceUntilIdle()
-
-            assertEquals(WidgetSettingsViewModel.SaveResult.Failed, result)
+            viewModel.saveAndNotify()
         }
 }

@@ -272,7 +272,11 @@ class SemanticSearchManagerTest {
                 "putDocuments should have failed (no successful requests recorded)",
                 session.putRequests.isEmpty(),
             )
-            assertEquals("removeByDocumentId SHOULD have been called", 1, session.removeRequests.size)
+            assertEquals(
+                "removeByDocumentId SHOULD have been called",
+                1,
+                session.removeRequests.size,
+            )
         }
 
     @Test
@@ -316,7 +320,11 @@ class SemanticSearchManagerTest {
             // Total removeByDocumentId calls should be 2:
             // 1st: initial index of SIM 0 (removes slot 1)
             // 2nd: index of SIM 1 (removes slot 0)
-            assertEquals("Total removeByDocumentId calls should be 2", 2, session.removeRequests.size)
+            assertEquals(
+                "Total removeByDocumentId calls should be 2",
+                2,
+                session.removeRequests.size,
+            )
 
             val lastRemove = session.removeRequests.last()
             assertTrue("Should remove sim_0_minutes", lastRemove.ids.contains("sim_0_minutes"))

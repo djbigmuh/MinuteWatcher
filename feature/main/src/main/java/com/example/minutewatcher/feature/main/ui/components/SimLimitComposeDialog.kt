@@ -65,13 +65,18 @@ fun SimLimitComposeDialog(
         confirmButton = {
             DialogButtons(
                 onConfirm = {
-                    val result = state.validate(validationMessages)
-                    if (result is SimLimitValidationResult.Valid) {
-                        onConfirm(
-                            result.minutes,
-                            (result.trafficGb * Constants.MB_PER_GB).roundToInt(),
-                            state.rolloverEnabled,
-                        )
+                    when (val result = state.validate(validationMessages)) {
+                        is SimLimitValidationResult.Valid -> {
+                            onConfirm(
+                                result.minutes,
+                                (result.trafficGb * Constants.MB_PER_GB).roundToInt(),
+                                state.rolloverEnabled,
+                            )
+                        }
+
+                        is SimLimitValidationResult.Invalid -> {
+                            // Ошибки уже установлены в state внутри validate()
+                        }
                     }
                 },
                 onReset = { showResetConfirm = true },

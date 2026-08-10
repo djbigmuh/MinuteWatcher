@@ -43,6 +43,7 @@ object Constants {
         const val ALPHA_FULL = 1f
 
         const val RETRY_BACKOFF_MS = 500L
+        const val MAX_UPDATE_ATTEMPTS = 4
     }
 
     object Traffic {
@@ -75,6 +76,8 @@ object Constants {
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
+        const val BANNER_RETRY_ATTEMPTS = 5L
+        const val BANNER_RETRY_DELAY_MS = 1_000L
     }
 
     object Calls {

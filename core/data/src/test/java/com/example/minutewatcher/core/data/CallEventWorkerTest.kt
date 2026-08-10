@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.Data
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -18,6 +19,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
 class CallEventWorkerTest {
     private val callTracker: CallTracker = mock()
     private lateinit var context: Context

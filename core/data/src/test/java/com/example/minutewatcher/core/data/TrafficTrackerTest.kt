@@ -18,7 +18,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -115,7 +114,6 @@ class TrafficTrackerTest {
                 permissionManager,
                 timeProvider,
                 networkStatsProvider,
-                TestScope(testDispatcher),
             )
     }
 
@@ -768,6 +766,6 @@ class TrafficTrackerTest {
             autoReset = true,
             autoResetDay = 1,
             lastResetDate = 0L,
-            rolloverEnabled = false,
+            rolloverEnabled = false
         )
 }

@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -17,6 +18,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class UsageUseCaseImplValidationTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()

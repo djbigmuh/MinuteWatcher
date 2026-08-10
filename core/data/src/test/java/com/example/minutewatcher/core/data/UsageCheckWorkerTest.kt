@@ -26,6 +26,7 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.resources.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -47,7 +48,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerTest {
     private val simUsageRepository: SimUsageRepository = mock()
     private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
