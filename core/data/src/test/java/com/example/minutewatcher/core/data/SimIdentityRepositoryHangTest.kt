@@ -287,4 +287,31 @@ class SimIdentityRepositoryHangTest {
             val identity2 = identityRepo.getSimIdentity(1)
             assertTrue("Identity2 should be based on ICCID", identity2.stableId.startsWith("icc_"))
         }
+
+    @Test
+    fun `observeActiveSims returns empty list immediately when no SIMs and not initialized`() =
+        runTest {
+            // Setup: no permissions yet, so flow won't emit physical SIMs
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            // Act & Assert: first() should return emptyList() immediately without blocking/timeout
+            val result =
+                withTimeoutOrNull(5.seconds) {
+                    identityRepo.observeActiveSims().first()
+                }
+
+            assertTrue("Flow should have emitted empty list immediately", result != null)
+            assertTrue("Result should be empty", result?.isEmpty() == true)
+        }
 }

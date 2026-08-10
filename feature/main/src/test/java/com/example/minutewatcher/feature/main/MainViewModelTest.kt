@@ -43,6 +43,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -588,5 +589,43 @@ class MainViewModelTest {
             // Note: the controller mutex handles the sequential execution of refreshSimCardsInternal,
             // but the hash check in ViewModel is what we're testing atomicity for.
             verify(dataChangeNotifier, times(1)).notifyDataChanged(eq(true), eq(false))
+        }
+
+    @Test
+    fun `autoResetScheduler uses monotonic time and handles reboot`() =
+        runTest(testDispatcher) {
+            // 1. Initial run
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
+            createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Verify first check happened
+            verify(autoResetUseCase).performAutoReset(eq(false))
+            clearInvocations(autoResetUseCase)
+
+            // 2. Simulate "rewinding" wall clock time (System.currentTimeMillis)
+            // In the new implementation, this should NOT trigger a check because we use elapsedRealtime.
+            // (Note: Robolectric shadows both, but they move forward together unless we jump).
+
+            // Advance time by 30 mins (less than 1h interval)
+            testScheduler.advanceTimeBy(30 * 60 * 1000L)
+
+            // Re-simulate initializeApp or just call checkOnStart via a new VM instance with same SavedState
+            createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Should NOT have called auto-reset again
+            verify(autoResetUseCase, never()).performAutoReset(any())
+
+            // 3. Simulate Reboot (elapsedRealtime jumps back)
+            // Set KEY_LAST_AUTO_RESET_CHECK to a "future" value relative to current 0
+            savedStateHandle["last_auto_reset_check"] = 10_000_000L
+            // Current elapsedRealtime is 30 mins (~1.8M), so 10M is in the "future" (or from previous session)
+
+            createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Should trigger check because elapsed < 0
+            verify(autoResetUseCase).performAutoReset(eq(false))
         }
 }

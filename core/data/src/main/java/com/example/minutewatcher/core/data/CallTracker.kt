@@ -155,7 +155,7 @@ class CallTracker
         private suspend fun <T : Any> readWithRetry(
             attempts: Int = 2,
             timeoutMs: Long = Constants.Flow.SHORT_TIMEOUT_MS,
-            retryDelayMs: Long = Constants.Flow.RETRY_DELAY_MS,
+            retryDelayMs: Long = 500L,
             reader: () -> Flow<T>,
         ): Result<T> {
             var currentDelay = retryDelayMs
@@ -176,8 +176,18 @@ class CallTracker
         }
 
         private suspend fun handleCallStartInternal(subId: Int): Boolean {
-            val startTimeResult = readWithRetry { callSessionRepository.getCallStartTime(subId) }
-            val savedBootTimeResult = readWithRetry { callSessionRepository.getBootTime(subId) }
+            val startTimeResult =
+                readWithRetry(
+                    attempts = 2,
+                    timeoutMs = 3000,
+                    retryDelayMs = 500,
+                ) { callSessionRepository.getCallStartTime(subId) }
+            val savedBootTimeResult =
+                readWithRetry(
+                    attempts = 2,
+                    timeoutMs = 3000,
+                    retryDelayMs = 500,
+                ) { callSessionRepository.getBootTime(subId) }
 
             if (startTimeResult.isFailure || savedBootTimeResult.isFailure) {
                 val field = if (startTimeResult.isFailure) "startTime" else "bootTime"
@@ -261,7 +271,11 @@ class CallTracker
             }
 
             if (subId == -1) {
-                callEndResolver.resolveUnknownSubIdEnd()
+                try {
+                    callEndResolver.resolveUnknownSubIdEnd()
+                } catch (e: SecurityException) {
+                    handleSecurityException(e)
+                }
             } else {
                 endCall(subId)
             }
@@ -342,14 +356,25 @@ class CallTracker
                     return
                 }
 
-                processCallDuration(
-                    durationSeconds = durationSeconds.toInt(),
-                    subId = subId,
-                    savedIdentity = sessionData.savedIdentity,
-                    savedUptime = sessionData.savedUptime,
-                    notify = notify,
-                )
-                clearSession(subId)
+                val success =
+                    processCallDuration(
+                        durationSeconds = durationSeconds.toInt(),
+                        subId = subId,
+                        savedIdentity = sessionData.savedIdentity,
+                        savedUptime = sessionData.savedUptime,
+                        notify = notify,
+                    )
+
+                if (success) {
+                    clearSession(subId)
+                } else {
+                    AppLogger.e("Call duration write failed for subId $subId (duration: $durationSeconds s), session preserved")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Call duration write failed, session preserved",
+                        )
+                }
             }
         }
 
@@ -368,11 +393,30 @@ class CallTracker
         )
 
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
-            val startTimeResult = readWithRetry { callSessionRepository.getCallStartTime(subId) }
-            val savedBootTimeResult = readWithRetry { callSessionRepository.getBootTime(subId) }
-            val savedUptimeResult = readWithRetry { callSessionRepository.getUptime(subId) }
+            val startTimeResult =
+                readWithRetry(
+                    attempts = 2,
+                    timeoutMs = 5000,
+                    retryDelayMs = 1000,
+                ) { callSessionRepository.getCallStartTime(subId) }
+            val savedBootTimeResult =
+                readWithRetry(
+                    attempts = 2,
+                    timeoutMs = 5000,
+                    retryDelayMs = 1000,
+                ) { callSessionRepository.getBootTime(subId) }
+            val savedUptimeResult =
+                readWithRetry(
+                    attempts = 2,
+                    timeoutMs = 5000,
+                    retryDelayMs = 1000,
+                ) { callSessionRepository.getUptime(subId) }
             val savedIdentityBoxResult =
-                readWithRetry {
+                readWithRetry(
+                    attempts = 2,
+                    timeoutMs = 5000,
+                    retryDelayMs = 1000,
+                ) {
                     callSessionRepository.getCallIdentity(subId).map { Box(it) }
                 }
 
@@ -552,7 +596,10 @@ internal class CallEndResolver(
     private val incrementInaccurateAttributions: suspend () -> Unit,
 ) {
     suspend fun resolveUnknownSubIdEnd() {
-        if (!permissionManager.hasPhoneStatePermission()) return
+        if (!permissionManager.hasPhoneStatePermission()) {
+            AppLogger.w("CallEndResolver: permission revoked during resolveUnknownSubIdEnd")
+            return
+        }
         val activeSubIds =
             try {
                 callSessionRepository.getActiveCallSubIds()

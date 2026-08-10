@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -80,6 +79,7 @@ class SimIdentityRepositoryImpl
         private val saveMutex = Mutex()
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
+        private val fallbackCache = ConcurrentHashMap<Int, SimIdentity>()
 
         private val seedFlow: Flow<SeedResult> =
             flow {
@@ -185,7 +185,7 @@ class SimIdentityRepositoryImpl
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
-        private val activeSimsCache: StateFlow<List<ActiveSimInfo>?> =
+        private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
             combine(
                 physicalActiveSims,
                 appSettingsRepository.observeAppSettings(),
@@ -203,8 +203,18 @@ class SimIdentityRepositoryImpl
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,
-                initialValue = null,
+                initialValue = emptyList(),
             )
+
+        init {
+            scope.launch {
+                seedFlow.collect { result ->
+                    if (result is SeedResult.Real) {
+                        fallbackCache.clear()
+                    }
+                }
+            }
+        }
 
         private suspend fun getSeed(): SeedResult {
             val seed =
@@ -228,11 +238,18 @@ class SimIdentityRepositoryImpl
             try {
                 val seed = getSeed()
 
+                if (seed is SeedResult.Fallback) {
+                    fallbackCache[slot]?.let {
+                        AppLogger.d("SimIdentityRepository: returning cached fallback for slot $slot")
+                        return it
+                    }
+                }
+
                 // Wait for activeSimsCache with a timeout that covers the potential seed generation time.
                 // If the seed is being generated, activeSimsCache (which depends on physicalActiveSims,
                 // which depends on seedFlow) will not emit until the seed is ready.
                 val currentSims: List<ActiveSimInfo> =
-                    activeSimsCache.filterNotNull().firstWithTimeout(SEED_TOTAL_TIMEOUT_MS)
+                    activeSimsCache.firstWithTimeout(SEED_TOTAL_TIMEOUT_MS)
                         ?: run {
                             AppLogger.w(
                                 "SimIdentityRepository: Timeout waiting for activeSimsCache, " +
@@ -245,7 +262,11 @@ class SimIdentityRepositoryImpl
                 }
 
                 // If not found in cache, try direct resolution
-                return findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
+                val resolved = findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
+                if (seed is SeedResult.Fallback) {
+                    fallbackCache[slot] = resolved
+                }
+                return resolved
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -385,9 +406,7 @@ class SimIdentityRepositoryImpl
             }
         }
 
-        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> =
-            activeSimsCache
-                .filterNotNull()
+        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache
 
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val infoList =

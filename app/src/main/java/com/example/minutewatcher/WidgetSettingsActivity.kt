@@ -32,22 +32,28 @@ class WidgetSettingsActivity : AppCompatActivity() {
                     WidgetSettingsScreen(
                         viewModel = viewModel,
                         onSave = {
-                            viewModel.saveAndNotify { success ->
-                                if (success) {
-                                    Toast
-                                        .makeText(
-                                            this,
-                                            getString(R.string.settings_saved_toast),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                    finish()
-                                } else {
-                                    Toast
-                                        .makeText(
-                                            this,
-                                            getString(R.string.error),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                            viewModel.saveAndNotify { result ->
+                                when (result) {
+                                    WidgetSettingsViewModel.SaveResult.Success -> {
+                                        Toast
+                                            .makeText(
+                                                this,
+                                                getString(R.string.settings_saved_toast),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        finish()
+                                    }
+                                    WidgetSettingsViewModel.SaveResult.Failed -> {
+                                        Toast
+                                            .makeText(
+                                                this,
+                                                getString(R.string.error),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                    }
+                                    WidgetSettingsViewModel.SaveResult.AlreadyInProgress -> {
+                                        // Ignore, avoid multiple toasts
+                                    }
                                 }
                             }
                         },

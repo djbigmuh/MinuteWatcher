@@ -26,6 +26,11 @@ class UsageMonitorReceiver : BroadcastReceiver() {
 
             val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
 
+            if (state == null) {
+                AppLogger.w("UsageMonitorReceiver: EXTRA_STATE is null, skipping")
+                return
+            }
+
             // Try to extract subId using various possible keys for better compatibility
             val subId =
                 intent.getIntExtra("subscription", -1).let {

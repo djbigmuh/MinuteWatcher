@@ -469,6 +469,77 @@ class UsageCheckWorkerTest {
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
         }
 
+    @Test
+    fun `doWork proceeds with stale snapshot on refresh timeout`() =
+        runTest(testDispatcher) {
+            val identity = "sim_0"
+            val staleTimestamp = 500000L
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = staleTimestamp,
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(
+                                slot = 0,
+                                identity = identity,
+                                operator = "MTS",
+                                isActive = true,
+                                entities =
+                                    mapOf(
+                                        PackageType.MINUTES to
+                                            SemanticEntity(
+                                                id = "e1",
+                                                simSlot = 0,
+                                                operatorName = "MTS",
+                                                packageType = PackageType.MINUTES,
+                                                limit = 100,
+                                                used = 90,
+                                                remaining = 10,
+                                                unit = MeasurementUnit.MINUTES,
+                                                periodStart = 0,
+                                                periodEnd = 0,
+                                                lastUpdateTime = 0,
+                                                sourceType = DataSourceType.SYSTEM,
+                                            ),
+                                    ),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            // Mock timeout with a valid (stale) snapshot
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult.Timeout(snapshot),
+            )
+
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
+            whenever(
+                simUsageRepository.getSimUsage(identity),
+            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+
+            // Verify it proceeded with notifications
+            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+        }
+
+    @Test
+    fun `doWork retries when refresh times out and no data loaded`() =
+        runTest(testDispatcher) {
+            // Mock timeout with empty snapshot (timestamp = 0)
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult.Timeout(createEmptySnapshot()),
+            )
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+        }
     @Suppress("SameParameterValue")
     private fun createUtcMillis(
         year: Int,

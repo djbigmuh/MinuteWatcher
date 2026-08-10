@@ -118,11 +118,7 @@ class WidgetUpdaterImpl
          *
          * Критерии срабатывания (любой из):
          * 1. В cause-цепочке присутствует [android.os.TransactionTooLargeException].
-         * 2. Сообщение содержит "RemoteViews" И "TransactionTooLarge".
-         *
-         * Ограничения:
-         * - Если в будущих версиях Android текст ошибки изменится, критерий 2 перестанет
-         *   работать, но критерий 1 (cause-цепочка) останется надёжным.
+         * 2. Сообщение содержит паттерны, указывающие на переполнение Binder или RemoteViews.
          *
          * При срабатывании эвристики виджет переключается в упрощённый режим (SIMPLE).
          */
@@ -131,15 +127,16 @@ class WidgetUpdaterImpl
             val isTransactionTooLarge = hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
 
             val message = e.message ?: ""
-            // Проверяем сообщение исключения на упоминание RemoteViews и лимитов.
             val isMessageRelated =
-                message.contains("RemoteViews", ignoreCase = true) &&
-                    message.contains("TransactionTooLarge", ignoreCase = true)
+                LIMIT_EXCEPTION_PATTERNS.any { pattern ->
+                    pattern.containsMatchIn(message)
+                }
 
             val result = isTransactionTooLarge || isMessageRelated
 
             if (result) {
-                AppLogger.w("RemoteViews size limit detection triggered (result=$result). Exception details: $e")
+                AppLogger.w("RemoteViews size limit detection triggered (result=$result). Full exception details: $e")
+                AppLogger.d("Exception message for diagnostics: $message")
             }
 
             return result
@@ -159,5 +156,17 @@ class WidgetUpdaterImpl
 
         companion object {
             private const val MAX_UPDATE_ATTEMPTS = 4
+
+            private val LIMIT_EXCEPTION_PATTERNS =
+                listOf(
+                    // Оригинальный паттерн (RemoteViews + TransactionTooLarge)
+                    Regex("RemoteViews.*TransactionTooLarge", RegexOption.IGNORE_CASE),
+                    // "exceeded maximum size"
+                    Regex("exceeded maximum size", RegexOption.IGNORE_CASE),
+                    // "RemoteViews size"
+                    Regex("RemoteViews size", RegexOption.IGNORE_CASE),
+                    // "Binder transaction" (Binder transaction failed)
+                    Regex("Binder transaction", RegexOption.IGNORE_CASE),
+                )
         }
     }

@@ -90,14 +90,13 @@ class WidgetSettingsViewModelTest {
         runTest {
             whenever(saver.save(any())).thenReturn(true)
             testScheduler.advanceUntilIdle()
-            var completed = false
-            viewModel.saveAndNotify { success ->
-                completed = true
-                assertTrue(success)
+            var result: WidgetSettingsViewModel.SaveResult? = null
+            viewModel.saveAndNotify { res ->
+                result = res
             }
             testScheduler.advanceUntilIdle()
 
-            assertTrue(completed)
+            assertEquals(WidgetSettingsViewModel.SaveResult.Success, result)
             verify(saver).save(any())
         }
 
@@ -117,21 +116,34 @@ class WidgetSettingsViewModelTest {
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             testScheduler.advanceUntilIdle()
 
-            var firstResult: Boolean? = null
-            var secondResult: Boolean? = null
+            var firstResult: WidgetSettingsViewModel.SaveResult? = null
+            var secondResult: WidgetSettingsViewModel.SaveResult? = null
 
             vm.saveAndNotify { firstResult = it }
             assertTrue(vm.isSaving.value)
 
             vm.saveAndNotify { secondResult = it }
             // В новом варианте второй вызов возвращает отказ сразу, так как сохранение уже в процессе
-            assertEquals(false, secondResult)
+            assertEquals(WidgetSettingsViewModel.SaveResult.AlreadyInProgress, secondResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(true, firstResult)
+            assertEquals(WidgetSettingsViewModel.SaveResult.Success, firstResult)
             assertFalse(vm.isSaving.value)
+        }
+
+    @Test
+    fun `saveAndNotify returns Failed on exception`() =
+        runTest {
+            whenever(saver.save(any())).thenThrow(RuntimeException("Save failed"))
+            testScheduler.advanceUntilIdle()
+
+            var result: WidgetSettingsViewModel.SaveResult? = null
+            viewModel.saveAndNotify { result = it }
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(WidgetSettingsViewModel.SaveResult.Failed, result)
         }
 
     @Test

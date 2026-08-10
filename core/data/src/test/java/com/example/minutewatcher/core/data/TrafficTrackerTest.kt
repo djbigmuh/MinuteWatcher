@@ -593,7 +593,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             assertTrue(tracker.status.value is TrackingStatus.Error)
-            assertEquals("Identity read timeout", (tracker.status.value as TrackingStatus.Error).message)
+            assertEquals("Identity read timeout in TrafficTracker", (tracker.status.value as TrackingStatus.Error).message)
 
             // 3. Third run: observeActiveSims succeeds, same SIM
             val activeSims =
@@ -695,6 +695,44 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
             verify(callSessionRepository, times(1)).getLastDataSubId()
         }
+
+    @Test
+    fun `updateTrafficUsage sets error status on identity timeout`() =
+        runTest(testDispatcher) {
+            // Arrange: observeActiveSims never emits
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+
+            // Act
+            tracker.updateTrafficUsage()
+
+            // Assert
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("Identity read timeout in TrafficTracker", (status as TrackingStatus.Error).message)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
+        }
+
+    @Test
+    fun `getActiveSimsAndCleanup timeout does not clear baselineNeedsRetry`() =
+        runTest(testDispatcher) {
+            // Arrange: add an entry to baselineNeedsRetry
+            val identity = "sim_0"
+            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            field.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val map = field[tracker] as MutableMap<String, Int>
+            map[identity] = 1
+
+            // Mock timeout
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+
+            // Act
+            tracker.updateTrafficUsage()
+
+            // Assert
+            assertTrue("baselineNeedsRetry should NOT be cleared on timeout", map.containsKey(identity))
+        }
+
 
     @Test
     fun `resetBaseline initializes inMemoryLastDataSubId and avoids subsequent DataStore read`() =

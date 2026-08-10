@@ -27,6 +27,14 @@ class WidgetSettingsViewModel
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
+        sealed interface SaveResult {
+            object Success : SaveResult
+
+            object AlreadyInProgress : SaveResult
+
+            object Failed : SaveResult
+        }
+
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()
 
@@ -85,12 +93,11 @@ class WidgetSettingsViewModel
             }
         }
 
-        fun saveAndNotify(onComplete: (Boolean) -> Unit) {
+        fun saveAndNotify(onComplete: (SaveResult) -> Unit) {
             viewModelScope.launch {
                 if (!saveMutex.tryLock()) {
                     // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
-                    // UI должен проигнорировать отказ или показать "подождите"
-                    onComplete(false)
+                    onComplete(SaveResult.AlreadyInProgress)
                     return@launch
                 }
                 _isSaving.value = true
@@ -98,17 +105,17 @@ class WidgetSettingsViewModel
                     val currentState = _settingsState.value
                     if (currentState == null) {
                         AppLogger.w("saveAndNotify called before settings were loaded")
-                        onComplete(false)
+                        onComplete(SaveResult.Failed)
                         return@launch
                     }
 
                     val success = saver.save(currentState)
-                    onComplete(success)
+                    onComplete(if (success) SaveResult.Success else SaveResult.Failed)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to save widget settings", e)
-                    onComplete(false)
+                    onComplete(SaveResult.Failed)
                 } finally {
                     _isSaving.value = false
                     saveMutex.unlock()

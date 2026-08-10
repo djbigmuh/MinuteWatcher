@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -99,5 +100,23 @@ class UsageMonitorReceiverTest {
             val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_2").get()
 
             assertTrue("Work CALL_EVENT_2 should be enqueued for telephony action", workInfos.isNotEmpty())
+        }
+
+    @Test
+    fun testOnReceiveNullStateDoesNotEnqueueWork() =
+        runTest {
+            val receiver = UsageMonitorReceiver()
+            val intent = Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+            // No EXTRA_STATE put
+
+            receiver.onReceive(context, intent)
+
+            ShadowLooper.idleMainLooper()
+
+            // Check that no unique work was enqueued. Since we don't know the name if it failed,
+            // we check by tag (which is always added by default for the worker class)
+            val workInfos = workManager.getWorkInfosByTag(CallEventWorker::class.java.name).get()
+
+            assertTrue("No work should be enqueued when state is null", workInfos.isEmpty())
         }
 }

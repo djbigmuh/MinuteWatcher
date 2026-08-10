@@ -97,7 +97,25 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns false for generic Binder failure`() {
-        val e = IllegalArgumentException("Binder call failed")
+        val e = IllegalArgumentException("Something failed in binder")
         assertFalse(updater.isRemoteViewsLimitException(e))
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true for exceeded maximum size pattern`() {
+        val e = IllegalArgumentException("RemoteViews exceeded maximum size of 1048576 bytes")
+        assertTrue(updater.isRemoteViewsLimitException(e))
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true for RemoteViews size pattern`() {
+        val e = IllegalArgumentException("The RemoteViews size is too large")
+        assertTrue(updater.isRemoteViewsLimitException(e))
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true for Binder transaction pattern`() {
+        val e = IllegalArgumentException("Binder transaction failed")
+        assertTrue(updater.isRemoteViewsLimitException(e))
     }
 }

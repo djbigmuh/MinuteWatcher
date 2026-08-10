@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -35,6 +36,8 @@ class UpdateCoordinatorTest {
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
 
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
+
     private val snapshotFlow = MutableSharedFlow<GlobalSnapshot>(replay = 1, extraBufferCapacity = 10)
 
     @Before
@@ -58,6 +61,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
@@ -87,6 +91,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
 
@@ -117,6 +122,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             testScheduler.advanceUntilIdle()
 
@@ -140,6 +146,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
 
             coordinator.notifyDataChanged(updateWidget = true, force = false)
@@ -168,6 +175,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             testScheduler.advanceUntilIdle()
 
@@ -197,6 +205,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             testScheduler.advanceUntilIdle()
 
@@ -334,6 +343,7 @@ class UpdateCoordinatorTest {
                     widgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             testScheduler.advanceUntilIdle()
 
@@ -402,6 +412,7 @@ class UpdateCoordinatorTest {
                     fakeWidgetUpdater,
                     usageStateRepository,
                     backgroundScope,
+                    timeProvider,
                 )
             testScheduler.advanceUntilIdle()
 
@@ -440,6 +451,51 @@ class UpdateCoordinatorTest {
             assertEquals(2, callCount.get())
             assertTrue(forcedUpdateJob.isCompleted)
         }
+
+    @Test
+    fun `observation continues indefinitely after many failures`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            var failCount = 0
+            val maxFails = 15
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                if (failCount < maxFails) {
+                    failCount++
+                    error("Failure $failCount")
+                }
+                Unit
+            }
+
+            UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+                timeProvider,
+            )
+
+            // Emit snapshot
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+
+            // Advance through 15 failures
+            // INITIAL_RETRY_DELAY_SECONDS = 5s
+            // MAX_RETRY_EXPONENT = 6 (2^6 = 64) -> Max initial-based delay is 5 * 64 = 320s, capped at 300s.
+
+            // Just advance a lot of time to cover 15 retries.
+            // 15 * 300s = 4500s
+            testScheduler.advanceTimeBy(5000.seconds)
+            testScheduler.advanceUntilIdle()
+
+            // After 15 failures, the 16th attempt should succeed
+            // (failCount will be 15, then it will return Unit)
+
+            // Total updateAll calls: 15 (fail) + 1 (success) = 16
+            verify(widgetUpdater, times(16)).updateAll()
+        }
+
 
     private fun createEmptySnapshot() =
         GlobalSnapshot(

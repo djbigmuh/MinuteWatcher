@@ -27,6 +27,7 @@ class CallEventWorker
                 when (state) {
                     TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId)
                     TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId)
+                    else -> AppLogger.w("CallEventWorker: unknown state=$state")
                 }
 
                 return Result.success()

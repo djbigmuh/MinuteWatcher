@@ -81,15 +81,16 @@ class UsageCheckWorker
                 false
             }
 
-        private fun handleRefreshTimeout(refreshResult: RefreshResult.Timeout): Result {
+        private suspend fun handleRefreshTimeout(refreshResult: RefreshResult.Timeout): Result {
             val snapshot = refreshResult.snapshot
             return if (snapshot.timestamp == 0L) {
-                AppLogger.w("UsageCheckWorker: Data never loaded, requesting retry")
+                AppLogger.w("UsageCheckWorker: no data loaded, scheduling retry")
                 Result.retry()
             } else {
                 AppLogger.w(
-                    "UsageCheckWorker: Data refresh timed out. Skipping notifications to avoid stale alerts.",
+                    "UsageCheckWorker: refresh timed out, proceeding with stale snapshot from ${snapshot.timestamp}",
                 )
+                processSuccessfulRefresh(snapshot)
                 Result.success()
             }
         }

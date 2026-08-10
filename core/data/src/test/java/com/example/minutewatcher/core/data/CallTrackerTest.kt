@@ -645,4 +645,57 @@ class CallTrackerTest {
             // Assert: No sessions cleared
             verify(callSessionRepository, never()).setCallStartTime(any(), any())
         }
+
+    @Test
+    fun `endCall preserves session on write failure`() =
+        runTest(testDispatcher) {
+            // Arrange
+            val subId = 1
+            val identity = "id_1"
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
+
+            // Simulate write failure in simUsageRepository
+            whenever(simUsageRepository.incrementMinutesUsed(eq(identity), any()))
+                .thenThrow(RuntimeException("Write failed"))
+
+            timeProvider.advance(60000) // 60s duration -> 1 min
+
+            // Act
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+
+            // Assert
+            // 1. Session is NOT cleared
+            verify(callSessionRepository, never()).setCallStartTime(eq(subId), eq(0L))
+
+            // 2. Status is Error with specific message
+            val status = callTracker.status.value as TrackingStatus.Error
+            assertEquals("Call duration write failed, session preserved", status.message)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
+        }
+
+    @Test
+    fun `resolveUnknownSubIdEnd handles permission revocation gracefully`() =
+        runTest(testDispatcher) {
+            // Setup: Active call exists
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+
+            // Check permissions succeeds initially in onCallEnded -> executeCallEnded
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+
+            // BUT, when resolveUnknownSubIdEnd is called, we simulate SecurityException
+            whenever(callSessionRepository.getActiveCallSubIds()).thenThrow(SecurityException("Permission revoked"))
+
+            // Act
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: No crash, and status is PERMISSION_MISSING
+            val status = callTracker.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, status.type)
+        }
 }

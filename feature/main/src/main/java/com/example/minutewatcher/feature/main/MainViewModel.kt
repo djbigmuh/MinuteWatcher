@@ -281,12 +281,21 @@ internal class AutoResetScheduler(
     suspend fun checkOnStart() {
         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK) ?: 0L
         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
-        val now = System.currentTimeMillis()
+
+        // Используем SystemClock.elapsedRealtime() для измерения интервалов между проверками.
+        // Это обеспечивает монотонность и независимость от ручного изменения системных часов
+        // или NTP-синхронизации, в отличие от System.currentTimeMillis().
+        val now = SystemClock.elapsedRealtime()
+        val elapsed = now - lastResetCheck
+
+        // Если elapsed < 0, это означает, что устройство было перезагружено и таймер сбросился.
+        // Перезагрузка является сигналом для обязательной проверки автосброса.
+        val isReboot = elapsed < 0
         val effectiveFailCount =
-            if ((now - lastResetCheck) > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+            if (isReboot || elapsed > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
 
         try {
-            if ((now - lastResetCheck) > AUTO_RESET_CHECK_INTERVAL_MS) {
+            if (isReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
                 if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                     autoResetUseCase.performAutoReset(shouldNotify = false)
                     savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
@@ -302,7 +311,7 @@ internal class AutoResetScheduler(
         } catch (e: Exception) {
             AppLogger.e("Auto-reset failed during initialization", e)
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
-            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = System.currentTimeMillis()
+            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = SystemClock.elapsedRealtime()
         }
     }
 

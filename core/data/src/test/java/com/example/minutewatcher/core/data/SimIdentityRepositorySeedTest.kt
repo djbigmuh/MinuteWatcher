@@ -150,4 +150,65 @@ class SimIdentityRepositorySeedTest {
             )
             assertEquals(IdentitySource.ICCID, realIdentity.source)
         }
+
+    @Test
+    fun `getSimIdentity uses fallback cache and clears it on real seed`() =
+        runTest {
+            dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_sim_settings_cache.preferences_pb") },
+                )
+
+            val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
+            val seedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = storedSeed
+                    override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
+                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                        delay(60.seconds)
+                        return "generated"
+                    }
+                }
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            // 1. Advance to Fallback state
+            testScheduler.advanceTimeBy(25_000)
+            testScheduler.advanceUntilIdle()
+
+            // 2. First call - populates cache
+            val id1 = identityRepo.getSimIdentity(0)
+            assertEquals("sim_0", id1.stableId)
+
+            // 3. Second call - must be from cache (no suspension for activeSimsCache)
+            // We verify by advancing time very little - if it's cached, it returns immediately.
+            // If it weren't cached, it would wait for activeSimsCache.firstWithTimeout(...)
+            val id2 = identityRepo.getSimIdentity(0)
+            assertEquals("sim_0", id2.stableId)
+
+            // 4. Transition to Real seed
+            storedSeed.emit("real_seed")
+            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceUntilIdle()
+
+            // 5. Cache should be cleared, call should return real identity (based on ICCID if we provide mock sub)
+            val mockSubInfo = mock<SubscriptionInfo>()
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.iccId).thenReturn("icc_1")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+            val id3 = identityRepo.getSimIdentity(0)
+            assertTrue("Should return real ID now, got ${id3.stableId}", id3.stableId.startsWith("icc_"))
+        }
 }

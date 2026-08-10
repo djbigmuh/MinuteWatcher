@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -41,9 +42,13 @@ class UpdateCoordinator
         private val widgetUpdater: WidgetUpdater,
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
+        private val timeProvider: TimeProvider,
     ) : DataChangeNotifier {
         private val lastSnapshotHash = MutableStateFlow<Int?>(null)
         private val widgetUpdateMutex = Mutex()
+
+        private var retryAttempt = 0L
+        private var lastSuccessTime = 0L
 
         init {
             startObservation()
@@ -60,6 +65,12 @@ class UpdateCoordinator
                             SnapshotUtils.calculateContentHash(new)
                     }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
+                        val now = timeProvider.now()
+                        if (now - lastSuccessTime > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                            retryAttempt = 0
+                        }
+                        lastSuccessTime = now
+
                         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
                         if (snapshot.suppressWidgetUpdate) {
@@ -76,23 +87,28 @@ class UpdateCoordinator
                                 widgetUpdater.updateAll()
                             }
                         }
-                    }.retryWhen { cause, attempt ->
+                    }.retryWhen { cause, _ ->
                         if (cause is CancellationException) throw cause
-                        if (attempt >= MAX_RETRY_ATTEMPTS) {
-                            AppLogger.e("UpdateCoordinator: giving up after $MAX_RETRY_ATTEMPTS retries", cause)
-                            return@retryWhen false
+
+                        val now = timeProvider.now()
+                        if (now - lastSuccessTime > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                            retryAttempt = 0
                         }
 
                         lastSnapshotHash.value = null
                         val delaySeconds =
                             minOf(
-                                INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT)),
+                                INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
                                 MAX_RETRY_DELAY_SECONDS,
                             )
+
+                        retryAttempt++
+
                         AppLogger.e(
-                            "UpdateCoordinator: observation failed (attempt ${attempt + 1}), retry in ${delaySeconds}s",
+                            "UpdateCoordinator: observation failed (attempt $retryAttempt), retry in ${delaySeconds}s",
                             cause,
                         )
+
                         delay(delaySeconds.seconds)
                         true
                     }.collect {}
@@ -154,5 +170,6 @@ class UpdateCoordinator
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
             private const val MAX_RETRY_ATTEMPTS = 10L
+            private const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
         }
     }

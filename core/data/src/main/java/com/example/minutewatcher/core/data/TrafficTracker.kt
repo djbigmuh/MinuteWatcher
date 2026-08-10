@@ -110,7 +110,15 @@ class TrafficTracker
                 if (!checkPermissions()) return
 
                 val activeSims = getActiveSimsAndCleanup()
-                if (activeSims == null) return
+                if (activeSims == null) {
+                    AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Identity read timeout in TrafficTracker",
+                        )
+                    return
+                }
 
                 val target = targetResolver.resolve(activeSims)
                 if (target == null) {
@@ -129,7 +137,7 @@ class TrafficTracker
 
                     if (isSimChanged) {
                         val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                        val retryCount = baselineNeedsRetry[targetIdentity] ?: 0
+                        val retryCount = baselineNeedsRetry.getOrDefault(targetIdentity, 0)
                         handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, retryCount)
                         handleSkipDelta(target, retryCount)
                     } else {
@@ -151,11 +159,7 @@ class TrafficTracker
 
         private suspend fun getActiveSimsAndCleanup(): List<ActiveSimInfo>? {
             val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout()
-            if (activeSims == null) {
-                AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Identity read timeout")
-                return null
-            }
+            if (activeSims == null) return null
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
             baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
             return activeSims
@@ -337,7 +341,7 @@ class TrafficTracker
                         }
                     handled = true
                 }
-            } else if (baselineNeedsRetry.containsKey(targetIdentity)) {
+            } else if (baselineNeedsRetry.getOrDefault(targetIdentity, 0) > 0) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
                 _status.value =
                     TrackingStatus.Error(
@@ -539,7 +543,7 @@ class TrafficTracker
                             "Baseline reset will be retried (attempt ${retryCount + 1}).",
                     )
                     simUsageResetRepository.setLastTotalBytes(identity, -1L)
-                    baselineNeedsRetry[identity] = retryCount + 1
+                    baselineNeedsRetry.merge(identity, 1, Int::plus)
                     true
                 }
             }

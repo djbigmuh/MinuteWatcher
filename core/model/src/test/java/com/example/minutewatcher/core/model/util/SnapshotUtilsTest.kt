@@ -91,6 +91,18 @@ class SnapshotUtilsTest {
         assertEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
     }
 
+    @Test
+    fun `hash changes when autoResetDay changes`() {
+        val s1 = createSnapshot(remaining = 90)
+        // Default autoResetDay is 1 in createSnapshot helper
+
+        val entity = s1.simSnapshots[0].entities[PackageType.MINUTES]!!
+        val sim2 = SimSnapshot(0, "ABC", "ABC", true, mapOf(PackageType.MINUTES to entity), autoResetDay = 2)
+        val s2 = s1.copy(simSnapshots = listOf(sim2))
+
+        assertNotEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
+    }
+
     private fun createSimSnapshot(
         slot: Int,
         remaining: Long,

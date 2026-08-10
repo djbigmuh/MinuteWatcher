@@ -86,4 +86,32 @@ class CallEventWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
             verify(callTracker).onCallEnded(subId)
         }
+
+    @Test
+    fun `doWork returns success for unknown state`() =
+        runTest {
+            val inputData =
+                Data
+                    .Builder()
+                    .putString("state", "UNKNOWN_STATE")
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : androidx.work.WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: androidx.work.WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            org.mockito.kotlin.verifyNoInteractions(callTracker)
+        }
 }

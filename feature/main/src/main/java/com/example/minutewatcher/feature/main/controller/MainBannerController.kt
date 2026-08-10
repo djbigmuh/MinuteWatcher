@@ -9,12 +9,14 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -55,7 +57,10 @@ class MainBannerController
             combine(
                 _isPhonePermissionPermanentlyDenied,
                 _isNotificationPermissionPermanentlyDenied,
-                appSettingsRepository.observeAppSettings(),
+                appSettingsRepository.observeAppSettings().catch {
+                    AppLogger.e("Failed to observe AppSettings in MainBannerController", it)
+                    emit(com.example.minutewatcher.core.model.AppSettings())
+                },
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
             }.stateIn(
@@ -73,9 +78,9 @@ class MainBannerController
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
-                permissionRepository.phoneStatePermissionGranted,
-                permissionRepository.usageStatsPermissionGranted,
-                permissionRepository.notificationPermissionGranted,
+                permissionRepository.phoneStatePermissionGranted.catch { emit(false) },
+                permissionRepository.usageStatsPermissionGranted.catch { emit(false) },
+                permissionRepository.notificationPermissionGranted.catch { emit(false) },
                 bannerExtraData,
             ) { status, phone, usage, notif, extra ->
                 TrackingBannerMapper.mapToBannerState(
@@ -87,12 +92,21 @@ class MainBannerController
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
                 )
+            }.retry(MAX_BANNER_RETRY_ATTEMPTS) { e ->
+                AppLogger.e("Retrying banner state computation due to error", e)
+                delay(BANNER_RETRY_DELAY_MS)
+                true
             }.catch { e ->
-                AppLogger.e("Failed to compute banner state", e)
+                AppLogger.e("CRITICAL: Failed to compute banner state after retries", e)
                 emit(TrackingBannerState())
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,
                 initialValue = TrackingBannerState(),
             )
+
+        companion object {
+            private const val MAX_BANNER_RETRY_ATTEMPTS = 5L
+            private const val BANNER_RETRY_DELAY_MS = 1000L
+        }
     }
