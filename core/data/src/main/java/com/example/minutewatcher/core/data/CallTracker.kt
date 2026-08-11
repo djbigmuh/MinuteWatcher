@@ -35,6 +35,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val INTERNAL_READ_TIMEOUT_MS = 2000L
 
+private class DataStoreTimeoutException(
+    message: String,
+) : Exception(message)
+
 @Singleton
 class CallTracker
     @Inject
@@ -173,7 +177,7 @@ class CallTracker
                 }
             }
             AppLogger.w("readWithRetry($label): all $attempts attempts timed out")
-            return Result.failure(java.util.concurrent.TimeoutException("readWithRetry($label) timed out"))
+            return Result.failure(DataStoreTimeoutException("readWithRetry($label) timed out"))
         }
 
         @Suppress("LongMethod", "ReturnCount")

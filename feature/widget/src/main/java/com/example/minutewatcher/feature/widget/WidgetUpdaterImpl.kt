@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -18,14 +17,13 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-open class WidgetUpdaterImpl
+class WidgetUpdaterImpl
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
         private val appSettingsRepository: AppSettingsRepository,
+        private val renderer: WidgetRenderer = WidgetRenderer { ctx -> MinutesGlanceWidget().updateAll(ctx) },
     ) : WidgetUpdater {
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal var widget: GlanceAppWidget = MinutesGlanceWidget()
         private val updateMutex = Mutex()
 
         private sealed class UpdateResult {
@@ -36,68 +34,80 @@ open class WidgetUpdaterImpl
             object GenericFailure : UpdateResult()
         }
 
-        override suspend fun updateAll(): Boolean =
-            updateMutex.withLock {
-                try {
-                    val result = attemptUpdateWithRetry(context)
-                    when (result) {
-                        is UpdateResult.Success -> {
-                            val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
-                            if (current) {
-                                setWidgetLimitExceeded(false)
-                            }
-                            true
-                        }
+        override suspend fun updateAll(): Boolean {
+            var delayMs = Constants.Widget.RETRY_BACKOFF_MS
+            var isSuccessful = false
+            var attempt = 1
+            var shouldRetryLoop = true
 
-                        is UpdateResult.LimitExceeded -> {
-                            val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
-                            if (!current) {
-                                setWidgetLimitExceeded(true)
-                                AppLogger.w(
-                                    "Widget update failed due to size limit. " +
-                                        "Flag set to trigger simplified layout on next update.",
-                                )
-                                // G-484: Immediate re-render to apply SIMPLE layout right away.
-                                try {
-                                    performWidgetUpdate(context)
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    AppLogger.e("Immediate widget re-render after limit exceeded failed", e)
-                                }
-                            }
-                            true // Return true as we handled the limit and simplified the widget
-                        }
-
-                        is UpdateResult.GenericFailure -> {
-                            AppLogger.e("Widget update failed after ${Constants.Widget.MAX_UPDATE_ATTEMPTS} attempts")
-                            false
+            while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && shouldRetryLoop) {
+                val (success, shouldRetryResult) =
+                    updateMutex.withLock {
+                        try {
+                            val result = safeUpdateAll(context)
+                            handleUpdateResult(result)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Unexpected error updating widgets", e)
+                            Pair(false, true)
                         }
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Unexpected error updating widgets", e)
-                    false
-                }
-            }
 
-        private suspend fun attemptUpdateWithRetry(context: Context): UpdateResult {
-            var delayMs = Constants.Widget.RETRY_BACKOFF_MS
-            var lastResult: UpdateResult = UpdateResult.GenericFailure
-            for (attempt in 1..Constants.Widget.MAX_UPDATE_ATTEMPTS) {
-                lastResult = safeUpdateAll(context)
-                if (lastResult is UpdateResult.Success || lastResult is UpdateResult.LimitExceeded) {
-                    return lastResult
-                }
-                if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                if (success) {
+                    isSuccessful = true
+                    shouldRetryLoop = false
+                } else if (!shouldRetryResult) {
+                    shouldRetryLoop = false
+                } else if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
                     AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
                     delay(delayMs.milliseconds)
                     delayMs *= 2
+                    attempt++
+                } else {
+                    shouldRetryLoop = false
                 }
             }
-            return lastResult
+            if (!isSuccessful) {
+                AppLogger.e("Widget update failed after ${Constants.Widget.MAX_UPDATE_ATTEMPTS} attempts")
+            }
+            return isSuccessful
         }
+
+        private suspend fun handleUpdateResult(result: UpdateResult): Pair<Boolean, Boolean> =
+            when (result) {
+                is UpdateResult.Success -> {
+                    val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
+                    if (current) {
+                        setWidgetLimitExceeded(false)
+                    }
+                    Pair(true, false)
+                }
+
+                is UpdateResult.LimitExceeded -> {
+                    val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
+                    if (!current) {
+                        setWidgetLimitExceeded(true)
+                        AppLogger.w(
+                            "Widget update failed due to size limit. " +
+                                "Flag set to trigger simplified layout on next update.",
+                        )
+                        // G-484: Immediate re-render to apply SIMPLE layout right away.
+                        try {
+                            renderer.renderAll(context)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Immediate widget re-render after limit exceeded failed", e)
+                        }
+                    }
+                    Pair(true, false) // Return true as we handled the limit and simplified the widget
+                }
+
+                is UpdateResult.GenericFailure -> {
+                    Pair(false, true)
+                }
+            }
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {
             try {
@@ -115,7 +125,7 @@ open class WidgetUpdaterImpl
 
         private suspend fun safeUpdateAll(context: Context): UpdateResult =
             try {
-                performWidgetUpdate(context)
+                renderer.renderAll(context)
                 UpdateResult.Success
             } catch (e: CancellationException) {
                 // Должен перехватываться ПЕРВЫМ и пробрасываться дальше для корректной остановки корутин.
@@ -145,11 +155,6 @@ open class WidgetUpdaterImpl
             }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal open suspend fun performWidgetUpdate(context: Context) {
-            widget.updateAll(context)
-        }
-
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean {
             // Основной критерий: TransactionTooLargeException в cause-цепочке.
             // Это единственный достоверный признак переполнения Binder-транзакции,
@@ -176,3 +181,7 @@ open class WidgetUpdaterImpl
 
         companion object
     }
+
+fun interface WidgetRenderer {
+    suspend fun renderAll(context: Context)
+}

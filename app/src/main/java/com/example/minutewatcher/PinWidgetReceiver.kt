@@ -6,8 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidget
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class PinWidgetReceiver : BroadcastReceiver() {
@@ -39,11 +41,10 @@ class PinWidgetReceiver : BroadcastReceiver() {
             try {
                 val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
                 MinutesGlanceWidget().update(context, glanceId)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
+            } catch (e: CancellationException) {
+                AppLogger.d("Widget pin update cancelled: ${e.message}")
             } catch (e: Exception) {
-                com.example.minutewatcher.core.common.util.AppLogger
-                    .e("Failed to update widget after pinning", e)
+                AppLogger.e("Failed to update widget after pinning", e)
             } finally {
                 pendingResult.finish()
             }

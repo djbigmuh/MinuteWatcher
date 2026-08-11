@@ -105,11 +105,18 @@ class MainViewModel
                     autoResetScheduler.checkOnStart()
 
                     var result = controllers.refresh.refreshSimCardsInternal()
-                    if (result is RefreshResult.Timeout) {
-                        // G-484: If primary refresh timed out, it might be due to slow initialization.
-                        // Retry once with a small delay.
-                        kotlinx.coroutines.delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+                    var retryDelay = Constants.Flow.RETRY_DELAY_MS
+                    repeat(MAX_INIT_RETRIES) {
+                        if (result !is RefreshResult.Timeout) return@repeat
+
+                        AppLogger.d("initializeApp: refresh timed out, retrying in ${retryDelay}ms")
+                        kotlinx.coroutines.delay(retryDelay.milliseconds)
                         result = controllers.refresh.refreshSimCardsInternal()
+                        retryDelay *= 2
+                    }
+
+                    if (result is RefreshResult.Timeout) {
+                        AppLogger.w("initializeApp: refresh timed out after all retries")
                     }
 
                     result?.let {
@@ -259,6 +266,7 @@ class MainViewModel
         companion object {
             internal const val KEY_LAST_REFRESH_ELAPSED = "last_refresh_elapsed"
             internal const val KEY_LAST_SNAPSHOT_HASH = "last_snapshot_hash"
+            private const val MAX_INIT_RETRIES = 3
         }
 
         fun onActivityResume(nowElapsed: Long) {

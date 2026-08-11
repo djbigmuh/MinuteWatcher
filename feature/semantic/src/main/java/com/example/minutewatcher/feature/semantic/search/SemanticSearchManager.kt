@@ -77,7 +77,13 @@ class SemanticSearchManager
                             if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
                         }.collect { snapshot ->
                             ensureActive()
-                            indexSnapshot(snapshot)
+                            try {
+                                indexSnapshot(snapshot)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("SemanticSearchManager: unexpected error during indexing, will continue", e)
+                            }
                         }
                 }
         }

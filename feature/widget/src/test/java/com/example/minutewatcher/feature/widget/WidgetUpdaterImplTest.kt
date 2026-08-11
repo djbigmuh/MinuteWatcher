@@ -111,11 +111,11 @@ class WidgetUpdaterImplTest {
     fun `updateAll returns false when performWidgetUpdate throws unexpected exception`() =
         runTest {
             val failingUpdater =
-                object : WidgetUpdaterImpl(context, appSettingsRepository) {
-                    override suspend fun performWidgetUpdate(context: Context) {
-                        error("Unexpected crash")
-                    }
-                }
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    renderer = { _ -> error("Unexpected crash") },
+                )
 
             val result = failingUpdater.updateAll()
 
@@ -135,8 +135,10 @@ class WidgetUpdaterImplTest {
             }
 
             val updater =
-                object : WidgetUpdaterImpl(context, appSettingsRepository) {
-                    override suspend fun performWidgetUpdate(context: Context) {
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    renderer = { _ ->
                         callCount++
                         if (callCount == 1) {
                             // Simulate LimitExceeded on first call
@@ -145,8 +147,8 @@ class WidgetUpdaterImplTest {
                                 android.os.TransactionTooLargeException(),
                             )
                         }
-                    }
-                }
+                    },
+                )
 
             val result = updater.updateAll()
 

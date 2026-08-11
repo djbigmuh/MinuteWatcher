@@ -1,9 +1,13 @@
 package com.example.minutewatcher.feature.widget.di
 
+import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.domain.WidgetUpdater
+import com.example.minutewatcher.feature.widget.MinutesGlanceWidget
+import com.example.minutewatcher.feature.widget.WidgetRenderer
 import com.example.minutewatcher.feature.widget.WidgetUpdaterImpl
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
@@ -16,4 +20,13 @@ interface WidgetModule {
     @Binds
     @Singleton
     fun bindWidgetUpdater(impl: WidgetUpdaterImpl): WidgetUpdater
+
+    companion object {
+        @Provides
+        @Singleton
+        fun provideWidgetRenderer(): WidgetRenderer =
+            WidgetRenderer { ctx ->
+                MinutesGlanceWidget().updateAll(ctx)
+            }
+    }
 }
