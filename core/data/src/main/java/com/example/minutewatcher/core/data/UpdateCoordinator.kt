@@ -18,7 +18,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
@@ -71,10 +70,7 @@ class UpdateCoordinator
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                        .distinctUntilChanged { old, new ->
-                            SnapshotUtils.calculateContentHash(old) ==
-                                SnapshotUtils.calculateContentHash(new)
-                        }.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                         .onEach { snapshot ->
                             processSnapshot(snapshot)
                         }.retryWhen { cause, _ ->

@@ -18,8 +18,12 @@ class SimWidgetVisibilityRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimWidgetVisibilityRepository {
-        override fun getSimSettings(identity: String): Flow<SimSettingsState> =
-            dataStore.data.map { prefs ->
+        override fun getSimSettings(identity: String): Flow<SimSettingsState> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getSimSettings called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf(SimSettingsState(showSim = false))
+            }
+            return dataStore.data.map { prefs ->
                 SimSettingsState(
                     showSim = prefs[WidgetSettingsKeys.showSimKey(identity)] ?: true,
                     showIcon = prefs[WidgetSettingsKeys.showSimIconKey(identity)] ?: true,
@@ -30,10 +34,12 @@ class SimWidgetVisibilityRepositoryImpl
                     showTrafficLimit = prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] ?: false,
                 )
             }
+        }
 
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
                 identities
+                    .filter { !it.startsWith("invalid_slot") }
                     .mapNotNull { identity ->
                         val showSim = prefs[WidgetSettingsKeys.showSimKey(identity)]
                         if (showSim == null) return@mapNotNull null
@@ -54,6 +60,10 @@ class SimWidgetVisibilityRepositoryImpl
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
             dataStore.edit { prefs ->
                 settingsMap.forEach { (identity, settings) ->
+                    if (identity.startsWith("invalid_slot")) {
+                        AppLogger.w("setSimSettingsBatch skipped for invalid identity: $identity")
+                        return@forEach
+                    }
                     prefs[WidgetSettingsKeys.showSimKey(identity)] = settings.showSim
                     prefs[WidgetSettingsKeys.showSimIconKey(identity)] = settings.showIcon
                     prefs[WidgetSettingsKeys.showSimNameKey(identity)] = settings.showName

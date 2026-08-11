@@ -178,8 +178,6 @@ open class WidgetUpdaterImpl
                     Regex("exceeded maximum size", RegexOption.IGNORE_CASE),
                     // "RemoteViews size"
                     Regex("RemoteViews size", RegexOption.IGNORE_CASE),
-                    // "Binder transaction" (Binder transaction failed)
-                    Regex("Binder transaction", RegexOption.IGNORE_CASE),
                 )
         }
     }

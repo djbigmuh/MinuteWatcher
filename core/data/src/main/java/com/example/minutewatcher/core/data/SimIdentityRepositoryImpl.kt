@@ -254,10 +254,10 @@ class SimIdentityRepositoryImpl
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
                 AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
-                // G-484: Using a constant instead of a slot-indexed string for invalid slots
-                // to prevent downstream logic from treating "sim_-1" as a valid identity.
+                // G-484: Using a slot-indexed string for invalid slots to prevent
+                // downstream logic from treating them as a single valid identity.
                 // This stableId MUST NOT be saved to DataStore.
-                return createFallbackIdentity(slot, "invalid_slot")
+                return createFallbackIdentity(slot, "invalid_slot_$slot")
             }
 
             // Мгновенное чтение текущего значения StateFlow
@@ -341,7 +341,12 @@ class SimIdentityRepositoryImpl
             val toMigrate = mutableListOf<SimIdentity>()
 
             saveMutex.withLock {
-                val validIdentities = identities.filter { it.source != IdentitySource.SLOT_FALLBACK }
+                val validIdentities =
+                    identities
+                        .filter {
+                            it.source != IdentitySource.SLOT_FALLBACK &&
+                                !it.stableId.startsWith("invalid_slot")
+                        }
                 if (validIdentities.isEmpty()) return@withLock
 
                 var currentPrefs = fetchCurrentPrefs()
@@ -506,21 +511,35 @@ class SimIdentityRepositoryImpl
             getActiveIdentities()
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
 
-        override fun getSimOperator(identity: String): Flow<String> =
-            combine(
+        override fun getSimOperator(identity: String): Flow<String> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getSimOperator called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf("")
+            }
+            return combine(
                 getData(SimSettingsKeys.simOperatorKey(identity), ""),
                 getCustomSimOperator(identity),
             ) { resolved, custom ->
                 custom ?: resolved
             }
+        }
 
-        override fun getCustomSimOperator(identity: String): Flow<String?> =
-            dataStore.data.map { it[SimSettingsKeys.customSimOperatorKey(identity)] }
+        override fun getCustomSimOperator(identity: String): Flow<String?> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getCustomSimOperator called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf(null)
+            }
+            return dataStore.data.map { it[SimSettingsKeys.customSimOperatorKey(identity)] }
+        }
 
         override suspend fun setSimOperator(
             identity: String,
             name: String,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setSimOperator called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.simOperatorKey(identity)] = name }
         }
 
@@ -528,6 +547,10 @@ class SimIdentityRepositoryImpl
             identity: String,
             name: String?,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setCustomSimOperator called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { prefs ->
                 if (name == null) {
                     prefs.remove(SimSettingsKeys.customSimOperatorKey(identity))
@@ -537,12 +560,22 @@ class SimIdentityRepositoryImpl
             }
         }
 
-        override fun getSimCode(identity: String): Flow<String> = getData(SimSettingsKeys.simCodeKey(identity), "")
+        override fun getSimCode(identity: String): Flow<String> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getSimCode called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf("")
+            }
+            return getData(SimSettingsKeys.simCodeKey(identity), "")
+        }
 
         override suspend fun setSimCode(
             identity: String,
             code: String,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setSimCode called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
         }
 

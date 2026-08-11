@@ -63,6 +63,10 @@ class TrafficTracker
          * @throws SecurityException if permission is revoked during operation
          */
         suspend fun resetBaseline(identity: String) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
+                return
+            }
             trafficUpdateMutex.withLock {
                 simChangeMutex.withLock {
                     try {

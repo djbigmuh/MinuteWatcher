@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
@@ -31,33 +32,63 @@ class SimUsageRepositoryImpl
         SimUsageResetRepository {
         private val resetMutex = Mutex()
 
-        override fun getSimUsage(identity: String): Flow<SimUsage> =
-            dataStore.data.map { prefs ->
-                SimUsage(
-                    identity = identity,
-                    slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
-                    subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
-                    operator =
-                        prefs[SimSettingsKeys.customSimOperatorKey(identity)]
-                            ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
-                            ?: "",
-                    minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
-                    minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
-                    trafficUsedMb = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
-                    trafficLimitMb = prefs[SimSettingsKeys.trafficLimitKey(identity)] ?: 0,
-                    manualAdjustment = prefs[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0,
-                    trafficAdjustmentGb = prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f,
-                    autoReset = prefs[SimSettingsKeys.autoResetKey(identity)] ?: false,
-                    autoResetDay = prefs[SimSettingsKeys.autoResetDayKey(identity)] ?: 1,
-                    lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L,
-                    rolloverEnabled = prefs[SimSettingsKeys.rolloverEnabledKey(identity)] ?: false,
-                )
+        override fun getSimUsage(identity: String): Flow<SimUsage> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getSimUsage called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf(createEmptyUsage(identity))
             }
+            return dataStore.data.map { prefs -> mapToSimUsage(identity, prefs) }
+        }
+
+        private fun createEmptyUsage(identity: String) =
+            SimUsage(
+                identity = identity,
+                slotIndex = -1,
+                subscriptionId = null,
+                operator = "",
+                minutesUsed = 0,
+                minutesLimit = 0,
+                trafficUsedMb = 0f,
+                trafficLimitMb = 0,
+                manualAdjustment = 0,
+                trafficAdjustmentGb = 0f,
+                autoReset = false,
+                autoResetDay = 1,
+                lastResetDate = 0L,
+                rolloverEnabled = false,
+            )
+
+        private fun mapToSimUsage(
+            identity: String,
+            prefs: Preferences,
+        ) = SimUsage(
+            identity = identity,
+            slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
+            subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
+            operator =
+                prefs[SimSettingsKeys.customSimOperatorKey(identity)]
+                    ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
+                    ?: "",
+            minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
+            minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
+            trafficUsedMb = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
+            trafficLimitMb = prefs[SimSettingsKeys.trafficLimitKey(identity)] ?: 0,
+            manualAdjustment = prefs[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0,
+            trafficAdjustmentGb = prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f,
+            autoReset = prefs[SimSettingsKeys.autoResetKey(identity)] ?: false,
+            autoResetDay = prefs[SimSettingsKeys.autoResetDayKey(identity)] ?: 1,
+            lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L,
+            rolloverEnabled = prefs[SimSettingsKeys.rolloverEnabledKey(identity)] ?: false,
+        )
 
         override suspend fun setMinutesUsed(
             identity: String,
             value: Int,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setMinutesUsed called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.minutesUsedKey(identity)] = value }
         }
 
@@ -65,6 +96,10 @@ class SimUsageRepositoryImpl
             identity: String,
             delta: Int,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("incrementMinutesUsed called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { prefs ->
                 val current = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0
                 prefs[SimSettingsKeys.minutesUsedKey(identity)] = current + delta
@@ -75,6 +110,10 @@ class SimUsageRepositoryImpl
             identity: String,
             valueMb: Float,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setTrafficUsed called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.trafficUsedKey(identity)] = valueMb }
         }
 
@@ -82,6 +121,10 @@ class SimUsageRepositoryImpl
             identity: String,
             deltaMb: Float,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("incrementTrafficUsed called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { prefs ->
                 val current = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 prefs[SimSettingsKeys.trafficUsedKey(identity)] = (current + deltaMb.toDouble()).toFloat()
@@ -92,6 +135,10 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Int,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setManualAdjustment called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.manualAdjustmentKey(identity)] = value }
         }
 
@@ -99,6 +146,10 @@ class SimUsageRepositoryImpl
             identity: String,
             valueGb: Float,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setTrafficAdjustment called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.trafficAdjustmentKey(identity)] = valueGb }
         }
 
@@ -108,6 +159,10 @@ class SimUsageRepositoryImpl
             trafficUsedMb: Float,
             manualAdjustment: Int,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("updateSimStats called with invalid identity: $identity")
+                return
+            }
             dataStore.edit {
                 it[SimSettingsKeys.minutesUsedKey(identity)] = minutesUsed
                 it[SimSettingsKeys.trafficUsedKey(identity)] = trafficUsedMb
@@ -116,20 +171,32 @@ class SimUsageRepositoryImpl
         }
 
         override suspend fun resetSimUsage(identity: String) {
-            dataStore.edit { prefs ->
-                prefs.applyResetWithRollover(identity, timeProvider.now())
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("resetSimUsage called with invalid identity: $identity")
+                return
+            }
+            resetMutex.withLock {
+                dataStore.edit { prefs ->
+                    prefs.applyResetWithRollover(identity, timeProvider.now())
+                }
             }
         }
 
         override suspend fun resetSimUsageManual(identity: String) {
-            dataStore.edit { prefs ->
-                prefs[SimSettingsKeys.minutesUsedKey(identity)] = 0
-                prefs[SimSettingsKeys.trafficUsedKey(identity)] = 0f
-                prefs[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
-                prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
-                prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("resetSimUsageManual called with invalid identity: $identity")
+                return
+            }
+            resetMutex.withLock {
+                dataStore.edit { prefs ->
+                    prefs[SimSettingsKeys.minutesUsedKey(identity)] = 0
+                    prefs[SimSettingsKeys.trafficUsedKey(identity)] = 0f
+                    prefs[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
+                    prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
+                    prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
 
-                prefs.resetNotificationFlags(identity)
+                    prefs.resetNotificationFlags(identity)
+                }
             }
         }
 
@@ -137,8 +204,12 @@ class SimUsageRepositoryImpl
             identity: String,
             autoResetDay: Int,
             nowMillis: Long,
-        ): Boolean =
-            resetMutex.withLock {
+        ): Boolean {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("resetSimUsageIfDue called with invalid identity: $identity")
+                return false
+            }
+            return resetMutex.withLock {
                 val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
 
                 var actuallyReset = false
@@ -153,6 +224,7 @@ class SimUsageRepositoryImpl
                 }
                 actuallyReset
             }
+        }
 
         private fun MutablePreferences.applyResetWithRollover(
             identity: String,
@@ -200,23 +272,41 @@ class SimUsageRepositoryImpl
             this[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
-        override fun getLastResetDate(identity: String): Flow<Long> =
-            getData(SimSettingsKeys.lastResetDateKey(identity), 0L)
+        override fun getLastResetDate(identity: String): Flow<Long> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getLastResetDate called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf(0L)
+            }
+            return getData(SimSettingsKeys.lastResetDateKey(identity), 0L)
+        }
 
         override suspend fun setLastResetDate(
             identity: String,
             value: Long,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setLastResetDate called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[SimSettingsKeys.lastResetDateKey(identity)] = value }
         }
 
-        override fun getLastTotalBytes(identity: String): Flow<Long> =
-            getData(DynamicSettingsKeys.lastTotalBytesKey(identity), -1L)
+        override fun getLastTotalBytes(identity: String): Flow<Long> {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("getLastTotalBytes called with invalid identity: $identity")
+                return kotlinx.coroutines.flow.flowOf(-1L)
+            }
+            return getData(DynamicSettingsKeys.lastTotalBytesKey(identity), -1L)
+        }
 
         override suspend fun setLastTotalBytes(
             identity: String,
             bytes: Long,
         ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("setLastTotalBytes called with invalid identity: $identity")
+                return
+            }
             dataStore.edit { it[DynamicSettingsKeys.lastTotalBytesKey(identity)] = bytes }
         }
     }

@@ -117,9 +117,9 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
-    fun `isRemoteViewsLimitException returns true for Binder transaction pattern`() {
+    fun `isRemoteViewsLimitException returns false for Binder transaction pattern`() {
         val e = IllegalArgumentException("Binder transaction failed")
-        assertTrue(updater.isRemoteViewsLimitException(e))
+        assertFalse(updater.isRemoteViewsLimitException(e))
     }
 
     @Test

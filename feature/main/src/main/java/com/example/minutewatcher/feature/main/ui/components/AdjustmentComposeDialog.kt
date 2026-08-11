@@ -27,7 +27,7 @@ fun AdjustmentComposeDialog(
     onConfirm: (Float) -> Unit,
 ) {
     val initialValue = maxOf(0f, currentValue)
-    var text by remember {
+    var text by remember(currentValue, isMinutes) {
         mutableStateOf(
             if (isMinutes) {
                 initialValue.toInt().toString()
@@ -37,7 +37,7 @@ fun AdjustmentComposeDialog(
         )
     }
 
-    var errorText by remember { mutableStateOf<String?>(null) }
+    var errorText by remember(currentValue, isMinutes) { mutableStateOf<String?>(null) }
 
     val maxLimit = if (isMinutes) Constants.MAX_MINUTES_LIMIT.toFloat() else Constants.MAX_TRAFFIC_LIMIT_GB
 

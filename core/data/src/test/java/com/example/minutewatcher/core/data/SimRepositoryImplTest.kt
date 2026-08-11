@@ -307,6 +307,6 @@ class SimRepositoryImplTest {
                 )
 
             val identity = identityRepo.getSimIdentity(-1)
-            assertEquals("invalid_slot", identity.stableId)
+            assertEquals("invalid_slot_-1", identity.stableId)
         }
 }

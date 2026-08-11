@@ -94,7 +94,7 @@ class MainViewModel
         private fun initializeApp() {
             // Защита от повторной инициализации при пересоздании View или повторных вызовах.
             // isInitialized сбрасывается только при создании нового экземпляра ViewModel.
-            if (isInitialized.get()) return
+            if (!isInitialized.compareAndSet(false, true)) return
             viewModelScope.launch(ioDispatcher) {
                 try {
                     val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
@@ -114,7 +114,6 @@ class MainViewModel
                             lastRefreshAt = SystemClock.elapsedRealtime()
                         }
                     }
-                    isInitialized.compareAndSet(false, true)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -239,10 +238,14 @@ class MainViewModel
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
         private var lastRefreshAt: Long
-            get() = savedStateHandle[AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK] ?: 0L
+            get() = savedStateHandle[KEY_LAST_REFRESH_ELAPSED] ?: 0L
             set(value) {
-                savedStateHandle[AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK] = value
+                savedStateHandle[KEY_LAST_REFRESH_ELAPSED] = value
             }
+
+        companion object {
+            internal const val KEY_LAST_REFRESH_ELAPSED = "last_refresh_elapsed"
+        }
 
         fun onActivityResume(nowElapsed: Long) {
             if (!isInitialized.get()) return
