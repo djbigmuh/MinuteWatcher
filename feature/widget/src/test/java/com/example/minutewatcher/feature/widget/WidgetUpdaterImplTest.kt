@@ -60,6 +60,13 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
+    fun `isRemoteViewsLimitException returns true for RuntimeException with TransactionTooLargeException cause`() {
+        val cause = android.os.TransactionTooLargeException()
+        val e = RuntimeException("Failure sending RemoteViews", cause)
+        assertTrue(updater.isRemoteViewsLimitException(e))
+    }
+
+    @Test
     fun `isRemoteViewsLimitException returns false when stack trace contains only RemoteViews without exception`() {
         val e =
             IllegalArgumentException(
@@ -90,35 +97,8 @@ class WidgetUpdaterImplTest {
     }
 
     @Test
-    fun `isRemoteViewsLimitException returns true for RemoteViews and TransactionTooLarge`() {
-        val e = IllegalArgumentException("RemoteViews: TransactionTooLargeException during update")
-        assertTrue(updater.isRemoteViewsLimitException(e))
-
-        val e2 = IllegalArgumentException("The RemoteViews is too large to be sent")
-        assertFalse(updater.isRemoteViewsLimitException(e2))
-    }
-
-    @Test
     fun `isRemoteViewsLimitException returns false for generic Binder failure`() {
         val e = IllegalArgumentException("Something failed in binder")
-        assertFalse(updater.isRemoteViewsLimitException(e))
-    }
-
-    @Test
-    fun `isRemoteViewsLimitException returns true for exceeded maximum size pattern`() {
-        val e = IllegalArgumentException("RemoteViews exceeded maximum size of 1048576 bytes")
-        assertTrue(updater.isRemoteViewsLimitException(e))
-    }
-
-    @Test
-    fun `isRemoteViewsLimitException returns true for RemoteViews size pattern`() {
-        val e = IllegalArgumentException("The RemoteViews size is too large")
-        assertTrue(updater.isRemoteViewsLimitException(e))
-    }
-
-    @Test
-    fun `isRemoteViewsLimitException returns false for Binder transaction pattern`() {
-        val e = IllegalArgumentException("Binder transaction failed")
         assertFalse(updater.isRemoteViewsLimitException(e))
     }
 

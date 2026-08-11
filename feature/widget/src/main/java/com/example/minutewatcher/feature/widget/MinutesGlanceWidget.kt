@@ -71,7 +71,16 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     ) {
         try {
             val uiState = getUiState(context)
-            val navigationProvider = getNavigationProvider(context)
+            val navigationProvider =
+                try {
+                    getNavigationProvider(context)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Widget: failed to get NavigationProvider", e)
+                    null
+                }
+
             provideContent {
                 GlanceTheme {
                     WidgetContent(uiState, navigationProvider)
@@ -198,7 +207,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 @Composable
 private fun WidgetContent(
     uiState: WidgetUiState,
-    navigationProvider: NavigationProvider,
+    navigationProvider: NavigationProvider?,
 ) {
     val context = LocalContext.current
     val alpha = Constants.Widget.ALPHA_FULL - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
@@ -232,7 +241,7 @@ private fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
 
 private fun getWidgetModifier(
     context: Context,
-    navigationProvider: NavigationProvider,
+    navigationProvider: NavigationProvider?,
     bgColor: androidx.compose.ui.graphics.Color,
 ): GlanceModifier {
     var modifier =
@@ -241,7 +250,7 @@ private fun getWidgetModifier(
             .background(GlanceColorProvider(day = bgColor, night = bgColor))
             .appWidgetBackground()
 
-    val className = navigationProvider.mainActivityClassName
+    val className = navigationProvider?.mainActivityClassName ?: ""
     if (className.isNotEmpty()) {
         try {
             modifier = modifier.clickable(actionStartActivity(ComponentName(context, className)))

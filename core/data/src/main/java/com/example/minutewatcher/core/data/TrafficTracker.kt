@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -53,7 +52,7 @@ class TrafficTracker
 
         private var inMemoryLastDataSubId: Int = -1
 
-        private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
+        private val baselineNeedsRetry = HashMap<String, Int>()
 
         private val targetResolver = TrafficTargetResolver(permissionManager)
 
@@ -157,7 +156,7 @@ class TrafficTracker
                             handleSkipDelta(target, retryCount)
                         } else {
                             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                            baselineNeedsRetry.keys.removeIf { it != targetIdentity }
+                            baselineNeedsRetry.entries.removeIf { it.key != targetIdentity }
                             performTrafficUpdate(target, targetIdentity)
                         }
                     }
@@ -176,7 +175,7 @@ class TrafficTracker
         private suspend fun getActiveSimsAndCleanup(): List<ActiveSimInfo>? {
             val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: return null
             // G-484: Cleanup baselineNeedsRetry from inactive SIMs before returning result
-            baselineNeedsRetry.keys.removeIf { key -> activeSims.none { it.identity.stableId == key } }
+            baselineNeedsRetry.entries.removeIf { entry -> activeSims.none { it.identity.stableId == entry.key } }
             return activeSims
         }
 
@@ -495,7 +494,7 @@ class TrafficTracker
                 val identity = simIdentityRepository.getIdentity(targetSim)
 
                 // Ensure we only track retry for the current target.
-                baselineNeedsRetry.keys.removeIf { it != identity }
+                baselineNeedsRetry.entries.removeIf { it.key != identity }
 
                 val shouldReturn =
                     handleSimChangeFailure(
@@ -560,7 +559,7 @@ class TrafficTracker
                             "Baseline reset will be retried (attempt ${retryCount + 1}).",
                     )
                     simUsageResetRepository.setLastTotalBytes(identity, -1L)
-                    baselineNeedsRetry.merge(identity, 1, Int::plus)
+                    baselineNeedsRetry[identity] = (baselineNeedsRetry[identity] ?: 0) + 1
                     true
                 }
             }

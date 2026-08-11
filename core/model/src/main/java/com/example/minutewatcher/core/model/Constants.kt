@@ -78,6 +78,8 @@ object Constants {
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
         const val BANNER_RETRY_ATTEMPTS = 5L
         const val BANNER_RETRY_DELAY_MS = 1_000L
+        const val WIDGET_RETRY_ATTEMPTS = 5L
+        const val WIDGET_RETRY_DELAY_MS = 5_000L
     }
 
     object Calls {

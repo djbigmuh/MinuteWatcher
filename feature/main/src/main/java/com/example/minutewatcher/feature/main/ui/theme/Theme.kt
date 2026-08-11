@@ -65,13 +65,13 @@ fun MinuteWatcherTheme(
 }
 
 val ColorScheme.usageNormal: Color
-    get() = Color(UsageColors.normal(background.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
+    get() = Color(UsageColors.normal(surface.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
 
 val ColorScheme.usageLow: Color
-    get() = Color(UsageColors.low(background.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
+    get() = Color(UsageColors.low(surface.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
 
 val ColorScheme.usageCritical: Color
-    get() = Color(UsageColors.critical(background.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
+    get() = Color(UsageColors.critical(surface.luminance() < Constants.UI.LUMINANCE_THRESHOLD))
 
 fun ColorScheme.usageColor(status: UsageStatus): Color =
     when (status) {

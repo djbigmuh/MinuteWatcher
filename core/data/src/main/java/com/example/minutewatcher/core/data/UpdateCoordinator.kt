@@ -78,7 +78,7 @@ class UpdateCoordinator
                         }.catch { cause ->
                             AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
                         }.onCompletion { cause ->
-                            if ((cause == null) && (observationRetryCount > MAX_OBSERVATION_RETRIES)) {
+                            if ((cause == null) && (observationRetryCount > Constants.Flow.WIDGET_RETRY_ATTEMPTS)) {
                                 AppLogger.e(
                                     "UpdateCoordinator: observation stopped after " +
                                         "$observationRetryCount retries",
@@ -120,11 +120,16 @@ class UpdateCoordinator
                         val success = widgetUpdater.updateAll()
                         if (success) {
                             lastSnapshotHash = newHash
+                            // G-484: Reset the counter only on successful snapshot processing.
+                            // This counter tracks flow subscription health, not just widget update success.
+                            observationRetryCount = 0
                         } else {
                             AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
                         }
                     } else {
                         AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
+                        // If we received a snapshot and hash matches, the observation flow is healthy.
+                        observationRetryCount = 0
                     }
                 }
             } catch (e: CancellationException) {
@@ -132,19 +137,15 @@ class UpdateCoordinator
             } catch (e: Exception) {
                 AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
             }
-
-            // Сбрасываем счетчик ошибок только после успешного получения снимка.
-            // Это позволяет системе восстанавливаться после временных сбоев.
-            observationRetryCount = 0
         }
 
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
             if (cause is CancellationException) throw cause
 
             observationRetryCount++
-            if (observationRetryCount > MAX_OBSERVATION_RETRIES) {
+            if (observationRetryCount > Constants.Flow.WIDGET_RETRY_ATTEMPTS) {
                 AppLogger.e(
-                    "UpdateCoordinator: observation stopped after $MAX_OBSERVATION_RETRIES " +
+                    "UpdateCoordinator: observation stopped after ${Constants.Flow.WIDGET_RETRY_ATTEMPTS} " +
                         "consecutive failures. Restart the app to restore background updates.",
                     cause,
                 )
@@ -162,7 +163,8 @@ class UpdateCoordinator
 
             val delaySeconds =
                 minOf(
-                    INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
+                    (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
+                        (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
                     MAX_RETRY_DELAY_SECONDS,
                 )
 
@@ -231,10 +233,8 @@ class UpdateCoordinator
         }
 
         companion object {
-            private const val INITIAL_RETRY_DELAY_SECONDS = 5L
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
             private const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
-            private const val MAX_OBSERVATION_RETRIES = 10L
         }
     }

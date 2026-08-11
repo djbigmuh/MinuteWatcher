@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,7 +37,6 @@ class MainViewModel
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val isInitialized = AtomicBoolean(false)
-        private val lastSnapshotHash = AtomicInteger(-1)
         private val hashMutex = Mutex()
         private var resumeRefreshJob: Job? = null
 
@@ -108,7 +106,7 @@ class MainViewModel
                     result?.let {
                         val newHash = SnapshotUtils.calculateContentHash(it.snapshot)
                         hashMutex.withLock {
-                            lastSnapshotHash.set(newHash)
+                            lastSnapshotHash = newHash
                         }
                         if (it is RefreshResult.Success && lastRefreshAt == 0L) {
                             lastRefreshAt = SystemClock.elapsedRealtime()
@@ -167,8 +165,8 @@ class MainViewModel
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
             val hasChanged =
                 hashMutex.withLock {
-                    val changed = newHash != lastSnapshotHash.get()
-                    lastSnapshotHash.set(newHash)
+                    val changed = newHash != lastSnapshotHash
+                    lastSnapshotHash = newHash
                     changed
                 }
 
@@ -237,6 +235,12 @@ class MainViewModel
 
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
+        private var lastSnapshotHash: Int
+            get() = savedStateHandle[KEY_LAST_SNAPSHOT_HASH] ?: -1
+            set(value) {
+                savedStateHandle[KEY_LAST_SNAPSHOT_HASH] = value
+            }
+
         private var lastRefreshAt: Long
             get() = savedStateHandle[KEY_LAST_REFRESH_ELAPSED] ?: 0L
             set(value) {
@@ -245,6 +249,7 @@ class MainViewModel
 
         companion object {
             internal const val KEY_LAST_REFRESH_ELAPSED = "last_refresh_elapsed"
+            internal const val KEY_LAST_SNAPSHOT_HASH = "last_snapshot_hash"
         }
 
         fun onActivityResume(nowElapsed: Long) {

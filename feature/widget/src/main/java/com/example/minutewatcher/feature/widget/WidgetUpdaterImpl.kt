@@ -113,12 +113,22 @@ open class WidgetUpdaterImpl
                 // Должен перехватываться ПЕРВЫМ и пробрасываться дальше для корректной остановки корутин.
                 throw e
             } catch (e: IllegalArgumentException) {
-                val isLimit = isRemoteViewsLimitException(e)
-                if (isLimit) {
+                if (isRemoteViewsLimitException(e)) {
                     AppLogger.e("Widget update failed due to size limit. Detection confirmed.", e)
                     UpdateResult.LimitExceeded
                 } else {
                     AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
+                    UpdateResult.GenericFailure
+                }
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: RuntimeException,
+            ) {
+                if (isRemoteViewsLimitException(e)) {
+                    AppLogger.e("Widget update failed due to size limit (wrapped).", e)
+                    UpdateResult.LimitExceeded
+                } else {
+                    AppLogger.e("Widget update failed with RuntimeException", e)
                     UpdateResult.GenericFailure
                 }
             } catch (e: Exception) {
@@ -132,7 +142,7 @@ open class WidgetUpdaterImpl
         }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {
+        internal fun isRemoteViewsLimitException(e: Throwable): Boolean {
             // Основной критерий: TransactionTooLargeException в cause-цепочке.
             // Это единственный достоверный признак переполнения Binder-транзакции,
             // гарантированный на всех версиях Android API 26–37.
@@ -141,20 +151,7 @@ open class WidgetUpdaterImpl
                 return true
             }
 
-            // Fallback: текстовые паттерны для случаев, когда система не обернула
-            // ошибку в TransactionTooLargeException. Это не гарантировано документацией,
-            // но расширяет покрытие на нестандартных прошивках.
-            val message = e.message ?: ""
-            val isMessageRelated =
-                LIMIT_EXCEPTION_PATTERNS.any { pattern ->
-                    pattern.containsMatchIn(message)
-                }
-
-            if (isMessageRelated) {
-                AppLogger.w("RemoteViews size limit detected via message pattern: $message", e)
-            }
-
-            return isMessageRelated
+            return false
         }
 
         private fun hasCauseOfType(
@@ -169,15 +166,5 @@ open class WidgetUpdaterImpl
             return false
         }
 
-        companion object {
-            private val LIMIT_EXCEPTION_PATTERNS =
-                listOf(
-                    // Оригинальный паттерн (RemoteViews + TransactionTooLarge)
-                    Regex("RemoteViews.*TransactionTooLarge", RegexOption.IGNORE_CASE),
-                    // "exceeded maximum size"
-                    Regex("exceeded maximum size", RegexOption.IGNORE_CASE),
-                    // "RemoteViews size"
-                    Regex("RemoteViews size", RegexOption.IGNORE_CASE),
-                )
-        }
+        companion object
     }

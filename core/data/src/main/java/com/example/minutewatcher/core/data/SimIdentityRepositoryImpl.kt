@@ -23,7 +23,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -109,19 +112,42 @@ class SimIdentityRepositoryImpl
             seedFlow
                 .flatMapLatest { seed ->
                     callbackFlow {
+                        var fetchJob: Job? = null
+
+                        fun launchFetch() {
+                            fetchJob?.cancel()
+                            fetchJob =
+                                launch {
+                                    var retryDelay = Constants.Flow.RETRY_DELAY_MS
+                                    val maxDelay = Constants.Flow.LONG_TIMEOUT_MS * MAX_DELAY_MULTIPLIER
+                                    var shouldContinue = true
+                                    while (shouldContinue) {
+                                        try {
+                                            send(getActiveSimsInternal(seed))
+                                            shouldContinue = false
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: IOException) {
+                                            AppLogger.e(
+                                                "SimIdentityRepository: DataStore error during fetch, " +
+                                                    "retrying in ${retryDelay}ms",
+                                                e,
+                                            )
+                                            delay(retryDelay.milliseconds)
+                                            retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
+                                        } catch (e: Exception) {
+                                            AppLogger.e("Failed to fetch active SIMs", e)
+                                            send(emptyList())
+                                            shouldContinue = false
+                                        }
+                                    }
+                                }
+                        }
+
                         val listener =
                             object : SubscriptionManager.OnSubscriptionsChangedListener() {
                                 override fun onSubscriptionsChanged() {
-                                    launch {
-                                        try {
-                                            send(getActiveSimsInternal(seed))
-                                        } catch (e: CancellationException) {
-                                            throw e
-                                        } catch (e: Exception) {
-                                            AppLogger.e("Failed to fetch active SIMs on change", e)
-                                            send(emptyList())
-                                        }
-                                    }
+                                    launchFetch()
                                 }
                             }
 
@@ -149,16 +175,10 @@ class SimIdentityRepositoryImpl
                         launch {
                             permissionStateNotifier.changes.collect {
                                 updateListenerRegistration()
-                                try {
-                                    if (permissionManager.hasPhoneStatePermission()) {
-                                        send(getActiveSimsInternal(seed))
-                                    } else {
-                                        send(emptyList())
-                                    }
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    AppLogger.e("Failed to fetch active SIMs on permission change", e)
+                                if (permissionManager.hasPhoneStatePermission()) {
+                                    launchFetch()
+                                } else {
+                                    fetchJob?.cancel()
                                     send(emptyList())
                                 }
                             }
@@ -166,18 +186,11 @@ class SimIdentityRepositoryImpl
 
                         // Initial fetch
                         if (permissionManager.hasPhoneStatePermission()) {
-                            try {
-                                val initialSims = getActiveSimsInternal(seed)
-                                send(initialSims)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to fetch initial active SIMs", e)
-                                trySend(emptyList())
-                            }
+                            launchFetch()
                         }
 
                         awaitClose {
+                            fetchJob?.cancel()
                             if (isListenerRegistered) {
                                 subscriptionManager.removeOnSubscriptionsChangedListener(listener)
                             }
@@ -360,7 +373,7 @@ class SimIdentityRepositoryImpl
                         "saveSimIdentitiesInfo: DataStore read failed after retry, " +
                             "could not save identities: $validIdentities",
                     )
-                    return@withLock
+                    throw IOException("DataStore read timed out after retry")
                 }
 
                 val toUpdate =
@@ -479,6 +492,8 @@ class SimIdentityRepositoryImpl
                 saveSimIdentitiesInfo(identities)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save identity info for active SIMs", e)
             }
@@ -588,5 +603,6 @@ class SimIdentityRepositoryImpl
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
+            private const val MAX_DELAY_MULTIPLIER = 3
         }
     }

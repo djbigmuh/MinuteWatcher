@@ -13,6 +13,7 @@ import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -51,9 +53,9 @@ class MainSimDataController
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
                 }.onStart { emit(SimCardListState.Loading) }
-                .retry(MAX_RETRY_ATTEMPTS) {
+                .retry(MAX_RETRY_ATTEMPTS) { e ->
                     delay(1000.milliseconds)
-                    true
+                    e is IOException || e is TimeoutCancellationException
                 }.catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
                 .stateIn(
                     scope = scope,

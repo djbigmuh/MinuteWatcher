@@ -508,9 +508,10 @@ class UpdateCoordinatorTest {
                     timeProvider,
                 )
 
-            // Advance through all 10 retries + 1 initial = 11 attempts
+            // Advance through retries. Since we now use WIDGET_RETRY_ATTEMPTS (5),
+            // total attempts = 5 retries + 1 initial = 6.
             testScheduler.advanceTimeBy(10000.seconds)
-            assertEquals(11, collectCount)
+            assertEquals(6, collectCount)
 
             // Setup working flow
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
