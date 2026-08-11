@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.PermissionRepository
@@ -61,6 +62,7 @@ class UsageAccessNavigationTest {
     private val settingsUseCase: SettingsUseCase = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
     private val savedStateHandle = SavedStateHandle()
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -142,6 +144,7 @@ class UsageAccessNavigationTest {
             appSettingsRepository = appSettingsRepository,
             autoResetUseCase = autoResetUseCase,
             savedStateHandle = savedStateHandle,
+            timeProvider = timeProvider,
             ioDispatcher = testDispatcher,
         )
     }

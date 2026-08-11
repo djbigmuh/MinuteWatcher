@@ -137,6 +137,9 @@ class TrafficTracker
                     val target = targetResolver.resolve(activeSims)
                     if (target == null) {
                         AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
+                        // G-484: Clear any pending baseline retries when no active SIM is available
+                        // to prevent stale state from affecting future SIM insertions.
+                        baselineNeedsRetry.clear()
                         _status.value = TrackingStatus.Idle
                         return
                     }

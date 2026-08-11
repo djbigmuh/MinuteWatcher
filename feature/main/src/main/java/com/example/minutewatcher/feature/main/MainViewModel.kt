@@ -1,11 +1,11 @@
 package com.example.minutewatcher.feature.main
 
-import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
@@ -25,6 +25,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class MainViewModel
@@ -34,13 +35,14 @@ class MainViewModel
         private val appSettingsRepository: AppSettingsRepository,
         autoResetUseCase: AutoResetUseCase,
         private val savedStateHandle: SavedStateHandle,
+        private val timeProvider: TimeProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val isInitialized = AtomicBoolean(false)
         private val hashMutex = Mutex()
         private var resumeRefreshJob: Job? = null
 
-        private val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase)
+        private val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
 
         // Dialog States
         val showLimitDialog = controllers.dialog.showLimitDialog
@@ -102,14 +104,21 @@ class MainViewModel
 
                     autoResetScheduler.checkOnStart()
 
-                    val result = controllers.refresh.refreshSimCardsInternal()
+                    var result = controllers.refresh.refreshSimCardsInternal()
+                    if (result is RefreshResult.Timeout) {
+                        // G-484: If primary refresh timed out, it might be due to slow initialization.
+                        // Retry once with a small delay.
+                        kotlinx.coroutines.delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+                        result = controllers.refresh.refreshSimCardsInternal()
+                    }
+
                     result?.let {
                         val newHash = SnapshotUtils.calculateContentHash(it.snapshot)
                         hashMutex.withLock {
                             lastSnapshotHash = newHash
                         }
                         if (it is RefreshResult.Success && lastRefreshAt == 0L) {
-                            lastRefreshAt = SystemClock.elapsedRealtime()
+                            lastRefreshAt = timeProvider.elapsedRealtime()
                         }
                     }
                 } catch (e: CancellationException) {
@@ -159,7 +168,7 @@ class MainViewModel
             }
 
             if (result is RefreshResult.Success) {
-                lastRefreshAt = SystemClock.elapsedRealtime()
+                lastRefreshAt = timeProvider.elapsedRealtime()
             }
 
             val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
@@ -257,9 +266,10 @@ class MainViewModel
 
             val last = lastRefreshAt
             val elapsed = nowElapsed - last
-            // После перезагрузки elapsedRealtime сбрасывается; lastRefreshAt из SavedState может быть больше.
+            // G-484: If lastRefreshAt == 0L, it means initial refresh failed or hasn't completed yet.
+            // We force a retry in this case to ensure data is loaded as soon as possible.
             // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
-            val isStale = (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
+            val isStale = (last == 0L) || (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
 
             if (isStale) {
                 resumeRefreshJob?.cancel()
@@ -275,6 +285,7 @@ class MainViewModel
 internal class AutoResetScheduler(
     private val savedStateHandle: SavedStateHandle,
     private val autoResetUseCase: AutoResetUseCase,
+    private val timeProvider: TimeProvider,
 ) {
     private val isCheckStarted = AtomicBoolean(false)
 
@@ -290,7 +301,7 @@ internal class AutoResetScheduler(
         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
 
-        val now = SystemClock.elapsedRealtime()
+        val now = timeProvider.elapsedRealtime()
 
         val isInitialOrReboot: Boolean
         val elapsed: Long
@@ -322,7 +333,7 @@ internal class AutoResetScheduler(
         } catch (e: Exception) {
             AppLogger.e("Auto-reset failed during initialization", e)
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
-            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = SystemClock.elapsedRealtime()
+            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = timeProvider.elapsedRealtime()
         }
     }
 

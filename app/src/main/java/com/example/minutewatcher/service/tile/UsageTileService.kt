@@ -50,6 +50,8 @@ class UsageTileService : TileService() {
             applicationScope.launch {
                 try {
                     usageStateRepository.refresh()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to force refresh snapshot for tile", e)
                 }

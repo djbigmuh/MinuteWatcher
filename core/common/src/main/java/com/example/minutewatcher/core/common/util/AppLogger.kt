@@ -25,7 +25,7 @@ object AppLogger {
 
     private var logDir: File? = null
     private var logger: Logger = AndroidLogger()
-    private val executor =
+    private val executor by lazy {
         ThreadPoolExecutor(
             1,
             1,
@@ -34,6 +34,7 @@ object AppLogger {
             LinkedBlockingQueue(LOG_QUEUE_CAPACITY),
             ThreadPoolExecutor.DiscardOldestPolicy(),
         )
+    }
     private val dateFormat =
         DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")

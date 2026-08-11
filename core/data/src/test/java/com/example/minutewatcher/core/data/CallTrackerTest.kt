@@ -272,7 +272,7 @@ class CallTrackerTest {
             // Assert
             val status = callTracker.status.first()
             assertTrue(status is TrackingStatus.Error)
-            assertTrue((status as TrackingStatus.Error).message?.contains("Timeout reading startTime") == true)
+            assertTrue((status as TrackingStatus.Error).message?.contains("Timeout reading session data") == true)
 
             // Verify session WAS cleared for safety
             verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))

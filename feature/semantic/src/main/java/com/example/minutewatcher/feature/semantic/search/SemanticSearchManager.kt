@@ -164,6 +164,8 @@ class SemanticSearchManager
                             if (ensureSession(forceOverride = true)) {
                                 try {
                                     result = executeIndexing(snapshot, currentHash)
+                                } catch (retryException: CancellationException) {
+                                    throw retryException
                                 } catch (retryException: Exception) {
                                     AppLogger.e("AppSearch indexing failed again after retry", retryException)
                                     lastSnapshotHash = null
@@ -183,6 +185,8 @@ class SemanticSearchManager
                                     e.message,
                                 )
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch non-AppSearch error during indexing", e)
                         lastSnapshotHash = null

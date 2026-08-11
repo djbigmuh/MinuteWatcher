@@ -6,12 +6,10 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,11 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.retry
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.milliseconds
 
 class MainBannerController
     @Inject
@@ -64,21 +59,14 @@ class MainBannerController
                 appSettingsRepository.observeAppSettings(),
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
-            }.retryWhen { _, attempt ->
-                if (attempt < Constants.Flow.BANNER_RETRY_ATTEMPTS) {
-                    delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
-                    true
-                } else {
-                    false
-                }
             }
 
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
-                permissionRepository.phoneStatePermissionGranted.withRetryAndFallback(),
-                permissionRepository.usageStatsPermissionGranted.withRetryAndFallback(),
-                permissionRepository.notificationPermissionGranted.withRetryAndFallback(),
+                permissionRepository.phoneStatePermissionGranted,
+                permissionRepository.usageStatsPermissionGranted,
+                permissionRepository.notificationPermissionGranted,
                 bannerExtraData,
             ) { status, phone, usage, notif, extra ->
                 TrackingBannerMapper.mapToBannerState(
@@ -90,27 +78,15 @@ class MainBannerController
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
                 )
-            }.retry(Constants.Flow.BANNER_RETRY_ATTEMPTS)
-                .catch { e ->
-                    // Вызывается, когда .retry() исчерпал лимит попыток и пробросил исключение.
-                    AppLogger.e("CRITICAL: Failed to compute banner state after all retry attempts", e)
-                    emit(TrackingBannerState())
-                }.stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = TrackingBannerState(),
-                )
-
-        private fun Flow<Boolean>.withRetryAndFallback(): Flow<Boolean> =
-            this
-                .retryWhen { _, attempt ->
-                    if (attempt < Constants.Flow.BANNER_RETRY_ATTEMPTS) {
-                        delay(Constants.Flow.BANNER_RETRY_DELAY_MS.milliseconds)
-                        true
-                    } else {
-                        false
-                    }
-                }.catch { emit(false) }
+            }.catch { e ->
+                // Вызывается при возникновении необработанного исключения в цепочке combine/map.
+                AppLogger.e("CRITICAL: Failed to compute banner state", e)
+                emit(TrackingBannerState())
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = TrackingBannerState(),
+            )
 
         companion object
     }

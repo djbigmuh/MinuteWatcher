@@ -75,6 +75,7 @@ dependencies {
     androidTestImplementation(libs.androidxUiTestJunit4)
     debugImplementation(libs.androidxUiTestManifest)
     testImplementation(libs.mockingKotlin)
+    testImplementation(testFixtures(project(":core:common")))
     androidTestImplementation(libs.androidxJunit)
     androidTestImplementation(libs.androidxEspressoCore)
 }

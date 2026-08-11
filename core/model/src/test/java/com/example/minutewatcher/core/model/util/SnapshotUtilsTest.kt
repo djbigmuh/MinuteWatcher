@@ -92,6 +92,40 @@ class SnapshotUtilsTest {
     }
 
     @Test
+    fun `hash is stable regardless of entities map iteration order`() {
+        val e1 = createEntity(id = "min", type = PackageType.MINUTES)
+        val e2 = createEntity(id = "data", type = PackageType.DATA)
+
+        // LinkedHashMap preserves insertion order
+        val map1 = linkedMapOf(PackageType.MINUTES to e1, PackageType.DATA to e2)
+        val map2 = linkedMapOf(PackageType.DATA to e2, PackageType.MINUTES to e1)
+
+        val sim1 = SimSnapshot(0, "ABC", "ABC", true, map1, autoResetDay = 1)
+        val sim2 = SimSnapshot(0, "ABC", "ABC", true, map2, autoResetDay = 1)
+
+        val s1 =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0,
+                simSnapshots = listOf(sim1),
+                capabilities = emptyList(),
+            )
+        val s2 =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0,
+                simSnapshots = listOf(sim2),
+                capabilities = emptyList(),
+            )
+
+        assertEquals(
+            "Hash should be same regardless of map insertion order",
+            SnapshotUtils.calculateContentHash(s1),
+            SnapshotUtils.calculateContentHash(s2),
+        )
+    }
+
+    @Test
     fun `hash changes when autoResetDay changes`() {
         val s1 = createSnapshot(remaining = 90)
         // Default autoResetDay is 1 in createSnapshot helper
@@ -102,6 +136,25 @@ class SnapshotUtilsTest {
 
         assertNotEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
     }
+
+    private fun createEntity(
+        id: String,
+        type: PackageType,
+    ): SemanticEntity =
+        SemanticEntity(
+            id = id,
+            simSlot = 0,
+            operatorName = "ABC",
+            packageType = type,
+            limit = 1000,
+            used = 0,
+            remaining = 100,
+            unit = MeasurementUnit.MINUTES,
+            periodStart = 0,
+            periodEnd = 0,
+            lastUpdateTime = 0,
+            sourceType = DataSourceType.SYSTEM,
+        )
 
     private fun createSimSnapshot(
         slot: Int,

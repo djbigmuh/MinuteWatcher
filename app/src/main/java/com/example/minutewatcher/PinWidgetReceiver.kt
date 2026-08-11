@@ -34,13 +34,18 @@ class PinWidgetReceiver : BroadcastReceiver() {
             ).show()
 
         // Trigger an immediate update for the newly added widget
+        val pendingResult = goAsync()
         context.applicationScope.launch {
             try {
                 val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
                 MinutesGlanceWidget().update(context, glanceId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 com.example.minutewatcher.core.common.util.AppLogger
                     .e("Failed to update widget after pinning", e)
+            } finally {
+                pendingResult.finish()
             }
         }
     }

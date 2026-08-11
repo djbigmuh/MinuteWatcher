@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -67,6 +68,7 @@ class MainViewModelTest {
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
     private val savedStateHandle = SavedStateHandle()
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -173,6 +175,7 @@ class MainViewModelTest {
             appSettingsRepository = appSettingsRepository,
             autoResetUseCase = autoResetUseCase,
             savedStateHandle = savedStateHandle,
+            timeProvider = timeProvider,
             ioDispatcher = testDispatcher,
         )
     }
@@ -447,16 +450,41 @@ class MainViewModelTest {
         }
 
     @Test
-    fun `onActivityResume does NOT trigger refresh on first call`() =
+    fun `onActivityResume triggers refresh if initial refresh failed (lastRefreshAt is 0)`() =
         runTest(testDispatcher) {
             // lastRefreshAt is 0L by default in SavedStateHandle
+            // Mock refresh to fail (return null) in initializeApp
+            whenever(usageStateRepository.refresh()).thenReturn(null)
 
             val viewModel = createViewModel(backgroundScope)
-            testScheduler.advanceUntilIdle() // Let initializeApp() finish its refresh
+            testScheduler.advanceUntilIdle() // Let initializeApp() finish
             clearInvocations(usageStateRepository)
 
             // first call to onActivityResume
             viewModel.onActivityResume(1000L)
+            testScheduler.advanceUntilIdle()
+
+            // Verify that data refresh WAS triggered because lastRefreshAt is still 0
+            verify(usageStateRepository).refresh()
+        }
+
+    @Test
+    fun `onActivityResume does NOT trigger refresh if initial refresh succeeded`() =
+        runTest(testDispatcher) {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle() // Let initializeApp() finish successfully
+
+            assertTrue(
+                "lastRefreshAt should be set",
+                (savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED) ?: 0L) > 0,
+            )
+            clearInvocations(usageStateRepository)
+
+            // call to onActivityResume within threshold
+            viewModel.onActivityResume(timeProvider.elapsedRealtime() + 5000L)
             testScheduler.advanceUntilIdle()
 
             // Verify that NO data refresh was triggered

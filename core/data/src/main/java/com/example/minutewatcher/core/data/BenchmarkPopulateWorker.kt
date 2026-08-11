@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -41,6 +42,8 @@ class BenchmarkPopulateWorker
                     AppLogger.d("BenchmarkPopulateWorker: Starting population for $simCount SIMs")
                     benchmarkUseCase.populateMockData(simCount)
                     Result.success()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("BenchmarkPopulateWorker failed to populate mock data", e)
                     Result.failure()

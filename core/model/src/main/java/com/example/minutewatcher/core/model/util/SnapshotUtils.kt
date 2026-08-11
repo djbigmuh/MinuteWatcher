@@ -31,21 +31,24 @@ object SnapshotUtils {
                 .map { sim ->
                     sim.slot to (
                         sim.autoResetDay to
-                            sim.entities.values.filterNotNull().map { entity ->
-                                // Исключаем operatorName и lastUpdateTime для стабильности хэша
-                                listOf(
-                                    entity.id,
-                                    entity.simSlot,
-                                    entity.packageType,
-                                    entity.limit,
-                                    entity.used,
-                                    entity.remaining,
-                                    entity.unit,
-                                    entity.periodStart,
-                                    entity.periodEnd,
-                                    entity.sourceType,
-                                )
-                            }
+                            sim.entities.values
+                                .filterNotNull()
+                                .sortedBy { it.packageType }
+                                .map { entity ->
+                                    // Исключаем operatorName и lastUpdateTime для стабильности хэша
+                                    listOf(
+                                        entity.id,
+                                        entity.simSlot,
+                                        entity.packageType,
+                                        entity.limit,
+                                        entity.used,
+                                        entity.remaining,
+                                        entity.unit,
+                                        entity.periodStart,
+                                        entity.periodEnd,
+                                        entity.sourceType,
+                                    )
+                                }
                     )
                 }
 
