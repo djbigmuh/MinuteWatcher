@@ -291,4 +291,22 @@ class SimRepositoryImplTest {
             assertEquals(1, sims.size)
             assertEquals(0, sims.first().slotIndex)
         }
+
+    @Test
+    fun `getSimIdentity with invalid slot returns invalid_slot stableId`() =
+        runTest {
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            val identity = identityRepo.getSimIdentity(-1)
+            assertEquals("invalid_slot", identity.stableId)
+        }
 }

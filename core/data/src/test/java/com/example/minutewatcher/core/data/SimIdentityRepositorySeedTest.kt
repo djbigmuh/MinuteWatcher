@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -272,5 +273,67 @@ class SimIdentityRepositorySeedTest {
                     assertEquals(IdentitySource.ICCID, identity.source)
                 },
             )
+        }
+
+    @Test
+    fun `getSimIdentity handles race between fallback return and real seed emission`() =
+        runTest {
+            dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_sim_race_seed.preferences_pb") },
+                )
+
+            val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
+            val seedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = storedSeed
+
+                    override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
+
+                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                        delay(60.seconds)
+                        return "generated"
+                    }
+                }
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
+
+            // 1. Advance to Fallback state
+            testScheduler.advanceTimeBy(25_000)
+            testScheduler.runCurrent()
+
+            // 2. Launch getSimIdentity call that will see Fallback seed.
+            val callJob =
+                backgroundScope.launch {
+                    val identity = identityRepo.getSimIdentity(0)
+                    assertTrue(identity.stableId.isNotEmpty())
+                }
+
+            // 3. Emit Real seed immediately
+            storedSeed.emit("real_seed")
+
+            // 4. Provide sub info for resolution
+            val mockSubInfo = mock<SubscriptionInfo>()
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.iccId).thenReturn("icc_1")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+            // Advance time to allow any timeouts or deferred work to complete
+            testScheduler.advanceTimeBy(30_000)
+            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
+
+            assertTrue("Call should complete", callJob.isCompleted)
         }
 }

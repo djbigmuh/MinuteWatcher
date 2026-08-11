@@ -13,6 +13,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
+import com.example.minutewatcher.feature.settings.ui.SaveResult
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsScreen
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,7 +37,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
                         onSave = {
                             lifecycleScope.launch {
                                 when (viewModel.saveAndNotify()) {
-                                    WidgetSettingsViewModel.SaveResult.Success -> {
+                                    SaveResult.Success -> {
                                         Toast
                                             .makeText(
                                                 this@WidgetSettingsActivity,
@@ -46,7 +47,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
                                         finish()
                                     }
 
-                                    WidgetSettingsViewModel.SaveResult.Failed -> {
+                                    SaveResult.Failed -> {
                                         Toast
                                             .makeText(
                                                 this@WidgetSettingsActivity,
@@ -55,7 +56,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
                                             ).show()
                                     }
 
-                                    WidgetSettingsViewModel.SaveResult.AlreadyInProgress -> {
+                                    SaveResult.AlreadyInProgress -> {
                                         // Ignore, avoid multiple toasts
                                     }
                                 }

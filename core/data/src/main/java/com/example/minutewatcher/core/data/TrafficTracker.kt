@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,7 +51,7 @@ class TrafficTracker
 
         private val trafficUpdateMutex = Mutex()
 
-        private val inMemoryLastDataSubId = AtomicInteger(-1)
+        private var inMemoryLastDataSubId: Int = -1
 
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
@@ -120,7 +119,10 @@ class TrafficTracker
 
                     val activeSims = getActiveSimsAndCleanup()
                     if (activeSims == null) {
-                        AppLogger.w("TrafficTracker: observeActiveSims timed out, skipping update")
+                        AppLogger.w(
+                            "TrafficTracker: observeActiveSims timed out, skipping update. " +
+                                "baselineNeedsRetry cleanup deferred due to activeSims timeout",
+                        )
                         _status.value =
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.UNKNOWN,
@@ -138,7 +140,7 @@ class TrafficTracker
 
                     simChangeMutex.withLock {
                         ensureInMemoryLastDataSubId()
-                        val savedLastDataSubId = inMemoryLastDataSubId.get()
+                        val savedLastDataSubId = inMemoryLastDataSubId
                         val isSimChanged =
                             (savedLastDataSubId != -1) &&
                                 (target.dataSubId != -1) &&
@@ -169,8 +171,8 @@ class TrafficTracker
 
         private suspend fun getActiveSimsAndCleanup(): List<ActiveSimInfo>? {
             val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: return null
-            val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
-            baselineNeedsRetry.keys.removeIf { it !in activeIdentities }
+            // G-484: Cleanup baselineNeedsRetry from inactive SIMs before returning result
+            baselineNeedsRetry.keys.removeIf { key -> activeSims.none { it.identity.stableId == key } }
             return activeSims
         }
 
@@ -385,7 +387,7 @@ class TrafficTracker
         private suspend fun updateLastDataSubId(dataSubId: Int) {
             if (dataSubId != -1) {
                 callSessionRepository.setLastDataSubId(dataSubId)
-                inMemoryLastDataSubId.set(dataSubId)
+                inMemoryLastDataSubId = dataSubId
             }
         }
 
@@ -441,10 +443,12 @@ class TrafficTracker
         }
 
         private suspend fun ensureInMemoryLastDataSubId() {
-            if (inMemoryLastDataSubId.get() != -1) return
+            if (inMemoryLastDataSubId != -1) return
 
             val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
-            inMemoryLastDataSubId.compareAndSet(-1, savedId)
+            if (inMemoryLastDataSubId == -1) {
+                inMemoryLastDataSubId = savedId
+            }
         }
 
         private suspend fun resetStatsAfterSimChange(

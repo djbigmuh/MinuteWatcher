@@ -632,8 +632,8 @@ class TrafficTrackerTest {
 
             val field = TrafficTracker::class.java.getDeclaredField("inMemoryLastDataSubId")
             field.isAccessible = true
-            val atomicId = field[tracker] as java.util.concurrent.atomic.AtomicInteger
-            assertEquals(1, atomicId.get())
+            val subId = field[tracker] as Int
+            assertEquals(1, subId)
 
             // 2. Timeout on observeActiveSims
             whenever(simIdentityRepository.observeActiveSims())
@@ -641,7 +641,8 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
-            assertEquals("inMemoryLastDataSubId should NOT be reset on timeout", 1, atomicId.get())
+            val subIdAfter = field[tracker] as Int
+            assertEquals("inMemoryLastDataSubId should NOT be reset on timeout", 1, subIdAfter)
         }
 
     @Test
@@ -749,6 +750,47 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             verify(callSessionRepository, never()).getLastDataSubId()
+        }
+
+    @Test
+    fun `baselineNeedsRetry is cleared of inactive SIMs after successful call following timeout`() =
+        runTest(testDispatcher) {
+            val staleIdentity = "stale_sim"
+            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            field.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val map = field[tracker] as MutableMap<String, Int>
+            map[staleIdentity] = 1
+
+            // 1. First call: timeout on observeActiveSims
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+            tracker.updateTrafficUsage()
+            assertTrue("Should still contain stale_sim after timeout", map.containsKey(staleIdentity))
+
+            // 2. Second call: success, but stale_sim is NOT in activeSims
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        displayName = "SIM 1",
+                        carrierName = "Carrier 1",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            tracker.updateTrafficUsage()
+
+            // 3. Verify stale_sim is gone
+            assertFalse("stale_sim should be cleared after successful call", map.containsKey(staleIdentity))
+            assertTrue("sim_0 should not be in retry map unless it failed", map.isEmpty())
         }
 
     private fun createSimUsage(id: String) =

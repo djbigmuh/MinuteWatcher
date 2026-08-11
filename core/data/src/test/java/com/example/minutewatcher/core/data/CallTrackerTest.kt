@@ -819,4 +819,35 @@ class CallTrackerTest {
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
             assertEquals("Attribution failed for subId 1", (status as TrackingStatus.Error).message)
         }
+
+    @Test
+    fun `onCallEnded clears session and sets Error on unexpected RuntimeException`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val subId = 1
+            val now = timeProvider.now()
+
+            // Setup active session
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 1000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(null))
+
+            // Trigger unexpected exception in endCall -> loadCallSessionData -> resolveIdentity
+            whenever(permissionManager.getActiveSubscriptions()).thenThrow(RuntimeException("Unexpected crash"))
+
+            // Act
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+
+            // Assert
+            // 1. Session IS cleared (setCallStartTime called with 0)
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+
+            // 2. Status is Error
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals("Unexpected crash", (status as TrackingStatus.Error).message)
+        }
 }

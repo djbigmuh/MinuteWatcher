@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -17,13 +18,14 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-class WidgetUpdaterImpl
+open class WidgetUpdaterImpl
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
         private val appSettingsRepository: AppSettingsRepository,
     ) : WidgetUpdater {
-        private val widget = MinutesGlanceWidget()
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal var widget: GlanceAppWidget = MinutesGlanceWidget()
         private val updateMutex = Mutex()
 
         private sealed class UpdateResult {
@@ -34,7 +36,7 @@ class WidgetUpdaterImpl
             object GenericFailure : UpdateResult()
         }
 
-        override suspend fun updateAll() {
+        override suspend fun updateAll(): Boolean =
             updateMutex.withLock {
                 try {
                     val result = attemptUpdateWithRetry(context)
@@ -44,6 +46,7 @@ class WidgetUpdaterImpl
                             if (current) {
                                 setWidgetLimitExceeded(false)
                             }
+                            true
                         }
 
                         is UpdateResult.LimitExceeded -> {
@@ -55,19 +58,21 @@ class WidgetUpdaterImpl
                                         "Flag set to trigger simplified layout on next update.",
                                 )
                             }
+                            true // Return true as we handled the limit and simplified the widget
                         }
 
                         is UpdateResult.GenericFailure -> {
                             AppLogger.e("Widget update failed after ${Constants.Widget.MAX_UPDATE_ATTEMPTS} attempts")
+                            false
                         }
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Unexpected error updating widgets", e)
+                    false
                 }
             }
-        }
 
         private suspend fun attemptUpdateWithRetry(context: Context): UpdateResult {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
@@ -102,7 +107,7 @@ class WidgetUpdaterImpl
 
         private suspend fun safeUpdateAll(context: Context): UpdateResult =
             try {
-                widget.updateAll(context)
+                performWidgetUpdate(context)
                 UpdateResult.Success
             } catch (e: CancellationException) {
                 // Должен перехватываться ПЕРВЫМ и пробрасываться дальше для корректной остановки корутин.
@@ -120,6 +125,11 @@ class WidgetUpdaterImpl
                 AppLogger.e("Generic widget update failure", e)
                 UpdateResult.GenericFailure
             }
+
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal open suspend fun performWidgetUpdate(context: Context) {
+            widget.updateAll(context)
+        }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: IllegalArgumentException): Boolean {

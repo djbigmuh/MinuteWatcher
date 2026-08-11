@@ -27,14 +27,6 @@ class WidgetSettingsViewModel
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
-        sealed interface SaveResult {
-            object Success : SaveResult
-
-            object AlreadyInProgress : SaveResult
-
-            object Failed : SaveResult
-        }
-
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()
 

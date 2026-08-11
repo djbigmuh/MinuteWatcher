@@ -1,5 +1,5 @@
 package com.example.minutewatcher.core.domain
 
 interface WidgetUpdater {
-    suspend fun updateAll()
+    suspend fun updateAll(): Boolean
 }

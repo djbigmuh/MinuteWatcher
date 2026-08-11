@@ -213,9 +213,16 @@ class SimIdentityRepositoryImpl
                     if (result is SeedResult.Real) {
                         fallbackMutex.withLock {
                             val fallbacks = fallbackCache.entries.toList()
-                            fallbackCache.clear()
-
                             if (fallbacks.isNotEmpty()) {
+                                // G-484: We clear the cache to ensure we don't use stale slot-based IDs
+                                // now that a real seed is available. Even if a race re-adds a fallback
+                                // entry, it is benign as activeSimsCache will eventually override it.
+                                fallbackCache.clear()
+                                AppLogger.d(
+                                    "SimIdentityRepository: cleared ${fallbacks.size} fallback cache entries " +
+                                        "upon receiving real seed transition",
+                                )
+
                                 val seedValue = result.value
                                 permissionManager.getActiveSubscriptions().forEach { sub ->
                                     val slot = sub.simSlotIndex
@@ -247,7 +254,10 @@ class SimIdentityRepositoryImpl
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
                 AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
-                return createFallbackIdentity(slot, "sim_$slot")
+                // G-484: Using a constant instead of a slot-indexed string for invalid slots
+                // to prevent downstream logic from treating "sim_-1" as a valid identity.
+                // This stableId MUST NOT be saved to DataStore.
+                return createFallbackIdentity(slot, "invalid_slot")
             }
 
             // Мгновенное чтение текущего значения StateFlow
@@ -265,20 +275,6 @@ class SimIdentityRepositoryImpl
                             return it
                         }
                     }
-                }
-
-                // Wait for activeSimsCache with a reduced timeout
-                val currentSims: List<ActiveSimInfo> =
-                    activeSimsCache.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                        ?: run {
-                            AppLogger.w(
-                                "getSimIdentity: activeSimsCache timeout for slot $slot, " +
-                                    "using fallback identity",
-                            )
-                            emptyList()
-                        }
-                currentSims.find { it.slotIndex == slot }?.let {
-                    return it.identity
                 }
 
                 // If not found in cache, try direct resolution
@@ -348,7 +344,19 @@ class SimIdentityRepositoryImpl
                 val validIdentities = identities.filter { it.source != IdentitySource.SLOT_FALLBACK }
                 if (validIdentities.isEmpty()) return@withLock
 
-                val currentPrefs = fetchCurrentPrefs() ?: return@withLock
+                var currentPrefs = fetchCurrentPrefs()
+                if (currentPrefs == null) {
+                    AppLogger.w("saveSimIdentitiesInfo: DataStore read timed out, retrying with doubled timeout")
+                    currentPrefs = fetchCurrentPrefs(Constants.Flow.LONG_TIMEOUT_MS * 2)
+                }
+
+                if (currentPrefs == null) {
+                    AppLogger.e(
+                        "saveSimIdentitiesInfo: DataStore read failed after retry, " +
+                            "could not save identities: $validIdentities",
+                    )
+                    return@withLock
+                }
 
                 val toUpdate =
                     validIdentities.filter { identity ->
@@ -369,12 +377,12 @@ class SimIdentityRepositoryImpl
             }
         }
 
-        private suspend fun fetchCurrentPrefs(): Preferences? =
-            dataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+        private suspend fun fetchCurrentPrefs(timeoutMs: Long = Constants.Flow.LONG_TIMEOUT_MS): Preferences? =
+            dataStore.data.firstWithTimeout(timeoutMs)
                 ?: run {
                     AppLogger.w(
-                        "saveSimIdentitiesInfo: DataStore read timed out, " +
-                            "skipping save to avoid redundant writes",
+                        "saveSimIdentitiesInfo: DataStore read timed out (timeout=${timeoutMs}ms), " +
+                            "identity update skipped",
                     )
                     null
                 }

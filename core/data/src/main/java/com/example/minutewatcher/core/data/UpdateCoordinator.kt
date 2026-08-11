@@ -16,7 +16,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -49,7 +48,7 @@ class UpdateCoordinator
         @ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
     ) : DataChangeNotifier {
-        private val lastSnapshotHash = MutableStateFlow<Int?>(null)
+        private var lastSnapshotHash: Int? = null
         private val widgetUpdateMutex = Mutex()
 
         private var retryAttempt = 0L
@@ -83,7 +82,7 @@ class UpdateCoordinator
                         }.catch { cause ->
                             AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
                         }.onCompletion { cause ->
-                            if (cause == null && observationRetryCount > MAX_OBSERVATION_RETRIES) {
+                            if ((cause == null) && (observationRetryCount > MAX_OBSERVATION_RETRIES)) {
                                 AppLogger.e(
                                     "UpdateCoordinator: observation stopped after " +
                                         "$observationRetryCount retries",
@@ -109,26 +108,35 @@ class UpdateCoordinator
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
             if (snapshot.suppressWidgetUpdate) {
-                lastSnapshotHash.value = newHash
+                widgetUpdateMutex.withLock {
+                    lastSnapshotHash = newHash
+                }
                 observationRetryCount = 0
                 return
             }
 
-            if (newHash != lastSnapshotHash.value) {
-                // Обновление виджета при отсутствии активных SIM выполняется
-                // намеренно — виджет должен корректно отобразить состояние
-                // "No SIM" или "No Data".
-                try {
-                    widgetUpdateMutex.withLock {
-                        widgetUpdater.updateAll()
+            // Обновление виджета при отсутствии активных SIM выполняется
+            // намеренно — виджет должен корректно отобразить состояние
+            // "No SIM" или "No Data".
+            try {
+                widgetUpdateMutex.withLock {
+                    if (newHash != lastSnapshotHash) {
+                        val success = widgetUpdater.updateAll()
+                        if (success) {
+                            lastSnapshotHash = newHash
+                        } else {
+                            AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
+                        }
+                    } else {
+                        AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                     }
-                    lastSnapshotHash.value = newHash
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
             }
+
             // Сбрасываем счетчик ошибок только после успешного получения снимка.
             // Это позволяет системе восстанавливаться после временных сбоев.
             observationRetryCount = 0
@@ -152,7 +160,10 @@ class UpdateCoordinator
                 retryAttempt = 0
             }
 
-            lastSnapshotHash.value = null
+            widgetUpdateMutex.withLock {
+                lastSnapshotHash = null
+            }
+
             val delaySeconds =
                 minOf(
                     INITIAL_RETRY_DELAY_SECONDS * (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
@@ -208,15 +219,17 @@ class UpdateCoordinator
             widgetUpdateMutex.withLock {
                 try {
                     val snapshot = usageStateRepository.observeSnapshot().value
-                    widgetUpdater.updateAll()
-                    if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                        lastSnapshotHash.value = SnapshotUtils.calculateContentHash(snapshot)
+                    val success = widgetUpdater.updateAll()
+                    if (success && snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                        lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
+                    } else if (!success) {
+                        AppLogger.w("Force widget update reported failure, hash not updated")
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.w("Force widget update failed, hash not updated", e)
-                    lastSnapshotHash.value = null
+                    lastSnapshotHash = null
                 }
             }
         }

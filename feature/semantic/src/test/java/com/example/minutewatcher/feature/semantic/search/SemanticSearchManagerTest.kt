@@ -334,6 +334,51 @@ class SemanticSearchManagerTest {
             assertTrue(manager.status.value is TrackingStatus.Error)
         }
 
+    @Test
+    fun `both putDocuments and removeByDocumentId failure logs both messages`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Initial indexing to have something to remove
+            manager.indexSnapshot(createSnapshotWithOneSim())
+
+            // 2. Setup failure for both put and remove
+            fakeWrapper.failAllPutDocuments = true
+            fakeWrapper.failAllRemoveByDocumentId = true
+
+            // 3. Trigger update that requires removal of old documents
+            val snapshotWithSim1 =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            slot = 1,
+                            identity = "sim_1",
+                            operator = "B",
+                            isActive = true,
+                            entities =
+                                mapOf(
+                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50),
+                                ),
+                            autoResetDay = 1,
+                        ),
+                    ),
+                )
+
+            val result = manager.indexSnapshot(snapshotWithSim1)
+
+            // Assert: indexSnapshot returns false
+            assertTrue("indexSnapshot should return false when update fails", !result)
+
+            // Assert: status is Error and contains both messages
+            val status = manager.status.value
+            assertTrue(status is TrackingStatus.Error)
+            val errorMessage = (status as TrackingStatus.Error).message ?: ""
+            assertTrue("Message should contain put failure: $errorMessage", errorMessage.contains("put failed"))
+            assertTrue("Message should contain remove failure: $errorMessage", errorMessage.contains("remove failed"))
+            assertTrue("Message should contain 'Put failed': $errorMessage", errorMessage.contains("Put failed"))
+            assertTrue("Message should contain 'Remove failed': $errorMessage", errorMessage.contains("Remove failed"))
+        }
+
     private fun createManager(scope: CoroutineScope) =
         SemanticSearchManager(
             context = context,
@@ -401,6 +446,7 @@ class SemanticSearchManagerTest {
         var failNextWithFatalError = false
         var failNextWithGenericError = false
         var failAllPutDocuments = false
+        var failAllRemoveByDocumentId = false
 
         override suspend fun createSearchSession(
             context: Context,
@@ -409,6 +455,7 @@ class SemanticSearchManagerTest {
             createdSessions++
             val session = FakeAppSearchSessionWrapper(this)
             session.failPutDocuments = failAllPutDocuments
+            session.failRemoveByDocumentId = failAllRemoveByDocumentId
             lastSession = session
             return session
         }
@@ -450,6 +497,7 @@ class SemanticSearchManagerTest {
         val putRequests = mutableListOf<PutDocumentsRequest>()
         val removeRequests = mutableListOf<RemoveByDocumentIdRequest>()
         var failPutDocuments = false
+        var failRemoveByDocumentId = false
         var putDocumentsResultCode: Int = AppSearchResult.RESULT_OK
 
         override suspend fun setSchema(request: SetSchemaRequest) {
@@ -469,7 +517,7 @@ class SemanticSearchManagerTest {
 
         override suspend fun putDocuments(request: PutDocumentsRequest) {
             if (failPutDocuments || wrapper.failAllPutDocuments) {
-                throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Simulated failure")
+                throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Put failed")
             }
             if (putDocumentsResultCode != AppSearchResult.RESULT_OK) {
                 throw AppSearchException(putDocumentsResultCode, "Simulated failure with code $putDocumentsResultCode")
@@ -478,6 +526,9 @@ class SemanticSearchManagerTest {
         }
 
         override suspend fun removeByDocumentId(request: RemoveByDocumentIdRequest) {
+            if (failRemoveByDocumentId || wrapper.failAllRemoveByDocumentId) {
+                throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Remove failed")
+            }
             removeRequests.add(request)
         }
 

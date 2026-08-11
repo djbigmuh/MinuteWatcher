@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -325,5 +326,42 @@ class SimIdentityRepositoryHangTest {
 
             assertTrue("Flow should have emitted empty list immediately", result != null)
             assertTrue("Result should be empty", result?.isEmpty() == true)
+        }
+
+    @Test
+    fun `saveSimIdentitiesInfo handles DataStore hang without crashing`() =
+        runTest(testDispatcher) {
+            val hangingDataStore = mock<DataStore<Preferences>>()
+            whenever(hangingDataStore.data).thenReturn(MutableSharedFlow())
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = hangingDataStore,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = testScope,
+                )
+
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            val subInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(subInfo.subscriptionId).thenReturn(1)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+
+            // Act: Try to get identity. This will trigger saveSimIdentitiesInfo internally.
+            // We advance time to cover both timeout attempts (10s + 20s).
+            val job =
+                launch {
+                    identityRepo.getSimIdentity(0)
+                }
+
+            // Constants.Flow.LONG_TIMEOUT_MS is 10_000L
+            testScheduler.advanceTimeBy(35_000)
+            testScheduler.runCurrent()
+
+            assertTrue("Identity resolution should complete even if DataStore hangs", job.isCompleted)
         }
 }

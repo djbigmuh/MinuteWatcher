@@ -38,6 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Ensures that data is searchable via global system search.
  */
 @Singleton
+@Suppress("TooManyFunctions")
 class SemanticSearchManager
     @Inject
     constructor(
@@ -88,39 +89,41 @@ class SemanticSearchManager
             session?.close()
             session = null
 
-            var shouldForce = forceOverride
-            repeat(SCHEMA_RETRY_ATTEMPTS) {
-                var newSession: AppSearchSessionWrapper? = null
-                try {
-                    newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
-                    newSession.setSchema(appSearchWrapper.createSchemaRequest(shouldForce))
-                    session = newSession
-                    _status.value = TrackingStatus.Active
-                    return true
-                } catch (e: AppSearchException) {
-                    newSession?.close()
-                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA && !shouldForce) {
-                        shouldForce = true
-                        // Продолжаем retry
-                    } else {
-                        // Это действительно fatal или повторная неудача с force
-                        AppLogger.e(
-                            "AppSearch schema setup failed (force=$shouldForce, code=${e.resultCode})",
-                            e,
-                        )
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                        return false
-                    }
-                } catch (e: CancellationException) {
-                    newSession?.close()
-                    throw e
-                } catch (e: Exception) {
-                    newSession?.close()
-                    return handleInitializationError(e)
-                }
+            if (forceOverride) return tryOpenSession(forceOverride = true)
+
+            if (tryOpenSession(false)) return true
+            return tryOpenSession(true)
+        }
+
+        private suspend fun tryOpenSession(forceOverride: Boolean): Boolean {
+            var newSession: AppSearchSessionWrapper? = null
+            return try {
+                newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
+                newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
+                session = newSession
+                _status.value = TrackingStatus.Active
+                true
+            } catch (e: AppSearchException) {
+                newSession?.close()
+                handleSchemaException(e, forceOverride)
+            } catch (e: CancellationException) {
+                newSession?.close()
+                throw e
+            } catch (e: Exception) {
+                newSession?.close()
+                handleInitializationError(e)
             }
-            _status.value =
-                TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "Schema setup failed after retries")
+        }
+
+        private fun handleSchemaException(
+            e: AppSearchException,
+            forceOverride: Boolean,
+        ): Boolean {
+            if ((e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) && !forceOverride) {
+                return false
+            }
+            AppLogger.e("AppSearch schema setup failed (force=$forceOverride, code=${e.resultCode})", e)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
             return false
         }
 
@@ -244,16 +247,34 @@ class SemanticSearchManager
                 staleIds.addAll(possibleIds.filter { it !in currentIds })
             }
 
+            var removeException: Exception? = null
             if (staleIds.isNotEmpty()) {
-                session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                try {
+                    session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failure during removeByDocumentId", e)
+                    removeException = e
+                }
             }
 
-            putException?.let { throw it }
+            throwIfErrors(putException, removeException)
+        }
+
+        private fun throwIfErrors(
+            putEx: Exception?,
+            removeEx: Exception?,
+        ) {
+            if (putEx != null && removeEx != null) {
+                error("put failed: ${putEx.message}; remove failed: ${removeEx.message}")
+            }
+            putEx?.let { throw it }
+            removeEx?.let { throw it }
         }
 
         companion object {
             private const val DATABASE_NAME = "usage"
             const val NAMESPACE = "usage"
-            private const val SCHEMA_RETRY_ATTEMPTS = 2
         }
     }

@@ -95,7 +95,7 @@ class WidgetSettingsViewModelTest {
             val result = viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(WidgetSettingsViewModel.SaveResult.Success, result)
+            assertEquals(SaveResult.Success, result)
             verify(saver).save(any())
         }
 
@@ -115,8 +115,8 @@ class WidgetSettingsViewModelTest {
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             testScheduler.advanceUntilIdle()
 
-            var firstResult: WidgetSettingsViewModel.SaveResult? = null
-            val secondResult: WidgetSettingsViewModel.SaveResult?
+            var firstResult: SaveResult? = null
+            val secondResult: SaveResult?
 
             launch { firstResult = vm.saveAndNotify() }
             testScheduler.runCurrent()
@@ -124,12 +124,12 @@ class WidgetSettingsViewModelTest {
 
             secondResult = vm.saveAndNotify()
             // В новом варианте второй вызов возвращает отказ сразу, так как сохранение уже в процессе
-            assertEquals(WidgetSettingsViewModel.SaveResult.AlreadyInProgress, secondResult)
+            assertEquals(SaveResult.AlreadyInProgress, secondResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(WidgetSettingsViewModel.SaveResult.Success, firstResult)
+            assertEquals(SaveResult.Success, firstResult)
             assertFalse(vm.isSaving.value)
         }
 
@@ -142,7 +142,7 @@ class WidgetSettingsViewModelTest {
             val result = viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(WidgetSettingsViewModel.SaveResult.Failed, result)
+            assertEquals(SaveResult.Failed, result)
         }
 
     @Test
@@ -212,7 +212,7 @@ class WidgetSettingsViewModelTest {
             assertNotNull(finalFontSize)
             assertTrue(
                 "FontSize should be one of the updated values and not default",
-                (finalFontSize!! in 100 until (100 + totalUpdates)),
+                finalFontSize!! in 100 until (100 + totalUpdates),
             )
         }
 

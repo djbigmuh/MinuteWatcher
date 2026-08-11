@@ -436,7 +436,7 @@ class MainViewModelTest {
             clearInvocations(usageStateRepository)
 
             // ВАЖНО: Устанавливаем симуляцию состояния "до перезагрузки" ПОСЛЕ initializeApp()
-            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_AT] = 500_000L
+            savedStateHandle[AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK] = 500_000L
 
             // nowElapsed = 1000L (SystemClock.elapsedRealtime() после перезагрузки)
             viewModel.onActivityResume(1000L)
@@ -493,12 +493,12 @@ class MainViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // Reset after initializeApp
-            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_AT] = 0L
+            savedStateHandle[AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK] = 0L
 
             viewModel.refreshSimCardsNow()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_AT))
+            assertEquals(0L, savedStateHandle.get<Long>(AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK))
         }
 
     @Test
@@ -523,7 +523,7 @@ class MainViewModelTest {
 
             // Verification: lastRefreshAt is set to something non-zero (mock SystemClock.elapsedRealtime if needed,
             // but Robolectric handles it).
-            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_AT) ?: 0L
+            val lastRefresh = savedStateHandle.get<Long>(AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK) ?: 0L
             assertTrue("lastRefreshAt should be set after pull-to-refresh", lastRefresh > 0)
 
             clearInvocations(usageStateRepository)

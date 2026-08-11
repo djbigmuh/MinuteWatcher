@@ -2,6 +2,8 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -11,6 +13,7 @@ import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetUpdaterImplTest {
@@ -118,4 +121,19 @@ class WidgetUpdaterImplTest {
         val e = IllegalArgumentException("Binder transaction failed")
         assertTrue(updater.isRemoteViewsLimitException(e))
     }
+
+    @Test
+    fun `updateAll returns false when performWidgetUpdate throws unexpected exception`() =
+        runTest {
+            val failingUpdater =
+                object : WidgetUpdaterImpl(context, appSettingsRepository) {
+                    override suspend fun performWidgetUpdate(context: Context) {
+                        error("Unexpected crash")
+                    }
+                }
+
+            val result = failingUpdater.updateAll()
+
+            assertFalse("updateAll should return false on unexpected exception", result)
+        }
 }

@@ -239,9 +239,9 @@ class MainViewModel
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
         private var lastRefreshAt: Long
-            get() = savedStateHandle[KEY_LAST_REFRESH_AT] ?: 0L
+            get() = savedStateHandle[AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK] ?: 0L
             set(value) {
-                savedStateHandle[KEY_LAST_REFRESH_AT] = value
+                savedStateHandle[AutoResetScheduler.KEY_LAST_AUTO_RESET_CHECK] = value
             }
 
         fun onActivityResume(nowElapsed: Long) {
@@ -257,10 +257,6 @@ class MainViewModel
                 resumeRefreshJob?.cancel()
                 resumeRefreshJob = viewModelScope.launch { refreshAndNotify(force = false) }
             }
-        }
-
-        companion object {
-            const val KEY_LAST_REFRESH_AT = "last_refresh_at"
         }
     }
 

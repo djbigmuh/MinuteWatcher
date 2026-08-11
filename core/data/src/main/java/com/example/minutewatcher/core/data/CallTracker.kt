@@ -264,6 +264,20 @@ class CallTracker
                     AppLogger.e("Error in onCallEnded", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     errorSetInThisCall = true
+
+                    // G-484: Ensure session is cleared even on unexpected failure to prevent stale state.
+                    // We choose to clear the session here instead of re-throwing for a Worker retry
+                    // because unexpected exceptions (like logic errors) are often non-transient,
+                    // and a "hanging" active session is worse than a single lost call record.
+                    if (subId != -1) {
+                        withContext(NonCancellable) {
+                            try {
+                                clearSession(subId)
+                            } catch (cleanupEx: Exception) {
+                                AppLogger.w("CallTracker: Failed to clear session after onCallEnded error", cleanupEx)
+                            }
+                        }
+                    }
                 } finally {
                     @Suppress("ThrowingExceptionFromFinally")
                     withContext(NonCancellable) {

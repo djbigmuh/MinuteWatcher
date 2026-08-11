@@ -49,6 +49,9 @@ class UpdateCoordinatorTest {
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
         snapshotFlow.tryEmit(createEmptySnapshot())
+        runTest {
+            whenever(widgetUpdater.updateAll()).thenReturn(true)
+        }
     }
 
     @Test
@@ -383,7 +386,7 @@ class UpdateCoordinatorTest {
 
             val fakeWidgetUpdater =
                 object : WidgetUpdater {
-                    override suspend fun updateAll() {
+                    override suspend fun updateAll(): Boolean {
                         val count = callCount.incrementAndGet()
                         if (count == 1) {
                             firstUpdateStarted.complete(Unit)
@@ -392,6 +395,7 @@ class UpdateCoordinatorTest {
                             secondUpdateStarted.complete(Unit)
                             canFinishSecond.await()
                         }
+                        return true
                     }
                 }
 
@@ -439,6 +443,45 @@ class UpdateCoordinatorTest {
             // 5. Verification:
             assertEquals(2, callCount.get())
             assertTrue(forcedUpdateJob.isCompleted)
+        }
+
+    @Test
+    fun `forced update and subsequent reactive update with same content trigger only one update`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                    timeProvider,
+                )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Trigger forced update for snapshot s1
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.runCurrent() // Ensure StateFlow value is updated
+
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.runCurrent() // Start forced update
+            testScheduler.advanceUntilIdle()
+
+            // Forced update should call updateAll
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Advance time to let reactive path (debounce) trigger for s1
+            // Use runCurrent() several times to ensure all coroutines and flows are processed
+            testScheduler.runCurrent()
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should NOT call updateAll again because forced update already updated the hash
+            verify(widgetUpdater, times(1)).updateAll()
         }
 
     @Test
