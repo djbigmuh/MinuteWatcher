@@ -347,10 +347,10 @@ internal class AutoResetScheduler(
 
     companion object {
         /** Key for storing the last auto-reset check timestamp in SavedStateHandle. */
-        const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+        private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
 
         /** Key for storing the consecutive auto-reset failure count in SavedStateHandle. */
-        const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
+        private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
 
         private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
         private const val MAX_AUTO_RESET_RETRIES = 3

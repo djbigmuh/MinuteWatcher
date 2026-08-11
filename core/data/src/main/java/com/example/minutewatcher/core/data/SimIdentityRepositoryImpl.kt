@@ -224,26 +224,36 @@ class SimIdentityRepositoryImpl
             scope.launch {
                 seedFlow.collect { result ->
                     if (result is SeedResult.Real) {
-                        fallbackMutex.withLock {
-                            val fallbacks = fallbackCache.entries.toList()
-                            if (fallbacks.isNotEmpty()) {
-                                // G-484: We clear the cache to ensure we don't use stale slot-based IDs
-                                // now that a real seed is available. Even if a race re-adds a fallback
-                                // entry, it is benign as activeSimsCache will eventually override it.
-                                fallbackCache.clear()
-                                AppLogger.d(
-                                    "SimIdentityRepository: cleared ${fallbacks.size} fallback cache entries " +
-                                        "upon receiving real seed transition",
-                                )
+                        val fallbackSlots =
+                            fallbackMutex.withLock {
+                                val slots = fallbackCache.keys.toList()
+                                if (slots.isNotEmpty()) {
+                                    fallbackCache.clear()
+                                    slots
+                                } else {
+                                    emptyList()
+                                }
+                            }
 
+                        if (fallbackSlots.isNotEmpty()) {
+                            AppLogger.d(
+                                "SimIdentityRepository: cleared ${fallbackSlots.size} fallback cache entries " +
+                                    "upon receiving real seed transition",
+                            )
+
+                            try {
                                 val seedValue = result.value
                                 permissionManager.getActiveSubscriptions().forEach { sub ->
                                     val slot = sub.simSlotIndex
-                                    if (fallbacks.any { it.key == slot }) {
+                                    if (fallbackSlots.contains(slot)) {
                                         val newIdentity = SimIdentityUtils.createIdentityFromInfo(sub, seedValue)
                                         migrationService.migrateLegacyData(newIdentity)
                                     }
                                 }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to migrate fallback data after seed transition", e)
                             }
                         }
                     }
@@ -292,6 +302,13 @@ class SimIdentityRepositoryImpl
 
                 // If not found in cache, try direct resolution
                 val resolved = findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
+
+                if (resolved.source != IdentitySource.SLOT_FALLBACK && !resolved.stableId.startsWith("invalid_slot")) {
+                    if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
+                        saveSimIdentitiesInfo(listOf(resolved))
+                    }
+                }
+
                 if (seed is SeedResult.Fallback) {
                     fallbackMutex.withLock {
                         fallbackCache[slot] = resolved
@@ -312,18 +329,15 @@ class SimIdentityRepositoryImpl
         ): SimIdentity? =
             try {
                 permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                    val resolved =
-                        when (seed) {
-                            is SeedResult.Fallback -> {
-                                AppLogger.w("getSimIdentity: seed unavailable for slot $slot, using fallback identity")
-                                createFallbackIdentity(slot, "sim_$slot")
-                            }
-                            is SeedResult.Real -> {
-                                SimIdentityUtils.createIdentityFromInfo(it, seed.value)
-                            }
+                    when (seed) {
+                        is SeedResult.Fallback -> {
+                            AppLogger.w("getSimIdentity: seed unavailable for slot $slot, using fallback identity")
+                            createFallbackIdentity(slot, "sim_$slot")
                         }
-                    saveSimIdentitiesInfo(listOf(resolved))
-                    resolved
+                        is SeedResult.Real -> {
+                            SimIdentityUtils.createIdentityFromInfo(it, seed.value)
+                        }
+                    }
                 } ?: run {
                     AppLogger.d("getSimIdentity: no active subscription found for slot $slot, using fallback identity")
                     null
@@ -404,6 +418,11 @@ class SimIdentityRepositoryImpl
                     )
                     null
                 }
+
+        private fun isIdentityAlreadyCached(
+            slot: Int,
+            stableId: String,
+        ): Boolean = activeSimsCache.value.any { it.slotIndex == slot && it.identity.stableId == stableId }
 
         private fun isIdentityUpdateRequired(
             identity: SimIdentity,

@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,20 +51,18 @@ class WidgetSettingsViewModel
 
         private fun loadSettings() {
             _loadError.value = false
-            viewModelScope.launch {
-                loadJob?.cancelAndJoin()
-                loadJob =
-                    launch {
-                        try {
-                            _settingsState.value = loader.load()
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to load widget settings", e)
-                            _loadError.value = true
-                        }
+            loadJob?.cancel()
+            loadJob =
+                viewModelScope.launch {
+                    try {
+                        _settingsState.value = loader.load()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to load widget settings", e)
+                        _loadError.value = true
                     }
-            }
+                }
         }
 
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {

@@ -52,11 +52,11 @@ class MainSimDataController
                 .observeSimCardUiModels()
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
-                }.onStart { emit(SimCardListState.Loading) }
-                .retry(MAX_RETRY_ATTEMPTS) { e ->
+                }.retry(MAX_RETRY_ATTEMPTS) { e ->
                     delay(1000.milliseconds)
                     e is IOException || e is TimeoutCancellationException
-                }.catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
+                }.onStart { emit(SimCardListState.Loading) }
+                .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
                 .stateIn(
                     scope = scope,
                     started = SharingStarted.Eagerly,

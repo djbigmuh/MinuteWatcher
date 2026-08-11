@@ -93,13 +93,16 @@ class WidgetUpdaterImpl
                                 "Flag set to trigger simplified layout on next update.",
                         )
                         // G-484: Immediate re-render to apply SIMPLE layout right away.
+                        var renderSucceeded = true
                         try {
                             renderer.renderAll(context)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             AppLogger.e("Immediate widget re-render after limit exceeded failed", e)
+                            renderSucceeded = false
                         }
+                        return Pair(renderSucceeded, !renderSucceeded)
                     }
                     Pair(true, false) // Return true as we handled the limit and simplified the widget
                 }

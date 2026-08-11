@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,7 +53,7 @@ class TrafficTracker
 
         private var inMemoryLastDataSubId: Int = -1
 
-        private val baselineNeedsRetry = HashMap<String, Int>()
+        private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
         private val targetResolver = TrafficTargetResolver(permissionManager)
 

@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +24,15 @@ class WidgetSettingsRepository
     ) : WidgetSettingsLoader {
         override suspend fun load(): WidgetSettingsState =
             coroutineScope {
-                val settings = appSettingsRepository.getAppSettings().first()
+                val settings =
+                    appSettingsRepository
+                        .getAppSettings()
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+
+                if (settings == null) {
+                    AppLogger.e("WidgetSettingsRepository: failed to load app settings")
+                    return@coroutineScope getFallbackWidgetSettings(AppSettings())
+                }
 
                 val activeSims =
                     simIdentityRepository

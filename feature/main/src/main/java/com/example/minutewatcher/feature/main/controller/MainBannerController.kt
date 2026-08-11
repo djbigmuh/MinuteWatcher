@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.controller
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -65,6 +66,17 @@ class MainBannerController
                 Triple(phoneDenied, notifDenied, settings)
             }
 
+        /**
+         * Цепочка расчета состояния баннеров с бесконечной стратегией повторных попыток.
+         *
+         * Стратегия Retry:
+         * 1. Экспоненциальная задержка (exponential backoff), начиная с 1с, с ограничением [MAX_RETRY_DELAY_MS].
+         * 2. Если количество попыток достигает [MAX_ATTEMPTS_BEFORE_FALLBACK], в UI эмитится состояние
+         *    по умолчанию [TrackingBannerState]. Это предотвращает «зависание» интерфейса в состоянии
+         *    загрузки или ошибки при длительных сбоях в репозиториях.
+         * 3. Попытки продолжаются бесконечно, чтобы UI мог автоматически восстановиться после
+         *    устранения причины сбоя.
+         */
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
                 trackingStatus,
@@ -89,7 +101,7 @@ class MainBannerController
 
                 // Эмитим дефолтное состояние после нескольких неудачных попыток,
                 // чтобы UI не застыл в неопределенности, но продолжаем попытки.
-                if (attempt == MAX_ATTEMPTS_BEFORE_FALLBACK) {
+                if (attempt >= MAX_ATTEMPTS_BEFORE_FALLBACK) {
                     emit(TrackingBannerState())
                 }
 
@@ -105,7 +117,10 @@ class MainBannerController
             )
 
         companion object {
-            private const val MAX_ATTEMPTS_BEFORE_FALLBACK = 5L
-            private const val MAX_RETRY_DELAY_MS = 30_000L
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+            internal const val MAX_ATTEMPTS_BEFORE_FALLBACK = 5L
+
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+            internal const val MAX_RETRY_DELAY_MS = 30_000L
         }
     }

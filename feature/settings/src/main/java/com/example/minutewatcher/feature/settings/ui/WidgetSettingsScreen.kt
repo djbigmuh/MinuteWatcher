@@ -59,7 +59,7 @@ fun WidgetSettingsScreen(
         )
 
     val uiState =
-        remember(state, snapshot, strings) {
+        remember(state, snapshot, strings, context) {
             val nonNullState = state ?: return@remember null
             val operatorNames =
                 snapshot.simSnapshots.associate { sim ->
