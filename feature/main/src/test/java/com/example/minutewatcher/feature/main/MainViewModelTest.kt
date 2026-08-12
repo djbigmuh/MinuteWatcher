@@ -505,7 +505,7 @@ class MainViewModelTest {
         }
 
     @Test
-    fun `refreshAndNotify does not update lastRefreshAt on Timeout`() =
+    fun `refreshAndNotify updates lastRefreshAt also on Timeout`() =
         runTest(testDispatcher) {
             val initialSnapshot =
                 GlobalSnapshot(
@@ -522,11 +522,47 @@ class MainViewModelTest {
 
             // Reset after initializeApp
             savedStateHandle[MainViewModel.KEY_LAST_REFRESH_ELAPSED] = 0L
+            val now = 2000000L
+            timeProvider.setRealtime(now)
 
             viewModel.refreshSimCardsNow()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED))
+            assertEquals(now, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED))
+        }
+
+    @Test
+    fun `onActivityResume does not trigger refresh immediately after a Timeout`() =
+        runTest(testDispatcher) {
+            val initialSnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Timeout(initialSnapshot))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // Manual refresh that results in Timeout
+            viewModel.refreshSimCardsNow()
+            testScheduler.advanceUntilIdle()
+
+            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED) ?: 0L
+            assertTrue("lastRefreshAt should be set even after Timeout", lastRefresh > 0)
+
+            clearInvocations(usageStateRepository)
+
+            // Activity resume within threshold
+            val now = lastRefresh + 5000L
+            viewModel.onActivityResume(now)
+            testScheduler.advanceUntilIdle()
+
+            // Should NOT trigger another refresh
+            verify(usageStateRepository, never()).refresh()
         }
 
     @Test
@@ -655,5 +691,36 @@ class MainViewModelTest {
 
             // Should trigger check because elapsed < 0
             verify(autoResetUseCase).performAutoReset(eq(false))
+        }
+
+    @Test
+    fun `autoResetScheduler can be retried after failure`() =
+        runTest(testDispatcher) {
+            val scheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
+
+            // 1. First call fails.
+            org.mockito.kotlin
+                .doThrow(RuntimeException("First failure"))
+                .whenever(autoResetUseCase)
+                .performAutoReset(eq(false))
+
+            // This should NOT throw because it's caught inside AutoResetScheduler.
+            // But we use runCatching just in case Mockito bubbles it up weirdly.
+            kotlin.runCatching { scheduler.checkOnStart() }
+
+            verify(autoResetUseCase, times(1)).performAutoReset(eq(false))
+
+            // 2. Second call should be allowed now because isCheckStarted was reset.
+            // We need to advance time to trigger the interval check again.
+            timeProvider.advance(3600000L + 1000L) // 1 hour + 1s
+
+            org.mockito.kotlin
+                .doReturn(Unit)
+                .whenever(autoResetUseCase)
+                .performAutoReset(eq(false))
+
+            scheduler.checkOnStart()
+
+            verify(autoResetUseCase, times(2)).performAutoReset(eq(false))
         }
 }

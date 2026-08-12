@@ -30,6 +30,8 @@ class SimIdentitySeedRepositoryImpl
 
         private val seedMutex = Mutex()
 
+        @Volatile private var cachedEphemeralSeed: String? = null
+
         override val seedFlow: Flow<String> =
             dataStore.data
                 .catch { e ->
@@ -40,7 +42,10 @@ class SimIdentitySeedRepositoryImpl
                 }
 
         override suspend fun setSeed(seed: String) {
-            dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
+            seedMutex.withLock {
+                dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
+                cachedEphemeralSeed = null
+            }
         }
 
         /**
@@ -56,12 +61,13 @@ class SimIdentitySeedRepositoryImpl
                         seed = generator()
                         dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
                     }
+                    cachedEphemeralSeed = null
                     seed
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to read/write identity seed, generating ephemeral seed", e)
-                    generator() // Ephemeral seed; will be regenerated on next successful access
+                    cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                 }
             }
     }

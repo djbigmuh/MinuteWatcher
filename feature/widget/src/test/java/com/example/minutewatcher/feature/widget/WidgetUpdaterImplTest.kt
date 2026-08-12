@@ -114,7 +114,15 @@ class WidgetUpdaterImplTest {
                 WidgetUpdaterImpl(
                     context,
                     appSettingsRepository,
-                    renderer = { _ -> error("Unexpected crash") },
+                    renderer =
+                        object : WidgetRenderer {
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceSimpleLayout: Boolean,
+                            ) {
+                                error("Unexpected crash")
+                            }
+                        },
                 )
 
             val result = failingUpdater.updateAll()
@@ -123,9 +131,10 @@ class WidgetUpdaterImplTest {
         }
 
     @Test
-    fun `updateAll calls performWidgetUpdate twice when LimitExceeded occurs`() =
+    fun `updateAll calls performWidgetUpdate twice when LimitExceeded occurs and passes forceSimpleLayout`() =
         runTest {
             var callCount = 0
+            var lastForceSimpleValue = false
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
@@ -138,22 +147,30 @@ class WidgetUpdaterImplTest {
                 WidgetUpdaterImpl(
                     context,
                     appSettingsRepository,
-                    renderer = { _ ->
-                        callCount++
-                        if (callCount == 1) {
-                            // Simulate LimitExceeded on first call
-                            throw IllegalArgumentException(
-                                "RemoteViews too large",
-                                android.os.TransactionTooLargeException(),
-                            )
-                        }
-                    },
+                    renderer =
+                        object : WidgetRenderer {
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceSimpleLayout: Boolean,
+                            ) {
+                                callCount++
+                                lastForceSimpleValue = forceSimpleLayout
+                                if (callCount == 1) {
+                                    // Simulate LimitExceeded on first call
+                                    throw IllegalArgumentException(
+                                        "RemoteViews too large",
+                                        android.os.TransactionTooLargeException(),
+                                    )
+                                }
+                            }
+                        },
                 )
 
             val result = updater.updateAll()
 
             assertTrue("updateAll should return true even on LimitExceeded", result)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
+            assertTrue("last call should have forceSimpleLayout = true", lastForceSimpleValue)
             assertTrue("widgetLimitExceeded flag should be set", mockSettings.value.widgetLimitExceeded)
         }
 }

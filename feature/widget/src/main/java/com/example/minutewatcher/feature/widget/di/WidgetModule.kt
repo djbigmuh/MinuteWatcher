@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.widget.di
 
+import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidget
@@ -25,8 +26,13 @@ interface WidgetModule {
         @Provides
         @Singleton
         fun provideWidgetRenderer(): WidgetRenderer =
-            WidgetRenderer { ctx ->
-                MinutesGlanceWidget().updateAll(ctx)
+            object : WidgetRenderer {
+                override suspend fun renderAll(
+                    context: Context,
+                    forceSimpleLayout: Boolean,
+                ) {
+                    MinutesGlanceWidget().updateAll(context)
+                }
             }
     }
 }

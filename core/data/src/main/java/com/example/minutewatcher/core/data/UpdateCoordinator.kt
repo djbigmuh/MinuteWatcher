@@ -53,9 +53,11 @@ class UpdateCoordinator
         private var retryAttempt = 0L
         private var observationRetryCount = 0L
         private var lastSuccessTime = 0L
+        private var lastResetTime = 0L
         private var observationJob: Job? = null
 
         init {
+            lastResetTime = timeProvider.now()
             startObservation()
         }
 
@@ -123,6 +125,7 @@ class UpdateCoordinator
                             // G-484: Reset the counter only on successful snapshot processing.
                             // This counter tracks flow subscription health, not just widget update success.
                             observationRetryCount = 0
+                            lastResetTime = now
                         } else {
                             AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
                         }
@@ -142,31 +145,37 @@ class UpdateCoordinator
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
             if (cause is CancellationException) throw cause
 
-            observationRetryCount++
-            if (observationRetryCount > Constants.Flow.WIDGET_RETRY_ATTEMPTS) {
-                AppLogger.e(
-                    "UpdateCoordinator: observation stopped after ${Constants.Flow.WIDGET_RETRY_ATTEMPTS} " +
-                        "consecutive failures. Restart the app to restore background updates.",
-                    cause,
-                )
-                return false
+            val now = timeProvider.now()
+            if ((now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                retryAttempt = 0
+                observationRetryCount = 0 // G-484: Reset consecutive failure counter by timer
+                lastResetTime = now
             }
 
-            val now = timeProvider.now()
-            if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                retryAttempt = 0
-            }
+            observationRetryCount++
 
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
             }
 
             val delaySeconds =
-                minOf(
-                    (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
-                        (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
-                    MAX_RETRY_DELAY_SECONDS,
-                )
+                if (observationRetryCount > Constants.Flow.WIDGET_RETRY_ATTEMPTS) {
+                    // G-484: When limit is exceeded, use MAX delay but don't stop the flow.
+                    // This ensures background updates can recover automatically if the system stabilize.
+                    AppLogger.w(
+                        "UpdateCoordinator: observation reached retry limit " +
+                            "(${Constants.Flow.WIDGET_RETRY_ATTEMPTS}). " +
+                            "Continuing with MAX delay ($MAX_RETRY_DELAY_SECONDS s).",
+                        cause,
+                    )
+                    MAX_RETRY_DELAY_SECONDS
+                } else {
+                    minOf(
+                        (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
+                            (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
+                        MAX_RETRY_DELAY_SECONDS,
+                    )
+                }
 
             retryAttempt++
 

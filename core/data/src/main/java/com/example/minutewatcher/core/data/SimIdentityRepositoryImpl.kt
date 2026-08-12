@@ -33,13 +33,13 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -86,25 +86,22 @@ class SimIdentityRepositoryImpl
         private val fallbackCache = ConcurrentHashMap<Int, SimIdentity>()
 
         private val seedFlow: Flow<SeedResult> =
-            flow {
-                val initial =
-                    withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
-                        val current = seedRepository.seedFlow.first()
-                        if (current.isNotEmpty()) {
-                            SeedResult.Real(current)
-                        } else {
-                            val generated = generateSeedWithRetry()
-                            if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
-                        }
-                    } ?: SeedResult.Fallback
-                emit(initial)
-
-                emitAll(
-                    seedRepository.seedFlow
-                        .filter { it.isNotEmpty() }
-                        .map { SeedResult.Real(it) },
-                )
-            }.distinctUntilChanged()
+            seedRepository.seedFlow
+                .filter { it.isNotEmpty() }
+                .map { SeedResult.Real(it) as SeedResult }
+                .onStart {
+                    val initial =
+                        withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                            val current = seedRepository.seedFlow.first()
+                            if (current.isNotEmpty()) {
+                                SeedResult.Real(current)
+                            } else {
+                                val generated = generateSeedWithRetry()
+                                if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
+                            }
+                        } ?: SeedResult.Fallback
+                    emit(initial)
+                }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Eagerly, replay = 1)
 
         @OptIn(ExperimentalCoroutinesApi::class)

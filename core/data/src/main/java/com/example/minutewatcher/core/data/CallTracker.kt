@@ -414,7 +414,6 @@ class CallTracker
                         durationSeconds = durationSeconds.toInt(),
                         subId = subId,
                         savedIdentity = sessionData.savedIdentity,
-                        savedUptime = sessionData.savedUptime,
                         notify = notify,
                     )
 
@@ -542,17 +541,8 @@ class CallTracker
             durationSeconds: Int,
             subId: Int,
             savedIdentity: String?,
-            savedUptime: Long,
             notify: Boolean = true,
         ): Boolean {
-            if (durationSeconds < 0) {
-                AppLogger.w(
-                    "CallTracker: negative call duration detected in processCallDuration " +
-                        "(duration=$durationSeconds, savedUptime=$savedUptime). Skipping update.",
-                )
-                return false
-            }
-
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
 
             if (targetIdentity == null) {

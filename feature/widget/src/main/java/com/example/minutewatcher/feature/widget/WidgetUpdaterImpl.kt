@@ -22,7 +22,15 @@ class WidgetUpdaterImpl
     constructor(
         @param:ApplicationContext private val context: Context,
         private val appSettingsRepository: AppSettingsRepository,
-        private val renderer: WidgetRenderer = WidgetRenderer { ctx -> MinutesGlanceWidget().updateAll(ctx) },
+        private val renderer: WidgetRenderer =
+            object : WidgetRenderer {
+                override suspend fun renderAll(
+                    context: Context,
+                    forceSimpleLayout: Boolean,
+                ) {
+                    MinutesGlanceWidget().updateAll(context)
+                }
+            },
     ) : WidgetUpdater {
         private val updateMutex = Mutex()
 
@@ -57,16 +65,14 @@ class WidgetUpdaterImpl
                 if (success) {
                     isSuccessful = true
                     shouldRetryLoop = false
-                } else if (!shouldRetryResult) {
+                } else if (!shouldRetryResult || attempt >= Constants.Widget.MAX_UPDATE_ATTEMPTS) {
                     shouldRetryLoop = false
-                } else if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                } else {
                     AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
                     delay(delayMs.milliseconds)
                     delayMs *= 2
-                    attempt++
-                } else {
-                    shouldRetryLoop = false
                 }
+                attempt++
             }
             if (!isSuccessful) {
                 AppLogger.e("Widget update failed after ${Constants.Widget.MAX_UPDATE_ATTEMPTS} attempts")
@@ -93,9 +99,13 @@ class WidgetUpdaterImpl
                                 "Flag set to trigger simplified layout on next update.",
                         )
                         // G-484: Immediate re-render to apply SIMPLE layout right away.
+                        // Wait for StateFlow update to avoid race condition where re-render still sees old flag.
+                        kotlinx.coroutines.yield()
+                        delay(Constants.Widget.RACE_DELAY_MS.milliseconds)
+
                         var renderSucceeded = true
                         try {
-                            renderer.renderAll(context)
+                            renderer.renderAll(context, forceSimpleLayout = true)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -185,6 +195,9 @@ class WidgetUpdaterImpl
         companion object
     }
 
-fun interface WidgetRenderer {
-    suspend fun renderAll(context: Context)
+interface WidgetRenderer {
+    suspend fun renderAll(
+        context: Context,
+        forceSimpleLayout: Boolean = false,
+    )
 }

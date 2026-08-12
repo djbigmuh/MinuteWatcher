@@ -28,6 +28,7 @@ class DialogsTest {
 
         composeTestRule.setContent {
             SimLimitComposeDialog(
+                slot = 0,
                 operatorName = "MTS",
                 initialMinutes = 0,
                 initialTrafficMb = 0,
@@ -57,6 +58,7 @@ class DialogsTest {
 
         composeTestRule.setContent {
             SimLimitComposeDialog(
+                slot = 0,
                 operatorName = "MTS",
                 initialMinutes = 0,
                 initialTrafficMb = 0,

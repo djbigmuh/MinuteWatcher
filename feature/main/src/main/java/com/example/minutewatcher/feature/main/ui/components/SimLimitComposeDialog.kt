@@ -35,6 +35,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SimLimitComposeDialog(
+    slot: Int,
     operatorName: String,
     initialMinutes: Int,
     initialTrafficMb: Int,
@@ -43,7 +44,7 @@ fun SimLimitComposeDialog(
     onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -> Unit,
     onReset: () -> Unit,
 ) {
-    val state = rememberSimLimitState(initialMinutes, initialTrafficMb, initialRolloverEnabled)
+    val state = rememberSimLimitState(slot, initialMinutes, initialTrafficMb, initialRolloverEnabled)
     var showResetConfirm by remember { mutableStateOf(false) }
 
     if (showResetConfirm) {
@@ -115,6 +116,7 @@ private data class ValidationMessages(
 
 @Composable
 private fun rememberSimLimitState(
+    slot: Int,
     initialMinutes: Int,
     initialTrafficMb: Int,
     initialRolloverEnabled: Boolean,
@@ -125,7 +127,7 @@ private fun rememberSimLimitState(
             "%.1f".format(gb).replace(",", ".")
         }
 
-    return rememberSaveable(saver = SimLimitState.Saver) {
+    return rememberSaveable(saver = SimLimitState.Saver, key = "sim_limit_$slot") {
         SimLimitState(
             initialMinutesText = initialMinutes.toString(),
             initialTrafficText = initialTrafficText,

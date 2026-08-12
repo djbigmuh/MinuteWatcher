@@ -26,4 +26,14 @@ interface SimUsageResetRepository {
         identity: String,
         bytes: Long,
     )
+
+    /**
+     * Increment traffic usage and update baseline atomically in a single DataStore transaction.
+     * Prevents data loss or double counting if one operation fails.
+     */
+    suspend fun incrementTrafficAndSetBaseline(
+        identity: String,
+        deltaMb: Float,
+        totalBytes: Long,
+    )
 }

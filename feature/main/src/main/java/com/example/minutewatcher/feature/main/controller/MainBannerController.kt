@@ -106,7 +106,7 @@ class MainBannerController
                 }
 
                 val delayMillis =
-                    (2.0.pow(attempt.toDouble() - 1.0).toLong() * Constants.MILLIS_PER_SECOND)
+                    (2.0.pow(attempt.toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis)
                 true // Retrying infinitely with capped delay

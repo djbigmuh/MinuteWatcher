@@ -60,6 +60,7 @@ private fun LimitDialog(
     data?.let {
         key(it) {
             SimLimitComposeDialog(
+                slot = it.slot,
                 operatorName = it.name,
                 initialMinutes = it.minutes,
                 initialTrafficMb = it.traffic,

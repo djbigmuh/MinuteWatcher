@@ -606,7 +606,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `processCallDuration returns false on negative duration`() =
+    fun `onCallEnded ignores negative duration`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()

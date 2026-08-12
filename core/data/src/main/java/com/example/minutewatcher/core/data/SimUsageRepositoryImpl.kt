@@ -309,4 +309,23 @@ class SimUsageRepositoryImpl
             }
             dataStore.edit { it[DynamicSettingsKeys.lastTotalBytesKey(identity)] = bytes }
         }
+
+        override suspend fun incrementTrafficAndSetBaseline(
+            identity: String,
+            deltaMb: Float,
+            totalBytes: Long,
+        ) {
+            if (identity.startsWith("invalid_slot")) {
+                AppLogger.w("incrementTrafficAndSetBaseline called with invalid identity: $identity")
+                return
+            }
+            dataStore.edit { prefs ->
+                // 1. Increment traffic
+                val currentUsage = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                prefs[SimSettingsKeys.trafficUsedKey(identity)] = (currentUsage + deltaMb.toDouble()).toFloat()
+
+                // 2. Update baseline
+                prefs[DynamicSettingsKeys.lastTotalBytesKey(identity)] = totalBytes
+            }
+        }
     }

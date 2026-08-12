@@ -36,6 +36,8 @@ class MinuteWatcherApp :
         super.onCreate()
         AppLogger.init(this)
 
+        WorkManager.initialize(this, workManagerConfiguration)
+
         // Defer semantic layer initialization to improve cold start performance.
         // Using WorkManager ensures that initialization is attempted reliably even if the
         // initial application process is short-lived, while providing a grace period for UI.

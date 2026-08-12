@@ -364,4 +364,55 @@ class SimIdentityRepositoryHangTest {
 
             assertTrue("Identity resolution should complete even if DataStore hangs", job.isCompleted)
         }
+
+    @Test
+    fun `seedFlow continues emitting last known value when internal observation hangs`() =
+        runTest(testDispatcher) {
+            val storedSeed = MutableSharedFlow<String>(replay = 1)
+            val seedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = storedSeed
+
+                    override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
+
+                    override suspend fun getOrCreateSeed(generator: () -> String): String = "generated_seed"
+                }
+
+            val identityRepo =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    scope = testScope,
+                )
+
+            // 1. Emit real seed
+            storedSeed.emit("seed_1")
+            testScheduler.runCurrent()
+
+            // 2. Resolve identity to ensure we are in Real state and seed_1 is the last known value
+            val subInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(subInfo.iccId).thenReturn("iccid_1")
+            whenever(subInfo.subscriptionId).thenReturn(1)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+
+            val id1 = identityRepo.getSimIdentity(0)
+            assertTrue("Expected real identity", id1.source == IdentitySource.ICCID)
+
+            // 3. Advance time to trigger the withTimeoutOrNull around emitAll in seedFlow.
+            // Since storedSeed (MutableSharedFlow) doesn't emit after our first emit,
+            // the withTimeoutOrNull(10s) will eventually time out.
+            testScheduler.advanceTimeBy(15_000)
+            testScheduler.runCurrent()
+
+            // 4. New resolution attempt. It should still work using the last known seed
+            // provided by the replay cache of the shared seedFlow.
+            val id2 = identityRepo.getSimIdentity(0)
+            assertEquals("Should still use last known identity after hang", id1.stableId, id2.stableId)
+        }
 }

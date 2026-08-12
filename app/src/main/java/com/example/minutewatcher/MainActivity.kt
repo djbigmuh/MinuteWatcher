@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
@@ -133,9 +134,8 @@ class MainActivity : AppCompatActivity() {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
             ) {
-                SimCardScreen(
-                    viewModel = viewModel,
-                    actions =
+                val actions =
+                    remember(viewModel) {
                         SimCardScreenActions(
                             onOpenSettings = { openWidgetSettings() },
                             onAddWidget = { addWidgetToHomeScreen() },
@@ -157,7 +157,11 @@ class MainActivity : AppCompatActivity() {
                             onGrantNotificationPermission = {
                                 permissionHandler.requestNotificationPermission()
                             },
-                        ),
+                        )
+                    }
+                SimCardScreen(
+                    viewModel = viewModel,
+                    actions = actions,
                 )
             }
         }

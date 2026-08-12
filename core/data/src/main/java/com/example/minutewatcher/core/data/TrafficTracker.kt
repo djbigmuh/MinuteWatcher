@@ -177,7 +177,27 @@ class TrafficTracker
         }
 
         private suspend fun getActiveSimsAndCleanup(): List<ActiveSimInfo>? {
-            val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: return null
+            var activeSims =
+                simIdentityRepository
+                    .observeActiveSims()
+                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+
+            if (activeSims == null) {
+                AppLogger.w(
+                    "TrafficTracker: observeActiveSims timed out (${Constants.Flow.LONG_TIMEOUT_MS}ms). " +
+                        "Retrying once...",
+                )
+                activeSims =
+                    simIdentityRepository
+                        .observeActiveSims()
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+            }
+
+            if (activeSims == null) {
+                AppLogger.e("TrafficTracker: observeActiveSims failed after retry due to timeout.")
+                return null
+            }
+
             // G-484: Cleanup baselineNeedsRetry from inactive SIMs before returning result
             baselineNeedsRetry.entries.removeIf { entry -> activeSims.none { it.identity.stableId == entry.key } }
             return activeSims
@@ -381,20 +401,30 @@ class TrafficTracker
             if (deltaBytes > 0L) {
                 val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
                 if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
-                    simUsageResetRepository.setLastTotalBytes(
+                    simUsageResetRepository.incrementTrafficAndSetBaseline(
                         identity,
+                        deltaMB,
                         currentBytes,
                     )
-                    simUsageRepository.incrementTrafficUsed(identity, deltaMB)
                     AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
                 }
             }
         }
 
         private suspend fun updateLastDataSubId(dataSubId: Int) {
-            if (dataSubId != -1) {
+            if (dataSubId == -1 || dataSubId == inMemoryLastDataSubId) return
+
+            // G-484: Update in-memory state FIRST. Even if persistence fails,
+            // we want to prevent redundant SIM change detections in the current process lifetime.
+            inMemoryLastDataSubId = dataSubId
+            try {
                 callSessionRepository.setLastDataSubId(dataSubId)
-                inMemoryLastDataSubId = dataSubId
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: Failed to persist last data subId $dataSubId", e)
+                // Persistence failure is logged but doesn't block the update loop.
+                // The in-memory value will prevent immediate re-triggering of handleSimChange.
             }
         }
 

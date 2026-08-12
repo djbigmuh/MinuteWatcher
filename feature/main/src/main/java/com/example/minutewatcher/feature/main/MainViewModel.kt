@@ -174,7 +174,7 @@ class MainViewModel
                 return
             }
 
-            if (result is RefreshResult.Success) {
+            if (result is RefreshResult.Success || result is RefreshResult.Timeout) {
                 lastRefreshAt = timeProvider.elapsedRealtime()
             }
 
@@ -337,11 +337,13 @@ internal class AutoResetScheduler(
                 }
             }
         } catch (e: CancellationException) {
+            isCheckStarted.set(false)
             throw e
         } catch (e: Exception) {
             AppLogger.e("Auto-reset failed during initialization", e)
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
             savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = timeProvider.elapsedRealtime()
+            isCheckStarted.set(false) // G-484: Reset flag to allow retry after failure
         }
     }
 

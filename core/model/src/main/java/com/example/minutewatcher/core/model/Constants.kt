@@ -44,6 +44,7 @@ object Constants {
 
         const val RETRY_BACKOFF_MS = 500L
         const val MAX_UPDATE_ATTEMPTS = 4
+        const val RACE_DELAY_MS = 50L
     }
 
     object Traffic {

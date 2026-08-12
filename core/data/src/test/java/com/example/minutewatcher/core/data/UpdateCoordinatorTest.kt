@@ -485,7 +485,7 @@ class UpdateCoordinatorTest {
         }
 
     @Test
-    fun `observation stops after exceeding retry limit and resumes on restart`() =
+    fun `observationRetryCount is reset by timer`() =
         runTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
@@ -508,23 +508,29 @@ class UpdateCoordinatorTest {
                     timeProvider,
                 )
 
-            // Advance through retries. Since we now use WIDGET_RETRY_ATTEMPTS (5),
-            // total attempts = 5 retries + 1 initial = 6.
-            testScheduler.advanceTimeBy(10000.seconds)
+            // Fail 6 times. Total time: 5 + 10 + 20 + 40 + 80 = 155s for 5 retries.
+            // Attempt 1: 0s, Failure. Retry 1 in 5s.
+            // Attempt 2: 5s, Failure. Retry 2 in 10s.
+            // Attempt 3: 15s, Failure. Retry 3 in 20s.
+            // Attempt 4: 35s, Failure. Retry 4 in 40s.
+            // Attempt 5: 75s, Failure. Retry 5 in 80s.
+            // Attempt 6: 155s, Failure. Retry 6 in 300s.
+            testScheduler.advanceTimeBy(156.seconds)
             assertEquals(6, collectCount)
 
-            // Setup working flow
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            // Verify observationRetryCount is 6 (we can't access it directly, but we can verify behavior)
+            // If we wait RESET_RETRY_COUNTER_INTERVAL_MS (10 mins)
+            timeProvider.advance(601000L) // 10 mins + 1s
 
-            // Restart
-            coordinator.restartObservation()
-            testScheduler.advanceUntilIdle()
+            // Next retry should reset the counter and start from 5s delay instead of 300s.
+            // But wait, the PREVIOUS failure already scheduled a delay of 300s.
+            // So we need to wait at least 300s from the 155s mark.
+            testScheduler.advanceTimeBy(300.seconds)
 
-            // Verify it works now
-            val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            verify(widgetUpdater).updateAll()
+            val field = UpdateCoordinator::class.java.getDeclaredField("observationRetryCount")
+            field.isAccessible = true
+            val countAfterReset = field.get(coordinator) as Long
+            assertEquals("Counter should be reset (1 after increment in failure)", 1L, countAfterReset)
         }
 
     private fun createEmptySnapshot() =

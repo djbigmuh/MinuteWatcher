@@ -30,6 +30,7 @@ class SimLimitComposeDialogTest {
 
         composeTestRule.setContent {
             SimLimitComposeDialog(
+                slot = 0,
                 operatorName = "Test Operator",
                 initialMinutes = 100,
                 initialTrafficMb = 1000,

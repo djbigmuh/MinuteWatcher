@@ -30,9 +30,11 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run Static Analysis (Ktlint, Detekt, Lint)
+      if: always()
       run: ./gradlew ktlintCheck detekt lintDebug
 
     - name: Run Unit Tests
+      if: always()
       run: ./gradlew testDebugUnitTest
 
     - name: Build Debug APK
@@ -62,6 +64,7 @@ jobs:
       with:
         name: test-reports
         path: "**/build/reports/"
+        if-no-files-found: ignore
 
     - name: Upload Lint Reports
       if: always()
@@ -69,6 +72,7 @@ jobs:
       with:
         name: lint-reports
         path: "**/build/reports/lint-results-*"
+        if-no-files-found: ignore
 
     - name: Upload Build Artifacts
       if: always()
@@ -76,6 +80,7 @@ jobs:
       with:
         name: debug-apk
         path: app/build/outputs/apk/debug/*.apk
+        if-no-files-found: ignore
 
     - name: Upload Benchmark Artifacts
       if: always()
@@ -83,10 +88,16 @@ jobs:
       with:
         name: benchmark-apk
         path: app/build/outputs/apk/benchmark/*.apk
+        if-no-files-found: ignore
 
     - name: Check test results
       if: always()
       run: |
+        TOTAL=$(find . -path '*/build/test-results/testDebugUnitTest/*.xml' | wc -l)
+        if [ "$TOTAL" -eq 0 ]; then
+          echo "Error: No test result files found. Were tests executed?"
+          exit 1
+        fi
         FAILED=$(find . -path '*/build/test-results/testDebugUnitTest/*.xml' \
           -exec grep -l -E 'failures="[1-9]|errors="[1-9]' {} + 2>/dev/null || true)
         if [ -n "$FAILED" ]; then

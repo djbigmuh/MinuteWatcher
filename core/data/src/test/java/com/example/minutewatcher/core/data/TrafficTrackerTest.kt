@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -202,7 +203,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `updateTrafficUsage increments usage based on delta`() =
+    fun `updateTrafficUsage increments usage based on delta atomically`() =
         runTest(testDispatcher) {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
 
@@ -211,8 +212,43 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             val deltaMb = (34000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(35000L))
+            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
+        }
+
+    @Test
+    fun `updateTrafficUsage preserves delta when atomic update fails`() =
+        runTest(testDispatcher) {
+            // Setup initial state: baseline = 1000L
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            // 1. First attempt: stats = 35000L, delta = 34000L
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
+
+            // Mock atomic update to fail
+            whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any()))
+                .thenThrow(RuntimeException("Write failed"))
+
+            tracker.updateTrafficUsage()
+
+            // Verify failed attempt happened
+            val deltaMb = (34000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
+            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
+
+            // 2. Second attempt: stats still 35000L
+            // If baseline was NOT updated in first attempt (due to atomicity), delta will still be 34000L.
+            // In this mock-based test, we verify that the SECOND call to updateTrafficUsage
+            // still sees lastTotalBytes as 1000L (which we provide via mock).
+
+            whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any()))
+                .thenReturn(Unit) // Succeed this time
+
+            tracker.updateTrafficUsage()
+
+            // Verify it was called again with same delta
+            verify(
+                simUsageResetRepository,
+                times(2),
+            ).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
         }
 
     @Test
@@ -386,7 +422,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // 1000 bytes is < 0.01 MB (~10KB), should not increment usage but status is Active
-            verify(simUsageRepository, never()).incrementTrafficUsed(any(), any())
+            verify(simUsageResetRepository, never()).incrementTrafficAndSetBaseline(any(), any(), any())
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
@@ -617,8 +653,7 @@ class TrafficTrackerTest {
 
             // Verify skipDelta did NOT trigger: usage should be incremented (50000 - 1000 = 49000)
             val deltaMb = (49000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(deltaMb))
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_0"), eq(50000L))
+            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(50000L))
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
@@ -648,14 +683,15 @@ class TrafficTrackerTest {
     @Test
     fun `updateTrafficUsage reads fresh lastTotalBytes after resetBaseline due to serialization`() =
         runTest(testDispatcher) {
-            var currentStoredValue = 1000L
+            val currentStoredValue = MutableStateFlow(1000L)
 
             // Mock repository to reflect updates in-memory
-            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenAnswer {
-                flowOf(currentStoredValue)
-            }
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(currentStoredValue)
             whenever(simUsageResetRepository.setLastTotalBytes(eq("sim_0"), any())).thenAnswer {
-                currentStoredValue = it.getArgument(1)
+                currentStoredValue.value = it.getArgument<Long>(1)
+            }
+            whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(eq("sim_0"), any(), any())).thenAnswer {
+                currentStoredValue.value = it.getArgument<Long>(2)
             }
 
             // Mock network stats: first call sets 5000, second call adds 100000 (total 105000)
@@ -675,8 +711,10 @@ class TrafficTrackerTest {
 
             // Verify delta was calculated from 5000, not the initial 1000
             val expectedDeltaMb = (100000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageRepository).incrementTrafficUsed(eq("sim_0"), eq(expectedDeltaMb))
-            assertEquals(105000L, currentStoredValue)
+            verify(
+                simUsageResetRepository,
+            ).incrementTrafficAndSetBaseline(eq("sim_0"), eq(expectedDeltaMb), eq(105000L))
+            assertEquals(105000L, currentStoredValue.value)
         }
 
     @Test
@@ -791,6 +829,69 @@ class TrafficTrackerTest {
             // 3. Verify stale_sim is gone
             assertFalse("stale_sim should be cleared after successful call", map.containsKey(staleIdentity))
             assertTrue("sim_0 should not be in retry map unless it failed", map.isEmpty())
+        }
+
+    @Test
+    fun `updateLastDataSubId updates memory even if repository fails`() =
+        runTest(testDispatcher) {
+            // 1. Initial state: subId = 1
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+            verify(callSessionRepository).setLastDataSubId(1)
+
+            // 2. SIM swap to subId = 2, but repository fails
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
+            whenever(callSessionRepository.setLastDataSubId(2)).thenThrow(RuntimeException("Persistence failed"))
+
+            tracker.updateTrafficUsage()
+
+            // Verify it was called once (and failed)
+            verify(callSessionRepository).setLastDataSubId(2)
+
+            // Reset inMemoryLastDataSubId to simulate clean state if needed?
+            // No, the whole point is it stays updated.
+
+            // 3. Third call: same subId = 2
+            // It should NOT call handleSimChange or updateLastDataSubId again
+            // because inMemoryLastDataSubId is already 2
+            tracker.updateTrafficUsage()
+
+            verify(callSessionRepository, times(1)).setLastDataSubId(2)
+        }
+
+    @Test
+    fun `updateTrafficUsage retries observeActiveSims on timeout`() =
+        runTest(testDispatcher) {
+            // Setup: first call times out, second call succeeds
+            var callCount = 0
+            val neverFlow = MutableSharedFlow<List<ActiveSimInfo>>()
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        displayName = "SIM 1",
+                        carrierName = "Carrier 1",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
+                )
+
+            whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
+                callCount++
+                if (callCount == 1) neverFlow else flowOf(activeSims)
+            }
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            tracker.updateTrafficUsage()
+
+            // Verify it was called twice
+            verify(simIdentityRepository, times(2)).observeActiveSims()
+            assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
     private fun createSimUsage(id: String) =
