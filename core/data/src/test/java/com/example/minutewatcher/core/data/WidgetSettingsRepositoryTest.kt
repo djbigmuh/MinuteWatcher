@@ -21,6 +21,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -226,7 +227,7 @@ class WidgetSettingsRepositoryTest {
         }
 
     @Test
-    fun `load should retry on observeActiveSims timeout and return default simStates if both fail`() =
+    fun `load returns fallback with simListLoadFailed when observeActiveSims times out`() =
         runTest {
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
 
@@ -238,6 +239,11 @@ class WidgetSettingsRepositoryTest {
             val result = repository.load()
 
             assertTrue("simStates should be empty on load failure", result.simStates.isEmpty())
-            assertTrue(result.settingsLoadFailed)
+            assertTrue("General settings should be loaded successfully", !result.settingsLoadFailed)
+            assertTrue("SIM list should be marked as failed", result.simListLoadFailed)
+
+            // getSimSettingsBatch не должен вызываться при таймауте observeActiveSims,
+            // так как список SIM не был получен и загружать настройки не для чего.
+            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
         }
 }

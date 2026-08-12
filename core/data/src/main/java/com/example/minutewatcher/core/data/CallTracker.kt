@@ -34,8 +34,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
-private const val INTERNAL_READ_TIMEOUT_MS = 2000L
-
 private class DataStoreTimeoutException(
     message: String,
 ) : Exception(message)
@@ -59,6 +57,7 @@ class CallTracker
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private val writeAttempts = ConcurrentHashMap<Int, Int>()
+        private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
         private val callMutex = Mutex()
 
@@ -158,6 +157,13 @@ class CallTracker
             return effective
         }
 
+        /**
+         * Reads data with retry and timeout.
+         *
+         * Таймаут по умолчанию — [Constants.Flow.SHORT_TIMEOUT_MS].
+         * Для чтения сессий звонков используется [Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS] (2000 мс)
+         * — см. документацию константы.
+         */
         @Suppress("LongParameterList")
         private suspend fun <T : Any> readWithRetry(
             label: String,
@@ -189,7 +195,7 @@ class CallTracker
                 readWithRetry(
                     label = "callStartData",
                     attempts = READ_RETRY_ATTEMPTS,
-                    timeoutMs = INTERNAL_READ_TIMEOUT_MS,
+                    timeoutMs = Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS,
                     retryDelayMs = READ_RETRY_DELAY_MS,
                 ) {
                     combine(
@@ -205,12 +211,14 @@ class CallTracker
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Timeout reading session data for subId $subId",
                     )
-                try {
-                    clearSession(subId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("Failed to clear session for subId $subId after start timeout", e)
+                withContext(NonCancellable) {
+                    try {
+                        clearSession(subId)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.w("Failed to clear session for subId $subId after start timeout", e)
+                    }
                 }
                 return false
             }
@@ -219,7 +227,7 @@ class CallTracker
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 
-            val isStale = startTime == 0L || savedBootTime == 0L || savedBootTime > currentBootTime
+            val isStale = (startTime == 0L) || (savedBootTime == 0L) || (savedBootTime > currentBootTime)
 
             if (isStale) {
                 if (startTime != 0L || savedBootTime != 0L) {
@@ -370,65 +378,131 @@ class CallTracker
             AppLogger.d("Cleared stale call session for subId $subId without adding minutes")
         }
 
+        /**
+         * Ends the call for the given [subId].
+         *
+         * При невозможности прочитать сессию (таймаут), сессия принудительно очищается.
+         * Это строгое соблюдение контракта: сессия с ненулевым startTime блокирует следующий звонок.
+         * Потеря данных одного звонка предпочтительнее полной блокировки трекинга.
+         *
+         * @param subId The subscription ID.
+         * @param notify Whether to notify about data changes.
+         */
         private suspend fun endCall(
             subId: Int,
             notify: Boolean = true,
         ) {
-            val sessionData = loadCallSessionData(subId) ?: return
+            val sessionData = loadCallSessionData(subId)
+            if (sessionData == null) {
+                handleEndCallTimeout(subId)
+                return
+            }
 
             val currentBootTime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 
             if (sessionData.startTime > 0) {
-                if (!validateSession(subId, sessionData, currentBootTime)) {
-                    return
-                }
+                processActiveSessionEnd(subId, sessionData, currentBootTime, currentUptime, notify)
+            }
+        }
 
-                val now = timeProvider.now()
-                if ((now - sessionData.startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
-                    // Проверку на "протухшую" сессию (stale) выполняем ДО попытки атрибуции.
-                    // Это гарантирует очистку сессии даже при ошибке записи минут.
-                    AppLogger.w(
-                        "Call attribution failed for subId $subId and session exceeded " +
-                            "${Constants.Calls.MAX_CALL_DURATION_MS / Constants.MILLIS_PER_HOUR} hours. " +
-                            "Force clearing session.",
-                    )
+        private suspend fun handleEndCallTimeout(subId: Int) {
+            // G-484: Если чтение сессии не удалось по таймауту, сессия в DataStore
+            // может содержать stale-данные с ненулевым startTime. Это заблокирует
+            // следующий onCallStarted для данного subId (duplicate OFFHOOK detection).
+            // Принудительно очищаем сессию, чтобы гарантировать возможность
+            // отслеживания следующего звонка. Потеря данных текущего звонка
+            // допустима — альтернатива (полная блокировка трекинга) хуже.
+            AppLogger.w(
+                "endCall: session read timed out for subId $subId, " +
+                    "force-clearing session to prevent tracking block",
+            )
+            withContext(NonCancellable) {
+                try {
                     clearSession(subId)
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Attribution failed for subId $subId",
-                        )
-                    return
-                }
-
-                val durationSeconds = (currentUptime - sessionData.savedUptime) / Constants.MILLIS_PER_SECOND
-                if (durationSeconds < 0) {
-                    AppLogger.w(
-                        "CallTracker: negative duration for subId $subId " +
-                            "(currentUptime=$currentUptime, savedUptime=${sessionData.savedUptime}), clearing session",
-                    )
-                    clearSession(subId)
-                    return
-                }
-
-                val success =
-                    processCallDuration(
-                        durationSeconds = durationSeconds.toInt(),
-                        subId = subId,
-                        savedIdentity = sessionData.savedIdentity,
-                        notify = notify,
-                    )
-
-                if (success) {
-                    clearSession(subId)
-                } else {
-                    AppLogger.e(
-                        "Call duration write failed for subId $subId (duration: $durationSeconds s), " +
-                            "session preserved",
-                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("endCall: failed to clear session after timeout for subId $subId", e)
                 }
             }
+        }
+
+        private suspend fun processActiveSessionEnd(
+            subId: Int,
+            sessionData: CallSessionData,
+            currentBootTime: Long,
+            currentUptime: Long,
+            notify: Boolean,
+        ) {
+            val isValid = validateSession(subId, sessionData, currentBootTime)
+            if (!isValid) return
+
+            val now = timeProvider.now()
+            val isExpired = (now - sessionData.startTime) > Constants.Calls.MAX_CALL_DURATION_MS
+
+            if (isExpired) {
+                handleStaleSession(subId)
+            } else {
+                val durationSeconds = (currentUptime - sessionData.savedUptime) / Constants.MILLIS_PER_SECOND
+                if (durationSeconds < 0) {
+                    handleNegativeDuration(subId, currentUptime, sessionData.savedUptime)
+                } else {
+                    performCallAttribution(subId, durationSeconds, sessionData.savedIdentity, notify)
+                }
+            }
+        }
+
+        private suspend fun performCallAttribution(
+            subId: Int,
+            durationSeconds: Long,
+            savedIdentity: String?,
+            notify: Boolean,
+        ) {
+            val success =
+                processCallDuration(
+                    durationSeconds = durationSeconds.toInt(),
+                    subId = subId,
+                    savedIdentity = savedIdentity,
+                    notify = notify,
+                )
+
+            if (success) {
+                clearSession(subId)
+            } else {
+                AppLogger.e(
+                    "Call duration write failed for subId $subId (duration: $durationSeconds s), " +
+                        "session preserved",
+                )
+            }
+        }
+
+        private suspend fun handleStaleSession(subId: Int) {
+            // Проверку на "протухшую" сессию (stale) выполняем ДО попытки атрибуции.
+            // Это гарантирует очистку сессии даже при ошибке записи минут.
+            AppLogger.w(
+                "Call attribution failed for subId $subId and session exceeded " +
+                    "${Constants.Calls.MAX_CALL_DURATION_MS / Constants.MILLIS_PER_HOUR} hours. " +
+                    "Force clearing session.",
+            )
+            clearSession(subId)
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "Attribution failed for subId $subId",
+                )
+        }
+
+        private suspend fun handleNegativeDuration(
+            subId: Int,
+            currentUptime: Long,
+            savedUptime: Long,
+        ) {
+            AppLogger.w(
+                "CallTracker: negative duration for subId $subId " +
+                    "(currentUptime=$currentUptime, savedUptime=$savedUptime), clearing session",
+            )
+            clearSession(subId)
         }
 
         private data class CallSessionData(
@@ -444,7 +518,7 @@ class CallTracker
                 readWithRetry(
                     label = "callSessionData",
                     attempts = READ_RETRY_ATTEMPTS,
-                    timeoutMs = INTERNAL_READ_TIMEOUT_MS,
+                    timeoutMs = Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS,
                     retryDelayMs = READ_RETRY_DELAY_MS,
                 ) {
                     combine(
@@ -458,20 +532,12 @@ class CallTracker
                 }
 
             if (result.isFailure) {
-                AppLogger.e("Call session data read timeout for subId $subId, clearing session", null)
+                AppLogger.e("Call session data read timeout for subId $subId", null)
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Timeout loading session data for subId $subId",
                     )
-                // Очищаем сессию, чтобы избежать stale-данных
-                try {
-                    clearSession(subId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("Failed to clear stale session for subId $subId after read timeout", e)
-                }
                 return null
             }
 
@@ -519,10 +585,13 @@ class CallTracker
         }
 
         private suspend fun clearSession(subId: Int) {
-            callSessionRepository.setCallStartTime(subId, 0L)
-            callSessionRepository.setBootTime(subId, 0L)
-            callSessionRepository.setUptime(subId, 0L)
-            callSessionRepository.setCallIdentity(subId, null)
+            withContext(NonCancellable) {
+                callSessionRepository.setCallStartTime(subId, 0L)
+                callSessionRepository.setBootTime(subId, 0L)
+                callSessionRepository.setUptime(subId, 0L)
+                callSessionRepository.setCallIdentity(subId, null)
+                attributionFailures.remove(subId)
+            }
         }
 
         private suspend fun resolveIdentity(subId: Int): String? {
@@ -537,6 +606,12 @@ class CallTracker
          * Rounding logic:
          * Uses ceiling rounding for minutes (1 sec = 1 min, 61 sec = 2 min).
          * This follows the most common carrier billing practices.
+         *
+         * Если атрибуция не удаётся MAX_ATTRIBUTION_FAILURES раз подряд, сессия принудительно очищается.
+         * Это строгое соблюдение контракта: на AOSP атрибуция всегда успешна при наличии SIM и READ_PHONE_STATE.
+         * Перманентный сбой атрибуции возможен только на кастомных прошивках, не соответствующих документации Google
+         * (отсутствие activeSubscriptionInfoList при наличии активного звонка).
+         * В этом случае потеря данных одного звонка предпочтительнее перманентной блокировки трекинга.
          */
         @Suppress("LongMethod", "ReturnCount")
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -558,12 +633,14 @@ class CallTracker
             if (durationSeconds == 0) {
                 AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
                 writeAttempts.remove(subId)
+                attributionFailures.remove(subId)
                 return true
             }
 
             if (!isCallTrackingEnabled()) {
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 writeAttempts.remove(subId)
+                attributionFailures.remove(subId)
                 return true
             }
             val durationMinutes =
@@ -580,6 +657,7 @@ class CallTracker
                         dataChangeNotifier.notifyDataChanged()
                     }
                     writeAttempts.remove(subId)
+                    attributionFailures.remove(subId)
                     true
                 } catch (e: CancellationException) {
                     throw e
@@ -603,12 +681,14 @@ class CallTracker
                      */
                     if (attempts >= MAX_WRITE_ATTEMPTS) {
                         AppLogger.e(
-                            "CRITICAL: Lost $durationMinutes min for identity $targetIdentity (subId=$subId) " +
-                                "after $attempts failed write attempts. Clearing session to unblock future tracking.",
+                            "CRITICAL: Lost $durationMinutes min for identity $targetIdentity " +
+                                "(subId=$subId) after $attempts failed write attempts. " +
+                                "Clearing session to unblock future tracking.",
                             e,
                         )
                         clearSession(subId)
                         writeAttempts.remove(subId)
+                        attributionFailures.remove(subId)
                         _status.value =
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.UNKNOWN,
@@ -617,8 +697,8 @@ class CallTracker
                         true // Session is now closed (cleared)
                     } else {
                         AppLogger.e(
-                            "Call duration write failed for identity $targetIdentity (subId=$subId, attempt $attempts). " +
-                                "Session preserved for retry.",
+                            "Call duration write failed for identity $targetIdentity " +
+                                "(subId=$subId, attempt $attempts). Session preserved for retry.",
                             e,
                         )
                         _status.value =
@@ -630,9 +710,26 @@ class CallTracker
                     }
                 }
             } else {
-                AppLogger.e("Could not attribute call duration for subId $subId")
+                val failures = (attributionFailures[subId] ?: 0) + 1
+                attributionFailures[subId] = failures
+                if (failures >= MAX_ATTRIBUTION_FAILURES) {
+                    AppLogger.e(
+                        "Call attribution failed $failures times for subId $subId. " +
+                            "Force-clearing session to prevent permanent block. " +
+                            "Call data for this session is lost.",
+                    )
+                    attributionFailures.remove(subId)
+                    return true // Сигнализируем endCall, что сессию нужно очистить
+                }
+                AppLogger.e(
+                    "Could not attribute call duration for subId $subId " +
+                        "(attempt $failures/$MAX_ATTRIBUTION_FAILURES)",
+                )
                 _status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Attribution failed for subId $subId",
+                    )
                 writeAttempts.remove(subId)
                 return false
             }
@@ -642,6 +739,7 @@ class CallTracker
             private const val READ_RETRY_ATTEMPTS = 2
             private const val READ_RETRY_DELAY_MS = 500L
             private const val MAX_WRITE_ATTEMPTS = 3
+            private const val MAX_ATTRIBUTION_FAILURES = 3
         }
     }
 
@@ -721,7 +819,9 @@ internal class CallEndResolver(
         val staleSessions = mutableListOf<Int>()
         for (subId in activeSubIds) {
             val startTime =
-                callSessionRepository.getCallStartTime(subId).firstWithTimeout(INTERNAL_READ_TIMEOUT_MS) ?: 0L
+                callSessionRepository
+                    .getCallStartTime(subId)
+                    .firstWithTimeout(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS) ?: 0L
             if (startTime > 0 && (now - startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
                 staleSessions.add(subId)
             }
@@ -771,8 +871,8 @@ internal class CallEndResolver(
      * does not specify which one ended.
      *
      * **Contract (AOSP):**
-     * Ideally, on API 31+, [TelephonyManager.CALL_STATE_IDLE] per subscription should
-     * uniquely identify the ended call. In standard AOSP, [SubscriptionManager.getDefaultVoiceSubscriptionId]
+     * Ideally, on API 31+, [android.telephony.TelephonyManager.CALL_STATE_IDLE] per subscription should
+     * uniquely identify the ended call. In standard AOSP, [android.telephony.SubscriptionManager.getDefaultVoiceSubscriptionId]
      * points to the primary SIM for calls.
      *
      * **Heuristic/Fallback:**
@@ -800,7 +900,9 @@ internal class CallEndResolver(
                 var minTime = Long.MAX_VALUE
                 for (subId in activeSubIds) {
                     val t =
-                        callSessionRepository.getCallStartTime(subId).firstWithTimeout(INTERNAL_READ_TIMEOUT_MS)
+                        callSessionRepository
+                            .getCallStartTime(subId)
+                            .firstWithTimeout(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS)
                             ?: Long.MAX_VALUE
                     if (t < minTime) {
                         minTime = t

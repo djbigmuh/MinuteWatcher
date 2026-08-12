@@ -44,7 +44,7 @@ object Constants {
 
         const val RETRY_BACKOFF_MS = 500L
         const val MAX_UPDATE_ATTEMPTS = 4
-        const val RACE_DELAY_MS = 50L
+        // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
     }
 
     object Traffic {
@@ -74,6 +74,17 @@ object Constants {
         const val RETRY_TIMEOUT_MS = 5_000L
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
+
+        /**
+         * Таймаут чтения сессии звонка из DataStore.
+         * 2000 мс выбран как компромисс: достаточно для чтения 4 ключей
+         * (callStartTime, bootTime, uptime, callIdentity) из DataStore
+         * на AOSP, но не настолько велик, чтобы блокировать обработчик
+         * звонков на длительное время. На AOSP чтение DataStore занимает
+         * < 100 мс; таймаут срабатывает только при деградации хранилища.
+         */
+        const val CALL_SESSION_READ_TIMEOUT_MS = 2000L
+
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L

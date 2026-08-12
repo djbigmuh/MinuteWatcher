@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +60,14 @@ class TrafficTracker
          */
         private var inMemoryLastDataSubId: Int = -1
 
+        /**
+         * Карта identity -> число неудачных попыток сброса baseline после смены SIM.
+         * Записи создаются в [handleSimChange] при недоступности статистики.
+         * Очищаются в [performTrafficUpdate] при успешном обновлении или таймауте.
+         * Также очищаются в [processActiveSimsTraffic] для нецелевых identity.
+         * На AOSP смена SIM всегда сопровождается доступной статистикой;
+         * накопление записей возможно только на кастомных прошивках.
+         */
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
         private val targetResolver = TrafficTargetResolver(permissionManager)
@@ -130,8 +139,11 @@ class TrafficTracker
                     if (!checkPermissions()) return
 
                     // G-484: Protect against unbounded growth of the retry map due to multiple SIM swaps.
-                    if (baselineNeedsRetry.size > Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2) {
-                        AppLogger.w("TrafficTracker: baselineNeedsRetry map size exceeded limit, force clearing to prevent leak.")
+                    if (baselineNeedsRetry.size > (Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2)) {
+                        AppLogger.w(
+                            "TrafficTracker: baselineNeedsRetry map size exceeded limit, " +
+                                "force clearing to prevent leak.",
+                        )
                         baselineNeedsRetry.clear()
                     }
 
@@ -141,7 +153,8 @@ class TrafficTracker
                             "TrafficTracker: observeActiveSims timed out, skipping update. " +
                                 "baselineNeedsRetry cleanup deferred due to activeSims timeout",
                         )
-                        // Identity read timeout is a transient state; status will be restored on the next successful update.
+                        // Identity read timeout is a transient state; status will be restored
+                        // on the next successful update.
                         _status.value =
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.UNKNOWN,
@@ -150,37 +163,14 @@ class TrafficTracker
                         return
                     }
 
-                    cleanupStaleRetryEntries(activeSims.map { it.identity.stableId }.toSet())
+                    val identities =
+                        activeSims
+                            .asSequence()
+                            .map { it.identity.stableId }
+                            .toSet()
+                    cleanupStaleRetryEntries(identities)
 
-                    val target = targetResolver.resolve(activeSims)
-                    if (target == null) {
-                        AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
-                        // G-484: Clear any pending baseline retries when no active SIM is available
-                        // to prevent stale state from affecting future SIM insertions.
-                        baselineNeedsRetry.clear()
-                        _status.value = TrackingStatus.Idle
-                        return
-                    }
-
-                    withSimChangeLock {
-                        ensureInMemoryLastDataSubId()
-                        val savedLastDataSubId = inMemoryLastDataSubId
-                        val isSimChanged =
-                            (savedLastDataSubId != -1) &&
-                                (target.dataSubId != -1) &&
-                                (savedLastDataSubId != target.dataSubId)
-
-                        if (isSimChanged) {
-                            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                            val retryCount = baselineNeedsRetry.getOrDefault(targetIdentity, 0)
-                            handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, retryCount)
-                            handleSkipDelta(target, retryCount)
-                        } else {
-                            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                            baselineNeedsRetry.entries.removeIf { it.key != targetIdentity }
-                            performTrafficUpdate(target, targetIdentity)
-                        }
-                    }
+                    processActiveSimsTraffic(activeSims)
                 } catch (e: SecurityException) {
                     AppLogger.e("SecurityException in TrafficTracker", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
@@ -189,6 +179,38 @@ class TrafficTracker
                 } catch (e: Exception) {
                     AppLogger.e("Error updating traffic", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                }
+            }
+        }
+
+        private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
+            val target = targetResolver.resolve(activeSims)
+            if (target == null) {
+                AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
+                // G-484: Clear any pending baseline retries when no active SIM is available
+                // to prevent stale state from affecting future SIM insertions.
+                baselineNeedsRetry.clear()
+                _status.value = TrackingStatus.Idle
+                return
+            }
+
+            withSimChangeLock {
+                ensureInMemoryLastDataSubId()
+                val savedLastDataSubId = inMemoryLastDataSubId
+                val isSimChanged =
+                    (savedLastDataSubId != -1) &&
+                        (target.dataSubId != -1) &&
+                        (savedLastDataSubId != target.dataSubId)
+
+                if (isSimChanged) {
+                    val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                    val retryCount = baselineNeedsRetry.getOrDefault(targetIdentity, 0)
+                    handleSimChange(target.slot, target.dataSubId, savedLastDataSubId, retryCount)
+                    handleSkipDelta(target, retryCount)
+                } else {
+                    val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                    baselineNeedsRetry.entries.removeIf { it.key != targetIdentity }
+                    performTrafficUpdate(target, targetIdentity)
                 }
             }
         }
@@ -261,6 +283,10 @@ class TrafficTracker
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Timeout reading simUsage",
                     )
+                // G-484: Очищаем запись retry при таймауте, чтобы избежать
+                // накопления stale-записей. На AOSP getSimUsage не таймаутится;
+                // таймаут возможен только при деградации DataStore.
+                baselineNeedsRetry.remove(targetIdentity)
                 return
             }
 
@@ -404,6 +430,9 @@ class TrafficTracker
                     handled = true
                 }
             } else if (baselineNeedsRetry.getOrDefault(targetIdentity, 0) > 0) {
+                // G-484: Запись в baselineNeedsRetry остаётся для повторной попытки в следующем цикле,
+                // так как статистика временно недоступна. Она будет очищена в handleBaselineRetry (ветка Success)
+                // или в performTrafficUpdate (ветка таймаута чтения DataStore).
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
                 _status.value =
                     TrackingStatus.Error(
@@ -452,6 +481,33 @@ class TrafficTracker
             }
         }
 
+        /**
+         * Запрашивает суммарный мобильный трафик (RX + TX) за период [startTime, now].
+         *
+         * **Контракт (AOSP):**
+         * [android.app.usage.NetworkStatsManager.querySummaryForDevice] возвращает
+         * агрегированный трафик за указанный период. На AOSP результат детерминирован
+         * и покрывает весь запрошенный период.
+         *
+         * **Эвристика (30-дневный lookback):**
+         * При [startTime] == 0 (первый запуск, нет данных о последней дате сброса)
+         * используется окно ретроспективы [Constants.Traffic.LOOKBACK_DAYS] дней.
+         * Это эвристика в пределах критерия надёжности:
+         * - Типичный расчётный период оператора — 30 дней.
+         * - Если расчётный период длиннее 30 дней, трафик за пределами окна
+         *   не будет учтён. Это допустимая потеря точности при первом запуске;
+         *   после первого успешного обновления [startTime] будет установлен
+         *   в [SimUsage.lastResetDate], и окно станет точным.
+         * - Если [startTime] > 0, но старше [Constants.Traffic.LOOKBACK_DAYS] дней,
+         *   окно обрезается до lookback. Это защита от некорректных timestamp
+         *   на кастомных прошивках, где системные часы могут быть сбиты.
+         *
+         * **Границы:**
+         * На AOSP [android.app.usage.NetworkStatsManager] всегда доступен при
+         * наличии PACKAGE_USAGE_STATS. На кастомных прошивках без этого API
+         * метод возвращает [StatsResult.Unavailable], что обрабатывается
+         * вызывающим кодом.
+         */
         private fun getCurrentMobileBytes(startTime: Long): StatsResult {
             val now = timeProvider.now()
             val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
@@ -462,13 +518,17 @@ class TrafficTracker
                         AppLogger.d("First run: using 30-day lookback window")
                         lookbackStart
                     }
+
                     startTime < lookbackStart -> {
                         AppLogger.w(
-                            "Billing period start is older than 30 days, clamping to lookback window. " +
-                                "Some traffic data may be missed.",
+                            "Billing period start ($startTime) is older than " +
+                                "${Constants.Traffic.LOOKBACK_DAYS}-day lookback window. " +
+                                "Clamping to $lookbackStart. Some traffic data may be missed. " +
+                                "This is expected on first run or after system clock reset.",
                         )
                         lookbackStart
                     }
+
                     else -> startTime
                 }
 
@@ -619,7 +679,7 @@ class TrafficTracker
                 }
             }
 
-        private fun fetchStatsOnSimChange(usage: com.example.minutewatcher.core.model.SimUsage?): StatsResult =
+        private fun fetchStatsOnSimChange(usage: SimUsage?): StatsResult =
             if (usage != null) {
                 try {
                     getCurrentMobileBytes(usage.lastResetDate)
@@ -689,7 +749,7 @@ internal class TrafficTargetResolver(
      *
      * **Contract (AOSP):**
      * This method relies on [ActiveSimInfo.isDefaultData], which is populated based on
-     * [SubscriptionManager.getDefaultDataSubscriptionId]. In a standard AOSP environment,
+     * [android.telephony.SubscriptionManager.getDefaultDataSubscriptionId]. In a standard AOSP environment,
      * this correctly identifies the SIM currently responsible for mobile data.
      *
      * **Heuristic/Fallback:**

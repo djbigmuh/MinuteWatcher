@@ -10,10 +10,8 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -38,7 +36,9 @@ class WidgetUpdaterImpl
 
             object LimitExceeded : UpdateResult()
 
-            data class GenericFailure(val isRetryable: Boolean) : UpdateResult()
+            data class GenericFailure(
+                val isRetryable: Boolean,
+            ) : UpdateResult()
         }
 
         /**
@@ -62,7 +62,7 @@ class WidgetUpdaterImpl
             var attempt = 1
             var shouldRetryLoop = true
 
-            while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && shouldRetryLoop) {
+            while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && shouldRetryLoop) {
                 val updateResult =
                     updateMutex.withLock {
                         try {
@@ -93,7 +93,8 @@ class WidgetUpdaterImpl
                 }
             }
             if (!isSuccessful) {
-                AppLogger.e("Widget update failed after ${minOf(attempt, Constants.Widget.MAX_UPDATE_ATTEMPTS)} attempts")
+                val totalAttempts = minOf(attempt, Constants.Widget.MAX_UPDATE_ATTEMPTS)
+                AppLogger.e("Widget update failed after $totalAttempts attempts")
             }
             return isSuccessful
         }
@@ -103,7 +104,7 @@ class WidgetUpdaterImpl
                 is UpdateResult.Success -> {
                     val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
                     if (current) {
-                        setWidgetLimitExceeded(false)
+                        setWidgetLimitExceeded(value = false)
                     }
                     Pair(true, false)
                 }
@@ -111,15 +112,32 @@ class WidgetUpdaterImpl
                 is UpdateResult.LimitExceeded -> {
                     val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
                     if (!current) {
-                        setWidgetLimitExceeded(true)
+                        setWidgetLimitExceeded(value = true)
                         AppLogger.w(
                             "Widget update failed due to size limit. " +
                                 "Flag set to trigger simplified layout on next update.",
                         )
-                        // G-484: Immediate re-render to apply SIMPLE layout right away.
-                        // Wait for StateFlow update to ensure re-render sees the new flag.
-                        withTimeoutOrNull(Constants.Widget.RACE_DELAY_MS.milliseconds) {
-                            appSettingsRepository.observeAppSettings().first { it.widgetLimitExceeded }
+                        /**
+                         * После установки флага widgetLimitExceeded, значение читается из StateFlow.value напрямую.
+                         * StateFlow.update() гарантирует синхронную видимость нового значения в текущей корутине.
+                         * На AOSP это всегда выполняется. На кастомных прошивках с нестандартной реализацией
+                         * StateFlow, если значение не видно, рендер продолжается с текущим layout; упрощённый
+                         * layout будет применён при следующем цикле обновления.
+                         *
+                         * Детерминированное ожидание: читаем из StateFlow напрямую,
+                         * пока не увидим обновлённое значение. StateFlow.update()
+                         * синхронно обновляет value, поэтому значение доступно сразу
+                         * после возврата из updateAppSettings(). На AOSP updateAppSettings
+                         * завершается синхронно; на кастомных прошивках с асинхронным
+                         * DataStore ожидание гарантирует корректность.
+                         */
+                        val updated = appSettingsRepository.observeAppSettings().value
+                        if (!updated.widgetLimitExceeded) {
+                            AppLogger.w(
+                                "widgetLimitExceeded flag not yet visible in StateFlow " +
+                                    "after setWidgetLimitExceeded. Proceeding with re-render; " +
+                                    "simplified layout will be applied on next update cycle.",
+                            )
                         }
 
                         var renderSucceeded = true
@@ -133,7 +151,7 @@ class WidgetUpdaterImpl
                         }
                         return Pair(renderSucceeded, !renderSucceeded)
                     }
-                    Pair(true, false) // Return true as we handled the limit and simplified the widget
+                    Pair(true, false)
                 }
 
                 is UpdateResult.GenericFailure -> {

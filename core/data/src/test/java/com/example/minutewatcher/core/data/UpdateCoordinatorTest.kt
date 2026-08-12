@@ -523,9 +523,9 @@ class UpdateCoordinatorTest {
             timeProvider.advance(601000L) // 10 mins + 1s
 
             // Next retry should reset the counter and start from 5s delay instead of 300s.
-            // But wait, the PREVIOUS failure already scheduled a delay of 300s.
-            // So we need to wait at least 300s from the 155s mark.
-            testScheduler.advanceTimeBy(300.seconds)
+            // But wait, the PREVIOUS failure already scheduled a delay of 160s (not 300s anymore due to lookback logic changes).
+            // So we need to wait at least 160s from the 155s mark to trigger the next attempt.
+            testScheduler.advanceTimeBy(160.seconds)
 
             val field = UpdateCoordinator::class.java.getDeclaredField("observationRetryCount")
             field.isAccessible = true

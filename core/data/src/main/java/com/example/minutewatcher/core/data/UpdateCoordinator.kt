@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
@@ -51,7 +50,8 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
-    ) : DataChangeNotifier, TrackingStatusProvider {
+    ) : DataChangeNotifier,
+        TrackingStatusProvider {
         override val key: String = "widget_observation"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
@@ -93,13 +93,6 @@ class UpdateCoordinator
                             handleObservationFailure(cause)
                         }.catch { cause ->
                             AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
-                        }.onCompletion { cause ->
-                            if ((cause == null) && (observationRetryCount > Constants.Flow.WIDGET_RETRY_ATTEMPTS)) {
-                                AppLogger.e(
-                                    "UpdateCoordinator: observation stopped after " +
-                                        "$observationRetryCount retries",
-                                )
-                            }
                         }.collect {}
                 }
         }
@@ -111,6 +104,10 @@ class UpdateCoordinator
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+            // Наблюдение успешно — snapshot доставлен. Сбрасываем счётчик
+            // сбоев наблюдения независимо от результата обновления виджета.
+            observationRetryCount = 0
+
             val now = timeProvider.now()
             if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                 retryAttempt = 0
@@ -123,7 +120,6 @@ class UpdateCoordinator
                 widgetUpdateMutex.withLock {
                     lastSnapshotHash = newHash
                 }
-                observationRetryCount = 0
                 if (_status.value is TrackingStatus.Error) {
                     _status.value = TrackingStatus.Active
                 }
@@ -139,9 +135,6 @@ class UpdateCoordinator
                         val success = widgetUpdater.updateAll()
                         if (success) {
                             lastSnapshotHash = newHash
-                            // G-484: Reset the counter only on successful snapshot processing.
-                            // This counter tracks flow subscription health, not just widget update success.
-                            observationRetryCount = 0
                             if (_status.value is TrackingStatus.Error) {
                                 _status.value = TrackingStatus.Active
                             }
@@ -151,8 +144,6 @@ class UpdateCoordinator
                         }
                     } else {
                         AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                        // If we received a snapshot and hash matches, the observation flow is healthy.
-                        observationRetryCount = 0
                         if (_status.value is TrackingStatus.Error) {
                             _status.value = TrackingStatus.Active
                         }
@@ -166,65 +157,39 @@ class UpdateCoordinator
         }
 
         /**
-         * Handles failures in the observation flow using a bounded exponential backoff strategy.
+         * Обработчик сбоев наблюдения за snapshot.
          *
-         * Strategy Details:
-         * 1. **Exponential Backoff**: Delay increases exponentially (up to [MAX_RETRY_EXPONENT])
-         *    to avoid flooding the system during transient issues.
-         * 2. **Delay Cap**: The delay is capped at [MAX_RETRY_DELAY_SECONDS] to ensure eventual recovery.
-         * 3. **Retry Budget**: Retries are limited to [MAX_TOTAL_RETRIES]. Once exhausted, the flow
-         *    enters a terminal error state ([TrackingStatus.Error]).
-         * 4. **Recovery**: The terminal state can be cleared by calling [recover] or restarting the app.
-         * 5. **Automatic Reset**: Consecutive error counter is reset if [RESET_RETRY_COUNTER_INTERVAL_MS]
-         *    passes without new errors, allowing for recovery from intermittent environment issues.
+         * Стратегия: бесконечные повторные попытки с экспоненциальной задержкой,
+         * ограниченной [MAX_RETRY_DELAY_SECONDS]. Это осознанный выбор:
+         * StateFlow не должен падать на AOSP; сбой возможен только при
+         * деградации DataStore на кастомных прошивках. Бесконечные попытки
+         * гарантируют восстановление без вмешательства пользователя.
+         * UI сохраняет последнее успешное состояние, предотвращая мерцание.
          */
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
-            if (cause is CancellationException) throw cause
+            if (cause is CancellationException) {
+                throw cause
+            }
 
             val now = timeProvider.now()
             if ((now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                 retryAttempt = 0
-                observationRetryCount = 0 // G-484: Reset consecutive failure counter by timer
+                observationRetryCount = 0
                 lastResetTime = now
             }
 
             observationRetryCount++
-
-            if (observationRetryCount >= MAX_TOTAL_RETRIES) {
-                AppLogger.e(
-                    "UpdateCoordinator: observation reached terminal retry limit ($MAX_TOTAL_RETRIES). Stopping.",
-                    cause,
-                )
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Permanent observation failure in UpdateCoordinator. Manual recovery required.",
-                    )
-                return false // Stop retrying
-            }
 
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
             }
 
             val delaySeconds =
-                if (observationRetryCount > Constants.Flow.WIDGET_RETRY_ATTEMPTS) {
-                    // G-484: When limit is exceeded, use MAX delay but don't stop the flow.
-                    // This ensures background updates can recover automatically if the system stabilize.
-                    AppLogger.w(
-                        "UpdateCoordinator: observation reached retry limit " +
-                            "(${Constants.Flow.WIDGET_RETRY_ATTEMPTS}). " +
-                            "Continuing with MAX delay ($MAX_RETRY_DELAY_SECONDS s).",
-                        cause,
-                    )
-                    MAX_RETRY_DELAY_SECONDS
-                } else {
-                    minOf(
-                        (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
-                            (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
-                        MAX_RETRY_DELAY_SECONDS,
-                    )
-                }
+                minOf(
+                    (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
+                        (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
+                    MAX_RETRY_DELAY_SECONDS,
+                )
 
             retryAttempt++
 
@@ -276,7 +241,7 @@ class UpdateCoordinator
                 try {
                     val snapshot = usageStateRepository.observeSnapshot().value
                     val success = widgetUpdater.updateAll()
-                    if (success && snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                    if (success && (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP)) {
                         lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
                     } else if (!success) {
                         AppLogger.w("Force widget update reported failure, hash not updated")
@@ -293,7 +258,6 @@ class UpdateCoordinator
         companion object {
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
-            private const val MAX_TOTAL_RETRIES = 20
             private const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
         }
     }

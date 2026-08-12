@@ -129,7 +129,8 @@ class SimIdentityRepositoryImpl
                                             consecutiveErrors++
                                             if (consecutiveErrors >= MAX_FETCH_RETRIES) {
                                                 AppLogger.e(
-                                                    "SimIdentityRepository: Terminal DataStore error after $consecutiveErrors attempts. " +
+                                                    "SimIdentityRepository: Terminal DataStore error after " +
+                                                        "$consecutiveErrors attempts. " +
                                                         "Stopping retries for this change event.",
                                                     e,
                                                 )
@@ -137,8 +138,8 @@ class SimIdentityRepositoryImpl
                                                 shouldContinue = false
                                             } else {
                                                 AppLogger.e(
-                                                    "SimIdentityRepository: DataStore error during fetch (attempt $consecutiveErrors), " +
-                                                        "retrying in ${retryDelay}ms",
+                                                    "SimIdentityRepository: DataStore error during fetch " +
+                                                        "(attempt $consecutiveErrors), retrying in ${retryDelay}ms",
                                                     e,
                                                 )
                                                 delay(retryDelay.milliseconds)
@@ -235,34 +236,63 @@ class SimIdentityRepositoryImpl
                     if (result is SeedResult.Real) {
                         val fallbackSlots =
                             fallbackMutex.withLock {
-                                val slots = fallbackCache.keys.toList()
-                                if (slots.isNotEmpty()) {
-                                    fallbackCache.clear()
-                                    slots
-                                } else {
-                                    emptyList()
-                                }
+                                fallbackCache.keys.toList()
                             }
 
                         if (fallbackSlots.isNotEmpty()) {
+                            /**
+                             * При переходе seed из Fallback в Real, миграция legacy-данных выполняется
+                             * до очистки fallback-кэша. Если миграция не удаётся, кэш сохраняется
+                             * для затронутого слота, обеспечивая корректный fallback при следующем запросе.
+                             * На AOSP миграция не падает при наличии READ_PHONE_STATE; сбой возможен
+                             * только на кастомных прошивках с повреждённым DataStore.
+                             */
                             AppLogger.d(
-                                "SimIdentityRepository: cleared ${fallbackSlots.size} fallback cache entries " +
+                                "SimIdentityRepository: processing ${fallbackSlots.size} fallback cache entries " +
                                     "upon receiving real seed transition",
                             )
 
                             try {
                                 val seedValue = result.value
-                                permissionManager.getActiveSubscriptions().forEach { sub ->
-                                    val slot = sub.simSlotIndex
-                                    if (fallbackSlots.contains(slot)) {
-                                        val newIdentity = SimIdentityUtils.createIdentityFromInfo(sub, seedValue)
-                                        migrationService.migrateLegacyData(newIdentity)
+                                // Сначала выполняем миграцию для всех затронутых слотов
+                                var migrationSucceeded = true
+                                permissionManager
+                                    .getActiveSubscriptions()
+                                    .forEach { sub ->
+                                        val slot = sub.simSlotIndex
+                                        if (fallbackSlots.contains(slot)) {
+                                            try {
+                                                val newIdentity =
+                                                    SimIdentityUtils.createIdentityFromInfo(
+                                                        info = sub,
+                                                        seed = seedValue,
+                                                    )
+                                                migrationService.migrateLegacyData(newIdentity)
+                                            } catch (e: CancellationException) {
+                                                throw e
+                                            } catch (e: Exception) {
+                                                AppLogger.e(
+                                                    "Migration failed for slot $slot after seed transition, " +
+                                                        "fallback cache will be preserved for this slot",
+                                                    e,
+                                                )
+                                                migrationSucceeded = false
+                                            }
+                                        }
                                     }
+                                // Очищаем кэш только после успешной миграции всех слотов
+                                if (migrationSucceeded) {
+                                    fallbackMutex.withLock {
+                                        fallbackSlots.forEach { fallbackCache.remove(it) }
+                                    }
+                                    AppLogger.d(
+                                        "SimIdentityRepository: cleared fallback cache after successful migration",
+                                    )
                                 }
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                AppLogger.e("Failed to migrate fallback data after seed transition", e)
+                                AppLogger.e("Failed to process fallback cache after seed transition", e)
                             }
                         }
                     }
@@ -319,7 +349,9 @@ class SimIdentityRepositoryImpl
 
             // Мгновенное чтение текущего значения StateFlow
             val cached = activeSimsCache.value.find { it.slotIndex == slot }
-            if (cached != null) return cached.identity
+            if (cached != null) {
+                return cached.identity
+            }
 
             try {
                 // Используем уменьшенный таймаут для UI-операций
@@ -337,7 +369,9 @@ class SimIdentityRepositoryImpl
                 // If not found in cache, try direct resolution
                 val resolved = findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
 
-                if (resolved.source != IdentitySource.SLOT_FALLBACK && !resolved.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+                val isFallback = resolved.source == IdentitySource.SLOT_FALLBACK
+                val isInvalid = resolved.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)
+                if (!isFallback && !isInvalid) {
                     if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
                         saveSimIdentitiesInfo(listOf(resolved))
                     }
@@ -357,7 +391,7 @@ class SimIdentityRepositoryImpl
             }
         }
 
-        private suspend fun findActiveIdentityInternal(
+        private fun findActiveIdentityInternal(
             slot: Int,
             seed: SeedResult,
         ): SimIdentity? =
