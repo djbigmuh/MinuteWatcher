@@ -44,95 +44,20 @@ class WidgetSettingsRepositoryTest {
     }
 
     @Test
-    @Suppress("UNUSED_VARIABLE")
     fun `load should return state populated from app settings`() =
         runTest {
-            val appSettings =
-                AppSettings(
-                    theme = AppTheme.LIGHT,
-                    language = "en",
-                    notifyLowMinutes = true,
-                    notifyLowTraffic = false,
-                    callTrackingEnabled = true,
-                    widgetLayoutMode = 1,
-                    widgetSimArrangement = 1,
-                    widgetTransparency = 80,
-                    widgetFontSize = 3,
-                    widgetBackgroundColor = 0xFF0000FF.toInt(),
-                    migrationV1Completed = true,
-                )
-            whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+            val appSettings = createAppSettings()
+            val appSettingsFlow = flowOf(appSettings)
+            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
 
-            val identity0 =
-                SimIdentity(
-                    "id0",
-                    100,
-                    0,
-                    com.example.minutewatcher.core.model.IdentitySource.ICCID,
-                )
-            val identity1 =
-                SimIdentity(
-                    "id1",
-                    101,
-                    1,
-                    com.example.minutewatcher.core.model.IdentitySource.ICCID,
-                )
-            val identity2 =
-                SimIdentity(
-                    "id2",
-                    null,
-                    2,
-                    com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK,
-                )
+            val activeSims = createMockActiveSims()
+            val activeSimsFlow = flowOf(activeSims)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
 
-            val activeSims =
-                listOf(
-                    ActiveSimInfo(
-                        identity = identity0,
-                        slotIndex = 0,
-                        subscriptionId = 100,
-                        displayName = "MTS",
-                        carrierName = "MTS",
-                        mccMnc = "25001",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                    ActiveSimInfo(
-                        identity = identity1,
-                        slotIndex = 1,
-                        subscriptionId = 101,
-                        displayName = "MegaFon",
-                        carrierName = "MegaFon",
-                        mccMnc = "25002",
-                        isDefaultData = false,
-                        isDefaultVoice = false,
-                    ),
-                    ActiveSimInfo(
-                        identity = identity2,
-                        slotIndex = 2,
-                        subscriptionId = 102,
-                        displayName = "Sim 2",
-                        carrierName = "Carrier 2",
-                        mccMnc = "25003",
-                        isDefaultData = false,
-                        isDefaultVoice = false,
-                    ),
-                )
-
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
-
-            val simSettings =
-                SimSettingsState(
-                    showSim = true,
-                    showIcon = true,
-                    showName = true,
-                    showMinutes = true,
-                    showMinutesLimit = false,
-                    showTraffic = true,
-                    showTrafficLimit = false,
-                )
+            val simSettings = createMockSimSettings()
             val batchSettings = mapOf("id0" to simSettings, "id1" to simSettings, "id2" to simSettings)
-            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(flowOf(batchSettings))
+            val batchSettingsFlow = flowOf(batchSettings)
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(batchSettingsFlow)
 
             val result = repository.load()
 
@@ -146,8 +71,8 @@ class WidgetSettingsRepositoryTest {
 
             assertEquals(3, result.simStates.size)
 
-            verify(settingsRepository).getAppSettings()
-            verify(simWidgetVisibilityRepository).getSimSettingsBatch(any())
+            verify(settingsRepository).getAppSettings().let { }
+            verify(simWidgetVisibilityRepository).getSimSettingsBatch(any()).let { }
         }
 
     @Test
@@ -187,7 +112,11 @@ class WidgetSettingsRepositoryTest {
                                 ),
                         ),
                 )
+            // Моки нужны для стабов getIdentity; результат вызова (String) не потребляется напрямую,
+            // но используется внутри Mockito для регистрации стаба.
+            @Suppress("UNUSED_EXPRESSION")
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
+            @Suppress("UNUSED_EXPRESSION")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim1")
 
             repository.save(state)
@@ -214,6 +143,7 @@ class WidgetSettingsRepositoryTest {
                             2 to SimSettingsState(showSim = true),
                         ),
                 )
+            @Suppress("UNUSED_EXPRESSION")
             whenever(simIdentityRepository.getIdentity(2)).thenReturn("sim2_inactive")
 
             repository.save(state)
@@ -231,12 +161,15 @@ class WidgetSettingsRepositoryTest {
     @Suppress("UNUSED_VARIABLE")
     fun `load returns fallback with simListLoadFailed when observeActiveSims times out`() =
         runTest {
-            whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
+            val appSettingsFlow = flowOf(AppSettings())
+            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
 
             // observeActiveSims never emits
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>()
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
 
-            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(flowOf(emptyMap()))
+            val batchSettingsFlow = flowOf(emptyMap<String, SimSettingsState>())
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(batchSettingsFlow)
 
             val result = repository.load()
 
@@ -246,6 +179,89 @@ class WidgetSettingsRepositoryTest {
 
             // getSimSettingsBatch не должен вызываться при таймауте observeActiveSims,
             // так как список SIM не был получен и загружать настройки не для чего.
-            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
+            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any()).let { }
         }
+
+    private fun createAppSettings() =
+        AppSettings(
+            theme = AppTheme.LIGHT,
+            language = "en",
+            notifyLowMinutes = true,
+            notifyLowTraffic = false,
+            callTrackingEnabled = true,
+            widgetLayoutMode = 1,
+            widgetSimArrangement = 1,
+            widgetTransparency = 80,
+            widgetFontSize = 3,
+            widgetBackgroundColor = 0xFF0000FF.toInt(),
+            migrationV1Completed = true,
+        )
+
+    private fun createMockActiveSims(): List<ActiveSimInfo> {
+        val identity0 =
+            SimIdentity(
+                "id0",
+                100,
+                0,
+                com.example.minutewatcher.core.model.IdentitySource.ICCID,
+            )
+        val identity1 =
+            SimIdentity(
+                "id1",
+                101,
+                1,
+                com.example.minutewatcher.core.model.IdentitySource.ICCID,
+            )
+        val identity2 =
+            SimIdentity(
+                "id2",
+                null,
+                2,
+                com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK,
+            )
+
+        return listOf(
+            ActiveSimInfo(
+                identity = identity0,
+                slotIndex = 0,
+                subscriptionId = 100,
+                displayName = "MTS",
+                carrierName = "MTS",
+                mccMnc = "25001",
+                isDefaultData = true,
+                isDefaultVoice = true,
+            ),
+            ActiveSimInfo(
+                identity = identity1,
+                slotIndex = 1,
+                subscriptionId = 101,
+                displayName = "MegaFon",
+                carrierName = "MegaFon",
+                mccMnc = "25002",
+                isDefaultData = false,
+                isDefaultVoice = false,
+            ),
+            ActiveSimInfo(
+                identity = identity2,
+                slotIndex = 2,
+                subscriptionId = 102,
+                displayName = "Sim 2",
+                carrierName = "Carrier 2",
+                mccMnc = "25003",
+                isDefaultData = false,
+                isDefaultVoice = false,
+            ),
+        )
+    }
+
+    private fun createMockSimSettings() =
+        SimSettingsState(
+            showSim = true,
+            showIcon = true,
+            showName = true,
+            showMinutes = true,
+            showMinutesLimit = false,
+            showTraffic = true,
+            showTrafficLimit = false,
+        )
 }

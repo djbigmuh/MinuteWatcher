@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -64,8 +65,11 @@ class UpdateCoordinator
         private var lastSnapshotHash: Int? = null
         private val widgetUpdateMutex = Mutex()
 
-        private var retryAttempt = 0L
-        private var observationRetryCount = 0L
+        // AtomicLong гарантирует потокобезопасность при доступе из retryWhen
+        // и processSnapshot, даже если они выполняются в разных корутинах.
+        private val retryAttempt = AtomicLong(0L)
+        private val observationRetryCount = AtomicLong(0L)
+
         private var lastSuccessTime = 0L
         private var lastResetTime = 0L
         private var observationJob: Job? = null
@@ -99,18 +103,18 @@ class UpdateCoordinator
 
         fun restartObservation() {
             observationJob?.cancel()
-            observationRetryCount = 0
+            observationRetryCount.set(0)
             startObservation()
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
             // Наблюдение успешно — snapshot доставлен. Сбрасываем счётчик
             // сбоев наблюдения независимо от результата обновления виджета.
-            observationRetryCount = 0
+            observationRetryCount.set(0)
 
             val now = timeProvider.now()
             if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                retryAttempt = 0
+                retryAttempt.set(0)
             }
             lastSuccessTime = now
 
@@ -173,12 +177,12 @@ class UpdateCoordinator
 
             val now = timeProvider.now()
             if ((now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                retryAttempt = 0
-                observationRetryCount = 0
+                retryAttempt.set(0)
+                observationRetryCount.set(0)
                 lastResetTime = now
             }
 
-            observationRetryCount++
+            observationRetryCount.incrementAndGet()
 
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
@@ -187,15 +191,15 @@ class UpdateCoordinator
             val delaySeconds =
                 minOf(
                     (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
-                        (1L shl minOf(retryAttempt.toInt(), MAX_RETRY_EXPONENT)),
+                        (1L shl minOf(retryAttempt.get().toInt(), MAX_RETRY_EXPONENT)),
                     MAX_RETRY_DELAY_SECONDS,
                 )
 
-            retryAttempt++
+            val currentRetry = retryAttempt.incrementAndGet()
 
             AppLogger.e(
-                "UpdateCoordinator: observation failed (attempt $retryAttempt, " +
-                    "consecutive: $observationRetryCount), retry in ${delaySeconds}s",
+                "UpdateCoordinator: observation failed (attempt $currentRetry, " +
+                    "consecutive: ${observationRetryCount.get()}), retry in ${delaySeconds}s",
                 cause,
             )
 

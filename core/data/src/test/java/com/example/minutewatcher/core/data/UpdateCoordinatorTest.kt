@@ -107,6 +107,7 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `observation retries on repository failure with exponential backoff`() =
         runTest {
             var collectCount = 0
@@ -140,6 +141,7 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `observation resumes after repository failure`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
@@ -343,6 +345,7 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `observationRetryCount is reset by timer`() =
         runTest {
             var collectCount = 0
@@ -389,7 +392,7 @@ class UpdateCoordinatorTest {
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            val countAfterReset = field[coordinator] as Long
+            val countAfterReset = (field[coordinator] as java.util.concurrent.atomic.AtomicLong).get()
             assertEquals("Counter should be reset", 0L, countAfterReset)
         }
 

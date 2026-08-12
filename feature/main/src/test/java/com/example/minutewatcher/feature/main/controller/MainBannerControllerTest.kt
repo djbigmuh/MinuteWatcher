@@ -46,6 +46,7 @@ class MainBannerControllerTest {
     }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun testBannerReactions() =
         runTest(UnconfinedTestDispatcher()) {
             val controller =
@@ -72,6 +73,7 @@ class MainBannerControllerTest {
         }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `retry delay for the first attempt is not zero`() =
         runTest {
             var collectionCount = 0

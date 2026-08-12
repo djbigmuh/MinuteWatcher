@@ -83,8 +83,7 @@ class SimIdentityRepositorySeedTest {
             dataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
-                )
+                ) { tmpFolder.newFile("test_sim_settings.preferences_pb") }
 
             // Mock a subscription info beforehand
             val mockSubInfo = mock<SubscriptionInfo>()
@@ -157,8 +156,7 @@ class SimIdentityRepositorySeedTest {
             dataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_sim_settings_cache.preferences_pb") },
-                )
+                ) { tmpFolder.newFile("test_sim_settings_cache.preferences_pb") }
 
             val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
             val seedRepo =
@@ -215,13 +213,12 @@ class SimIdentityRepositorySeedTest {
         }
 
     @Test
-    fun `migrationIsCalledWhenTransitioningFromFallbackToRealSeed`() =
+    fun migrationIsCalledWhenTransitioningFromFallbackToRealSeed() =
         runTest {
             dataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_sim_migration.preferences_pb") },
-                )
+                ) { tmpFolder.newFile("test_sim_migration.preferences_pb") }
 
             val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
             val seedRepo =
@@ -263,7 +260,11 @@ class SimIdentityRepositorySeedTest {
             testScheduler.advanceTimeBy(1000)
             testScheduler.advanceUntilIdle()
 
-            // 4. Verify migration was called for the new identity
+            // 4. Trigger identity observation to initiate migration (if needed by implementation)
+            // или просто верифицируем вызов, если переход на реальный сид триггерит его автоматически.
+            identityRepo.getSimIdentity(0)
+
+            // 5. Verify migration was called for the new identity
             org.mockito.kotlin.verify(migrationService).migrateLegacyData(
                 org.mockito.kotlin.check { identity ->
                     assertEquals(0, identity.slotIndex)

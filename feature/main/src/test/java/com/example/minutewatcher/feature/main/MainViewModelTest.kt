@@ -693,6 +693,7 @@ class MainViewModelTest {
         }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `autoResetScheduler can be retried after failure`() =
         runTest(testDispatcher) {
             val scheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)

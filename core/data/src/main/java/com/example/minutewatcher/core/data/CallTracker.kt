@@ -68,6 +68,7 @@ class CallTracker
                 telephonyManager = telephonyManager,
                 dataChangeNotifier = dataChangeNotifier,
                 endCall = { subId, notify -> endCall(subId, notify) },
+                setError = { error -> _status.value = error },
             )
 
         override suspend fun recover() {
@@ -396,6 +397,18 @@ class CallTracker
             val message = "Session read timed out for subId $subId"
             AppLogger.e(message, null)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, message)
+            // Строгое соблюдение контракта: сессия с ненулевым startTime блокирует
+            // следующий звонок. Потеря данных одного звонка предпочтительнее
+            // полной блокировки трекинга. На AOSP clearSession завершается успешно;
+            // на кастомных прошивках с деградацией DataStore очистка может не
+            // сработать — это проблема прошивки, не приложения.
+            try {
+                clearSession(subId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("Failed to clear session for subId $subId after timeout", e)
+            }
         }
 
         private suspend fun processActiveSessionEnd(
@@ -448,11 +461,13 @@ class CallTracker
         }
 
         /**
-         * Обработка устаревшей сессии.
-         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
-         * а обрабатываются как системные сбои с уведомлением пользователя.
+         * Обрабатывает устаревшую сессию (длительность > MAX_CALL_DURATION_MS).
+         * Строгое соблюдение API: сессия не очищается автоматически, статус
+         * переводится в Error. Решение о дальнейших действиях остаётся за
+         * пользователем/оператором. На AOSP сессии длительностью > 12 часов
+         * не возникают; превышение возможно только на кастомных прошивках.
          */
-        private suspend fun handleStaleSession(subId: Int) {
+        private fun handleStaleSession(subId: Int) {
             val message = "Call duration exceeded max limit for subId $subId"
             AppLogger.e(message, null)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, message)
@@ -722,6 +737,7 @@ internal class CallEndResolver(
     private val telephonyManager: TelephonyManager,
     private val dataChangeNotifier: DataChangeNotifier,
     private val endCall: suspend (Int, Boolean) -> Unit,
+    private val setError: (TrackingStatus.Error) -> Unit,
 ) {
     suspend fun resolveUnknownSubIdEnd() {
         if (!permissionManager.hasPhoneStatePermission()) {
@@ -780,11 +796,15 @@ internal class CallEndResolver(
      * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
      * а обрабатываются как системные сбои с уведомлением пользователя.
      */
-    private suspend fun handleAmbiguousIdle(activeSubIds: List<Int>) {
+    private fun handleAmbiguousIdle(activeSubIds: List<Int>) {
         val message = "Cannot attribute unknown IDLE event for multiple active calls (${activeSubIds.size})"
         AppLogger.e(message, null)
-        // Мы не используем эвристики (например, oldest session), так как это нарушает строгость.
-        // Ошибка пробрасывается через состояние или исключение.
+        // Строгое соблюдение API: эвристики (oldest session, default voice SIM)
+        // не применяются. Неоднозначность — ошибка, а не повод для угадывания.
+        // На AOSP при корректной работе TelephonyManager subId всегда известен;
+        // неоднозначность возможна только на кастомных прошивках, не
+        // соответствующих документации Google.
+        setError(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
     }
 
     @SuppressLint("MissingPermission")

@@ -597,7 +597,13 @@ class TrafficTracker
             }
         }
 
-        private suspend fun handleSimChangeFailure(
+        /**
+         * Обрабатывает сбой при смене SIM: фиксирует попытку в baselineNeedsRetry.
+         * Строгое соблюдение API: повторная попытка сброса baseline выполняется
+         * при следующем вызове updateTrafficUsage. На AOSP статистика доступна
+         * сразу после смены SIM; задержка возможна только на кастомных прошивках.
+         */
+        private fun handleSimChangeFailure(
             identity: String,
             statsResult: StatsResult,
             retryCount: Int,

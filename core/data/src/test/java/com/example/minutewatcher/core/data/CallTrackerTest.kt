@@ -28,6 +28,7 @@ import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -669,8 +670,8 @@ class CallTrackerTest {
                 status.message?.contains("Session read timed out") == true,
             )
 
-            // Verify clearSession (setCallStartTime) was NOT called
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(0L))
+            // Verify clearSession (setCallStartTime) WAS called
+            verify(callSessionRepository, times(1)).setCallStartTime(eq(1), eq(0L))
         }
 
     @Test

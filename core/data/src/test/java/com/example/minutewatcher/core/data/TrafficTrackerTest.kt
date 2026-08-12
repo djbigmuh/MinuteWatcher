@@ -28,6 +28,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
@@ -52,30 +53,45 @@ class TrafficTrackerTest {
     @Before
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
+        setupPermissionMocks()
+        setupIdentityMocks()
+        setupUsageMocks()
+        tracker =
+            TrafficTracker(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                callSessionRepository,
+                permissionManager,
+                timeProvider,
+                networkStatsProvider,
+            )
+    }
 
+    private fun setupPermissionMocks() {
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
-
-        // Match default data subId with an active subscription
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
-        val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
-        whenever(mockSubInfo.subscriptionId).thenReturn(1)
-        whenever(mockSubInfo.simSlotIndex).thenReturn(0)
-
-        val mockSubInfo2 = mock<android.telephony.SubscriptionInfo>()
-        whenever(mockSubInfo2.subscriptionId).thenReturn(2)
-        whenever(mockSubInfo2.simSlotIndex).thenReturn(1)
-
+        val mockSubInfo =
+            mock<android.telephony.SubscriptionInfo> {
+                on { subscriptionId } doReturn 1
+                on { simSlotIndex } doReturn 0
+            }
+        val mockSubInfo2 =
+            mock<android.telephony.SubscriptionInfo> {
+                on { subscriptionId } doReturn 2
+                on { simSlotIndex } doReturn 1
+            }
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo, mockSubInfo2))
+    }
 
+    private fun setupIdentityMocks() {
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
-
         runBlocking {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         }
-
         val activeSims =
             listOf(
                 ActiveSimInfo(
@@ -100,23 +116,17 @@ class TrafficTrackerTest {
                 ),
             )
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
-
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("Test Operator"))
-        whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("sim_0")))
-        whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
-        whenever(simUsageRepository.getSimUsage("sim_1")).thenReturn(flowOf(createSimUsage("sim_1")))
+    }
 
-        tracker =
-            TrafficTracker(
-                simIdentityRepository,
-                simUsageRepository,
-                simUsageResetRepository,
-                callSessionRepository,
-                permissionManager,
-                timeProvider,
-                networkStatsProvider,
-            )
+    private fun setupUsageMocks() {
+        val sim0UsageFlow = flowOf(createSimUsage("sim_0"))
+        whenever(simUsageRepository.getSimUsage(any())).thenReturn(sim0UsageFlow)
+        val sim0UsageFlow2 = flowOf(createSimUsage("sim_0"))
+        whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(sim0UsageFlow2)
+        val sim1UsageFlow = flowOf(createSimUsage("sim_1"))
+        whenever(simUsageRepository.getSimUsage("sim_1")).thenReturn(sim1UsageFlow)
     }
 
     @Test
@@ -167,7 +177,8 @@ class TrafficTrackerTest {
     fun `processTrafficUpdate handles timeout reading simUsage`() =
         runTest(testDispatcher) {
             // simUsage never emits
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
+            val neverFlow = MutableSharedFlow<SimUsage>()
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(neverFlow)
 
             tracker.updateTrafficUsage()
 
@@ -279,7 +290,8 @@ class TrafficTrackerTest {
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
             whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(flowOf("")) // empty/inactive
 
-            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
+            val sim0UsageFlow3 = flowOf(createSimUsage("sim_0"))
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(sim0UsageFlow3)
 
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
@@ -496,9 +508,8 @@ class TrafficTrackerTest {
             val now = timeProvider.now()
 
             // Usage with lastResetDate = 0
-            whenever(
-                simUsageRepository.getSimUsage("sim_0"),
-            ).thenReturn(flowOf(createSimUsage("sim_0")))
+            val sim0UsageFlow4 = flowOf(createSimUsage("sim_0"))
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(sim0UsageFlow4)
             whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(-1L))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(100L))
 
@@ -591,23 +602,16 @@ class TrafficTrackerTest {
         }
 
     @Test
-    @Suppress("UNUSED_VARIABLE")
     fun `updateTrafficUsage calls observeActiveSims only once and checks permissions first`() =
         runTest(testDispatcher) {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
-
             tracker.updateTrafficUsage()
-
-            // observeActiveSims should NOT be called if permissions are missing (it's after checkPermissions)
-            verify(simIdentityRepository, never()).observeActiveSims()
-
+            verify(simIdentityRepository, never()).observeActiveSims().let { }
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
-
+            val emptySimsFlow = flowOf(emptyList<ActiveSimInfo>())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySimsFlow)
             tracker.updateTrafficUsage()
-
-            // Now it should be called exactly once
-            verify(simIdentityRepository, times(1)).observeActiveSims()
+            verify(simIdentityRepository, times(1)).observeActiveSims().let { }
         }
 
     @Test
@@ -615,7 +619,8 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             // 1. Successful first run to set initial state
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            val lastTotalFlow = flowOf(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow)
 
             tracker.updateTrafficUsage()
             verify(callSessionRepository).setLastDataSubId(1)
@@ -721,18 +726,20 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             // Setup: initial state with sim_0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            val lastTotalFlow2 = flowOf(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow2)
 
             // Mock DataStore read for lastDataSubId
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
+            val lastDataSubIdFlow = flowOf(1)
+            whenever(callSessionRepository.getLastDataSubId()).thenReturn(lastDataSubIdFlow)
 
             // First call: should read from DataStore
             tracker.updateTrafficUsage()
-            verify(callSessionRepository, times(1)).getLastDataSubId()
+            verify(callSessionRepository, times(1)).getLastDataSubId().let { }
 
             // Second call: should NOT read from DataStore again
             tracker.updateTrafficUsage()
-            verify(callSessionRepository, times(1)).getLastDataSubId()
+            verify(callSessionRepository, times(1)).getLastDataSubId().let { }
         }
 
     @Test
@@ -778,7 +785,8 @@ class TrafficTrackerTest {
             // Setup: sim_0 is active default data SIM (subId 1)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
+            val lastTotalFlow6 = flowOf(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(lastTotalFlow6)
 
             // resetBaseline will call updateLastDataSubId(1) which sets inMemoryLastDataSubId
             tracker.resetBaseline("sim_0")
@@ -786,7 +794,7 @@ class TrafficTrackerTest {
             // updateTrafficUsage should now see it's initialized and NOT read from DataStore
             tracker.updateTrafficUsage()
 
-            verify(callSessionRepository, never()).getLastDataSubId()
+            verify(callSessionRepository, never()).getLastDataSubId().let { }
         }
 
     @Test
@@ -821,7 +829,8 @@ class TrafficTrackerTest {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            val lastTotalFlow3 = flowOf(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow3)
 
             tracker.updateTrafficUsage()
 
@@ -835,7 +844,8 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             // 1. Initial state: subId = 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            val lastTotalFlow4 = flowOf(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow4)
             tracker.updateTrafficUsage()
             verify(callSessionRepository).setLastDataSubId(1)
 
@@ -884,30 +894,31 @@ class TrafficTrackerTest {
                 if (callCount == 1) neverFlow else flowOf(activeSims)
             }
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            val lastTotalFlow5 = flowOf(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow5)
 
             tracker.updateTrafficUsage()
 
             // Verify it was called twice
-            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(simIdentityRepository, times(2)).observeActiveSims().let { }
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
-
-    private fun createSimUsage(id: String) =
-        SimUsage(
-            identity = id,
-            slotIndex = 0,
-            subscriptionId = 1,
-            operator = "Test Operator",
-            minutesUsed = 0,
-            minutesLimit = 0,
-            trafficUsedMb = 0f,
-            trafficLimitMb = 0,
-            manualAdjustment = 0,
-            trafficAdjustmentGb = 0f,
-            autoReset = true,
-            autoResetDay = 1,
-            lastResetDate = 0L,
-            rolloverEnabled = false,
-        )
 }
+
+private fun createSimUsage(id: String) =
+    SimUsage(
+        identity = id,
+        slotIndex = 0,
+        subscriptionId = 1,
+        operator = "Test Operator",
+        minutesUsed = 0,
+        minutesLimit = 0,
+        trafficUsedMb = 0f,
+        trafficLimitMb = 0,
+        manualAdjustment = 0,
+        trafficAdjustmentGb = 0f,
+        autoReset = true,
+        autoResetDay = 1,
+        lastResetDate = 0L,
+        rolloverEnabled = false,
+    )
