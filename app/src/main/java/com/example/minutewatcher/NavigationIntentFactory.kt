@@ -11,5 +11,16 @@ object NavigationIntentFactory {
             data = Uri.fromParts("package", context.packageName, null)
         }
 
-    fun getUsageAccessSettingsIntent(): Intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+    /**
+     * Возвращает Intent для открытия настроек доступа к данным об использовании.
+     *
+     * Передача package URI обязательна для открытия настроек конкретного приложения
+     * на актуальных Android/OEM; без URI ряд оболочек блокирует implicit-intent.
+     * Поведение при отсутствии разрешения на конкретном устройстве — проблема OEM-оболочки,
+     * приложение обязано предоставить fallback.
+     */
+    fun getUsageAccessSettingsIntent(context: Context): Intent =
+        Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+        }
 }

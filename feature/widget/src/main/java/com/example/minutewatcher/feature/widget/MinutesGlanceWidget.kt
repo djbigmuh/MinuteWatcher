@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -11,7 +12,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.action.actionStartActivity
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.appWidgetBackground
@@ -253,7 +254,19 @@ private fun getWidgetModifier(
     val className = navigationProvider?.mainActivityClassName ?: ""
     if (className.isNotEmpty()) {
         try {
-            modifier = modifier.clickable(actionStartActivity(ComponentName(context, className)))
+            /**
+             * Запуск из виджета должен имитировать запуск лаунчера
+             * (ACTION_MAIN + CATEGORY_LAUNCHER + NEW_TASK|CLEAR_TOP),
+             * чтобы не создавать дублирующих задач и сохранить корректное
+             * поведение кнопки «Домой»/Recents.
+             */
+            val launchIntent =
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    component = ComponentName(context, className)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+            modifier = modifier.clickable(actionStartActivity(launchIntent))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

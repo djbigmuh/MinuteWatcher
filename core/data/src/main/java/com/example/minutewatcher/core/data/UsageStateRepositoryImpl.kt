@@ -24,8 +24,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -176,27 +174,34 @@ class UsageStateRepositoryImpl
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
+        /**
+         * Принудительно обновляет данные и возвращает результат.
+         *
+         * Реализация без coroutineScope/async: withTimeoutOrNull напрямую отменяет
+         * ожидание snapshotFlow.first{} по таймауту, не создавая дочерних корутин,
+         * которые могли бы заблокировать выход. Это исключает дедлок при первом
+         * запуске, когда разрешения ещё не выданы и снапшот не обновляется.
+         *
+         * Строгое соблюдение API: на AOSP observeSnapshot() не выбрасывает исключений.
+         * Таймаут возможен только при деградации DataStore на кастомных прошивках,
+         * не соответствующих документации Google.
+         */
         override suspend fun refresh(): RefreshResult =
             refreshMutex.withLock {
-                coroutineScope {
-                    val currentTimestamp = snapshotFlow.value.timestamp
-                    val nextSnapshot =
-                        async {
-                            snapshotFlow.first { it.timestamp > currentTimestamp }
-                        }
-                    dataRefreshNotifier.notifyRefresh(isManual = true)
+                val currentTimestamp = snapshotFlow.value.timestamp
+                dataRefreshNotifier.notifyRefresh(isManual = true)
+                val newSnapshot =
                     withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                        nextSnapshot.await()
-                    }?.let {
-                        RefreshResult.Success(it)
-                    } ?: run {
-                        AppLogger.w(
-                            "UsageStateRepository: Refresh timed out after " +
-                                "${Constants.Data.SNAPSHOT_TIMEOUT_MS / Constants.MILLIS_PER_SECOND}s, " +
-                                "returning current snapshot",
-                        )
-                        RefreshResult.Timeout(snapshotFlow.value)
+                        snapshotFlow.first { it.timestamp > currentTimestamp }
                     }
+                if (newSnapshot != null) {
+                    RefreshResult.Success(newSnapshot)
+                } else {
+                    AppLogger.w(
+                        "UsageStateRepository: refresh timed out after " +
+                            "${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot",
+                    )
+                    RefreshResult.Timeout(snapshotFlow.value)
                 }
             }
     }

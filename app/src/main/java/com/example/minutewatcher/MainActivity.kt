@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.LocusId
+import android.provider.Settings
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -301,12 +302,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openUsageAccessSettings() {
+        // Приоритет: экран «Доступ к данным об использовании» для конкретного приложения.
         try {
-            startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent())
+            startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent(this))
+            return
         } catch (e: ActivityNotFoundException) {
-            AppLogger.e("Usage access settings not found, opening app settings", e)
-            openAppSettings()
+            AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
         }
+        // Fallback: общий список приложений с доступом к данным об использовании.
+        try {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            return
+        } catch (e: ActivityNotFoundException) {
+            AppLogger.e("Usage access settings not found, opening app details", e)
+        }
+        openAppSettings()
     }
 
     private fun addWidgetToHomeScreen() {
