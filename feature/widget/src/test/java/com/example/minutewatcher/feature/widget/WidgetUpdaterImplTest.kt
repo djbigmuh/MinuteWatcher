@@ -116,10 +116,7 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceSimpleLayout: Boolean,
-                            ) {
+                            override suspend fun renderAll(context: Context) {
                                 error("Unexpected crash")
                             }
                         },
@@ -131,10 +128,9 @@ class WidgetUpdaterImplTest {
         }
 
     @Test
-    fun `updateAll calls performWidgetUpdate twice when LimitExceeded occurs and passes forceSimpleLayout`() =
+    fun `updateAll calls performWidgetUpdate twice when LimitExceeded occurs`() =
         runTest {
             var callCount = 0
-            var lastForceSimpleValue = false
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
@@ -149,12 +145,8 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceSimpleLayout: Boolean,
-                            ) {
+                            override suspend fun renderAll(context: Context) {
                                 callCount++
-                                lastForceSimpleValue = forceSimpleLayout
                                 if (callCount == 1) {
                                     // Simulate LimitExceeded on first call
                                     throw IllegalArgumentException(
@@ -170,7 +162,6 @@ class WidgetUpdaterImplTest {
 
             assertTrue("updateAll should return true even on LimitExceeded", result)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
-            assertTrue("last call should have forceSimpleLayout = true", lastForceSimpleValue)
             assertTrue("widgetLimitExceeded flag should be set", mockSettings.value.widgetLimitExceeded)
         }
 }

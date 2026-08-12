@@ -24,10 +24,7 @@ class WidgetUpdaterImpl
         private val appSettingsRepository: AppSettingsRepository,
         private val renderer: WidgetRenderer =
             object : WidgetRenderer {
-                override suspend fun renderAll(
-                    context: Context,
-                    forceSimpleLayout: Boolean,
-                ) {
+                override suspend fun renderAll(context: Context) {
                     MinutesGlanceWidget().updateAll(context)
                 }
             },
@@ -105,7 +102,7 @@ class WidgetUpdaterImpl
 
                         var renderSucceeded = true
                         try {
-                            renderer.renderAll(context, forceSimpleLayout = true)
+                            renderer.renderAll(context)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -196,8 +193,5 @@ class WidgetUpdaterImpl
     }
 
 interface WidgetRenderer {
-    suspend fun renderAll(
-        context: Context,
-        forceSimpleLayout: Boolean = false,
-    )
+    suspend fun renderAll(context: Context)
 }
