@@ -17,13 +17,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import java.util.concurrent.CancellationException
 import javax.inject.Inject
 import kotlin.math.pow
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainBannerController
     @Inject
@@ -33,19 +33,16 @@ class MainBannerController
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-        private val _isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
-        val isPhonePermissionPermanentlyDenied: StateFlow<Boolean> = _isPhonePermissionPermanentlyDenied.asStateFlow()
+        private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
 
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
-            _isPhonePermissionPermanentlyDenied.value = denied
+            isPhonePermissionPermanentlyDenied.value = denied
         }
 
-        private val _isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
-        val isNotificationPermissionPermanentlyDenied: StateFlow<Boolean> =
-            _isNotificationPermissionPermanentlyDenied.asStateFlow()
+        private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
 
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
-            _isNotificationPermissionPermanentlyDenied.value = denied
+            isNotificationPermissionPermanentlyDenied.value = denied
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -59,8 +56,8 @@ class MainBannerController
 
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
-                _isPhonePermissionPermanentlyDenied,
-                _isNotificationPermissionPermanentlyDenied,
+                isPhonePermissionPermanentlyDenied,
+                isNotificationPermissionPermanentlyDenied,
                 appSettingsRepository.observeAppSettings(),
             ) { phoneDenied, notifDenied, settings ->
                 Triple(phoneDenied, notifDenied, settings)
@@ -100,7 +97,7 @@ class MainBannerController
                 val delayMillis =
                     (2.0.pow(attempt.toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
-                delay(delayMillis)
+                delay(delayMillis.milliseconds)
                 true // Retrying infinitely with capped delay; UI retains last successful state
             }.stateIn(
                 scope = scope,

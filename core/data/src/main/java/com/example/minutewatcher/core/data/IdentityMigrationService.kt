@@ -147,7 +147,7 @@ class IdentityMigrationService
                             .keys
                             .filter { it.name.startsWith("subscription_id_icc_") }
                             .filter { simPrefs[it] == subId }
-                            .map { it.name.substringAfter("subscription_id_") }
+                            .map { it.name.removePrefix("subscription_id_") }
 
                     iccIdentities.forEach { suffixes.add("_$it") }
                 }
@@ -170,7 +170,7 @@ class IdentityMigrationService
                 val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
                 for (oldKey in keysToMigrate) {
-                    val baseName = oldKey.name.substringBefore(legacySuffix)
+                    val baseName = oldKey.name.removeSuffix(legacySuffix)
                     val newKeyName = baseName + newSuffix
 
                     val result = prefs.migrateTypedKey(oldKey, newKeyName, storeName)

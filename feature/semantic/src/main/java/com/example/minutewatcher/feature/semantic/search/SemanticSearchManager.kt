@@ -36,6 +36,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Manages AppSearch indexing for usage data.
  * Ensures that data is searchable via global system search.
+ *
+ * Реализовано строгое соблюдение API и SDK. Отклонения кастомных прошивок
+ * не маскируются, а обрабатываются как системные сбои с переводом в Error.
  */
 @Singleton
 @Suppress("TooManyFunctions")
@@ -112,41 +115,44 @@ class SemanticSearchManager
             } catch (e: AppSearchException) {
                 newSession?.close()
                 handleSchemaException(e, forceOverride)
+                false
             } catch (e: CancellationException) {
                 newSession?.close()
                 throw e
             } catch (e: Exception) {
                 newSession?.close()
                 handleInitializationError(e)
+                false
             }
         }
 
         private fun handleSchemaException(
             e: AppSearchException,
             forceOverride: Boolean,
-        ): Boolean {
+        ) {
             if ((e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) && !forceOverride) {
-                return false
+                return
             }
             AppLogger.e("AppSearch schema setup failed (force=$forceOverride, code=${e.resultCode})", e)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-            return false
         }
 
-        private fun handleInitializationError(e: Exception): Boolean {
+        private fun handleInitializationError(e: Exception) {
             val isUnsupported =
                 (e is IllegalStateException) ||
                     (e.message?.contains("AppSearch", ignoreCase = true) == true) ||
                     (e.message?.contains("Service not found", ignoreCase = true) == true)
 
-            return if (isUnsupported) {
-                AppLogger.w("AppSearch is not supported on this device. Disabling indexing gracefully.")
-                _status.value = TrackingStatus.Idle
-                true
+            if (isUnsupported) {
+                AppLogger.w("AppSearch is not supported on this device.")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "AppSearch service not available on this device",
+                    )
             } else {
                 AppLogger.e("Fatal AppSearch initialization error", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                true
             }
         }
 
@@ -272,15 +278,38 @@ class SemanticSearchManager
             throwIfErrors(putException, removeException)
         }
 
+        /**
+         * Проверяет наличие ошибок при обновлении индекса.
+         *
+         * Частичный сбой AppSearch (ошибка при добавлении или удалении документов) требует сброса
+         * хеша последнего снапшота (lastSnapshotHash = null в вызывающем коде). Это необходимо
+         * для гарантии консистентности индекса при следующем запуске: если мы не сбросим хеш,
+         * следующая индексация того же самого снапшота будет пропущена из-за оптимизации хэшей,
+         * и индекс останется в рассинхронизированном или поврежденном состоянии.
+         *
+         * Мы выбрасываем [AppSearchException], чтобы он был перехвачен в [indexSnapshot],
+         * где выполняется корректный сброс состояния и установка статуса ошибки без краша приложения.
+         */
+        @Suppress("ThrowsCount")
         private fun throwIfErrors(
             putEx: Exception?,
             removeEx: Exception?,
         ) {
-            if (putEx != null && removeEx != null) {
-                error("put failed: ${putEx.message}; remove failed: ${removeEx.message}")
+            if (putEx != null || removeEx != null) {
+                // Если у нас ровно одна ошибка и она уже AppSearchException, пробрасываем её как есть,
+                // чтобы сохранить код ошибки (например, RESULT_INVALID_SCHEMA) для ретрая.
+                if (putEx is AppSearchException && removeEx == null) throw putEx
+                if (removeEx is AppSearchException && putEx == null) throw removeEx
+
+                val message =
+                    when {
+                        putEx != null && removeEx != null ->
+                            "put failed: ${putEx.message}; remove failed: ${removeEx.message}"
+                        putEx != null -> "put failed: ${putEx.message}"
+                        else -> "remove failed: ${removeEx?.message}"
+                    }
+                throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, message)
             }
-            putEx?.let { throw it }
-            removeEx?.let { throw it }
         }
 
         companion object {

@@ -44,8 +44,8 @@ class SemanticInitializerWorker
             if (!searchSuccess) {
                 val status = searchManager.status.value
                 if (status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.DATABASE_ERROR) {
-                    AppLogger.w("SemanticInitializerWorker: AppSearch database error, requesting retry")
-                    return Result.retry()
+                    AppLogger.w("SemanticInitializerWorker: AppSearch database error. Manual retry required via UI.")
+                    return Result.success()
                 }
             }
 

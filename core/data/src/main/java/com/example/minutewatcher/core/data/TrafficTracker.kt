@@ -184,15 +184,26 @@ class TrafficTracker
         }
 
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
-            val target = targetResolver.resolve(activeSims)
-            if (target == null) {
+            val result = targetResolver.resolve(activeSims)
+
+            if (result is TrafficTargetResolver.TargetResult.NoActiveSims) {
                 AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
-                // G-484: Clear any pending baseline retries when no active SIM is available
-                // to prevent stale state from affecting future SIM insertions.
                 baselineNeedsRetry.clear()
                 _status.value = TrackingStatus.Idle
                 return
             }
+
+            if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
+                AppLogger.w(
+                    "TrafficTracker: inconsistent firmware state - " +
+                        "active SIMs exist but no default data SIM identified.",
+                )
+                baselineNeedsRetry.clear()
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
+                return
+            }
+
+            val target = (result as TrafficTargetResolver.TargetResult.Success).target
 
             withSimChangeLock {
                 ensureInMemoryLastDataSubId()
@@ -257,15 +268,10 @@ class TrafficTracker
                 "Traffic delta skipped due to SIM change " +
                     "(slot=${target.slot}, retryCount=$retryCount)",
             )
-            _status.value =
-                if (target.isFallback) {
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                        slotIndex = target.slot,
-                    )
-                } else {
-                    TrackingStatus.Active
-                }
+            // Мы не переводим статус в Active здесь, если уже установлена ошибка (например, сбой получения статистики).
+            if (_status.value !is TrackingStatus.Error) {
+                _status.value = TrackingStatus.Active
+            }
         }
 
         private suspend fun performTrafficUpdate(
@@ -376,15 +382,7 @@ class TrafficTracker
 
             updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
             updateLastDataSubId(target.dataSubId)
-            _status.value =
-                if (target.isFallback) {
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                        slotIndex = target.slot,
-                    )
-                } else {
-                    TrackingStatus.Active
-                }
+            _status.value = TrackingStatus.Active
         }
 
         private suspend fun updateTrafficBaselineAndUsage(
@@ -418,15 +416,7 @@ class TrafficTracker
 
                     updateLastDataSubId(target.dataSubId)
 
-                    _status.value =
-                        if (target.isFallback) {
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                                slotIndex = target.slot,
-                            )
-                        } else {
-                            TrackingStatus.Active
-                        }
+                    _status.value = TrackingStatus.Active
                     handled = true
                 }
             } else if (baselineNeedsRetry.getOrDefault(targetIdentity, 0) > 0) {
@@ -489,48 +479,16 @@ class TrafficTracker
          * агрегированный трафик за указанный период. На AOSP результат детерминирован
          * и покрывает весь запрошенный период.
          *
-         * **Эвристика (30-дневный lookback):**
-         * При [startTime] == 0 (первый запуск, нет данных о последней дате сброса)
-         * используется окно ретроспективы [Constants.Traffic.LOOKBACK_DAYS] дней.
-         * Это эвристика в пределах критерия надёжности:
-         * - Типичный расчётный период оператора — 30 дней.
-         * - Если расчётный период длиннее 30 дней, трафик за пределами окна
-         *   не будет учтён. Это допустимая потеря точности при первом запуске;
-         *   после первого успешного обновления [startTime] будет установлен
-         *   в [SimUsage.lastResetDate], и окно станет точным.
-         * - Если [startTime] > 0, но старше [Constants.Traffic.LOOKBACK_DAYS] дней,
-         *   окно обрезается до lookback. Это защита от некорректных timestamp
-         *   на кастомных прошивках, где системные часы могут быть сбиты.
-         *
-         * **Границы:**
-         * На AOSP [android.app.usage.NetworkStatsManager] всегда доступен при
-         * наличии PACKAGE_USAGE_STATS. На кастомных прошивках без этого API
-         * метод возвращает [StatsResult.Unavailable], что обрабатывается
-         * вызывающим кодом.
+         * **Strict Compliance:**
+         * Реализовано строгое соблюдение API и SDK. Отклонения кастомных прошивок
+         * не маскируются эвристиками (например, lookback-окнами при сбросе системных часов),
+         * а обрабатываются как системные сбои.
+         * Если [startTime] равен 0 (первый запуск), запрос выполняется с начала текущего момента (теперь),
+         * чтобы избежать неопределенности lookback-периодов.
          */
         private fun getCurrentMobileBytes(startTime: Long): StatsResult {
             val now = timeProvider.now()
-            val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
-
-            val effectiveStart =
-                when {
-                    startTime == 0L -> {
-                        AppLogger.d("First run: using 30-day lookback window")
-                        lookbackStart
-                    }
-
-                    startTime < lookbackStart -> {
-                        AppLogger.w(
-                            "Billing period start ($startTime) is older than " +
-                                "${Constants.Traffic.LOOKBACK_DAYS}-day lookback window. " +
-                                "Clamping to $lookbackStart. Some traffic data may be missed. " +
-                                "This is expected on first run or after system clock reset.",
-                        )
-                        lookbackStart
-                    }
-
-                    else -> startTime
-                }
+            val effectiveStart = if (startTime == 0L) now else startTime
 
             return networkStatsProvider
                 .queryMobileBytes(
@@ -591,9 +549,6 @@ class TrafficTracker
          *    and update [inMemoryLastDataSubId]. Future updates will track delta from this point.
          * 2. Retry: Stats are temporarily unavailable (e.g., system busy). We record the attempt
          *    in [baselineNeedsRetry]. The next [updateTrafficUsage] call will retry the reset.
-         * 3. Exhaustion: After [MAX_BASELINE_RETRIES], we give up on fetching previous stats.
-         *    We force [SimUsageResetRepository.setLastTotalBytes] to -1, which triggers a fresh
-         *    baseline initialization on the next successful update.
          */
         private suspend fun handleSimChange(
             targetSim: Int,
@@ -649,16 +604,6 @@ class TrafficTracker
             isLimitCheckOnly: Boolean = false,
         ): Boolean =
             when {
-                retryCount >= MAX_BASELINE_RETRIES -> {
-                    AppLogger.w(
-                        "Baseline reset retries exhausted for $identity after $retryCount attempts. " +
-                            "Forcing baseline re-initialization.",
-                    )
-                    simUsageResetRepository.setLastTotalBytes(identity, -1L)
-                    baselineNeedsRetry.remove(identity)
-                    true
-                }
-
                 isLimitCheckOnly -> false
 
                 else -> {
@@ -673,7 +618,8 @@ class TrafficTracker
                         "Stats unavailable on SIM change for $identity: $reason. " +
                             "Baseline reset will be retried (attempt ${retryCount + 1}).",
                     )
-                    simUsageResetRepository.setLastTotalBytes(identity, -1L)
+                    // Мы не форсируем сброс (-1L), а сохраняем состояние ошибки.
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, reason)
                     baselineNeedsRetry[identity] = (baselineNeedsRetry[identity] ?: 0) + 1
                     true
                 }
@@ -690,38 +636,52 @@ class TrafficTracker
                 StatsResult.Unavailable
             }
 
-        companion object {
-            private const val MAX_BASELINE_RETRIES = 5
-        }
+        companion object
     }
 
 internal data class TargetInfo(
     val slot: Int,
     val dataSubId: Int,
-    val isFallback: Boolean = false,
 )
 
 /**
  * Вспомогательный класс для определения целевой SIM-карты для отслеживания трафика.
  * Вынесен из [TrafficTracker] для упрощения основного класса.
+ *
+ * Реализовано строгое соблюдение API и SDK. Отклонения кастомных прошивок
+ * (например, отсутствие defaultDataSubscriptionId при наличии активных SIM)
+ * не маскируются эвристиками, а возвращаются как [TargetResult.InconsistentFirmware].
  */
 internal class TrafficTargetResolver(
     private val permissionManager: PermissionManager,
 ) {
-    fun resolve(activeSims: List<ActiveSimInfo>): TargetInfo? {
-        val (targetSim, currentDataSubId, isFallback) = resolveTargetSim(activeSims) ?: return null
+    sealed interface TargetResult {
+        data class Success(
+            val target: TargetInfo,
+        ) : TargetResult
 
-        return TargetInfo(
-            targetSim,
-            currentDataSubId,
-            isFallback = isFallback,
+        object NoActiveSims : TargetResult
+
+        object InconsistentFirmware : TargetResult
+    }
+
+    @Suppress("ReturnCount")
+    fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
+        if (activeSims.isEmpty()) return TargetResult.NoActiveSims
+
+        val (targetSim, currentDataSubId) = resolveTargetSim(activeSims) ?: return TargetResult.InconsistentFirmware
+
+        return TargetResult.Success(
+            TargetInfo(
+                targetSim,
+                currentDataSubId,
+            ),
         )
     }
 
-    private fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
+    private fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Pair<Int, Int>? {
         var targetSim = -1
         var currentDataSubId = -1
-        var isFallback = false
         try {
             currentDataSubId = permissionManager.getDefaultDataSubscriptionId()
             if (currentDataSubId != -1) {
@@ -737,11 +697,10 @@ internal class TrafficTargetResolver(
             if (resolveResult != null) {
                 targetSim = resolveResult.first
                 currentDataSubId = resolveResult.second
-                isFallback = resolveResult.third
             }
         }
 
-        return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
+        return if (targetSim != -1) Pair(targetSim, currentDataSubId) else null
     }
 
     /**
@@ -752,35 +711,17 @@ internal class TrafficTargetResolver(
      * [android.telephony.SubscriptionManager.getDefaultDataSubscriptionId]. In a standard AOSP environment,
      * this correctly identifies the SIM currently responsible for mobile data.
      *
-     * **Heuristic/Fallback:**
-     * If no SIM is explicitly marked as default data (e.g., during a transition or on some
-     * dual-SIM implementations), the method falls back to the active subscription with the
-     * lowest SIM slot index.
-     *
-     * **Boundaries:**
-     * This heuristic is acceptable because mobile data must be attributed somewhere to avoid
-     * data loss. If a custom firmware deviates from standard Android behavior (e.g., reporting
-     * no default SIM while data is active, or reporting multiple conflicting defaults), it is
-     * considered a firmware-level inconsistency that the app cannot reliably resolve.
-     *
-     * **Reliability Criterion:**
-     * Choosing the lowest slot index is a deterministic and safe "best effort" attribution
-     * that ensures the tracker remains active even in ambiguous system states.
+     * **Strict Compliance:**
+     * If no SIM is explicitly marked as default data, we no longer fall back to heuristics
+     * (like lowest slot index). Such states are treated as firmware inconsistencies.
      */
-    private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
+    private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Pair<Int, Int>? {
         val defaultDataSim = activeSims.find { it.isDefaultData }
 
         return if (defaultDataSim != null) {
-            Triple(defaultDataSim.slotIndex, defaultDataSim.subscriptionId, false)
+            Pair(defaultDataSim.slotIndex, defaultDataSim.subscriptionId)
         } else {
-            val activeSubs = permissionManager.getActiveSubscriptions()
-            activeSubs.minByOrNull { it.simSlotIndex }?.let { selected ->
-                AppLogger.w(
-                    "No default data SIM identified for traffic tracking. " +
-                        "Using fallback heuristic: attributing all traffic to Slot ${selected.simSlotIndex}.",
-                )
-                Triple(selected.simSlotIndex, selected.subscriptionId, true)
-            }
+            null
         }
     }
 }

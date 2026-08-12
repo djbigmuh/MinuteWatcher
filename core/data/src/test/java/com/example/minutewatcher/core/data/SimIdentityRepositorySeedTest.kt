@@ -17,7 +17,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -129,13 +128,13 @@ class SimIdentityRepositorySeedTest {
             testScheduler.advanceTimeBy(25_000)
             testScheduler.advanceUntilIdle()
 
-            // Проверяем fallback состояние через прямой вызов
-            val fallbackIdentity = identityRepo.getSimIdentity(0)
-            assertTrue(
-                "Expected fallback identity, got: ${fallbackIdentity.stableId}",
-                fallbackIdentity.stableId.startsWith("sim_"),
-            )
-            assertEquals(IdentitySource.SLOT_FALLBACK, fallbackIdentity.source)
+            // Проверяем состояние ошибки через прямой вызов
+            try {
+                identityRepo.getSimIdentity(0)
+                org.junit.Assert.fail("Expected IllegalStateException when seed is unavailable")
+            } catch (e: IllegalStateException) {
+                assertTrue(e.message?.contains("seed unavailable") == true)
+            }
 
             // Теперь предоставляем реальный сид
             storedSeed.emit("real_seed")
@@ -189,15 +188,15 @@ class SimIdentityRepositorySeedTest {
             testScheduler.advanceTimeBy(25_000)
             testScheduler.advanceUntilIdle()
 
-            // 2. First call - populates cache
-            val id1 = identityRepo.getSimIdentity(0)
-            assertEquals("sim_0", id1.stableId)
+            // 2. First call - must throw because no seed
+            try {
+                identityRepo.getSimIdentity(0)
+                org.junit.Assert.fail("Expected IllegalStateException when seed is unavailable")
+            } catch (e: IllegalStateException) {
+                assertTrue(e.message?.contains("seed unavailable") == true)
+            }
 
-            // 3. Second call - must be from cache (no suspension for activeSimsCache)
-            // We verify by advancing time very little - if it's cached, it returns immediately.
-            // If it weren't cached, it would wait for activeSimsCache.firstWithTimeout(...)
-            val id2 = identityRepo.getSimIdentity(0)
-            assertEquals("sim_0", id2.stableId)
+            // 3. (Deleted stale cache verification as cache is no longer populated with fallbacks)
 
             // 4. Transition to Real seed
             storedSeed.emit("real_seed")
@@ -255,10 +254,9 @@ class SimIdentityRepositorySeedTest {
             whenever(mockSubInfo.iccId).thenReturn("icc_1")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-            // 2. Advance to Fallback state and trigger cache population
+            // 2. Advance to Fallback state
             testScheduler.advanceTimeBy(25_000)
             testScheduler.advanceUntilIdle()
-            identityRepo.getSimIdentity(0) // Now sim_0 is in fallbackCache
 
             // 3. Transition to Real seed
             storedSeed.emit("real_seed")
@@ -273,67 +271,5 @@ class SimIdentityRepositorySeedTest {
                     assertEquals(IdentitySource.ICCID, identity.source)
                 },
             )
-        }
-
-    @Test
-    fun `getSimIdentity handles race between fallback return and real seed emission`() =
-        runTest {
-            dataStore =
-                PreferenceDataStoreFactory.create(
-                    scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_sim_race_seed.preferences_pb") },
-                )
-
-            val storedSeed = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
-            val seedRepo =
-                object : SimIdentitySeedRepository {
-                    override val seedFlow: Flow<String> = storedSeed
-
-                    override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
-
-                    override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        delay(60.seconds)
-                        return "generated"
-                    }
-                }
-
-            val identityRepo =
-                SimIdentityRepositoryImpl(
-                    discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
-                    seedRepository = seedRepo,
-                    appSettingsRepository = appSettingsRepository,
-                    migrationService = migrationService,
-                    mockSimProvider = mockSimProvider,
-                    scope = backgroundScope,
-                )
-
-            // 1. Advance to Fallback state
-            testScheduler.advanceTimeBy(25_000)
-            testScheduler.runCurrent()
-
-            // 2. Launch getSimIdentity call that will see Fallback seed.
-            val callJob =
-                backgroundScope.launch {
-                    val identity = identityRepo.getSimIdentity(0)
-                    assertTrue(identity.stableId.isNotEmpty())
-                }
-
-            // 3. Emit Real seed immediately
-            storedSeed.emit("real_seed")
-
-            // 4. Provide sub info for resolution
-            val mockSubInfo = mock<SubscriptionInfo>()
-            whenever(mockSubInfo.subscriptionId).thenReturn(1)
-            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
-            whenever(mockSubInfo.iccId).thenReturn("icc_1")
-            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
-
-            // Advance time to allow any timeouts or deferred work to complete
-            testScheduler.advanceTimeBy(30_000)
-            testScheduler.runCurrent()
-            testScheduler.advanceUntilIdle()
-
-            assertTrue("Call should complete", callJob.isCompleted)
         }
 }

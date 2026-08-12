@@ -95,8 +95,8 @@ class SimIdentityRepositoryHangTest {
             )
     }
 
-    @Test
-    fun `getSimIdentity returns fallback when activeSimsCache hangs`() =
+    @Test(expected = IllegalStateException::class)
+    fun `getSimIdentity throws error when activeSimsCache hangs`() =
         runTest(testDispatcher) {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
@@ -113,15 +113,12 @@ class SimIdentityRepositoryHangTest {
                 )
 
             // Mock seedRepository.seedFlow to return a flow that never emits,
-            // which will cause activeSimsCache to wait indefinitely.
+            // which will cause getSeed() to timeout and return Fallback result,
+            // leading to an IllegalStateException.
             whenever(seedRepository.seedFlow).thenReturn(MutableSharedFlow())
 
             // Act
-            val identity = identityRepo.getSimIdentity(0)
-
-            // Assert: It should return fallback after timeout instead of hanging forever
-            assertEquals("sim_0", identity.stableId)
-            assertEquals(IdentitySource.SLOT_FALLBACK, identity.source)
+            identityRepo.getSimIdentity(0)
         }
 
     @Test
@@ -161,21 +158,18 @@ class SimIdentityRepositoryHangTest {
 
             // Act: Try to get identity.
             // Using withTimeoutOrNull to ensure we don't hang if implementation is broken.
-            val identity =
+            val result =
                 withTimeoutOrNull(20.seconds) {
                     try {
                         identityRepo.getSimIdentity(0)
-                    } catch (_: Throwable) {
-                        null
+                        "success"
+                    } catch (_: IllegalStateException) {
+                        "error"
                     }
                 }
 
-            // The test is successful if it completed without hanging.
-            // If it returned fallback or threw, it's fine as long as it didn't hang.
-            if (identity != null) {
-                assertEquals("sim_0", identity.stableId)
-                assertEquals(IdentitySource.SLOT_FALLBACK, identity.source)
-            }
+            // The test is successful if it completed without hanging and reported the expected error.
+            assertEquals("error", result)
         }
 
     @Test
@@ -355,14 +349,18 @@ class SimIdentityRepositoryHangTest {
             // We advance time to cover both timeout attempts (10s + 20s).
             val job =
                 launch {
-                    identityRepo.getSimIdentity(0)
+                    try {
+                        identityRepo.getSimIdentity(0)
+                    } catch (_: Exception) {
+                        // Expected failure
+                    }
                 }
 
             // Constants.Flow.LONG_TIMEOUT_MS is 10_000L
             testScheduler.advanceTimeBy(35_000)
             testScheduler.runCurrent()
 
-            assertTrue("Identity resolution should complete even if DataStore hangs", job.isCompleted)
+            assertTrue("Identity resolution should complete even if DataStore hangs (via exception)", job.isCompleted)
         }
 
     @Test

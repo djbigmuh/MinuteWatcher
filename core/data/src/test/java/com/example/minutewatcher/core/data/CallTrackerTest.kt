@@ -186,9 +186,8 @@ class CallTrackerTest {
             callTracker.onCallEnded(-1)
             advanceUntilIdle()
 
-            // Should attribute to subId 2
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(2), eq(0L))
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(0L))
+            // Heuristic attribution is removed, so NO sessions should be closed
+            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
         }
 
     @Test
@@ -544,7 +543,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `call tracking defaults to enabled on settings timeout`() =
+    fun `call tracking sets error on settings timeout`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -555,12 +554,15 @@ class CallTrackerTest {
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
-            // Assert: verify that call start state WAS saved because isCallTrackingEnabled now returns true on timeout
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), any())
+            // Assert: verify that error status was set and call start state was NOT saved
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals("Settings DataStore read timeout", (status as TrackingStatus.Error).message)
+            verify(callSessionRepository, never()).setCallStartTime(eq(1), any())
         }
 
     @Test
-    fun `stale session cleanup does not increment minutes`() =
+    fun `stale session cleanup logs error and does nothing in handleAmbiguousIdle`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -597,12 +599,9 @@ class CallTrackerTest {
             callTracker.onCallEnded(-1)
             advanceUntilIdle()
 
-            // Assert: verify stale session was cleared but NO minutes were added
+            // Assert: verify NO sessions were cleared and NO minutes were added
             verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(staleSubId), eq(0L))
-
-            // activeSubId should NOT be cleared yet as it's not stale and we don't know which one ended
-            verify(callSessionRepository, never()).setCallStartTime(eq(activeSubId), any())
+            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
         }
 
     @Test
@@ -663,16 +662,15 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            // Assert: status should contain the ORIGINAL timeout message,
-            // not the "DataStore crash" or intermediate error
+            // Assert: status should contain the ORIGINAL timeout message
             val status = callTracker.status.value as TrackingStatus.Error
             assertTrue(
                 "Expected status to contain timeout info, but was: ${status.message}",
-                status.message?.contains("Timeout loading session data") == true,
+                status.message?.contains("Session read timed out") == true,
             )
 
-            // Verify clearSession (setCallStartTime) was indeed called and failed
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            // Verify clearSession (setCallStartTime) was NOT called
+            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(0L))
         }
 
     @Test
@@ -789,7 +787,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `endCall clears extremely long session even if attribution fails`() =
+    fun `endCall sets Error on extremely long session and preserves it`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -812,12 +810,12 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId)
             advanceUntilIdle()
 
-            // Assert: verify session WAS cleared because it's stale (>12h)
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
-            // Status should be Error (Attribution failed) from processCallDuration
+            // Assert: verify session was NOT cleared
+            verify(callSessionRepository, never()).setCallStartTime(eq(subId), eq(0L))
+            // Status should be Error (Attribution failed) from handleStaleSession
             val status = callTracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
-            assertEquals("Attribution failed for subId 1", (status as TrackingStatus.Error).message)
+            assertEquals("Call duration exceeded max limit for subId 1", (status as TrackingStatus.Error).message)
         }
 
     @Test

@@ -215,34 +215,17 @@ class WidgetUpdaterImpl
         /**
          * Detects whether a widget update failure is caused by the RemoteViews size limit.
          *
-         * **Contract (AOSP):**
-         * Android enforces a strict size limit on Binder transactions (typically 1MB).
-         * Since RemoteViews are sent via Binder, exceeding this limit results in a
-         * [android.os.TransactionTooLargeException]. In AOSP, this exception is guaranteed
-         * to be present in the causal chain when a widget is too complex to render.
-         *
-         * **Heuristic/Fallback:**
-         * The method traverses the exception's `cause` chain searching for [android.os.TransactionTooLargeException].
-         *
-         * **Boundaries:**
-         * This detection is reliable across all supported Android versions (API 26–35).
-         * If a custom firmware wraps this error in a non-standard way or uses a different
-         * mechanism to signal size limits, it is considered a firmware-level deviation
-         * that the app cannot reliably detect.
-         *
-         * **Reliability Criterion:**
-         * Checking the entire cause chain for [android.os.TransactionTooLargeException] is
-         * the most robust way to identify binder overflow, as it avoids relying on
-         * platform-specific wrapper exception types (like `RemoteViews$ActionException`)
-         * which can vary between OS versions.
+         * **Strict Compliance:**
+         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
+         * а обрабатываются как системные сбои с уведомлением пользователя.
+         * Детекция [android.os.TransactionTooLargeException] через cause-цепочку является
+         * единственным критерием переполнения Binder-транзакции. Попытки определить переполнение
+         * по тексту ошибки ("на глаз") исключены как ненадежные.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean {
-            // Основной критерий: TransactionTooLargeException в cause-цепочке.
-            // Это единственный достоверный признак переполнения Binder-транзакции,
-            // гарантированный на всех версиях Android API 26–37.
             if (hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)) {
-                AppLogger.w("RemoteViews size limit detected via TransactionTooLargeException", e)
+                AppLogger.e("RemoteViews size limit detected via TransactionTooLargeException", e)
                 return true
             }
 

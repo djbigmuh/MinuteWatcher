@@ -44,6 +44,7 @@ class WidgetSettingsRepositoryTest {
     }
 
     @Test
+    @Suppress("UNUSED_VARIABLE")
     fun `load should return state populated from app settings`() =
         runTest {
             val appSettings =
@@ -227,6 +228,7 @@ class WidgetSettingsRepositoryTest {
         }
 
     @Test
+    @Suppress("UNUSED_VARIABLE")
     fun `load returns fallback with simListLoadFailed when observeActiveSims times out`() =
         runTest {
             whenever(settingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))

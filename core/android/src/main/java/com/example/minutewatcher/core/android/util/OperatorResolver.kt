@@ -238,11 +238,22 @@ object OperatorResolver {
     private const val MCC_LENGTH = 3
     private const val MIN_MCC_MNC_LENGTH = 5
 
+    /**
+     * Resolves the operator resource ID from the given operator name.
+     * Uses strict token-based matching to prevent partial matches (e.g., "Timor" matching "TIM").
+     */
     fun getOperatorResourceId(operatorName: String): Int? =
         tokenToResKey.entries
             .find { (token, _) -> operatorName.hasToken(token) }
             ?.let { operatorResourceMap[it.value] }
 
+    /**
+     * Checks if the string contains the specified token as a whole word.
+     *
+     * **Strict Compliance:**
+     * Uses tokenization split by non-alphanumeric characters.
+     * Simple `contains()` is avoided to ensure "Timor Telecom" does not match "TIM".
+     */
     private fun String.hasToken(token: String): Boolean {
         val normalized = lowercase(Locale.ROOT)
         val targetToken = token.lowercase(Locale.ROOT)

@@ -76,9 +76,18 @@ class SimWidgetVisibilityRepositoryImpl
             }
         }
 
+        /**
+         * Clears settings for SIMs that are no longer active.
+         *
+         * **Strict Compliance:**
+         * Identity extraction uses strict prefix matching from longest to shortest.
+         * Fragile substring methods are avoided to prevent accidental deletion of unrelated keys.
+         * Fallback identities (sim_$slot) are protected using a strict regex pattern.
+         */
         override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
             val activeSet = activeIdentities.toSet()
             val prefixes = WidgetSettingsKeys.ALL_PREFIXES
+            val fallbackRegex = Regex("^sim_\\d+$")
 
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys
@@ -97,9 +106,7 @@ class SimWidgetVisibilityRepositoryImpl
                             if (identity.isEmpty()) return@filter false
 
                             // Protect sim_$slot fallback keys
-                            val isFallbackKey =
-                                identity.startsWith("sim_") &&
-                                    identity.substringAfter("sim_").toIntOrNull() != null
+                            val isFallbackKey = fallbackRegex.matches(identity)
 
                             identity !in activeSet && !isFallbackKey
                         } else {

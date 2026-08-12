@@ -32,7 +32,6 @@ object SnapshotUtils {
                     sim.slot to (
                         sim.autoResetDay to
                             sim.entities.values
-                                .filterNotNull()
                                 .sortedBy { it.packageType }
                                 .map { entity ->
                                     // Исключаем operatorName и lastUpdateTime для стабильности хэша

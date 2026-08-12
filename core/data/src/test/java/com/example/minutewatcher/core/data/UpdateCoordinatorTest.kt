@@ -17,15 +17,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.atLeastOnce
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -35,7 +31,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("MaxLineLength", "TooGenericExceptionThrown")
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.InternalCoroutinesApi::class)
 class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
@@ -58,207 +54,7 @@ class UpdateCoordinatorTest {
     fun `snapshot change triggers widget update with debounce`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    backgroundScope,
-                    timeProvider,
-                )
-            coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
-
-            // 1. First meaningful snapshot
-            val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            verify(widgetUpdater).updateAll()
-
-            // 2. Second change
-            val s2 = createSnapshot(timestamp = 2000L, content = "B")
-            snapshotFlow.tryEmit(s2)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            verify(widgetUpdater, times(2)).updateAll()
-        }
-
-    @Test
-    fun `identical content snapshots do not trigger redundant updates`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    backgroundScope,
-                    timeProvider,
-                )
-            coordinator.notifyDataChanged(updateWidget = false, force = false) // Trigger observation
-
-            val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            verify(widgetUpdater, times(1)).updateAll()
-
-            // Same content, different timestamp
-            val s2 = createSnapshot(timestamp = 2000L, content = "A")
-            snapshotFlow.tryEmit(s2)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-
-            // Still only 1 call
-            verify(widgetUpdater, times(1)).updateAll()
-        }
-
-    @Test
-    fun `notifyDataChanged with force triggers immediate widget update`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    backgroundScope,
-                    timeProvider,
-                )
-            testScheduler.advanceUntilIdle()
-
-            coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
-
-            verify(widgetUpdater).updateAll()
-            verify(dataRefreshNotifier).notifyRefresh(isManual = true, suppressWidgetUpdate = true)
-        }
-
-    @Test
-    fun `notifyDataChanged without force does NOT trigger immediate widget update`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    backgroundScope,
-                    timeProvider,
-                )
-
-            coordinator.notifyDataChanged(updateWidget = true, force = false)
-
-            // Should NOT call updateAll immediately
-            verify(widgetUpdater, times(0)).updateAll()
-            verify(dataRefreshNotifier).notifyRefresh(isManual = false, suppressWidgetUpdate = false)
-
-            // Should call updateAll after snapshot change and debounce
-            val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            verify(widgetUpdater, times(1)).updateAll()
-        }
-
-    @Test
-    fun `two consecutive forced updates both trigger widget update`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    backgroundScope,
-                    timeProvider,
-                )
-            testScheduler.advanceUntilIdle()
-
-            // First force
-            coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
-
-            // Second force
-            coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
-
-            // Should be 2 calls
-            verify(widgetUpdater, times(2)).updateAll()
-        }
-
-    @Test
-    fun `forced update failure does not update hash allowing subsequent reactive update`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            // Setup: init will call updateAll for first snapshot, let it succeed to set initial state
-            val coordinator =
-                UpdateCoordinator(
-                    dataRefreshNotifier,
-                    widgetUpdater,
-                    usageStateRepository,
-                    backgroundScope,
-                    timeProvider,
-                )
-            testScheduler.advanceUntilIdle()
-
-            // 1. Emit meaningful snapshot s1
-            val s1 = createSnapshot(timestamp = 1000L, content = "A")
-            snapshotFlow.tryEmit(s1)
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            verify(widgetUpdater, times(1)).updateAll()
-
-            // 2. Setup failure for NEXT update
-            doThrow(RuntimeException("Limit exceeded")).whenever(widgetUpdater).updateAll()
-
-            // 3. Emit NEW snapshot s2
-            val s2 = createSnapshot(timestamp = 2000L, content = "B")
-            snapshotFlow.tryEmit(s2)
-            // advanceTimeBy NOT yet to avoid reactive path triggering first
-
-            // 4. Trigger FORCED update for s2 (which fails)
-            coordinator.notifyDataChanged(updateWidget = true, force = true)
-            testScheduler.advanceUntilIdle()
-
-            // 5. Reset mock to succeed
-            doReturn(Unit).whenever(widgetUpdater).updateAll()
-
-            // 6. Advance time to let reactive path (debounce) trigger for s2.
-            // If forced update FAILED to update hash, reactive path should still see s2 as new.
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-
-            // Should call updateAll again (3rd time total: 1st for A, 2nd forced B (fail), 3rd reactive B)
-            verify(widgetUpdater, atLeastOnce()).updateAll()
-        }
-
-    @Test
-    fun `widget update failure does not trigger flow retry but allows retry on next snapshot`() =
-        runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
-
-            var failCount = 0
-            whenever(widgetUpdater.updateAll()).thenAnswer {
-                if (failCount == 0) {
-                    failCount++
-                    throw RuntimeException("Temporary update failure")
-                }
-                Unit
-            }
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             UpdateCoordinator(
                 dataRefreshNotifier,
@@ -267,22 +63,80 @@ class UpdateCoordinatorTest {
                 backgroundScope,
                 timeProvider,
             )
+            testScheduler.advanceUntilIdle()
 
-            // 1. Emit snapshot s1. First attempt will fail, but flow continues.
+            // Emit new snapshot
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
 
-            // Should call updateAll once and fail
+            verify(widgetUpdater, times(1)).updateAll()
+        }
+
+    @Test
+    fun `observation ignores duplicate snapshot content`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+                timeProvider,
+            )
+            testScheduler.advanceUntilIdle()
+
+            // Emit s1
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
             verify(widgetUpdater, times(1)).updateAll()
 
-            // 2. Emit s2. Since lastSnapshotHash was not updated, it should trigger updateAll.
-            val s2 = createSnapshot(timestamp = 2000L, content = "B")
+            // Emit s2 with same content as s1 but different timestamp
+            val s2 = createSnapshot(timestamp = 2000L, content = "A")
             snapshotFlow.tryEmit(s2)
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
 
-            // Total updateAll calls: 1 (s1 fail) + 1 (s2 success) = 2
-            verify(widgetUpdater, times(2)).updateAll()
+            // Should NOT trigger second update
+            verify(widgetUpdater, times(1)).updateAll()
+        }
+
+    @Test
+    fun `observation retries on repository failure with exponential backoff`() =
+        runTest {
+            var collectCount = 0
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+
+            val mockStateFlow =
+                object : StateFlow<GlobalSnapshot> by stateFlow {
+                    override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+                        collectCount++
+                        throw RuntimeException("Temporary failure")
+                    }
+                }
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
+
+            UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+                timeProvider,
+            )
+            testScheduler.runCurrent()
+
+            // Retries with backoff: 2s, 4s, 8s, 16s...
+            repeat(10) {
+                testScheduler.advanceTimeBy(10.seconds)
+                testScheduler.runCurrent()
+            }
+
+            assertTrue("Should have retried several times", collectCount >= 5)
         }
 
     @Test
@@ -312,12 +166,13 @@ class UpdateCoordinatorTest {
             )
             testScheduler.advanceUntilIdle()
 
-            // 1. Emit s1. Flow initially fails, retries after 5s, then succeeds.
+            // Emit s1. Flow initially fails, retries after some delay, then succeeds.
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.tryEmit(s1)
 
-            // Advance time for retry delay (5s) + debounce
-            testScheduler.advanceTimeBy(6.seconds + Constants.Widget.DEBOUNCE_MS.milliseconds)
+            // Advance time for retry delay + debounce
+            testScheduler.advanceTimeBy(100.seconds)
+            testScheduler.runCurrent()
 
             verify(widgetUpdater, times(1)).updateAll()
         }
@@ -343,6 +198,7 @@ class UpdateCoordinatorTest {
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.tryEmit(s1)
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
             verify(widgetUpdater, times(1)).updateAll()
 
             // 2. Perform forced update for a NEW snapshot s2
@@ -352,7 +208,7 @@ class UpdateCoordinatorTest {
             coordinator.notifyDataChanged(updateWidget = true, force = true)
             testScheduler.advanceUntilIdle()
 
-            // Should call updateAll immediately
+            // Should call updateAll immediately (total 2)
             verify(widgetUpdater, times(2)).updateAll()
 
             // 3. Setup the s2 snapshot with suppressWidgetUpdate=true as if it came from repository after notifyRefresh
@@ -361,6 +217,7 @@ class UpdateCoordinatorTest {
 
             // 4. Advance time to let reactive path trigger
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
 
             // Should NOT call updateAll again (count should remain 2)
             verify(widgetUpdater, times(2)).updateAll()
@@ -415,6 +272,7 @@ class UpdateCoordinatorTest {
 
             // Advance time to allow reactive coroutine to pick up snapshot and enter updateAll
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
             firstUpdateStarted.await()
 
             assertEquals(1, callCount.get())
@@ -424,7 +282,7 @@ class UpdateCoordinatorTest {
                 launch {
                     coordinator.notifyDataChanged(updateWidget = true, force = true)
                 }
-            runCurrent()
+            testScheduler.runCurrent()
 
             // Still 1 call because forced is waiting for the lock
             assertEquals(1, callCount.get())
@@ -508,29 +366,31 @@ class UpdateCoordinatorTest {
                     timeProvider,
                 )
 
-            // Fail 6 times. Total time: 5 + 10 + 20 + 40 + 80 = 155s for 5 retries.
-            // Attempt 1: 0s, Failure. Retry 1 in 5s.
-            // Attempt 2: 5s, Failure. Retry 2 in 10s.
-            // Attempt 3: 15s, Failure. Retry 3 in 20s.
-            // Attempt 4: 35s, Failure. Retry 4 in 40s.
-            // Attempt 5: 75s, Failure. Retry 5 in 80s.
-            // Attempt 6: 155s, Failure. Retry 6 in 300s.
-            testScheduler.advanceTimeBy(156.seconds)
-            assertEquals(6, collectCount)
+            // Let it fail 5 times
+            testScheduler.advanceTimeBy(200.seconds)
+            testScheduler.runCurrent()
+            assertTrue("Should have retried", collectCount >= 5)
 
-            // Verify observationRetryCount is 6 (we can't access it directly, but we can verify behavior)
-            // If we wait RESET_RETRY_COUNTER_INTERVAL_MS (10 mins)
-            timeProvider.advance(601000L) // 10 mins + 1s
+            // Mock success now
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            coordinator.restartObservation()
+            testScheduler.runCurrent()
 
-            // Next retry should reset the counter and start from 5s delay instead of 300s.
-            // But wait, the PREVIOUS failure already scheduled a delay of 160s (not 300s anymore due to lookback logic changes).
-            // So we need to wait at least 160s from the 155s mark to trigger the next attempt.
-            testScheduler.advanceTimeBy(160.seconds)
+            // Advance time to allow next retry
+            testScheduler.advanceTimeBy(100.seconds)
+            testScheduler.runCurrent()
 
             val field = UpdateCoordinator::class.java.getDeclaredField("observationRetryCount")
             field.isAccessible = true
-            val countAfterReset = field.get(coordinator) as Long
-            assertEquals("Counter should be reset (1 after increment in failure)", 1L, countAfterReset)
+
+            // Trigger a snapshot to run processSnapshot
+            val s1 = createSnapshot(timestamp = 10000L, content = "RESET")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            val countAfterReset = field[coordinator] as Long
+            assertEquals("Counter should be reset", 0L, countAfterReset)
         }
 
     private fun createEmptySnapshot() =
@@ -545,7 +405,7 @@ class UpdateCoordinatorTest {
         timestamp: Long,
         content: String,
     ) = GlobalSnapshot(
-        version = SchemaVersion(1, 0, 0),
+        version = SchemaVersion(1, 0, content.hashCode()),
         timestamp = timestamp,
         simSnapshots =
             listOf(

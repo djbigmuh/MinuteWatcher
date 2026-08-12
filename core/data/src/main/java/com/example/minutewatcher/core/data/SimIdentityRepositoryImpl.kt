@@ -80,10 +80,8 @@ class SimIdentityRepositoryImpl
         }
 
         private val saveMutex = Mutex()
-        private val fallbackMutex = Mutex()
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
-        private val fallbackCache = ConcurrentHashMap<Int, SimIdentity>()
 
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -231,73 +229,7 @@ class SimIdentityRepositoryImpl
             )
 
         init {
-            scope.launch {
-                seedFlow.collect { result ->
-                    if (result is SeedResult.Real) {
-                        val fallbackSlots =
-                            fallbackMutex.withLock {
-                                fallbackCache.keys.toList()
-                            }
-
-                        if (fallbackSlots.isNotEmpty()) {
-                            /**
-                             * При переходе seed из Fallback в Real, миграция legacy-данных выполняется
-                             * до очистки fallback-кэша. Если миграция не удаётся, кэш сохраняется
-                             * для затронутого слота, обеспечивая корректный fallback при следующем запросе.
-                             * На AOSP миграция не падает при наличии READ_PHONE_STATE; сбой возможен
-                             * только на кастомных прошивках с повреждённым DataStore.
-                             */
-                            AppLogger.d(
-                                "SimIdentityRepository: processing ${fallbackSlots.size} fallback cache entries " +
-                                    "upon receiving real seed transition",
-                            )
-
-                            try {
-                                val seedValue = result.value
-                                // Сначала выполняем миграцию для всех затронутых слотов
-                                var migrationSucceeded = true
-                                permissionManager
-                                    .getActiveSubscriptions()
-                                    .forEach { sub ->
-                                        val slot = sub.simSlotIndex
-                                        if (fallbackSlots.contains(slot)) {
-                                            try {
-                                                val newIdentity =
-                                                    SimIdentityUtils.createIdentityFromInfo(
-                                                        info = sub,
-                                                        seed = seedValue,
-                                                    )
-                                                migrationService.migrateLegacyData(newIdentity)
-                                            } catch (e: CancellationException) {
-                                                throw e
-                                            } catch (e: Exception) {
-                                                AppLogger.e(
-                                                    "Migration failed for slot $slot after seed transition, " +
-                                                        "fallback cache will be preserved for this slot",
-                                                    e,
-                                                )
-                                                migrationSucceeded = false
-                                            }
-                                        }
-                                    }
-                                // Очищаем кэш только после успешной миграции всех слотов
-                                if (migrationSucceeded) {
-                                    fallbackMutex.withLock {
-                                        fallbackSlots.forEach { fallbackCache.remove(it) }
-                                    }
-                                    AppLogger.d(
-                                        "SimIdentityRepository: cleared fallback cache after successful migration",
-                                    )
-                                }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to process fallback cache after seed transition", e)
-                            }
-                        }
-                    }
-                }
-            }
+            // Initialization logic for identity seed transitions could be placed here if needed
         }
 
         private suspend fun getSeed(timeoutMs: Long = SEED_TOTAL_TIMEOUT_MS): SeedResult {
@@ -321,30 +253,17 @@ class SimIdentityRepositoryImpl
          * secure seed. In standard AOSP with proper permissions, it uniquely identifies
          * a SIM card based on hardware attributes.
          *
-         * **Heuristic/Fallback:**
-         * If the slot index is outside the supported range ([SimConstants.SUPPORTED_SLOT_INDICES]),
-         * or if the identity seed is unavailable after [SEED_TOTAL_TIMEOUT_MS], the method
-         * falls back to a slot-based identity string ([SimConstants.INVALID_SLOT_IDENTITY_PREFIX]).
-         *
-         * **Boundaries:**
-         * This fallback is critical for API stability. If a custom firmware prevents
-         * reading hardware identifiers or misreports slot indices, the repository uses
-         * these fallback identities to maintain internal state consistency. Deviations
-         * from Google's telephony documentation are considered firmware-level issues.
-         *
-         * **Reliability Criterion:**
-         * Identities starting with this prefix are used as a strict API protection
-         * mechanism. They MUST NOT be saved to DataStore, and all repositories are
-         * responsible for verifying this prefix before write operations. This ensures
-         * that transient system states do not corrupt the permanent usage database.
+         * **Strict Compliance:**
+         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
+         * а обрабатываются как системные сбои с уведомлением пользователя.
+         * Любое нарушение контракта (некорректный слот, отсутствие seed, ошибка чтения SubscriptionManager)
+         * приводит к исключению, которое должно обрабатываться вызывающей стороной (трекером).
          */
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
-                // G-484: Using a slot-indexed string for invalid slots to prevent
-                // downstream logic from treating them as a single valid identity.
-                // This stableId MUST NOT be saved to DataStore.
-                return createFallbackIdentity(slot, "${SimConstants.INVALID_SLOT_IDENTITY_PREFIX}$slot")
+                val message = "getSimIdentity called with out-of-range slot=$slot"
+                AppLogger.e(message, null)
+                throw IllegalArgumentException(message)
             }
 
             // Мгновенное чтение текущего значения StateFlow
@@ -358,36 +277,25 @@ class SimIdentityRepositoryImpl
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
-                    fallbackMutex.withLock {
-                        fallbackCache[slot]?.let {
-                            AppLogger.d("SimIdentityRepository: returning cached fallback for slot $slot")
-                            return it
-                        }
-                    }
+                    val message = "Identity seed unavailable for slot $slot"
+                    AppLogger.e(message, null)
+                    throw IllegalStateException(message)
                 }
 
                 // If not found in cache, try direct resolution
-                val resolved = findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
+                val resolved =
+                    findActiveIdentityInternal(slot, seed) ?: error("No active SIM in slot $slot")
 
-                val isFallback = resolved.source == IdentitySource.SLOT_FALLBACK
-                val isInvalid = resolved.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)
-                if (!isFallback && !isInvalid) {
-                    if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
-                        saveSimIdentitiesInfo(listOf(resolved))
-                    }
+                if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
+                    saveSimIdentitiesInfo(listOf(resolved))
                 }
 
-                if (seed is SeedResult.Fallback) {
-                    fallbackMutex.withLock {
-                        fallbackCache[slot] = resolved
-                    }
-                }
                 return resolved
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("getSimIdentity failed for slot $slot", e)
-                return createFallbackIdentity(slot, "sim_$slot")
+                throw e
             }
         }
 
@@ -567,7 +475,14 @@ class SimIdentityRepositoryImpl
          *
          * @throws java.io.IOException if DataStore write fails after internal retries within [saveSimIdentitiesInfo].
          */
+        @Suppress("ReturnCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
+            if (seed is SeedResult.Fallback) {
+                AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
+                return emptyList()
+            }
+
+            val seedValue = (seed as SeedResult.Real).value
             val infoList =
                 permissionManager
                     .getActiveSubscriptions()
@@ -575,14 +490,7 @@ class SimIdentityRepositoryImpl
 
             val identities =
                 infoList.map { info ->
-                    when (seed) {
-                        is SeedResult.Fallback -> {
-                            createFallbackIdentity(info.simSlotIndex, "sim_${info.simSlotIndex}")
-                        }
-                        is SeedResult.Real -> {
-                            SimIdentityUtils.createIdentityFromInfo(info, seed.value)
-                        }
-                    }
+                    SimIdentityUtils.createIdentityFromInfo(info, seedValue)
                 }
 
             val currentIdentities = identities.asSequence().map { it.stableId }.toSet()

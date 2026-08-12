@@ -71,7 +71,6 @@ object Constants {
     object Flow {
         const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MS = 5_000L
         const val DEBOUNCE_MS = 300L
-        const val RETRY_TIMEOUT_MS = 5_000L
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
 
@@ -88,9 +87,6 @@ object Constants {
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
-        const val BANNER_RETRY_ATTEMPTS = 5L
-        const val BANNER_RETRY_DELAY_MS = 1_000L
-        const val WIDGET_RETRY_ATTEMPTS = 5L
         const val WIDGET_RETRY_DELAY_MS = 5_000L
     }
 

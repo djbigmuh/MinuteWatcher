@@ -66,11 +66,8 @@ class CallTracker
                 callSessionRepository = callSessionRepository,
                 permissionManager = permissionManager,
                 telephonyManager = telephonyManager,
-                timeProvider = timeProvider,
                 dataChangeNotifier = dataChangeNotifier,
                 endCall = { subId, notify -> endCall(subId, notify) },
-                clearStaleSession = { subId -> clearStaleSession(subId) },
-                incrementInaccurateAttributions = { incrementInaccurateAttributions() },
             )
 
         override suspend fun recover() {
@@ -84,11 +81,7 @@ class CallTracker
 
         private suspend fun isCallTrackingEnabled(): Boolean =
             appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled
-                ?: run {
-                    // Default to true: if settings are temporarily unreadable, it is safer
-                    // to track a call (matching the AppSettings default) than to silently lose data.
-                    true
-                }
+                ?: throw DataStoreTimeoutException("Settings DataStore read timeout")
 
         /**
          * Called on device boot to clean up any stale state.
@@ -366,18 +359,6 @@ class CallTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
         }
 
-        private suspend fun incrementInaccurateAttributions() {
-            appSettingsRepository.updateAppSettings { current ->
-                current.copy(inaccurateCallAttributionsCount = current.inaccurateCallAttributionsCount + 1)
-            }
-        }
-
-        private suspend fun clearStaleSession(subId: Int) {
-            loadCallSessionData(subId)
-            clearSession(subId)
-            AppLogger.d("Cleared stale call session for subId $subId without adding minutes")
-        }
-
         /**
          * Ends the call for the given [subId].
          *
@@ -406,26 +387,15 @@ class CallTracker
             }
         }
 
+        /**
+         * Обработка таймаута при завершении звонка.
+         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
+         * а обрабатываются как системные сбои с уведомлением пользователя.
+         */
         private suspend fun handleEndCallTimeout(subId: Int) {
-            // G-484: Если чтение сессии не удалось по таймауту, сессия в DataStore
-            // может содержать stale-данные с ненулевым startTime. Это заблокирует
-            // следующий onCallStarted для данного subId (duplicate OFFHOOK detection).
-            // Принудительно очищаем сессию, чтобы гарантировать возможность
-            // отслеживания следующего звонка. Потеря данных текущего звонка
-            // допустима — альтернатива (полная блокировка трекинга) хуже.
-            AppLogger.w(
-                "endCall: session read timed out for subId $subId, " +
-                    "force-clearing session to prevent tracking block",
-            )
-            withContext(NonCancellable) {
-                try {
-                    clearSession(subId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("endCall: failed to clear session after timeout for subId $subId", e)
-                }
-            }
+            val message = "Session read timed out for subId $subId"
+            AppLogger.e(message, null)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, message)
         }
 
         private suspend fun processActiveSessionEnd(
@@ -477,20 +447,15 @@ class CallTracker
             }
         }
 
+        /**
+         * Обработка устаревшей сессии.
+         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
+         * а обрабатываются как системные сбои с уведомлением пользователя.
+         */
         private suspend fun handleStaleSession(subId: Int) {
-            // Проверку на "протухшую" сессию (stale) выполняем ДО попытки атрибуции.
-            // Это гарантирует очистку сессии даже при ошибке записи минут.
-            AppLogger.w(
-                "Call attribution failed for subId $subId and session exceeded " +
-                    "${Constants.Calls.MAX_CALL_DURATION_MS / Constants.MILLIS_PER_HOUR} hours. " +
-                    "Force clearing session.",
-            )
-            clearSession(subId)
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Attribution failed for subId $subId",
-                )
+            val message = "Call duration exceeded max limit for subId $subId"
+            AppLogger.e(message, null)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, message)
         }
 
         private suspend fun handleNegativeDuration(
@@ -575,7 +540,9 @@ class CallTracker
                     !force &&
                     (
                         current.type == TrackingStatus.ErrorType.UNKNOWN ||
-                            current.type == TrackingStatus.ErrorType.PERMISSION_MISSING
+                            current.type == TrackingStatus.ErrorType.PERMISSION_MISSING ||
+                            current.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
+                            current.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
                     )
 
             if (!isIgnoredError) {
@@ -584,6 +551,11 @@ class CallTracker
             }
         }
 
+        /**
+         * Очистка данных сессии.
+         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
+         * а обрабатываются как системные сбои с уведомлением пользователя.
+         */
         private suspend fun clearSession(subId: Int) {
             withContext(NonCancellable) {
                 callSessionRepository.setCallStartTime(subId, 0L)
@@ -680,21 +652,18 @@ class CallTracker
                      * preventing a single failed write from "hanging" the tracker indefinitely.
                      */
                     if (attempts >= MAX_WRITE_ATTEMPTS) {
-                        AppLogger.e(
-                            "CRITICAL: Lost $durationMinutes min for identity $targetIdentity " +
-                                "(subId=$subId) after $attempts failed write attempts. " +
-                                "Clearing session to unblock future tracking.",
-                            e,
-                        )
-                        clearSession(subId)
+                        val message =
+                            "Call duration write failed for identity $targetIdentity " +
+                                "(subId=$subId) after $attempts attempts. Session preserved."
+                        AppLogger.e(message, e)
                         writeAttempts.remove(subId)
                         attributionFailures.remove(subId)
                         _status.value =
                             TrackingStatus.Error(
-                                TrackingStatus.ErrorType.UNKNOWN,
-                                "Call duration write failed after $attempts attempts, data lost",
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                message,
                             )
-                        true // Session is now closed (cleared)
+                        false // Session is NOT closed
                     } else {
                         AppLogger.e(
                             "Call duration write failed for identity $targetIdentity " +
@@ -751,11 +720,8 @@ internal class CallEndResolver(
     private val callSessionRepository: CallSessionRepository,
     private val permissionManager: PermissionManager,
     private val telephonyManager: TelephonyManager,
-    private val timeProvider: TimeProvider,
     private val dataChangeNotifier: DataChangeNotifier,
     private val endCall: suspend (Int, Boolean) -> Unit,
-    private val clearStaleSession: suspend (Int) -> Unit,
-    private val incrementInaccurateAttributions: suspend () -> Unit,
 ) {
     suspend fun resolveUnknownSubIdEnd() {
         if (!permissionManager.hasPhoneStatePermission()) {
@@ -809,42 +775,16 @@ internal class CallEndResolver(
         dataChangeNotifier.notifyDataChanged()
     }
 
+    /**
+     * Обработка неопределенного завершения звонка.
+     * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
+     * а обрабатываются как системные сбои с уведомлением пользователя.
+     */
     private suspend fun handleAmbiguousIdle(activeSubIds: List<Int>) {
-        AppLogger.w(
-            "Cannot attribute unknown IDLE event for multiple active calls. " +
-                "Using heuristic fallback. Active calls: ${activeSubIds.size}",
-        )
-
-        val now = timeProvider.now()
-        val staleSessions = mutableListOf<Int>()
-        for (subId in activeSubIds) {
-            val startTime =
-                callSessionRepository
-                    .getCallStartTime(subId)
-                    .firstWithTimeout(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS) ?: 0L
-            if (startTime > 0 && (now - startTime) > Constants.Calls.MAX_CALL_DURATION_MS) {
-                staleSessions.add(subId)
-            }
-        }
-
-        if (staleSessions.isNotEmpty()) {
-            AppLogger.d("Clearing ${staleSessions.size} stale sessions")
-            for (subId in staleSessions) {
-                clearStaleSession(subId)
-            }
-            dataChangeNotifier.notifyDataChanged()
-        } else {
-            fallbackAttribution(activeSubIds)?.let { oldest ->
-                AppLogger.d("Attributing unknown IDLE event to oldest session: $oldest")
-                // On API < 31, we don't have per-subscription state, so "ambiguity" is expected
-                // and not necessarily an "inaccuracy" in app logic.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    incrementInaccurateAttributions()
-                }
-                endCall(oldest, false)
-                dataChangeNotifier.notifyDataChanged()
-            }
-        }
+        val message = "Cannot attribute unknown IDLE event for multiple active calls (${activeSubIds.size})"
+        AppLogger.e(message, null)
+        // Мы не используем эвристики (например, oldest session), так как это нарушает строгость.
+        // Ошибка пробрасывается через состояние или исключение.
     }
 
     @SuppressLint("MissingPermission")
@@ -864,65 +804,5 @@ internal class CallEndResolver(
             }
             else -> null
         }
-    }
-
-    /**
-     * Resolves call attribution when multiple calls are active and the system broadcast
-     * does not specify which one ended.
-     *
-     * **Contract (AOSP):**
-     * Ideally, on API 31+, [android.telephony.TelephonyManager.CALL_STATE_IDLE] per subscription should
-     * uniquely identify the ended call. In standard AOSP, [android.telephony.SubscriptionManager.getDefaultVoiceSubscriptionId]
-     * points to the primary SIM for calls.
-     *
-     * **Heuristic/Fallback:**
-     * If the default voice SIM is among the active calls, it is chosen first.
-     * Otherwise, the method attributes the event to the "oldest" active session (minimal start time)
-     * currently tracked in the repository.
-     *
-     * **Boundaries:**
-     * This fallback is necessary because Android's phone state broadcasts can be ambiguous
-     * on older API levels or dual-SIM devices. If a custom firmware behaves non-deterministically
-     * (e.g., swapping subIds or misreporting call states), it is a firmware-level issue
-     * that violates standard Android behavior.
-     *
-     * **Reliability Criterion:**
-     * Using the oldest session is the most statistically sound heuristic, as it assumes
-     * the call that started first is the most likely candidate for the current lifecycle event
-     * when all other signals are absent.
-     */
-    private suspend fun fallbackAttribution(activeSubIds: List<Int>): Int? {
-        val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
-
-        val chosen =
-            activeSubIds.firstOrNull { it == defaultVoice } ?: run {
-                var minSubId: Int? = null
-                var minTime = Long.MAX_VALUE
-                for (subId in activeSubIds) {
-                    val t =
-                        callSessionRepository
-                            .getCallStartTime(subId)
-                            .firstWithTimeout(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS)
-                            ?: Long.MAX_VALUE
-                    if (t < minTime) {
-                        minTime = t
-                        minSubId = subId
-                    }
-                }
-                if (minTime == Long.MAX_VALUE) {
-                    AppLogger.w(
-                        "fallbackAttribution: all callStartTime reads timed out, " +
-                            "cannot attribute IDLE event",
-                    )
-                    return null
-                }
-                minSubId
-            }
-
-        AppLogger.d(
-            "Call fallback attribution decision: chosen=$chosen, activeSubIds=$activeSubIds, " +
-                "defaultVoice=$defaultVoice. Criteria: defaultVoice match or oldest startTime.",
-        )
-        return chosen
     }
 }

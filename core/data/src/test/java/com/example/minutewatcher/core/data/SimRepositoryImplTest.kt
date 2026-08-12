@@ -234,8 +234,8 @@ class SimRepositoryImplTest {
             assertEquals(0f, usage.trafficAdjustmentGb)
         }
 
-    @Test
-    fun testGetSimIdentity_SavesFallback_WhenPermissionsMissing() =
+    @Test(expected = IllegalStateException::class)
+    fun testGetSimIdentity_Throws_WhenPermissionsMissing() =
         runTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
@@ -251,10 +251,7 @@ class SimRepositoryImplTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
-            val identity = identityRepo.getSimIdentity(0)
-
-            assertEquals("sim_0", identity.stableId)
-            assertEquals(com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK, identity.source)
+            identityRepo.getSimIdentity(0)
         }
 
     @Test
@@ -292,8 +289,8 @@ class SimRepositoryImplTest {
             assertEquals(0, sims.first().slotIndex)
         }
 
-    @Test
-    fun `getSimIdentity with invalid slot returns invalid_slot stableId`() =
+    @Test(expected = IllegalArgumentException::class)
+    fun `getSimIdentity with invalid slot throws IllegalArgumentException`() =
         runTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
@@ -306,7 +303,6 @@ class SimRepositoryImplTest {
                     scope = backgroundScope,
                 )
 
-            val identity = identityRepo.getSimIdentity(-1)
-            assertEquals("invalid_slot_-1", identity.stableId)
+            identityRepo.getSimIdentity(-1)
         }
 }

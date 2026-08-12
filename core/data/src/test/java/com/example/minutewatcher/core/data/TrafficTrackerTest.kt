@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -70,7 +71,7 @@ class TrafficTrackerTest {
 
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
 
-        runTest(testDispatcher) {
+        runBlocking {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         }
@@ -330,10 +331,10 @@ class TrafficTrackerTest {
 
             // Attempt 1: Stats unavailable
             tracker.updateTrafficUsage()
-            // Now we expect a baseline reset to -1L on failure
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
-            // skipDelta is true, so status is Active
-            assertEquals(TrackingStatus.Active, tracker.status.value)
+            // We expect an error status and baseline is NOT set to -1L anymore
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            assertEquals("Stats unavailable", (tracker.status.value as TrackingStatus.Error).message)
 
             // Attempt 2: Stats finally available
             tracker.updateTrafficUsage()
@@ -365,18 +366,15 @@ class TrafficTrackerTest {
 
             // Attempt 1: Stats unavailable
             tracker.updateTrafficUsage()
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
-            // skipDelta is true, so status is Active
-            assertEquals(TrackingStatus.Active, tracker.status.value)
+            // Error status, baseline NOT reset
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+            assertTrue(tracker.status.value is TrackingStatus.Error)
 
             // Attempt 2: Stats still unavailable
             tracker.updateTrafficUsage()
-            // skipDelta is false now, so processTrafficUpdate -> handleBaselineRetry is called
             assertTrue(tracker.status.value is TrackingStatus.Error)
             assertEquals("Stats unavailable, retry pending", (tracker.status.value as TrackingStatus.Error).message)
-            // It should be Error status because it's in baselineNeedsRetry.
-            // But it won't call setLastTotalBytes again until stats are Success.
-            verify(simUsageResetRepository, times(1)).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
 
             // Attempt 3: Stats finally become available
             tracker.updateTrafficUsage()
@@ -470,9 +468,9 @@ class TrafficTrackerTest {
             // Attempt: Stats unavailable
             tracker.updateTrafficUsage()
 
-            // Assert: baseline set to -1L, AND lastDataSubId UPDATED to 2
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
-            assertEquals(TrackingStatus.Active, tracker.status.value)
+            // Assert: baseline NOT set to -1L, AND lastDataSubId UPDATED to 2
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+            assertTrue(tracker.status.value is TrackingStatus.Error)
 
             val inOrder = inOrder(networkStatsProvider, callSessionRepository)
             // Должен быть вызов из updateTrafficUsage (initial)
@@ -493,10 +491,9 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `getCurrentMobileBytes uses lookback window on first run`() =
+    fun `getCurrentMobileBytes uses now on first run`() =
         runTest(testDispatcher) {
             val now = timeProvider.now()
-            val lookbackStart = now - (Constants.Traffic.LOOKBACK_DAYS * Constants.MILLIS_PER_DAY)
 
             // Usage with lastResetDate = 0
             whenever(
@@ -507,8 +504,8 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            // Verify query was called with lookbackStart
-            verify(networkStatsProvider).queryMobileBytes(eq(lookbackStart), eq(now))
+            // Verify query was called with now
+            verify(networkStatsProvider).queryMobileBytes(eq(now), eq(now))
         }
 
     @Test
@@ -555,8 +552,9 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            // Verify setLastTotalBytes(sim_1, -1L) called AND updateLastDataSubId(2) called
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            // Verify status is Error, baseline NOT reset
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
             verify(callSessionRepository).setLastDataSubId(2)
         }
 
@@ -582,9 +580,9 @@ class TrafficTrackerTest {
             // Act
             tracker.updateTrafficUsage()
 
-            // Assert: handleRetryLimitExceeded should have been called
-            // verify setLastTotalBytes(sim_1, -1L) and updateLastDataSubId(2)
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(-1L))
+            // Assert: verify status is Error, baseline NOT reset
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
             verify(callSessionRepository).setLastDataSubId(2)
 
             // Check that next update doesn't trigger SIM change again
@@ -593,6 +591,7 @@ class TrafficTrackerTest {
         }
 
     @Test
+    @Suppress("UNUSED_VARIABLE")
     fun `updateTrafficUsage calls observeActiveSims only once and checks permissions first`() =
         runTest(testDispatcher) {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
@@ -688,10 +687,10 @@ class TrafficTrackerTest {
             // Mock repository to reflect updates in-memory
             whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(currentStoredValue)
             whenever(simUsageResetRepository.setLastTotalBytes(eq("sim_0"), any())).thenAnswer {
-                currentStoredValue.value = it.getArgument<Long>(1)
+                currentStoredValue.value = it.getArgument(1)
             }
             whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(eq("sim_0"), any(), any())).thenAnswer {
-                currentStoredValue.value = it.getArgument<Long>(2)
+                currentStoredValue.value = it.getArgument(2)
             }
 
             // Mock network stats: first call sets 5000, second call adds 100000 (total 105000)

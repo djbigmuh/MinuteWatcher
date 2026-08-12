@@ -18,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -127,12 +128,14 @@ private fun rememberSimLimitState(
             "%.1f".format(gb).replace(",", ".")
         }
 
-    return rememberSaveable(saver = SimLimitState.Saver, key = "sim_limit_$slot") {
-        SimLimitState(
-            initialMinutesText = initialMinutes.toString(),
-            initialTrafficText = initialTrafficText,
-            initialRolloverEnabled = initialRolloverEnabled,
-        )
+    return key(slot) {
+        rememberSaveable(saver = SimLimitState.Saver) {
+            SimLimitState(
+                initialMinutesText = initialMinutes.toString(),
+                initialTrafficText = initialTrafficText,
+                initialRolloverEnabled = initialRolloverEnabled,
+            )
+        }
     }
 }
 
