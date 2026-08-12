@@ -400,10 +400,11 @@ class SimIdentityRepositoryImpl
                     }
                 }
 
-                // Обновление настроек и запуск миграции выполняем атомарно под замком.
+                // Обновление настроек выполняем атомарно под замком.
                 updatePrefsWithIdentities(toUpdate)
-                performMigrationsIfNeeded(toMigrate)
             }
+            // Запуск миграции выносим за пределы мьютекса, так как она может быть медленной.
+            performMigrationsIfNeeded(toMigrate)
         }
 
         private suspend fun fetchCurrentPrefs(timeoutMs: Long = Constants.Flow.LONG_TIMEOUT_MS): Preferences? =

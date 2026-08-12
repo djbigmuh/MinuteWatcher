@@ -13,16 +13,15 @@ import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.util.SnapshotUtils
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -39,7 +38,6 @@ class MainViewModel
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val isInitialized = AtomicBoolean(false)
-        private val hashMutex = Mutex()
         private var resumeRefreshJob: Job? = null
 
         private val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
@@ -104,29 +102,35 @@ class MainViewModel
 
                     autoResetScheduler.checkOnStart()
 
-                    var result = controllers.refresh.refreshSimCardsInternal()
+                    var result: RefreshResult? = null
                     var retryDelay = Constants.Flow.RETRY_DELAY_MS
-                    repeat(MAX_INIT_RETRIES) {
-                        if (result !is RefreshResult.Timeout) return@repeat
-
-                        AppLogger.d("initializeApp: refresh timed out, retrying in ${retryDelay}ms")
-                        kotlinx.coroutines.delay(retryDelay.milliseconds)
+                    for (attempt in 0..MAX_INIT_RETRIES) {
                         result = controllers.refresh.refreshSimCardsInternal()
-                        retryDelay *= 2
-                    }
 
-                    if (result is RefreshResult.Timeout) {
-                        AppLogger.w("initializeApp: refresh timed out after all retries")
-                    }
+                        if (result is RefreshResult.Success) break
 
-                    result?.let {
-                        val newHash = SnapshotUtils.calculateContentHash(it.snapshot)
-                        hashMutex.withLock {
-                            lastSnapshotHash = newHash
+                        if (attempt < MAX_INIT_RETRIES) {
+                            val reason =
+                                when (result) {
+                                    is RefreshResult.Timeout -> "timeout"
+                                    null -> "busy/error"
+                                }
+                            AppLogger.d(
+                                "initializeApp: refresh failed ($reason), " +
+                                    "retrying in ${retryDelay}ms (attempt ${attempt + 1}/$MAX_INIT_RETRIES)",
+                            )
+                            kotlinx.coroutines.delay(retryDelay.milliseconds)
+                            retryDelay *= 2
                         }
-                        if (it is RefreshResult.Success && lastRefreshAt == 0L) {
+                    }
+
+                    if (result is RefreshResult.Success) {
+                        if (lastRefreshAt == 0L) {
                             lastRefreshAt = timeProvider.elapsedRealtime()
                         }
+                    } else {
+                        val reason = if (result is RefreshResult.Timeout) "Timeout" else "Error/Busy"
+                        AppLogger.e("initializeApp: refresh failed after all retries ($reason)")
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -167,33 +171,41 @@ class MainViewModel
         }
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
+            val currentTimestamp =
+                controllers
+                    .simData
+                    .usageStateRepository
+                    .observeSnapshot()
+                    .value
+                    .timestamp
             val result = controllers.refresh.refreshSimCardsInternal()
 
             if (result == null) {
-                AppLogger.w("refreshAndNotify: refresh already in progress, skipping widget notification")
-                return
+                AppLogger.d("refreshAndNotify: refresh already in progress, waiting for new snapshot")
+                val newSnapshot =
+                    withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
+                        controllers.simData.usageStateRepository
+                            .observeSnapshot()
+                            .first { it.timestamp > currentTimestamp }
+                    }
+                if (newSnapshot == null) {
+                    AppLogger.w("refreshAndNotify: timed out waiting for new snapshot, forcing widget notification")
+                    controllers.simData.notifyDataChanged(force = force)
+                    return
+                }
             }
 
             if (result is RefreshResult.Success || result is RefreshResult.Timeout) {
                 lastRefreshAt = timeProvider.elapsedRealtime()
             }
 
-            val newHash = SnapshotUtils.calculateContentHash(result.snapshot)
-            val hasChanged =
-                hashMutex.withLock {
-                    val changed = newHash != lastSnapshotHash
-                    lastSnapshotHash = newHash
-                    changed
-                }
-
             /*
              * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).
-             * force=false уведомляет систему об изменениях, только если данные реально изменились,
-             * чтобы избежать лишних перерисовок виджета в UpdateCoordinator.
+             * force=false уведомляет систему об изменениях.
+             * UpdateCoordinator в core-data берет на себя ответственность за сравнение хэшей
+             * и обновление виджета только при реальном изменении данных.
              */
-            if (force || hasChanged) {
-                controllers.simData.notifyDataChanged(force = force)
-            }
+            controllers.simData.notifyDataChanged(force = force)
         }
 
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
@@ -251,12 +263,6 @@ class MainViewModel
 
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
-        private var lastSnapshotHash: Int
-            get() = savedStateHandle[KEY_LAST_SNAPSHOT_HASH] ?: -1
-            set(value) {
-                savedStateHandle[KEY_LAST_SNAPSHOT_HASH] = value
-            }
-
         private var lastRefreshAt: Long
             get() = savedStateHandle[KEY_LAST_REFRESH_ELAPSED] ?: 0L
             set(value) {
@@ -265,7 +271,6 @@ class MainViewModel
 
         companion object {
             internal const val KEY_LAST_REFRESH_ELAPSED = "last_refresh_elapsed"
-            internal const val KEY_LAST_SNAPSHOT_HASH = "last_snapshot_hash"
             private const val MAX_INIT_RETRIES = 3
         }
 

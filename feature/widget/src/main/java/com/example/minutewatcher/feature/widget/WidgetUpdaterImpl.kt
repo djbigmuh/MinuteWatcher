@@ -10,8 +10,10 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -46,18 +48,19 @@ class WidgetUpdaterImpl
             var shouldRetryLoop = true
 
             while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && shouldRetryLoop) {
-                val (success, shouldRetryResult) =
+                val updateResult =
                     updateMutex.withLock {
                         try {
-                            val result = safeUpdateAll(context)
-                            handleUpdateResult(result)
+                            safeUpdateAll(context)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             AppLogger.e("Unexpected error updating widgets", e)
-                            Pair(false, true)
+                            UpdateResult.GenericFailure
                         }
                     }
+
+                val (success, shouldRetryResult) = handleUpdateResult(updateResult)
 
                 if (success) {
                     isSuccessful = true
@@ -96,9 +99,10 @@ class WidgetUpdaterImpl
                                 "Flag set to trigger simplified layout on next update.",
                         )
                         // G-484: Immediate re-render to apply SIMPLE layout right away.
-                        // Wait for StateFlow update to avoid race condition where re-render still sees old flag.
-                        kotlinx.coroutines.yield()
-                        delay(Constants.Widget.RACE_DELAY_MS.milliseconds)
+                        // Wait for StateFlow update to ensure re-render sees the new flag.
+                        withTimeoutOrNull(Constants.Widget.RACE_DELAY_MS.milliseconds) {
+                            appSettingsRepository.observeAppSettings().first { it.widgetLimitExceeded }
+                        }
 
                         var renderSucceeded = true
                         try {

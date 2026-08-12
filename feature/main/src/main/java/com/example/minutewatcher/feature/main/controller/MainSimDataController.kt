@@ -38,7 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainSimDataController
     @Inject
     constructor(
-        usageStateRepository: UsageStateRepository,
+        val usageStateRepository: UsageStateRepository,
         private val trackingRecoveryController: TrackingRecoveryController,
         private val simIdentityRepository: SimIdentityRepository,
         private val simLimitsRepository: SimLimitsRepository,

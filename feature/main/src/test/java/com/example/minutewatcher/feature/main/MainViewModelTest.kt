@@ -648,11 +648,10 @@ class MainViewModelTest {
 
             testScheduler.advanceUntilIdle()
 
-            // Even if multiple calls started, only one should have resulted in notifyDataChanged(true, false)
-            // due to the hash change check being atomic with the update.
-            // Note: the controller mutex handles the sequential execution of refreshSimCardsInternal,
-            // but the hash check in ViewModel is what we're testing atomicity for.
-            verify(dataChangeNotifier, times(1)).notifyDataChanged(eq(true), eq(false))
+            // Since MainViewModel now delegates hash comparison to UpdateCoordinator,
+            // it will call notifyDataChanged for every successful refresh.
+            // The coordinator mock will be called twice here.
+            verify(dataChangeNotifier, times(2)).notifyDataChanged(eq(true), eq(false))
         }
 
     @Test

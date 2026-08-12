@@ -8,7 +8,9 @@ import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -55,10 +57,17 @@ class MainBannerControllerTest {
                     backgroundScope,
                 )
 
-            // With UnconfinedTestDispatcher and SharingStarted.Eagerly, it should have the value immediately
+            // Start collecting to activate WhileSubscribed
+            backgroundScope.launch { controller.trackingBannerState.collect {} }
+
+            // With UnconfinedTestDispatcher and SharingStarted.Eagerly (now WhileSubscribed),
+            // we might need a small advance or runCurrent to ensure collection started.
+            testScheduler.runCurrent()
+
             assertEquals(false, controller.trackingBannerState.value.showUsageAccessBanner)
 
             usageStatsPermissionFlow.value = false
+            testScheduler.runCurrent()
             // Updates should propagate immediately with Unconfined
             assertEquals(true, controller.trackingBannerState.value.showUsageAccessBanner)
         }
@@ -79,12 +88,16 @@ class MainBannerControllerTest {
             whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(dynamicFlow)
 
             val startTime = testScheduler.currentTime
-            MainBannerController(
-                trackingStatusRepository,
-                permissionRepository,
-                appSettingsRepository,
-                backgroundScope,
-            )
+            val controller =
+                MainBannerController(
+                    trackingStatusRepository,
+                    permissionRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                )
+
+            backgroundScope.launch { controller.trackingBannerState.collect {} }
+            testScheduler.runCurrent()
 
             // With StandardTestDispatcher (default in runTest now), we advance time
             // Wait, runTest default dispatcher is NOT necessarily Standard if I don't specify it?

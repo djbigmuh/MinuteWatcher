@@ -49,8 +49,14 @@ class TrafficTracker
 
         private val simChangeMutex = Mutex()
 
+        private suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
+
         private val trafficUpdateMutex = Mutex()
 
+        /**
+         * The subscription ID of the last default data SIM seen by the tracker.
+         * Modified only within [withSimChangeLock]. Do not access without the lock.
+         */
         private var inMemoryLastDataSubId: Int = -1
 
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
@@ -68,11 +74,13 @@ class TrafficTracker
                 return
             }
             trafficUpdateMutex.withLock {
-                simChangeMutex.withLock {
+                withSimChangeLock {
                     try {
-                        if (!checkPermissions()) return@withLock
+                        if (!checkPermissions()) return@withSimChangeLock
 
-                        val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return@withLock
+                        val usage =
+                            simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                                ?: return@withSimChangeLock
                         val statsResult = getCurrentMobileBytes(usage.lastResetDate)
                         if (statsResult is StatsResult.Success) {
                             val currentBytes = statsResult.bytes
@@ -145,7 +153,7 @@ class TrafficTracker
                         return
                     }
 
-                    simChangeMutex.withLock {
+                    withSimChangeLock {
                         ensureInMemoryLastDataSubId()
                         val savedLastDataSubId = inMemoryLastDataSubId
                         val isSimChanged =
@@ -482,10 +490,7 @@ class TrafficTracker
         private suspend fun ensureInMemoryLastDataSubId() {
             if (inMemoryLastDataSubId != -1) return
 
-            val savedId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
-            if (inMemoryLastDataSubId == -1) {
-                inMemoryLastDataSubId = savedId
-            }
+            inMemoryLastDataSubId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
         }
 
         private suspend fun resetStatsAfterSimChange(

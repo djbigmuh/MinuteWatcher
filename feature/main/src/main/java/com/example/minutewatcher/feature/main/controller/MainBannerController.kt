@@ -71,11 +71,9 @@ class MainBannerController
          *
          * Стратегия Retry:
          * 1. Экспоненциальная задержка (exponential backoff), начиная с 1с, с ограничением [MAX_RETRY_DELAY_MS].
-         * 2. Если количество попыток достигает [MAX_ATTEMPTS_BEFORE_FALLBACK], в UI эмитится состояние
-         *    по умолчанию [TrackingBannerState]. Это предотвращает «зависание» интерфейса в состоянии
-         *    загрузки или ошибки при длительных сбоях в репозиториях.
-         * 3. Попытки продолжаются бесконечно, чтобы UI мог автоматически восстановиться после
+         * 2. Попытки продолжаются бесконечно, чтобы UI мог автоматически восстановиться после
          *    устранения причины сбоя.
+         * 3. UI сохраняет последнее успешное состояние во время повторных попыток, предотвращая мерцание.
          */
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
@@ -97,29 +95,20 @@ class MainBannerController
             }.retryWhen { cause, attempt ->
                 if (cause is CancellationException) throw cause
 
-                AppLogger.e("RETRY ($attempt): Failed to compute banner state", cause)
-
-                // Эмитим дефолтное состояние после нескольких неудачных попыток,
-                // чтобы UI не застыл в неопределенности, но продолжаем попытки.
-                if (attempt >= MAX_ATTEMPTS_BEFORE_FALLBACK) {
-                    emit(TrackingBannerState())
-                }
+                AppLogger.e("Failed to compute banner state (attempt $attempt)", cause)
 
                 val delayMillis =
                     (2.0.pow(attempt.toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis)
-                true // Retrying infinitely with capped delay
+                true // Retrying infinitely with capped delay; UI retains last successful state
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.Eagerly,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                 initialValue = TrackingBannerState(),
             )
 
         companion object {
-            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal const val MAX_ATTEMPTS_BEFORE_FALLBACK = 5L
-
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val MAX_RETRY_DELAY_MS = 30_000L
         }

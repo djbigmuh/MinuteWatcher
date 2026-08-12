@@ -125,13 +125,13 @@ class CallTracker
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 } finally {
-                    @Suppress("ThrowingExceptionFromFinally")
                     withContext(NonCancellable) {
                         try {
                             if ((_status.value !is TrackingStatus.Error) && !justStarted) {
                                 refreshStatus()
                             }
                         } catch (e: CancellationException) {
+                            @Suppress("ThrowingExceptionFromFinally")
                             throw e
                         } catch (e: Exception) {
                             AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
@@ -283,13 +283,13 @@ class CallTracker
                         }
                     }
                 } finally {
-                    @Suppress("ThrowingExceptionFromFinally")
                     withContext(NonCancellable) {
                         try {
                             if (!errorSetInThisCall) {
                                 refreshStatus()
                             }
                         } catch (e: CancellationException) {
+                            @Suppress("ThrowingExceptionFromFinally")
                             throw e
                         } catch (e: Exception) {
                             AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
