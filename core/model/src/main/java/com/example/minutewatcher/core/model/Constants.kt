@@ -100,6 +100,7 @@ object Constants {
         const val MAX_SUPPORTED_SIM_SLOTS = 10
         const val MOCK_SUB_ID_BASE = 1000
         val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
+        const val INVALID_SLOT_IDENTITY_PREFIX = "invalid_slot_"
     }
 
     const val MILLIS_PER_SECOND = 1000L

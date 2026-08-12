@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,7 +20,7 @@ class SimWidgetVisibilityRepositoryImpl
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimWidgetVisibilityRepository {
         override fun getSimSettings(identity: String): Flow<SimSettingsState> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimSettings called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(SimSettingsState(showSim = false))
             }
@@ -39,7 +40,7 @@ class SimWidgetVisibilityRepositoryImpl
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
                 identities
-                    .filter { !it.startsWith("invalid_slot") }
+                    .filter { !it.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX) }
                     .mapNotNull { identity ->
                         val showSim = prefs[WidgetSettingsKeys.showSimKey(identity)]
                         if (showSim == null) return@mapNotNull null
@@ -60,7 +61,7 @@ class SimWidgetVisibilityRepositoryImpl
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
             dataStore.edit { prefs ->
                 settingsMap.forEach { (identity, settings) ->
-                    if (identity.startsWith("invalid_slot")) {
+                    if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                         AppLogger.w("setSimSettingsBatch skipped for invalid identity: $identity")
                         return@forEach
                     }

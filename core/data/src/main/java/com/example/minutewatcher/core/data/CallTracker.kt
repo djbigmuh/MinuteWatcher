@@ -29,6 +29,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -56,6 +57,8 @@ class CallTracker
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+        private val writeAttempts = ConcurrentHashMap<Int, Int>()
 
         private val callMutex = Mutex()
 
@@ -535,7 +538,7 @@ class CallTracker
          * Uses ceiling rounding for minutes (1 sec = 1 min, 61 sec = 2 min).
          * This follows the most common carrier billing practices.
          */
-        @Suppress("ReturnCount")
+        @Suppress("LongMethod", "ReturnCount")
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun processCallDuration(
             durationSeconds: Int,
@@ -554,11 +557,13 @@ class CallTracker
 
             if (durationSeconds == 0) {
                 AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
+                writeAttempts.remove(subId)
                 return true
             }
 
             if (!isCallTrackingEnabled()) {
                 AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
+                writeAttempts.remove(subId)
                 return true
             }
             val durationMinutes =
@@ -574,26 +579,61 @@ class CallTracker
                     if (notify) {
                         dataChangeNotifier.notifyDataChanged()
                     }
+                    writeAttempts.remove(subId)
                     true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e(
-                        "CRITICAL: Lost $durationMinutes min for identity $targetIdentity (subId=$subId). " +
-                            "DataStore write failed.",
-                        e,
-                    )
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Call duration write failed, session preserved",
+                    val attempts = (writeAttempts[subId] ?: 0) + 1
+                    writeAttempts[subId] = attempts
+
+                    /**
+                     * Handle DataStore write failure with a retry limit.
+                     *
+                     * Strategy:
+                     * 1. **Preserve Session**: Initially, we don't clear the session in DataStore, giving a chance
+                     *    for a retry on the next IDLE event (if any).
+                     * 2. **Avoid Deadlock**: However, an uncleared session blocks the tracking of the NEXT call
+                     *    on the same subId (it will be seen as a duplicate OFFHOOK).
+                     * 3. **Terminal Cleanup**: After [MAX_WRITE_ATTEMPTS], we prioritize future tracking over
+                     *    the current lost record. We clear the session and accept the data loss.
+                     *
+                     * This is a strict protection against permanent tracking loss for a specific SIM,
+                     * preventing a single failed write from "hanging" the tracker indefinitely.
+                     */
+                    if (attempts >= MAX_WRITE_ATTEMPTS) {
+                        AppLogger.e(
+                            "CRITICAL: Lost $durationMinutes min for identity $targetIdentity (subId=$subId) " +
+                                "after $attempts failed write attempts. Clearing session to unblock future tracking.",
+                            e,
                         )
-                    false
+                        clearSession(subId)
+                        writeAttempts.remove(subId)
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Call duration write failed after $attempts attempts, data lost",
+                            )
+                        true // Session is now closed (cleared)
+                    } else {
+                        AppLogger.e(
+                            "Call duration write failed for identity $targetIdentity (subId=$subId, attempt $attempts). " +
+                                "Session preserved for retry.",
+                            e,
+                        )
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Call duration write failed, session preserved",
+                            )
+                        false
+                    }
                 }
             } else {
                 AppLogger.e("Could not attribute call duration for subId $subId")
                 _status.value =
                     TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Attribution failed for subId $subId")
+                writeAttempts.remove(subId)
                 return false
             }
         }
@@ -601,6 +641,7 @@ class CallTracker
         companion object {
             private const val READ_RETRY_ATTEMPTS = 2
             private const val READ_RETRY_DELAY_MS = 500L
+            private const val MAX_WRITE_ATTEMPTS = 3
         }
     }
 
@@ -725,6 +766,31 @@ internal class CallEndResolver(
         }
     }
 
+    /**
+     * Resolves call attribution when multiple calls are active and the system broadcast
+     * does not specify which one ended.
+     *
+     * **Contract (AOSP):**
+     * Ideally, on API 31+, [TelephonyManager.CALL_STATE_IDLE] per subscription should
+     * uniquely identify the ended call. In standard AOSP, [SubscriptionManager.getDefaultVoiceSubscriptionId]
+     * points to the primary SIM for calls.
+     *
+     * **Heuristic/Fallback:**
+     * If the default voice SIM is among the active calls, it is chosen first.
+     * Otherwise, the method attributes the event to the "oldest" active session (minimal start time)
+     * currently tracked in the repository.
+     *
+     * **Boundaries:**
+     * This fallback is necessary because Android's phone state broadcasts can be ambiguous
+     * on older API levels or dual-SIM devices. If a custom firmware behaves non-deterministically
+     * (e.g., swapping subIds or misreporting call states), it is a firmware-level issue
+     * that violates standard Android behavior.
+     *
+     * **Reliability Criterion:**
+     * Using the oldest session is the most statistically sound heuristic, as it assumes
+     * the call that started first is the most likely candidate for the current lifecycle event
+     * when all other signals are absent.
+     */
     private suspend fun fallbackAttribution(activeSubIds: List<Int>): Int? {
         val defaultVoice = permissionManager.getDefaultVoiceSubscriptionId()
 

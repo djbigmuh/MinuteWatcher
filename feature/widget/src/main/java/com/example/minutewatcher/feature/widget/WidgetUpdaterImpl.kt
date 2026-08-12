@@ -38,9 +38,24 @@ class WidgetUpdaterImpl
 
             object LimitExceeded : UpdateResult()
 
-            object GenericFailure : UpdateResult()
+            data class GenericFailure(val isRetryable: Boolean) : UpdateResult()
         }
 
+        /**
+         * Updates all instances of the widget with a bounded exponential backoff retry strategy.
+         *
+         * **Strategy Details:**
+         * 1. **Transient Errors**: If a failure is determined to be transient (e.g., temporary Binder
+         *    congestion), the method retries up to [Constants.Widget.MAX_UPDATE_ATTEMPTS] times.
+         * 2. **Exponential Backoff**: Delay starts at [Constants.Widget.RETRY_BACKOFF_MS] and
+         *    doubles with each attempt.
+         * 3. **Permanent Errors**: If the error is permanent (e.g., [IllegalStateException] with
+         *    an invalid context or destroyed widget message), retry is skipped to save resources.
+         * 4. **Size Limits**: If [UpdateResult.LimitExceeded] is detected, the widget is immediately re-rendered
+         *    using a simplified layout; this does not count as a retry attempt in this loop.
+         *
+         * @return true if widgets were successfully updated (either directly or via simplified fallback).
+         */
         override suspend fun updateAll(): Boolean {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
             var isSuccessful = false
@@ -55,8 +70,8 @@ class WidgetUpdaterImpl
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            AppLogger.e("Unexpected error updating widgets", e)
-                            UpdateResult.GenericFailure
+                            AppLogger.e("Unexpected error updating widgets in UpdateCoordinator loop", e)
+                            UpdateResult.GenericFailure(isRetryable = true)
                         }
                     }
 
@@ -65,17 +80,20 @@ class WidgetUpdaterImpl
                 if (success) {
                     isSuccessful = true
                     shouldRetryLoop = false
-                } else if (!shouldRetryResult || attempt >= Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                } else if (!shouldRetryResult) {
                     shouldRetryLoop = false
-                } else {
+                } else if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
                     AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
                     delay(delayMs.milliseconds)
                     delayMs *= 2
+                    attempt++
+                } else {
+                    shouldRetryLoop = false
+                    attempt++ // Count the final failed attempt
                 }
-                attempt++
             }
             if (!isSuccessful) {
-                AppLogger.e("Widget update failed after ${Constants.Widget.MAX_UPDATE_ATTEMPTS} attempts")
+                AppLogger.e("Widget update failed after ${minOf(attempt, Constants.Widget.MAX_UPDATE_ATTEMPTS)} attempts")
             }
             return isSuccessful
         }
@@ -119,7 +137,7 @@ class WidgetUpdaterImpl
                 }
 
                 is UpdateResult.GenericFailure -> {
-                    Pair(false, true)
+                    Pair(false, result.isRetryable)
                 }
             }
 
@@ -150,8 +168,16 @@ class WidgetUpdaterImpl
                     UpdateResult.LimitExceeded
                 } else {
                     AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
-                    UpdateResult.GenericFailure
+                    UpdateResult.GenericFailure(isRetryable = false)
                 }
+            } catch (e: IllegalStateException) {
+                val message = e.message ?: ""
+                val isPermanent =
+                    message.contains("context", ignoreCase = true) ||
+                        message.contains("not registered", ignoreCase = true) ||
+                        message.contains("destroyed", ignoreCase = true)
+                AppLogger.e("Widget update failed with IllegalStateException (permanent=$isPermanent): $message", e)
+                UpdateResult.GenericFailure(isRetryable = !isPermanent)
             } catch (
                 @Suppress("TooGenericExceptionCaught")
                 e: RuntimeException,
@@ -160,14 +186,38 @@ class WidgetUpdaterImpl
                     AppLogger.e("Widget update failed due to size limit (wrapped).", e)
                     UpdateResult.LimitExceeded
                 } else {
-                    AppLogger.e("Widget update failed with RuntimeException", e)
-                    UpdateResult.GenericFailure
+                    AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
+                    UpdateResult.GenericFailure(isRetryable = true)
                 }
             } catch (e: Exception) {
-                AppLogger.e("Generic widget update failure", e)
-                UpdateResult.GenericFailure
+                AppLogger.e("Generic widget update failure: ${e.message}", e)
+                UpdateResult.GenericFailure(isRetryable = true)
             }
 
+        /**
+         * Detects whether a widget update failure is caused by the RemoteViews size limit.
+         *
+         * **Contract (AOSP):**
+         * Android enforces a strict size limit on Binder transactions (typically 1MB).
+         * Since RemoteViews are sent via Binder, exceeding this limit results in a
+         * [android.os.TransactionTooLargeException]. In AOSP, this exception is guaranteed
+         * to be present in the causal chain when a widget is too complex to render.
+         *
+         * **Heuristic/Fallback:**
+         * The method traverses the exception's `cause` chain searching for [android.os.TransactionTooLargeException].
+         *
+         * **Boundaries:**
+         * This detection is reliable across all supported Android versions (API 26–35).
+         * If a custom firmware wraps this error in a non-standard way or uses a different
+         * mechanism to signal size limits, it is considered a firmware-level deviation
+         * that the app cannot reliably detect.
+         *
+         * **Reliability Criterion:**
+         * Checking the entire cause chain for [android.os.TransactionTooLargeException] is
+         * the most robust way to identify binder overflow, as it avoids relying on
+         * platform-specific wrapper exception types (like `RemoteViews$ActionException`)
+         * which can vary between OS versions.
+         */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean {
             // Основной критерий: TransactionTooLargeException в cause-цепочке.

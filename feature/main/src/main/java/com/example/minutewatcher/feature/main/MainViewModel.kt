@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +38,8 @@ class MainViewModel
         private val timeProvider: TimeProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-        private val isInitialized = AtomicBoolean(false)
+        private val initializationDeferred = CompletableDeferred<Unit>()
+        private val isInitializationStarted = AtomicBoolean(false)
         private var resumeRefreshJob: Job? = null
 
         private val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
@@ -90,9 +92,8 @@ class MainViewModel
         }
 
         private fun initializeApp() {
-            // Защита от повторной инициализации при пересоздании View или повторных вызовах.
-            // isInitialized сбрасывается только при создании нового экземпляра ViewModel.
-            if (!isInitialized.compareAndSet(false, true)) return
+            // Protection against multiple initialization calls.
+            if (!isInitializationStarted.compareAndSet(false, true)) return
             viewModelScope.launch(ioDispatcher) {
                 try {
                     val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
@@ -136,6 +137,9 @@ class MainViewModel
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
+                } finally {
+                    // Signal that initialization (both successful and failed attempts) is complete.
+                    initializationDeferred.complete(Unit)
                 }
             }
         }
@@ -275,19 +279,33 @@ class MainViewModel
         }
 
         fun onActivityResume(nowElapsed: Long) {
-            if (!isInitialized.get()) return
+            resumeRefreshJob?.cancel()
+            resumeRefreshJob =
+                viewModelScope.launch {
+                    // G-484: A simple synchronous flag check is insufficient because it doesn't ensure
+                    // that asynchronous initialization (loading settings, auto-reset check) has actually finished.
+                    // We wait for the initialization deferred to guarantee a stable state before refreshing.
+                    val initialized =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            initializationDeferred.await()
+                        }
 
-            val last = lastRefreshAt
-            val elapsed = nowElapsed - last
-            // G-484: If lastRefreshAt == 0L, it means initial refresh failed or hasn't completed yet.
-            // We force a retry in this case to ensure data is loaded as soon as possible.
-            // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
-            val isStale = (last == 0L) || (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
+                    if (initialized == null) {
+                        AppLogger.w("onActivityResume: timed out waiting for initialization, skipping resume refresh")
+                        return@launch
+                    }
 
-            if (isStale) {
-                resumeRefreshJob?.cancel()
-                resumeRefreshJob = viewModelScope.launch { refreshAndNotify(force = false) }
-            }
+                    val last = lastRefreshAt
+                    val elapsed = nowElapsed - last
+                    // G-484: If lastRefreshAt == 0L, it means initial refresh failed or hasn't completed yet.
+                    // We force a retry in this case to ensure data is loaded as soon as possible.
+                    // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
+                    val isStale = (last == 0L) || (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
+
+                    if (isStale) {
+                        refreshAndNotify(force = false)
+                    }
+                }
         }
     }
 

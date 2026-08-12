@@ -117,6 +117,7 @@ class SimIdentityRepositoryImpl
                                 launch {
                                     var retryDelay = Constants.Flow.RETRY_DELAY_MS
                                     val maxDelay = Constants.Flow.LONG_TIMEOUT_MS * MAX_DELAY_MULTIPLIER
+                                    var consecutiveErrors = 0
                                     var shouldContinue = true
                                     while (shouldContinue) {
                                         try {
@@ -125,13 +126,24 @@ class SimIdentityRepositoryImpl
                                         } catch (e: CancellationException) {
                                             throw e
                                         } catch (e: IOException) {
-                                            AppLogger.e(
-                                                "SimIdentityRepository: DataStore error during fetch, " +
-                                                    "retrying in ${retryDelay}ms",
-                                                e,
-                                            )
-                                            delay(retryDelay.milliseconds)
-                                            retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
+                                            consecutiveErrors++
+                                            if (consecutiveErrors >= MAX_FETCH_RETRIES) {
+                                                AppLogger.e(
+                                                    "SimIdentityRepository: Terminal DataStore error after $consecutiveErrors attempts. " +
+                                                        "Stopping retries for this change event.",
+                                                    e,
+                                                )
+                                                send(emptyList())
+                                                shouldContinue = false
+                                            } else {
+                                                AppLogger.e(
+                                                    "SimIdentityRepository: DataStore error during fetch (attempt $consecutiveErrors), " +
+                                                        "retrying in ${retryDelay}ms",
+                                                    e,
+                                                )
+                                                delay(retryDelay.milliseconds)
+                                                retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
+                                            }
                                         } catch (e: Exception) {
                                             AppLogger.e("Failed to fetch active SIMs", e)
                                             send(emptyList())
@@ -271,13 +283,38 @@ class SimIdentityRepositoryImpl
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
+        /**
+         * Retrieves the identity for a given SIM slot.
+         *
+         * **Contract (AOSP):**
+         * This method attempts to resolve a stable SIM identity using a cryptographically
+         * secure seed. In standard AOSP with proper permissions, it uniquely identifies
+         * a SIM card based on hardware attributes.
+         *
+         * **Heuristic/Fallback:**
+         * If the slot index is outside the supported range ([SimConstants.SUPPORTED_SLOT_INDICES]),
+         * or if the identity seed is unavailable after [SEED_TOTAL_TIMEOUT_MS], the method
+         * falls back to a slot-based identity string ([SimConstants.INVALID_SLOT_IDENTITY_PREFIX]).
+         *
+         * **Boundaries:**
+         * This fallback is critical for API stability. If a custom firmware prevents
+         * reading hardware identifiers or misreports slot indices, the repository uses
+         * these fallback identities to maintain internal state consistency. Deviations
+         * from Google's telephony documentation are considered firmware-level issues.
+         *
+         * **Reliability Criterion:**
+         * Identities starting with this prefix are used as a strict API protection
+         * mechanism. They MUST NOT be saved to DataStore, and all repositories are
+         * responsible for verifying this prefix before write operations. This ensures
+         * that transient system states do not corrupt the permanent usage database.
+         */
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
                 AppLogger.w("getSimIdentity called with out-of-range slot=$slot, returning fallback")
                 // G-484: Using a slot-indexed string for invalid slots to prevent
                 // downstream logic from treating them as a single valid identity.
                 // This stableId MUST NOT be saved to DataStore.
-                return createFallbackIdentity(slot, "invalid_slot_$slot")
+                return createFallbackIdentity(slot, "${SimConstants.INVALID_SLOT_IDENTITY_PREFIX}$slot")
             }
 
             // Мгновенное чтение текущего значения StateFlow
@@ -300,7 +337,7 @@ class SimIdentityRepositoryImpl
                 // If not found in cache, try direct resolution
                 val resolved = findActiveIdentityInternal(slot, seed) ?: createFallbackIdentity(slot, "sim_$slot")
 
-                if (resolved.source != IdentitySource.SLOT_FALLBACK && !resolved.stableId.startsWith("invalid_slot")) {
+                if (resolved.source != IdentitySource.SLOT_FALLBACK && !resolved.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                     if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
                         saveSimIdentitiesInfo(listOf(resolved))
                     }
@@ -369,7 +406,7 @@ class SimIdentityRepositoryImpl
                     identities
                         .filter {
                             it.source != IdentitySource.SLOT_FALLBACK &&
-                                !it.stableId.startsWith("invalid_slot")
+                                !it.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)
                         }
                 if (validIdentities.isEmpty()) return@withLock
 
@@ -482,6 +519,20 @@ class SimIdentityRepositoryImpl
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache
 
+        /**
+         * Internal method to fetch active SIM information and persist their identities.
+         *
+         * Strategy for DataStore errors (IOException):
+         * 1. **Exponential Backoff**: If [saveSimIdentitiesInfo] fails due to DataStore timeout,
+         *    the caller retries with an increasing delay.
+         * 2. **Retry Budget**: Retries are limited to [MAX_FETCH_RETRIES].
+         * 3. **Terminal State**: If the budget is exhausted, an empty list is emitted to avoid
+         *    infinite background loops.
+         * 4. **Recovery**: The process will be re-triggered automatically upon the next SIM
+         *    subscription change (via SubscriptionManager) or if permissions are toggled.
+         *
+         * @throws java.io.IOException if DataStore write fails after internal retries within [saveSimIdentitiesInfo].
+         */
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val infoList =
                 permissionManager
@@ -544,7 +595,7 @@ class SimIdentityRepositoryImpl
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
 
         override fun getSimOperator(identity: String): Flow<String> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimOperator called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf("")
             }
@@ -557,7 +608,7 @@ class SimIdentityRepositoryImpl
         }
 
         override fun getCustomSimOperator(identity: String): Flow<String?> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getCustomSimOperator called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(null)
             }
@@ -568,7 +619,7 @@ class SimIdentityRepositoryImpl
             identity: String,
             name: String,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setSimOperator called with invalid identity: $identity")
                 return
             }
@@ -579,7 +630,7 @@ class SimIdentityRepositoryImpl
             identity: String,
             name: String?,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setCustomSimOperator called with invalid identity: $identity")
                 return
             }
@@ -593,7 +644,7 @@ class SimIdentityRepositoryImpl
         }
 
         override fun getSimCode(identity: String): Flow<String> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimCode called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf("")
             }
@@ -604,7 +655,7 @@ class SimIdentityRepositoryImpl
             identity: String,
             code: String,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setSimCode called with invalid identity: $identity")
                 return
             }
@@ -621,5 +672,6 @@ class SimIdentityRepositoryImpl
             internal const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
             private const val MAX_DELAY_MULTIPLIER = 3
+            private const val MAX_FETCH_RETRIES = 5
         }
     }

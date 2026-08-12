@@ -40,7 +40,11 @@ class WidgetSettingsRepository
                         .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
                 if (activeSims == null) {
                     AppLogger.e("WidgetSettingsRepository: failed to load active SIMs")
-                    return@coroutineScope getFallbackWidgetSettings(settings)
+                    return@coroutineScope getFallbackWidgetSettings(
+                        settings,
+                        settingsLoadFailed = false,
+                        simListLoadFailed = true,
+                    )
                 }
 
                 // Use the captured activeSims to load settings.
@@ -58,7 +62,11 @@ class WidgetSettingsRepository
 
                 if (batchSettingsResult == null) {
                     AppLogger.e("WidgetSettingsRepository: failed to load SIM visibility settings after timeout")
-                    return@coroutineScope getFallbackWidgetSettings(settings)
+                    return@coroutineScope getFallbackWidgetSettings(
+                        settings,
+                        settingsLoadFailed = false,
+                        simListLoadFailed = true,
+                    )
                 }
                 val batchSettings = batchSettingsResult
 
@@ -91,12 +99,13 @@ class WidgetSettingsRepository
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
                     settingsLoadFailed = false,
+                    simListLoadFailed = false,
                 )
             }
 
         override suspend fun save(state: WidgetSettingsState) {
             if (state.settingsLoadFailed) {
-                AppLogger.w("Skipping save: settings were not loaded successfully")
+                AppLogger.w("Skipping save: general settings were not loaded successfully")
                 return
             }
 
@@ -113,6 +122,11 @@ class WidgetSettingsRepository
                 )
             }
 
+            if (state.simListLoadFailed) {
+                AppLogger.w("Skipping SIM-specific settings save: SIM list was not loaded successfully")
+                return
+            }
+
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             for ((slot, simSettings) in state.simStates) {
                 val identity = simIdentityRepository.getIdentity(slot)
@@ -127,7 +141,11 @@ class WidgetSettingsRepository
             simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
         }
 
-        private fun getFallbackWidgetSettings(settings: AppSettings): WidgetSettingsState =
+        private fun getFallbackWidgetSettings(
+            settings: AppSettings,
+            settingsLoadFailed: Boolean = true,
+            simListLoadFailed: Boolean = true,
+        ): WidgetSettingsState =
             WidgetSettingsState(
                 layoutMode = settings.widgetLayoutMode,
                 simArrangement = settings.widgetSimArrangement,
@@ -139,6 +157,7 @@ class WidgetSettingsRepository
                 callTrackingEnabled = settings.callTrackingEnabled,
                 simStates = emptyMap(),
                 widgetLimitExceeded = settings.widgetLimitExceeded,
-                settingsLoadFailed = true,
+                settingsLoadFailed = settingsLoadFailed,
+                simListLoadFailed = simListLoadFailed,
             )
     }

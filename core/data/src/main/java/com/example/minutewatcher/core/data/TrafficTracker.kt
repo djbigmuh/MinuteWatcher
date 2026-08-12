@@ -69,7 +69,7 @@ class TrafficTracker
          * @throws SecurityException if permission is revoked during operation
          */
         suspend fun resetBaseline(identity: String) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
                 return
             }
@@ -129,12 +129,19 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return
 
+                    // G-484: Protect against unbounded growth of the retry map due to multiple SIM swaps.
+                    if (baselineNeedsRetry.size > Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2) {
+                        AppLogger.w("TrafficTracker: baselineNeedsRetry map size exceeded limit, force clearing to prevent leak.")
+                        baselineNeedsRetry.clear()
+                    }
+
                     val activeSims = getActiveSimsAndCleanup()
                     if (activeSims == null) {
                         AppLogger.w(
                             "TrafficTracker: observeActiveSims timed out, skipping update. " +
                                 "baselineNeedsRetry cleanup deferred due to activeSims timeout",
                         )
+                        // Identity read timeout is a transient state; status will be restored on the next successful update.
                         _status.value =
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.UNKNOWN,
@@ -142,6 +149,8 @@ class TrafficTracker
                             )
                         return
                     }
+
+                    cleanupStaleRetryEntries(activeSims.map { it.identity.stableId }.toSet())
 
                     val target = targetResolver.resolve(activeSims)
                     if (target == null) {
@@ -206,9 +215,16 @@ class TrafficTracker
                 return null
             }
 
-            // G-484: Cleanup baselineNeedsRetry from inactive SIMs before returning result
-            baselineNeedsRetry.entries.removeIf { entry -> activeSims.none { it.identity.stableId == entry.key } }
             return activeSims
+        }
+
+        /**
+         * Cleans up [baselineNeedsRetry] by removing entries for SIMs that are no longer active.
+         * This is only called when active SIM list is successfully retrieved to avoid
+         * clearing entries during transient timeout states.
+         */
+        private fun cleanupStaleRetryEntries(activeIdentities: Set<String>) {
+            baselineNeedsRetry.entries.removeIf { entry -> entry.key !in activeIdentities }
         }
 
         private fun handleSkipDelta(
@@ -668,6 +684,29 @@ internal class TrafficTargetResolver(
         return if (targetSim != -1) Triple(targetSim, currentDataSubId, isFallback) else null
     }
 
+    /**
+     * Attempts to identify the target SIM for traffic attribution from the list of active SIMs.
+     *
+     * **Contract (AOSP):**
+     * This method relies on [ActiveSimInfo.isDefaultData], which is populated based on
+     * [SubscriptionManager.getDefaultDataSubscriptionId]. In a standard AOSP environment,
+     * this correctly identifies the SIM currently responsible for mobile data.
+     *
+     * **Heuristic/Fallback:**
+     * If no SIM is explicitly marked as default data (e.g., during a transition or on some
+     * dual-SIM implementations), the method falls back to the active subscription with the
+     * lowest SIM slot index.
+     *
+     * **Boundaries:**
+     * This heuristic is acceptable because mobile data must be attributed somewhere to avoid
+     * data loss. If a custom firmware deviates from standard Android behavior (e.g., reporting
+     * no default SIM while data is active, or reporting multiple conflicting defaults), it is
+     * considered a firmware-level inconsistency that the app cannot reliably resolve.
+     *
+     * **Reliability Criterion:**
+     * Choosing the lowest slot index is a deterministic and safe "best effort" attribution
+     * that ensures the tracker remains active even in ambiguous system states.
+     */
     private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Triple<Int, Int, Boolean>? {
         val defaultDataSim = activeSims.find { it.isDefaultData }
 

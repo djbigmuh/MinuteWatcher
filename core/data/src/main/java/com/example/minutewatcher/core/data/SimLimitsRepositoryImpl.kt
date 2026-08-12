@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -24,7 +25,7 @@ class SimLimitsRepositoryImpl
         ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
         override fun getMonthlyLimit(identity: String): Flow<Int> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getMonthlyLimit called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(0)
             }
@@ -32,7 +33,7 @@ class SimLimitsRepositoryImpl
         }
 
         override fun getTrafficLimit(identity: String): Flow<Int> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getTrafficLimit called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(0)
             }
@@ -45,7 +46,7 @@ class SimLimitsRepositoryImpl
             trafficLimitMb: Int,
             rolloverEnabled: Boolean,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("updateSimLimits called with invalid identity: $identity")
                 return
             }
@@ -61,7 +62,7 @@ class SimLimitsRepositoryImpl
         }
 
         override fun getAutoReset(identity: String): Flow<Boolean> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getAutoReset called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(false)
             }
@@ -69,7 +70,7 @@ class SimLimitsRepositoryImpl
         }
 
         override fun getAutoResetDay(identity: String): Flow<Int> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getAutoResetDay called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(1)
             }
@@ -81,7 +82,7 @@ class SimLimitsRepositoryImpl
             day: Int,
             enabled: Boolean,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setAutoReset called with invalid identity: $identity")
                 return
             }

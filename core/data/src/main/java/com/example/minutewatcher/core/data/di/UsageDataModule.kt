@@ -86,4 +86,8 @@ abstract class UsageDataModule {
     @Binds
     @IntoSet
     abstract fun bindTrafficTrackerStatus(impl: TrafficTracker): TrackingStatusProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindUpdateCoordinatorStatus(impl: UpdateCoordinator): TrackingStatusProvider
 }

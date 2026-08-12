@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +34,7 @@ class SimUsageRepositoryImpl
         private val resetMutex = Mutex()
 
         override fun getSimUsage(identity: String): Flow<SimUsage> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimUsage called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(createEmptyUsage(identity))
             }
@@ -85,7 +86,7 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Int,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setMinutesUsed called with invalid identity: $identity")
                 return
             }
@@ -96,7 +97,7 @@ class SimUsageRepositoryImpl
             identity: String,
             delta: Int,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("incrementMinutesUsed called with invalid identity: $identity")
                 return
             }
@@ -110,7 +111,7 @@ class SimUsageRepositoryImpl
             identity: String,
             valueMb: Float,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setTrafficUsed called with invalid identity: $identity")
                 return
             }
@@ -121,7 +122,7 @@ class SimUsageRepositoryImpl
             identity: String,
             deltaMb: Float,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("incrementTrafficUsed called with invalid identity: $identity")
                 return
             }
@@ -135,7 +136,7 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Int,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setManualAdjustment called with invalid identity: $identity")
                 return
             }
@@ -146,7 +147,7 @@ class SimUsageRepositoryImpl
             identity: String,
             valueGb: Float,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setTrafficAdjustment called with invalid identity: $identity")
                 return
             }
@@ -159,7 +160,7 @@ class SimUsageRepositoryImpl
             trafficUsedMb: Float,
             manualAdjustment: Int,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("updateSimStats called with invalid identity: $identity")
                 return
             }
@@ -171,7 +172,7 @@ class SimUsageRepositoryImpl
         }
 
         override suspend fun resetSimUsage(identity: String) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("resetSimUsage called with invalid identity: $identity")
                 return
             }
@@ -183,7 +184,7 @@ class SimUsageRepositoryImpl
         }
 
         override suspend fun resetSimUsageManual(identity: String) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("resetSimUsageManual called with invalid identity: $identity")
                 return
             }
@@ -205,7 +206,7 @@ class SimUsageRepositoryImpl
             autoResetDay: Int,
             nowMillis: Long,
         ): Boolean {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("resetSimUsageIfDue called with invalid identity: $identity")
                 return false
             }
@@ -273,7 +274,7 @@ class SimUsageRepositoryImpl
         }
 
         override fun getLastResetDate(identity: String): Flow<Long> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getLastResetDate called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(0L)
             }
@@ -284,7 +285,7 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Long,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setLastResetDate called with invalid identity: $identity")
                 return
             }
@@ -292,7 +293,7 @@ class SimUsageRepositoryImpl
         }
 
         override fun getLastTotalBytes(identity: String): Flow<Long> {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getLastTotalBytes called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(-1L)
             }
@@ -303,7 +304,7 @@ class SimUsageRepositoryImpl
             identity: String,
             bytes: Long,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("setLastTotalBytes called with invalid identity: $identity")
                 return
             }
@@ -315,7 +316,7 @@ class SimUsageRepositoryImpl
             deltaMb: Float,
             totalBytes: Long,
         ) {
-            if (identity.startsWith("invalid_slot")) {
+            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("incrementTrafficAndSetBaseline called with invalid identity: $identity")
                 return
             }
