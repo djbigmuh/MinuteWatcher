@@ -113,6 +113,10 @@ class UpdateCoordinatorTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
+            // Реализация StateFlow через делегирование требует @OptIn,
+            // т.к. контракт collect() помечен как unstable API.
+            // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
+            @OptIn(ExperimentalCoroutinesApi::class)
             val mockStateFlow =
                 object : StateFlow<GlobalSnapshot> by stateFlow {
                     override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
@@ -147,6 +151,10 @@ class UpdateCoordinatorTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
             var shouldFail = true
 
+            // Реализация StateFlow через делегирование требует @OptIn,
+            // т.к. контракт collect() помечен как unstable API.
+            // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
+            @OptIn(ExperimentalCoroutinesApi::class)
             val mockStateFlow =
                 object : StateFlow<GlobalSnapshot> by stateFlow {
                     override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
@@ -351,6 +359,10 @@ class UpdateCoordinatorTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
+            // Реализация StateFlow через делегирование требует @OptIn,
+            // т.к. контракт collect() помечен как unstable API.
+            // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
+            @OptIn(ExperimentalCoroutinesApi::class)
             val mockStateFlow =
                 object : StateFlow<GlobalSnapshot> by stateFlow {
                     override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {

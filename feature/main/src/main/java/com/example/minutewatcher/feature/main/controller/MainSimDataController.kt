@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -10,6 +11,7 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.SimCardListState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -22,7 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.retry
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -32,8 +34,12 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Контроллер данных SIM-карт для главной страницы.
  *
- * Все операции по обновлению данных запускаются на [ioDispatcher], так как они
- * преимущественно связаны с чтением и записью в DataStore (I/O-bound).
+ * Все операции запускаются на [ioDispatcher], т.к. связаны с I/O (DataStore).
+ * Ошибки логируются и не пробрасываются в UI, чтобы единичный сбой
+ * (например, таймаут DataStore на кастомной прошивке) не ронял весь экран.
+ * Реализовано строгое соблюдение API: на AOSP getIdentity() не бросает
+ * исключений при корректном состоянии DataStore; исключения возможны только
+ * при деградации хранилища на кастомных прошивках.
  */
 class MainSimDataController
     @Inject
@@ -52,9 +58,21 @@ class MainSimDataController
                 .observeSimCardUiModels()
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
-                }.retry(MAX_RETRY_ATTEMPTS) { e ->
-                    delay(1000.milliseconds)
-                    e is IOException || e is TimeoutCancellationException
+                }.retryWhen { cause, attempt ->
+                    // Экспоненциальная задержка при повторах I/O-ошибок.
+                    // На AOSP observeSimCardUiModels() не бросает IOException.
+                    // Таймаут/IO-ошибка возможны только при деградации DataStore
+                    // на кастомных прошивках. Экспоненциальная задержка снижает
+                    // нагрузку на деградирующее хранилище.
+                    if ((attempt < MAX_RETRY_ATTEMPTS) &&
+                        ((cause is IOException) || (cause is TimeoutCancellationException))
+                    ) {
+                        val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
+                        delay(delayMs.milliseconds)
+                        true
+                    } else {
+                        false
+                    }
                 }.onStart { emit(SimCardListState.Loading) }
                 .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
                 .stateIn(
@@ -86,9 +104,15 @@ class MainSimDataController
             onRefresh: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
-                onRefresh()
+                try {
+                    val identity = simIdentityRepository.getIdentity(slot)
+                    simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: updateLimits failed for slot $slot", e)
+                }
             }
         }
 
@@ -97,8 +121,14 @@ class MainSimDataController
             onRefresh: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
-                usageUseCase.resetCounters(slot)
-                onRefresh()
+                try {
+                    usageUseCase.resetCounters(slot)
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: resetUsage failed for slot $slot", e)
+                }
             }
         }
 
@@ -108,10 +138,16 @@ class MainSimDataController
             onRefresh: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
-                simLimitsRepository.setAutoReset(identity, currentDay, enabled)
-                onRefresh()
+                try {
+                    val identity = simIdentityRepository.getIdentity(slot)
+                    val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
+                    simLimitsRepository.setAutoReset(identity, currentDay, enabled)
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: toggleAutoReset failed for slot $slot", e)
+                }
             }
         }
 
@@ -121,10 +157,16 @@ class MainSimDataController
             onRefresh: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
-                simLimitsRepository.setAutoReset(identity, day, enabled)
-                onRefresh()
+                try {
+                    val identity = simIdentityRepository.getIdentity(slot)
+                    val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
+                    simLimitsRepository.setAutoReset(identity, day, enabled)
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: updateAutoResetDay failed for slot $slot", e)
+                }
             }
         }
 
@@ -134,8 +176,14 @@ class MainSimDataController
             onRefresh: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
-                usageUseCase.adjustMinutes(slot, remainingMinutes)
-                onRefresh()
+                try {
+                    usageUseCase.adjustMinutes(slot, remainingMinutes)
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: adjustRemainingMinutes failed for slot $slot", e)
+                }
             }
         }
 
@@ -145,8 +193,14 @@ class MainSimDataController
             onRefresh: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
-                usageUseCase.adjustTraffic(slot, remainingGb)
-                onRefresh()
+                try {
+                    usageUseCase.adjustTraffic(slot, remainingGb)
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: adjustRemainingTraffic failed for slot $slot", e)
+                }
             }
         }
 
@@ -171,11 +225,19 @@ class MainSimDataController
             force: Boolean = false,
         ) {
             scope.launch(ioDispatcher) {
-                dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
+                try {
+                    dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
+                }
             }
         }
 
         private companion object {
             private const val MAX_RETRY_ATTEMPTS = 3L
+            private const val RETRY_BASE_DELAY_MS = 500L
+            private const val MAX_RETRY_EXPONENT = 4 // max ~8 секунд
         }
     }

@@ -138,7 +138,22 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return
 
-                    // G-484: Protect against unbounded growth of the retry map due to multiple SIM swaps.
+                    /**
+                     * Защита от неограниченного роста baselineNeedsRetry.
+                     *
+                     * Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null
+                     * (timeout) при наличии активного SubscriptionManager и READ_PHONE_STATE.
+                     * Таймаут возможен только при деградации DataStore на кастомных прошивках,
+                     * не соответствующих документации Google.
+                     *
+                     * Стратегия: если количество записей превышает удвоенное число поддерживаемых
+                     * слотов (MAX_SUPPORTED_SIM_SLOTS * 2), карта очищается полностью.
+                     * Это допустимая эвристика в пределах критерия надёжности:
+                     * - Потеря записи в baselineNeedsRetry приводит лишь к повторному вызову
+                     *   resetBaseline при следующем успешном обновлении.
+                     * - Альтернатива (точечная очистка по identity) невозможна без получения
+                     *   актуального списка SIM, что и является причиной таймаута.
+                     */
                     if (baselineNeedsRetry.size > (Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2)) {
                         AppLogger.w(
                             "TrafficTracker: baselineNeedsRetry map size exceeded limit, " +
@@ -245,6 +260,11 @@ class TrafficTracker
 
             if (activeSims == null) {
                 AppLogger.e("TrafficTracker: observeActiveSims failed after retry due to timeout.")
+                // Возврат null при таймауте: на AOSP observeActiveSims() завершается
+                // в пределах SHORT_TIMEOUT_MS. Таймаут указывает на деградацию DataStore
+                // на кастомной прошивке. Записи baselineNeedsRetry не очищаются здесь,
+                // т.к. без актуального списка SIM невозможно определить, какие записи
+                // устарели. Очистка выполняется грубой проверкой размера в updateTrafficUsage.
                 return null
             }
 
@@ -455,7 +475,7 @@ class TrafficTracker
         }
 
         private suspend fun updateLastDataSubId(dataSubId: Int) {
-            if (dataSubId == -1 || dataSubId == inMemoryLastDataSubId) return
+            if ((dataSubId == -1) || (dataSubId == inMemoryLastDataSubId)) return
 
             // G-484: Update in-memory state FIRST. Even if persistence fails,
             // we want to prevent redundant SIM change detections in the current process lifetime.
@@ -724,10 +744,8 @@ internal class TrafficTargetResolver(
     private fun resolveTargetSimFromActiveSims(activeSims: List<ActiveSimInfo>): Pair<Int, Int>? {
         val defaultDataSim = activeSims.find { it.isDefaultData }
 
-        return if (defaultDataSim != null) {
-            Pair(defaultDataSim.slotIndex, defaultDataSim.subscriptionId)
-        } else {
-            null
+        return defaultDataSim?.let {
+            Pair(it.slotIndex, it.subscriptionId)
         }
     }
 }

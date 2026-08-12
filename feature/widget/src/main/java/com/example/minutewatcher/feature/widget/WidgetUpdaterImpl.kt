@@ -42,27 +42,27 @@ class WidgetUpdaterImpl
         }
 
         /**
-         * Updates all instances of the widget with a bounded exponential backoff retry strategy.
+         * Обновляет все экземпляры виджета с ограниченной экспоненциальной стратегией повторов.
          *
-         * **Strategy Details:**
-         * 1. **Transient Errors**: If a failure is determined to be transient (e.g., temporary Binder
-         *    congestion), the method retries up to [Constants.Widget.MAX_UPDATE_ATTEMPTS] times.
-         * 2. **Exponential Backoff**: Delay starts at [Constants.Widget.RETRY_BACKOFF_MS] and
-         *    doubles with each attempt.
-         * 3. **Permanent Errors**: If the error is permanent (e.g., [IllegalStateException] with
-         *    an invalid context or destroyed widget message), retry is skipped to save resources.
-         * 4. **Size Limits**: If [UpdateResult.LimitExceeded] is detected, the widget is immediately re-rendered
-         *    using a simplified layout; this does not count as a retry attempt in this loop.
+         * Стратегия:
+         * 1. Транзиентные ошибки (Binder congestion): повтор до [Constants.Widget.MAX_UPDATE_ATTEMPTS].
+         * 2. Экспоненциальная задержка: старт [Constants.Widget.RETRY_BACKOFF_MS], удвоение.
+         * 3. Перманентные ошибки (destroyed context): повтор пропускается.
+         * 4. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout,
+         *    не считается попыткой повтора.
          *
-         * @return true if widgets were successfully updated (either directly or via simplified fallback).
+         * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
+         * исключений при корректном lifecycle. TransactionTooLargeException возможен
+         * только при превышении лимита Binder (~1 МБ), что предотвращается
+         * упрощённым layout при widgetLimitExceeded = true.
          */
         override suspend fun updateAll(): Boolean {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
-            var isSuccessful = false
+            var result = false
             var attempt = 1
-            var shouldRetryLoop = true
+            var keepGoing = true
 
-            while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && shouldRetryLoop) {
+            while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && keepGoing) {
                 val updateResult =
                     updateMutex.withLock {
                         try {
@@ -70,33 +70,30 @@ class WidgetUpdaterImpl
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            AppLogger.e("Unexpected error updating widgets in UpdateCoordinator loop", e)
+                            AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
                             UpdateResult.GenericFailure(isRetryable = true)
                         }
                     }
 
-                val (success, shouldRetryResult) = handleUpdateResult(updateResult)
-
+                val (success, shouldRetry) = handleUpdateResult(updateResult)
                 if (success) {
-                    isSuccessful = true
-                    shouldRetryLoop = false
-                } else if (!shouldRetryResult) {
-                    shouldRetryLoop = false
-                } else if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                    result = true
+                    keepGoing = false
+                } else if (!shouldRetry || attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                    keepGoing = false
+                } else {
                     AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
                     delay(delayMs.milliseconds)
                     delayMs *= 2
                     attempt++
-                } else {
-                    shouldRetryLoop = false
-                    attempt++ // Count the final failed attempt
                 }
             }
-            if (!isSuccessful) {
-                val totalAttempts = minOf(attempt, Constants.Widget.MAX_UPDATE_ATTEMPTS)
-                AppLogger.e("Widget update failed after $totalAttempts attempts")
+
+            if (!result) {
+                val total = minOf(attempt, Constants.Widget.MAX_UPDATE_ATTEMPTS)
+                AppLogger.e("Widget update failed after $total attempts")
             }
-            return isSuccessful
+            return result
         }
 
         private suspend fun handleUpdateResult(result: UpdateResult): Pair<Boolean, Boolean> =

@@ -77,14 +77,16 @@ class MainBannerControllerTest {
     fun `retry delay for the first attempt is not zero`() =
         runTest {
             var collectionCount = 0
-            val mockFlow = MutableStateFlow(true)
             val dynamicFlow =
                 kotlinx.coroutines.flow.flow<Boolean> {
                     collectionCount++
                     if (collectionCount == 1) {
                         throw IOException("Temporary failure")
                     }
-                    emitAll(mockFlow)
+                    // flowOf(true) используется вместо MutableStateFlow, чтобы emitAll
+                    // корректно завершил flow после эмиссии. StateFlow никогда не завершается,
+                    // что приводит к бесконечной приостановке и предупреждению "Flow constructed but not used".
+                    emitAll(kotlinx.coroutines.flow.flowOf(true))
                 }
             whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(dynamicFlow)
 

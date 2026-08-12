@@ -134,9 +134,16 @@ class MainViewModel
                         AppLogger.e("initializeApp: refresh failed after all retries ($reason)")
                     }
                 } catch (e: CancellationException) {
+                    // Сброс isInitializationStarted при ошибке позволяет повторить инициализацию
+                    // при следующем onResume. На AOSP инициализация не падает при корректном
+                    // состоянии DataStore; сбой возможен только при деградации хранилища
+                    // на кастомных прошивках. Повторная попытка — единственная стратегия
+                    // восстановления без вмешательства пользователя.
+                    isInitializationStarted.set(false)
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to initialize app in ViewModel", e)
+                    isInitializationStarted.set(false)
                 } finally {
                     // Signal that initialization (both successful and failed attempts) is complete.
                     initializationDeferred.complete(Unit)
@@ -199,7 +206,7 @@ class MainViewModel
                 }
             }
 
-            if (result is RefreshResult.Success || result is RefreshResult.Timeout) {
+            if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
                 lastRefreshAt = timeProvider.elapsedRealtime()
             }
 
