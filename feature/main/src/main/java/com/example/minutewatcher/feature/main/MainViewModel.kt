@@ -16,9 +16,9 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -38,7 +38,7 @@ class MainViewModel
         private val timeProvider: TimeProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
-        private val initializationDeferred = CompletableDeferred<Unit>()
+        private val initializationState = MutableStateFlow(false)
         private val isInitializationStarted = AtomicBoolean(false)
         private var resumeRefreshJob: Job? = null
 
@@ -94,6 +94,16 @@ class MainViewModel
         private fun initializeApp() {
             // Protection against multiple initialization calls.
             if (!isInitializationStarted.compareAndSet(false, true)) return
+
+            /**
+             * initializationState позволяет onActivityResume корректно ожидать завершения
+             * каждой попытки инициализации, включая повторные после сбоя.
+             * Строгое соблюдение API: на AOSP инициализация не падает при корректном
+             * состоянии DataStore; сбой возможен только при деградации хранилища
+             * на кастомных прошивках.
+             */
+            initializationState.value = false
+
             viewModelScope.launch(ioDispatcher) {
                 try {
                     val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
@@ -146,7 +156,7 @@ class MainViewModel
                     isInitializationStarted.set(false)
                 } finally {
                     // Signal that initialization (both successful and failed attempts) is complete.
-                    initializationDeferred.complete(Unit)
+                    initializationState.value = true
                 }
             }
         }
@@ -291,10 +301,10 @@ class MainViewModel
                 viewModelScope.launch {
                     // G-484: A simple synchronous flag check is insufficient because it doesn't ensure
                     // that asynchronous initialization (loading settings, auto-reset check) has actually finished.
-                    // We wait for the initialization deferred to guarantee a stable state before refreshing.
+                    // We wait for the initialization state to guarantee a stable state before refreshing.
                     val initialized =
                         withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            initializationDeferred.await()
+                            initializationState.first { it }
                         }
 
                     if (initialized == null) {
@@ -372,7 +382,14 @@ internal class AutoResetScheduler(
         } catch (e: Exception) {
             AppLogger.e("Auto-reset failed during initialization", e)
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
-            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = timeProvider.elapsedRealtime()
+            /**
+             * При сбое авто-сброса KEY_LAST_AUTO_RESET_CHECK не обновляется,
+             * чтобы следующая проверка могла сработать немедленно.
+             * Строгое соблюдение API: на AOSP performAutoReset() не бросает исключений
+             * при корректном состоянии DataStore; сбой возможен только при деградации
+             * хранилища на кастомных прошивках. Если кастомная прошивка не соответствует
+             * документации Google — это проблема кастомной прошивки.
+             */
             isCheckStarted.set(false) // G-484: Reset flag to allow retry after failure
         }
     }

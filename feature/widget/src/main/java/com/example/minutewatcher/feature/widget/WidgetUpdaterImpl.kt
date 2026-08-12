@@ -148,7 +148,18 @@ class WidgetUpdaterImpl
                         }
                         return Pair(renderSucceeded, !renderSucceeded)
                     }
-                    Pair(true, false)
+                    /**
+                     * Строгое соблюдение контракта: если обновление не произошло (виджет не был перерисован),
+                     * метод ОБЯЗАН вернуть false в первом элементе Pair. Это предотвращает обновление
+                     * lastSnapshotHash в вызывающем коде (UpdateCoordinator), что гарантирует
+                     * повторную попытку обновления при следующем изменении данных.
+                     *
+                     * На AOSP GlanceAppWidget.updateAll() не бросает TransactionTooLargeException
+                     * при корректном lifecycle; превышение лимита Binder (~1 МБ) предотвращается
+                     * упрощённым layout при widgetLimitExceeded = true. Если кастомная прошивка
+                     * не соответствует документации Google — это проблема кастомной прошивки.
+                     */
+                    Pair(false, false)
                 }
 
                 is UpdateResult.GenericFailure -> {
@@ -210,14 +221,17 @@ class WidgetUpdaterImpl
             }
 
         /**
-         * Detects whether a widget update failure is caused by the RemoteViews size limit.
+         * Детектирует, вызван ли сбой обновления виджета превышением лимита размера RemoteViews.
          *
-         * **Strict Compliance:**
-         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
-         * а обрабатываются как системные сбои с уведомлением пользователя.
-         * Детекция [android.os.TransactionTooLargeException] через cause-цепочку является
-         * единственным критерием переполнения Binder-транзакции. Попытки определить переполнение
-         * по тексту ошибки ("на глаз") исключены как ненадежные.
+         * Стратегия детекции:
+         * 1. Детекция [android.os.TransactionTooLargeException] через cause-цепочку является
+         *    единственным надёжным критерием переполнения Binder-транзакции.
+         * 2. Попытки определить переполнение по тексту ошибки исключены как ненадёжные (хрупкая эвристика).
+         * 3. Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
+         *    TransactionTooLargeException при корректном lifecycle; превышение лимита Binder (~1 МБ)
+         *    предотвращается упрощённым layout при widgetLimitExceeded = true.
+         * 4. Если кастомная прошивка не соответствует документации Google — это проблема
+         *    кастомной прошивки.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean {

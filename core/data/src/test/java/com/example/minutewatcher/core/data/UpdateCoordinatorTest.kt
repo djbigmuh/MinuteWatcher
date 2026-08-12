@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,7 +32,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("MaxLineLength", "TooGenericExceptionThrown")
-@OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.InternalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
@@ -107,7 +108,6 @@ class UpdateCoordinatorTest {
         }
 
     @Test
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun `observation retries on repository failure with exponential backoff`() =
         runTest {
             var collectCount = 0
@@ -116,8 +116,8 @@ class UpdateCoordinatorTest {
             // Реализация StateFlow через делегирование требует @OptIn,
             // т.к. контракт collect() помечен как unstable API.
             // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
-            @OptIn(ExperimentalCoroutinesApi::class)
             val mockStateFlow =
+                @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
                 object : StateFlow<GlobalSnapshot> by stateFlow {
                     override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
                         collectCount++
@@ -145,7 +145,6 @@ class UpdateCoordinatorTest {
         }
 
     @Test
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun `observation resumes after repository failure`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
@@ -154,8 +153,8 @@ class UpdateCoordinatorTest {
             // Реализация StateFlow через делегирование требует @OptIn,
             // т.к. контракт collect() помечен как unstable API.
             // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
-            @OptIn(ExperimentalCoroutinesApi::class)
             val mockStateFlow =
+                @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
                 object : StateFlow<GlobalSnapshot> by stateFlow {
                     override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
                         if (shouldFail) {
@@ -353,7 +352,6 @@ class UpdateCoordinatorTest {
         }
 
     @Test
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun `observationRetryCount is reset by timer`() =
         runTest {
             var collectCount = 0
@@ -362,8 +360,8 @@ class UpdateCoordinatorTest {
             // Реализация StateFlow через делегирование требует @OptIn,
             // т.к. контракт collect() помечен как unstable API.
             // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
-            @OptIn(ExperimentalCoroutinesApi::class)
             val mockStateFlow =
+                @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
                 object : StateFlow<GlobalSnapshot> by stateFlow {
                     override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
                         collectCount++

@@ -163,12 +163,17 @@ class UpdateCoordinator
         /**
          * Обработчик сбоев наблюдения за snapshot.
          *
-         * Стратегия: бесконечные повторные попытки с экспоненциальной задержкой,
-         * ограниченной [MAX_RETRY_DELAY_SECONDS]. Это осознанный выбор:
-         * StateFlow не должен падать на AOSP; сбой возможен только при
-         * деградации DataStore на кастомных прошивках. Бесконечные попытки
-         * гарантируют восстановление без вмешательства пользователя.
-         * UI сохраняет последнее успешное состояние, предотвращая мерцание.
+         * Стратегия:
+         * 1. Бесконечные повторные попытки с экспоненциальной задержкой,
+         *    ограниченной [MAX_RETRY_DELAY_SECONDS].
+         * 2. [observationRetryCount] отслеживает последовательные сбои для логирования.
+         * 3. [retryAttempt] и [observationRetryCount] сбрасываются каждые
+         *    [RESET_RETRY_COUNTER_INTERVAL_MS] (10 минут) для предотвращения накопления.
+         * 4. Строгое соблюдение API: на AOSP observeSnapshot() из StateFlow не бросает
+         *    исключений; сбой возможен только при деградации DataStore на кастомных прошивках.
+         *    Бесконечные попытки гарантируют восстановление без вмешательства пользователя.
+         *    Если кастомная прошивка не соответствует документации Google — это проблема
+         *    кастомной прошивки.
          */
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
             if (cause is CancellationException) throw cause
@@ -182,6 +187,11 @@ class UpdateCoordinator
 
             observationRetryCount.incrementAndGet()
 
+            /**
+             * Сбрасываем lastSnapshotHash в null при сбое, чтобы гарантировать
+             * полную переиндексацию и принудительное обновление виджетов
+             * при следующем успешном получении данных.
+             */
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
             }

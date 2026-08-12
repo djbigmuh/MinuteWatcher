@@ -711,8 +711,8 @@ class MainViewModelTest {
             verify(autoResetUseCase, times(1)).performAutoReset(eq(false))
 
             // 2. Second call should be allowed now because isCheckStarted was reset.
-            // We need to advance time to trigger the interval check again.
-            timeProvider.advance(3600000L + 1000L) // 1 hour + 1s
+            // При сбое KEY_LAST_AUTO_RESET_CHECK не обновляется, поэтому повторная
+            // проверка должна сработать немедленно без продвижения времени.
 
             org.mockito.kotlin
                 .doReturn(Unit)
