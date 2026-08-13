@@ -60,6 +60,15 @@ object Constants {
          * Ограничивает общее время ожидания: 500+1000+2000+4000 = 7.5с. */
         const val MAX_UPDATE_ATTEMPTS = 4
         // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
+
+        const val MIN_LAYOUT_MODE = 0
+        const val MAX_LAYOUT_MODE = 4
+        const val MIN_SIM_ARRANGEMENT = 0
+        const val MAX_SIM_ARRANGEMENT = 1
+        const val MIN_TRANSPARENCY = 0
+        const val MAX_TRANSPARENCY = 100
+        const val MIN_FONT_SIZE = 0
+        const val MAX_FONT_SIZE = 4
     }
 
     object Traffic {

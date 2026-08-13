@@ -92,16 +92,14 @@ class MainViewModel
         }
 
         private fun initializeApp() {
-            // Protection against multiple initialization calls.
+            /**
+             * Повторная инициализация допустима только если предыдущая завершилась ошибкой.
+             * Строгое соблюдение API: на AOSP DataStore и SharedPreferences доступны
+             * сразу после создания Application. Ошибка инициализации возможна только
+             * на кастомных прошивках с повреждённым хранилищем.
+             */
             if (!isInitializationStarted.compareAndSet(false, true)) return
 
-            /**
-             * initializationState позволяет onActivityResume корректно ожидать завершения
-             * каждой попытки инициализации, включая повторные после сбоя.
-             * Строгое соблюдение API: на AOSP инициализация не падает при корректном
-             * состоянии DataStore; сбой возможен только при деградации хранилища
-             * на кастомных прошивках.
-             */
             initializationState.value = false
 
             viewModelScope.launch(ioDispatcher) {
@@ -191,6 +189,13 @@ class MainViewModel
             }
         }
 
+        /**
+         * Обновляет данные и уведомляет виджет.
+         * force=true используется для операций, которые изменяют отображаемые
+         * на виджете данные (лимиты, настройки, сброс). Без force виджет
+         * обновится только при изменении хеша данных, что может не произойти
+         * при изменении только настроек отображения.
+         */
         private suspend fun refreshAndNotify(force: Boolean = false) {
             val currentTimestamp =
                 controllers
@@ -254,7 +259,7 @@ class MainViewModel
             rolloverEnabled: Boolean = false,
         ) {
             controllers.simData.updateLimits(slot, minutesLimit, trafficLimitMb, rolloverEnabled) {
-                refreshAndNotify()
+                refreshAndNotify(force = true)
             }
         }
 
@@ -266,14 +271,14 @@ class MainViewModel
             slot: Int,
             enabled: Boolean,
         ) {
-            controllers.simData.toggleAutoReset(slot, enabled) { refreshAndNotify() }
+            controllers.simData.toggleAutoReset(slot, enabled) { refreshAndNotify(force = true) }
         }
 
         fun updateAutoResetDay(
             slot: Int,
             day: Int,
         ) {
-            controllers.simData.updateAutoResetDay(slot, day) { refreshAndNotify() }
+            controllers.simData.updateAutoResetDay(slot, day) { refreshAndNotify(force = true) }
         }
 
         fun adjustRemainingMinutes(
@@ -321,8 +326,14 @@ class MainViewModel
                             initializationState.first { it }
                         }
 
+                    /**
+                     * При первом запуске lastRefreshAt = 0, что триггерит обновление.
+                     * Однако если initializeApp ещё не завершился, параллельный вызов
+                     * refresh может привести к двойному обновлению. Поэтому проверяем
+                     * initializationState перед выполнением refresh.
+                     */
                     if (initialized == null) {
-                        AppLogger.w("onActivityResume: timed out waiting for initialization, skipping resume refresh")
+                        AppLogger.w("onActivityResume: initialization not complete, skipping refresh")
                         return@launch
                     }
 

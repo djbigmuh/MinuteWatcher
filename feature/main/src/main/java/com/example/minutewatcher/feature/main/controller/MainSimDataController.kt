@@ -89,6 +89,9 @@ class MainSimDataController
 
         private var highlightJob: Job? = null
 
+        /**
+         * Подсвечивает карточку SIM в указанном слоте на короткое время.
+         */
         fun highlightSlot(slot: Int) {
             highlightJob?.cancel()
             _highlightedSlot.value = slot
@@ -99,6 +102,12 @@ class MainSimDataController
                 }
         }
 
+        /**
+         * Обновляет лимиты для SIM в указанном слоте.
+         * Если SIM была удалена между отображением UI и вызовом метода,
+         * операция пропускается с логированием. Это штатная ситуация:
+         * пользователь мог извлечь SIM-карту.
+         */
         fun updateLimits(
             slot: Int,
             minutesLimit: Int,
@@ -111,6 +120,8 @@ class MainSimDataController
                     val identity = simIdentityRepository.getIdentity(slot)
                     simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
                     onRefresh()
+                } catch (e: IllegalStateException) {
+                    AppLogger.w("SIM was removed from slot $slot, skipping updateLimits", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -119,6 +130,9 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Сбрасывает текущую статистику использования для SIM в указанном слоте.
+         */
         fun resetUsage(
             slot: Int,
             onRefresh: suspend () -> Unit,
@@ -127,6 +141,8 @@ class MainSimDataController
                 try {
                     usageUseCase.resetCounters(slot)
                     onRefresh()
+                } catch (e: IllegalStateException) {
+                    AppLogger.w("SIM was removed from slot $slot, skipping resetUsage", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -135,6 +151,11 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Включает или выключает автоматический сброс лимитов для SIM в указанном слоте.
+         * Если SIM была удалена между отображением UI и вызовом метода,
+         * операция пропускается с логированием.
+         */
         fun toggleAutoReset(
             slot: Int,
             enabled: Boolean,
@@ -146,6 +167,8 @@ class MainSimDataController
                     val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
                     simLimitsRepository.setAutoReset(identity, currentDay, enabled)
                     onRefresh()
+                } catch (e: IllegalStateException) {
+                    AppLogger.w("SIM was removed from slot $slot, skipping toggleAutoReset", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -154,6 +177,11 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Обновляет день месяца для автоматического сброса лимитов для SIM в указанном слоте.
+         * Если SIM была удалена между отображением UI и вызовом метода,
+         * операция пропускается с логированием.
+         */
         fun updateAutoResetDay(
             slot: Int,
             day: Int,
@@ -165,6 +193,8 @@ class MainSimDataController
                     val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
                     simLimitsRepository.setAutoReset(identity, day, enabled)
                     onRefresh()
+                } catch (e: IllegalStateException) {
+                    AppLogger.w("SIM was removed from slot $slot, skipping updateAutoResetDay", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -173,6 +203,9 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Корректирует оставшееся количество минут для SIM в указанном слоте.
+         */
         fun adjustRemainingMinutes(
             slot: Int,
             remainingMinutes: Int,
@@ -182,6 +215,8 @@ class MainSimDataController
                 try {
                     usageUseCase.adjustMinutes(slot, remainingMinutes)
                     onRefresh()
+                } catch (e: IllegalStateException) {
+                    AppLogger.w("SIM was removed from slot $slot, skipping adjustRemainingMinutes", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -190,6 +225,9 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Корректирует оставшееся количество трафика для SIM в указанном слоте.
+         */
         fun adjustRemainingTraffic(
             slot: Int,
             remainingGb: Float,
@@ -199,6 +237,8 @@ class MainSimDataController
                 try {
                     usageUseCase.adjustTraffic(slot, remainingGb)
                     onRefresh()
+                } catch (e: IllegalStateException) {
+                    AppLogger.w("SIM was removed from slot $slot, skipping adjustRemainingTraffic", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -207,22 +247,37 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Повторяет поиск установленных приложений (для AppFunctions).
+         */
         fun retryAppSearch() {
             scope.launch { trackingRecoveryController.retryAppSearch() }
         }
 
+        /**
+         * Повторяет попытку восстановления отслеживания звонков.
+         */
         fun retryCalls() {
             scope.launch { trackingRecoveryController.retryCalls() }
         }
 
+        /**
+         * Повторяет попытку создания ярлыков.
+         */
         fun retryShortcuts() {
             scope.launch { trackingRecoveryController.retryShortcuts() }
         }
 
+        /**
+         * Повторяет попытку восстановления отслеживания трафика.
+         */
         fun retryTraffic(onRefresh: suspend () -> Unit) {
             scope.launch { trackingRecoveryController.retryTraffic(onRefresh) }
         }
 
+        /**
+         * Уведомляет систему об изменении данных для обновления виджетов и UI.
+         */
         fun notifyDataChanged(
             updateWidget: Boolean = true,
             force: Boolean = false,

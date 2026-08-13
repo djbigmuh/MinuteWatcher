@@ -128,7 +128,8 @@ class SimUsageRepositoryImpl
             }
             dataStore.edit { prefs ->
                 val current = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                prefs[SimSettingsKeys.trafficUsedKey(identity)] = (current + deltaMb.toDouble()).toFloat()
+                val newValue = (current + deltaMb.toDouble()).toFloat().coerceAtMost(MAX_TRAFFIC_MB)
+                prefs[SimSettingsKeys.trafficUsedKey(identity)] = newValue
             }
         }
 
@@ -323,10 +324,21 @@ class SimUsageRepositoryImpl
             dataStore.edit { prefs ->
                 // 1. Increment traffic
                 val currentUsage = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                prefs[SimSettingsKeys.trafficUsedKey(identity)] = (currentUsage + deltaMb.toDouble()).toFloat()
+                val newValue = (currentUsage + deltaMb.toDouble()).toFloat().coerceAtMost(MAX_TRAFFIC_MB)
+                prefs[SimSettingsKeys.trafficUsedKey(identity)] = newValue
 
                 // 2. Update baseline
                 prefs[DynamicSettingsKeys.lastTotalBytesKey(identity)] = totalBytes
             }
+        }
+
+        companion object {
+            /**
+             * Максимальное значение трафика в МБ, при котором Float сохраняет
+             * точность до 1 МБ. Выше этого значения Float теряет точность.
+             * На практике трафик не достигает таких значений за один расчётный
+             * период, но защита предотвращает переполнение при ошибке.
+             */
+            private const val MAX_TRAFFIC_MB = 10_000_000f // ~10 ТБ
         }
     }

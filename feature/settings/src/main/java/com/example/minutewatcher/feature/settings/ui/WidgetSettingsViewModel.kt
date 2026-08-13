@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -97,7 +98,8 @@ class WidgetSettingsViewModel
                     AppLogger.w("saveAndNotify called before settings were loaded")
                     SaveResult.Failed
                 } else {
-                    val success = saver.save(currentState)
+                    val validatedState = validateSettings(currentState)
+                    val success = saver.save(validatedState)
                     if (success) SaveResult.Success else SaveResult.Failed
                 }
             } catch (e: CancellationException) {
@@ -110,4 +112,34 @@ class WidgetSettingsViewModel
                 saveMutex.unlock()
             }
         }
+
+        /**
+         * Валидирует настройки перед сохранением.
+         * Строгое соблюдение API: значения coerceIn гарантируют,
+         * что виджет получит корректные параметры даже если UI
+         * передал некорректные данные (например, из-за бага в слайдере).
+         */
+        private fun validateSettings(state: WidgetSettingsState): WidgetSettingsState =
+            state.copy(
+                layoutMode =
+                    state.layoutMode.coerceIn(
+                        Constants.Widget.MIN_LAYOUT_MODE,
+                        Constants.Widget.MAX_LAYOUT_MODE,
+                    ),
+                simArrangement =
+                    state.simArrangement.coerceIn(
+                        Constants.Widget.MIN_SIM_ARRANGEMENT,
+                        Constants.Widget.MAX_SIM_ARRANGEMENT,
+                    ),
+                transparency =
+                    state.transparency.coerceIn(
+                        Constants.Widget.MIN_TRANSPARENCY,
+                        Constants.Widget.MAX_TRANSPARENCY,
+                    ),
+                fontSize =
+                    state.fontSize.coerceIn(
+                        Constants.Widget.MIN_FONT_SIZE,
+                        Constants.Widget.MAX_FONT_SIZE,
+                    ),
+            )
     }

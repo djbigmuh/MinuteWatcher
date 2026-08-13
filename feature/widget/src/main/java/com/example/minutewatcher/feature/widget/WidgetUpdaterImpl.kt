@@ -24,8 +24,16 @@ class WidgetUpdaterImpl
         private val appSettingsRepository: AppSettingsRepository,
         private val renderer: WidgetRenderer =
             object : WidgetRenderer {
-                override suspend fun renderAll(context: Context) {
-                    MinutesGlanceWidget().updateAll(context)
+                override suspend fun renderAll(
+                    context: Context,
+                    forceSimplified: Boolean,
+                ) {
+                    try {
+                        MinutesGlanceWidget.isForceSimplified = forceSimplified
+                        MinutesGlanceWidget().updateAll(context)
+                    } finally {
+                        MinutesGlanceWidget.isForceSimplified = false
+                    }
                 }
             },
     ) : WidgetUpdater {
@@ -129,60 +137,27 @@ class WidgetUpdaterImpl
         private suspend fun handleLimitExceeded(): Pair<Boolean, Boolean> {
             val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
             if (current) {
-                // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
-                // TransactionTooLargeException при корректном lifecycle. Превышение лимита
-                // Binder (~1 МБ) предотвращается упрощённым layout при widgetLimitExceeded.
-                // Если кастомная прошивка не соответствует документации Google — это
-                // проблема кастомной прошивки. Повторные попытки после уже установленного
-                // флага не имеют смысла и пресекаются.
+                // Повторные попытки после уже установленного флага не имеют смысла.
                 return Pair(false, false)
             }
 
             setWidgetLimitExceeded(value = true)
-            AppLogger.w(
-                "Widget update failed due to size limit. " +
-                    "Flag set to trigger simplified layout on next update.",
-            )
+            AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
 
-            // Строгое соблюдение API: повторный рендер после установки флага должен гарантированно видеть
-            // новый флаг, чтобы не повторять падение. Для детерминированного поведения мы даем StateFlow
-            // небольшое время на распространение.
-            var updated = appSettingsRepository.observeAppSettings().value
-            if (!updated.widgetLimitExceeded) {
-                var retryCount = 0
-                while (!updated.widgetLimitExceeded && retryCount < STATE_FLOW_PROPAGATION_RETRIES) {
-                    delay(STATE_FLOW_PROPAGATION_DELAY_MS.milliseconds)
-                    updated = appSettingsRepository.observeAppSettings().value
-                    retryCount++
-                }
-            }
-
-            return if (updated.widgetLimitExceeded) {
-                var renderSucceeded = true
-                try {
-                    renderer.renderAll(context)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Immediate widget re-render after limit exceeded failed", e)
-                    renderSucceeded = false
-                }
-                Pair(renderSucceeded, !renderSucceeded)
-            } else {
-                AppLogger.w(
-                    "widgetLimitExceeded flag still not visible in StateFlow after wait. " +
-                        "Simplified layout will be applied on next update cycle.",
-                )
-                // Флаг widgetLimitExceeded установлен, но ещё не виден в StateFlow.
-                // Немедленный повторный рендер бесполезен — он снова попытается
-                // отрисовать полный layout и упадёт с LimitExceeded.
-                // Флаг станет виден к следующему циклу обновления (reactive path
-                // в UpdateCoordinator или принудительный вызов updateAll).
-                // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
-                // TransactionTooLargeException при корректном lifecycle. Превышение лимита
-                // Binder (~1 МБ) предотвращается упрощённым layout при widgetLimitExceeded = true.
-                // Если кастомная прошивка не соответствует документации Google — это проблема
-                // кастомной прошивки.
+            /**
+             * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
+             * TransactionTooLargeException при корректном lifecycle. Превышение лимита
+             * Binder (~1 МБ) предотвращается упрощённым layout при widgetLimitExceeded.
+             * Если кастомная прошивка не соответствует документации Google —
+             * это проблема кастомной прошивки.
+             */
+            return try {
+                renderer.renderAll(context, forceSimplified = true)
+                Pair(true, false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Re-render after limit exceeded failed", e)
                 Pair(false, false)
             }
         }
@@ -215,7 +190,7 @@ class WidgetUpdaterImpl
          */
         private suspend fun safeUpdateAll(context: Context): UpdateResult =
             try {
-                renderer.renderAll(context)
+                renderer.renderAll(context, forceSimplified = false)
                 UpdateResult.Success
             } catch (e: CancellationException) {
                 // Должен перехватываться ПЕРВЫМ и пробрасываться дальше для корректной остановки корутин.
@@ -309,12 +284,12 @@ class WidgetUpdaterImpl
             return false
         }
 
-        companion object {
-            private const val STATE_FLOW_PROPAGATION_RETRIES = 10
-            private const val STATE_FLOW_PROPAGATION_DELAY_MS = 20L
-        }
+        companion object
     }
 
 interface WidgetRenderer {
-    suspend fun renderAll(context: Context)
+    suspend fun renderAll(
+        context: Context,
+        forceSimplified: Boolean = false,
+    )
 }

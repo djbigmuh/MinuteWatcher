@@ -52,6 +52,14 @@ class TrafficTracker
 
         private suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 
+        /**
+         * Мьютекс сериализует конкурентные вызовы [updateTrafficUsage].
+         * Без него два параллельных воркера прочитают одинаковый lastTotalBytes
+         * и дважды прибавят дельту к trafficUsedMb.
+         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+         * детерминирован для одного и того же интервала, поэтому сериализация
+         * полностью устраняет гонку.
+         */
         private val trafficUpdateMutex = Mutex()
 
         /**
@@ -433,9 +441,18 @@ class TrafficTracker
             lastTotalBytes: Long,
             target: TargetInfo,
         ) {
+            // Строгое соблюдение API: NetworkStatsManager.querySummaryForDevice
+            // возвращает монотонно возрастающее значение на AOSP.
+            // Уменьшение currentBytes относительно lastTotalBytes означает
+            // одно из двух:
+            // 1. Перезагрузка устройства — счётчик сброшен.
+            // 2. Смена SIM по умолчанию — новый счётчик для новой SIM.
+            // В обоих случаях корректно сбросить baseline на текущее значение.
+            // На кастомных прошивках, возвращающих немонотонные значения,
+            // это проблема кастомной прошивки, а не штатного пути.
             if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
                 simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                AppLogger.d("Traffic baseline initialized/reset for $targetIdentity to $currentBytes")
+                AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
             } else {
                 handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
             }

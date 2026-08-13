@@ -56,6 +56,16 @@ import androidx.glance.color.ColorProvider as GlanceColorProvider
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 class MinutesGlanceWidget : GlanceAppWidget() {
+    companion object {
+        /**
+         * Принудительно использует упрощённый layout для виджета.
+         * Используется [WidgetUpdaterImpl] для немедленного восстановления
+         * после TransactionTooLargeException, не дожидаясь распространения
+         * изменений через StateFlow/DataStore.
+         */
+        var isForceSimplified: Boolean = false
+    }
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
@@ -143,12 +153,14 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 
         val settingsState =
             try {
-                widgetSettingsLoader.load()
+                val loaded = widgetSettingsLoader.load()
+                if (isForceSimplified) loaded.copy(widgetLimitExceeded = true) else loaded
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to load widget settings, using defaults", e)
-                WidgetSettingsState(settingsLoadFailed = true)
+                val fallback = WidgetSettingsState(settingsLoadFailed = true)
+                if (isForceSimplified) fallback.copy(widgetLimitExceeded = true) else fallback
             }
 
         if (refreshFailed && settingsState.settingsLoadFailed) {
@@ -186,18 +198,28 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                     )
         }
 
+    /**
+     * Получает актуальный snapshot для рендера виджета.
+     *
+     * Проверка staleness использует wall clock (System.currentTimeMillis),
+     * поскольку snapshot.timestamp хранится как wall clock.
+     *
+     * Известное ограничение: при переводе системных часов назад
+     * (now - timestamp > STALE_THRESHOLD при отрицательном now - timestamp)
+     * isStale может дать ложный результат. Это безопасно: лишний вызов
+     * refresh() не приводит к потере данных, а лишь выполняет
+     * дополнительное обновление.
+     *
+     * Строгое соблюдение API: на AOSP UsageStateRepository.refresh()
+     * не возвращает null при корректном состоянии DataStore.
+     * Если кастомная прошивка не соответствует документации Google —
+     * это проблема кастомной прошивки.
+     */
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
     ): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         val now = System.currentTimeMillis()
-        // Проверка staleness использует wall clock (System.currentTimeMillis),
-        // поскольку snapshot.timestamp хранится как wall clock.
-        // При переводе системных часов назад isStale может дать ложный результат,
-        // но это приведёт лишь к лишнему вызову refresh(), что безопасно.
-        // Строгое соблюдение API: на AOSP refresh() не возвращает null
-        // при корректном состоянии DataStore. Если кастомная прошивка не
-        // соответствует документации Google — это проблема кастомной прошивки.
         val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
         if (initialSnapshot.timestamp != 0L && !isStale) {

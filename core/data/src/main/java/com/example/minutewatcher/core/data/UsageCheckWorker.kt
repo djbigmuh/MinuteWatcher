@@ -41,10 +41,12 @@ class UsageCheckWorker
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
                 try {
-                    // Refresh operator info periodically
-                    deps.usageUseCase.refreshOperatorInfo()
-
-                    return@withContext checkUsageAndNotify()
+                    withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
+                        executeWork()
+                    } ?: run {
+                        AppLogger.e("UsageCheckWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
+                        Result.retry()
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: java.io.IOException) {
@@ -58,6 +60,11 @@ class UsageCheckWorker
                     Result.failure()
                 }
             }
+
+        private suspend fun executeWork(): Result {
+            deps.usageUseCase.refreshOperatorInfo()
+            return checkUsageAndNotify()
+        }
 
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
@@ -377,5 +384,12 @@ class UsageCheckWorker
 
             private const val NOTIFICATION_TYPE_MINUTES = 0
             private const val NOTIFICATION_TYPE_TRAFFIC = 1
+
+            /**
+             * Общий таймаут воркера. Превышение означает зависание
+             * на кастомной прошивке. На AOSP все операции завершаются
+             * в пределах нескольких секунд.
+             */
+            private const val WORKER_TIMEOUT_MS = 120_000L // 2 минуты
         }
     }

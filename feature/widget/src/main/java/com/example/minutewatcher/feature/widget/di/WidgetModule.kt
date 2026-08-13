@@ -27,8 +27,16 @@ interface WidgetModule {
         @Singleton
         fun provideWidgetRenderer(): WidgetRenderer =
             object : WidgetRenderer {
-                override suspend fun renderAll(context: Context) {
-                    MinutesGlanceWidget().updateAll(context)
+                override suspend fun renderAll(
+                    context: Context,
+                    forceSimplified: Boolean,
+                ) {
+                    try {
+                        MinutesGlanceWidget.isForceSimplified = forceSimplified
+                        MinutesGlanceWidget().updateAll(context)
+                    } finally {
+                        MinutesGlanceWidget.isForceSimplified = false
+                    }
                 }
             }
     }

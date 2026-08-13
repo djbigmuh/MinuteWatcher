@@ -59,6 +59,19 @@ class CallTracker
         private val writeAttempts = ConcurrentHashMap<Int, Int>()
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
+        /**
+         * Мьютекс сериализует обработку событий звонков.
+         * Удерживается на время чтения и записи в DataStore.
+         *
+         * Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+         * На кастомных прошивках с деградацией хранилища время удержания
+         * может увеличиться, что приведёт к задержке обработки следующего
+         * события звонка. Это проблема кастомной прошивки.
+         *
+         * Мьютекс необходим для корректности: без него два события
+         * OFFHOOK для разных subId могут прочитать/записать пересекающиеся
+         * ключи DataStore и повредить состояние сессии.
+         */
         private val callMutex = Mutex()
 
         private val callEndResolver =
@@ -155,13 +168,14 @@ class CallTracker
         }
 
         /**
-         * Reads data with retry and timeout.
-         *
-         * Таймаут по умолчанию — [Constants.Flow.SHORT_TIMEOUT_MS].
-         * Для чтения сессий звонков используется [Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS] (2000 мс)
-         * — см. документацию константы.
+         * Читает данные с retry и timeout.
+         * Обрабатывает два типа сбоев:
+         * 1. Таймаут — Flow не эмитит значение в пределах timeoutMs.
+         * 2. Внутреннее исключение Flow — DataStore в повреждённом состоянии.
+         * В обоих случаях выполняется retry с экспоненциальной задержкой.
+         * Строгое соблюдение API: на AOSP DataStore.data всегда эмитит
+         * хотя бы одно значение. Сбой возможен только на кастомных прошивках.
          */
-
         @Suppress("LongParameterList")
         // Подавление LongParameterList оправдано: readWithRetry — это универсальный инфраструктурный метод,
         // где каждый из 5 параметров (label, attempts, timeout, delay, reader) необходим для точной
@@ -174,20 +188,30 @@ class CallTracker
             reader: () -> Flow<T>,
         ): Result<T> {
             var currentDelay = retryDelayMs
+            var lastException: Exception? = null
             for (attempt in 1..attempts) {
                 val result =
                     withTimeoutOrNull(timeoutMs.milliseconds) {
-                        reader().first()
+                        try {
+                            reader().first()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.w("readWithRetry($label): flow threw on attempt $attempt", e)
+                            lastException = e
+                            null
+                        }
                     }
                 result?.let { return Result.success(it) }
                 if (attempt < attempts) {
-                    AppLogger.d("readWithRetry($label): attempt $attempt timed out, retrying in ${currentDelay}ms")
+                    AppLogger.d("readWithRetry($label): attempt $attempt failed, retrying in ${currentDelay}ms")
                     delay(currentDelay.milliseconds)
                     currentDelay *= 2
                 }
             }
-            AppLogger.w("readWithRetry($label): all $attempts attempts timed out")
-            return Result.failure(DataStoreTimeoutException("readWithRetry($label) timed out"))
+            val errorMessage = lastException?.message ?: "Timeout reading $label"
+            AppLogger.w("readWithRetry($label): all $attempts attempts failed ($errorMessage)")
+            return Result.failure(DataStoreTimeoutException(errorMessage))
         }
 
         // Подавление LongMethod и ReturnCount оправдано: метод инкапсулирует атомарную логику захвата
@@ -196,7 +220,7 @@ class CallTracker
         private suspend fun handleCallStartInternal(subId: Int): Boolean {
             val result =
                 readWithRetry(
-                    label = "callStartData",
+                    label = "session data for subId $subId",
                     attempts = READ_RETRY_ATTEMPTS,
                     timeoutMs = Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS,
                     retryDelayMs = READ_RETRY_DELAY_MS,
@@ -208,11 +232,12 @@ class CallTracker
                 }
 
             if (result.isFailure) {
-                AppLogger.e("Call start event dropped due to DataStore timeout for subId $subId", null)
+                val errorMessage = result.exceptionOrNull()?.message ?: "Unknown error"
+                AppLogger.e("Call start event dropped due to DataStore error for subId $subId: $errorMessage", null)
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
-                        "Timeout reading session data for subId $subId",
+                        errorMessage,
                     )
                 withContext(NonCancellable) {
                     try {
@@ -538,11 +563,12 @@ class CallTracker
                 }
 
             if (result.isFailure) {
-                AppLogger.e("Call session data read timeout for subId $subId", null)
+                val errorMessage = result.exceptionOrNull()?.message ?: "Unknown error"
+                AppLogger.e("Call session data read failed for subId $subId: $errorMessage", null)
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
-                        "Timeout loading session data for subId $subId",
+                        errorMessage,
                     )
                 return null
             }

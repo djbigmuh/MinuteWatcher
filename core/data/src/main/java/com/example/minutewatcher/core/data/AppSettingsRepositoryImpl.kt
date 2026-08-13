@@ -14,8 +14,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,16 +42,29 @@ class AppSettingsRepositoryImpl
 
         override fun observeAppSettings(): StateFlow<AppSettings> = appSettingsState
 
-        override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
-            dataStore.edit { prefs ->
-                val current = prefs.toAppSettings()
-                val updated = transform(current)
+        private val updateMutex = Mutex()
 
-                updateBasicSettings(prefs, updated)
-                updateWidgetSettings(prefs, updated)
-                updateSystemSettings(prefs, updated)
-                updateTrackingSettings(prefs, updated)
+        /**
+         * Атомарно обновляет настройки приложения.
+         * Строгое соблюдение API: Использование Mutex гарантирует,
+         * что между чтением и записью не произойдёт конкурентная модификация.
+         */
+        override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
+            updateMutex.withLock {
+                val current = dataStore.data.first().toAppSettings()
+                val updated = transform(current)
+                dataStore.edit { prefs -> applyUpdatedSettings(prefs, updated) }
             }
+        }
+
+        private fun applyUpdatedSettings(
+            prefs: MutablePreferences,
+            updated: AppSettings,
+        ) {
+            updateBasicSettings(prefs, updated)
+            updateWidgetSettings(prefs, updated)
+            updateSystemSettings(prefs, updated)
+            updateTrackingSettings(prefs, updated)
         }
 
         private fun updateBasicSettings(

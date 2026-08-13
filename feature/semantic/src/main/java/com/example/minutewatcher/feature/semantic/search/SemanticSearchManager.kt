@@ -69,26 +69,40 @@ class SemanticSearchManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
+        private val initMutex = Mutex()
+
+        /**
+         * Инициализирует менеджер для наблюдения за изменениями snapshot.
+         * Мьютекс предотвращает гонку при быстром повторном вызове initialize.
+         * Строгое соблюдение API: на AOSP StateFlow эмитит значения
+         * последовательно, и debounce гарантирует отсутствие дубликатов.
+         */
         @OptIn(FlowPreview::class)
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             lastSnapshotFlow = snapshotFlow
+            // Отменяем предыдущий job вне мьютекса (cancel идемпотентен)
             job?.cancel()
-            job =
-                scope.launch {
-                    snapshotFlow
-                        .debounce { snapshot ->
-                            if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
-                        }.collect { snapshot ->
-                            ensureActive()
-                            try {
-                                indexSnapshot(snapshot)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("SemanticSearchManager: unexpected error during indexing, will continue", e)
-                            }
+
+            scope.launch {
+                initMutex.withLock {
+                    job =
+                        launch {
+                            snapshotFlow
+                                .debounce { snapshot ->
+                                    if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                                }.collect { snapshot ->
+                                    ensureActive()
+                                    try {
+                                        indexSnapshot(snapshot)
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
+                                    }
+                                }
                         }
                 }
+            }
         }
 
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
