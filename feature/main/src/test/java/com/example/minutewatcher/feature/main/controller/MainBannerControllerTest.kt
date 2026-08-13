@@ -113,7 +113,9 @@ class MainBannerControllerTest {
             // It should have retried now.
             // But we need to make sure the coroutine had a chance to run.
             testScheduler.runCurrent()
-            assertEquals("Should have retried after 1000ms delay", 2, collectionCount)
-            assertEquals(1000L, testScheduler.currentTime - startTime)
+
+            val expectedDelay = 1000L.coerceAtMost(MainBannerController.MAX_RETRY_DELAY_MS)
+            assertEquals("Should have retried after ${expectedDelay}ms delay", 2, collectionCount)
+            assertEquals(expectedDelay, testScheduler.currentTime - startTime)
         }
 }

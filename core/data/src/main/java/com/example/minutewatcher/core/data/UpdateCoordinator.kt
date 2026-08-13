@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -23,7 +24,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
@@ -87,8 +90,7 @@ class UpdateCoordinator
                 }
             observationJob =
                 scope.launch(handler) {
-                    usageStateRepository
-                        .observeSnapshot()
+                    flow { emitAll(usageStateRepository.observeSnapshot()) }
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                         .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                         .onEach { snapshot ->
@@ -110,6 +112,8 @@ class UpdateCoordinator
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
             // Наблюдение успешно — snapshot доставлен. Сбрасываем счётчик
             // сбоев наблюдения независимо от результата обновления виджета.
+            // Это гарантирует, что после восстановления счётчик не остаётся
+            // в состоянии "много ошибок" и не влияет на логирование.
             observationRetryCount.set(0)
 
             val now = timeProvider.now()
@@ -169,11 +173,14 @@ class UpdateCoordinator
          * 2. [observationRetryCount] отслеживает последовательные сбои для логирования.
          * 3. [retryAttempt] и [observationRetryCount] сбрасываются каждые
          *    [RESET_RETRY_COUNTER_INTERVAL_MS] (10 минут) для предотвращения накопления.
-         * 4. Строгое соблюдение API: на AOSP observeSnapshot() из StateFlow не бросает
-         *    исключений; сбой возможен только при деградации DataStore на кастомных прошивках.
-         *    Бесконечные попытки гарантируют восстановление без вмешательства пользователя.
-         *    Если кастомная прошивка не соответствует документации Google — это проблема
-         *    кастомной прошивки.
+         *
+         * **Строгое соблюдение API:**
+         * На AOSP combine из StateFlow не бросает исключений; сбой возможен только
+         * при деградации DataStore на кастомных прошивках, не соответствующих
+         * документации Google. Если кастомная прошивка не соответствует
+         * документации Google — это проблема кастомной прошивки.
+         * Бесконечные повторные попытки гарантируют восстановление без
+         * вмешательства пользователя.
          */
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
             if (cause is CancellationException) throw cause
@@ -286,6 +293,8 @@ class UpdateCoordinator
         companion object {
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
-            private const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
+
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+            internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
         }
     }

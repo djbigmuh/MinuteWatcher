@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.os.Build
+import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
@@ -264,10 +265,11 @@ class SimIdentityRepositoryImpl
          * Эвристика не применяется: если данные недоступны — это ошибка,
          * а не повод для угадывания.
          */
+
+        @Suppress("ThrowsCount")
         // Подавление ThrowsCount оставлено намеренно: метод реализует строгую валидацию по трем независимым
         // критериям (диапазон слотов, наличие seed, наличие подписки). Объединение исключений снизит
         // точность диагностики сбоев на кастомных прошивках.
-        @Suppress("ThrowsCount")
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
                 val message = "getSimIdentity called with out-of-range slot=$slot"
@@ -286,6 +288,11 @@ class SimIdentityRepositoryImpl
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
+                    // Строгое соблюдение API: на AOSP генерация seed завершается успешно.
+                    // Таймаут генерации возможен только при деградации DataStore
+                    // на кастомных прошивках, не соответствующих документации Google.
+                    // Если кастомная прошивка не соответствует документации Google —
+                    // это проблема кастомной прошивки.
                     val message = "Identity seed unavailable for slot $slot"
                     AppLogger.e(message, null)
                     throw IllegalStateException(message)
@@ -484,12 +491,18 @@ class SimIdentityRepositoryImpl
          *
          * @throws java.io.IOException if DataStore write fails after internal retries within [saveSimIdentitiesInfo].
          */
+
+        @Suppress("ReturnCount")
         // Подавление ReturnCount оставлено намеренно: метод содержит 3 точки выхода, соответствующие
         // различным терминальным состояниям (отсутствие seed, отсутствие SIM, успешное завершение).
         // Усложнение структуры ради одного возврата снизит читаемость критической секции обнаружения SIM.
-        @Suppress("ReturnCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             if (seed is SeedResult.Fallback) {
+                // Строгое соблюдение API: на AOSP генерация seed завершается успешно.
+                // Таймаут генерации возможен только при деградации DataStore
+                // на кастомных прошивках, не соответствующих документации Google.
+                // Если кастомная прошивка не соответствует документации Google —
+                // это проблема кастомной прошивки.
                 AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
                 return emptyList()
             }
@@ -500,10 +513,7 @@ class SimIdentityRepositoryImpl
                     .getActiveSubscriptions()
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
 
-            val identities =
-                infoList.map { info ->
-                    SimIdentityUtils.createIdentityFromInfo(info, seedValue)
-                }
+            val identities = mapInfoListToIdentities(infoList, seedValue)
 
             val currentIdentities = identities.asSequence().map { it.stableId }.toSet()
             migratedIdentities.retainAll(currentIdentities)
@@ -520,6 +530,27 @@ class SimIdentityRepositoryImpl
                 AppLogger.e("Failed to save identity info for active SIMs", e)
             }
 
+            return createActiveSimInfoList(infoList, identities)
+        }
+
+        /**
+         * Маппинг информации о подписках в идентичности SIM.
+         */
+        private fun mapInfoListToIdentities(
+            infoList: List<SubscriptionInfo>,
+            seedValue: String,
+        ): List<SimIdentity> =
+            infoList.map { info ->
+                SimIdentityUtils.createIdentityFromInfo(info, seedValue)
+            }
+
+        /**
+         * Создание списка ActiveSimInfo на основе подписок и идентичностей.
+         */
+        private fun createActiveSimInfoList(
+            infoList: List<SubscriptionInfo>,
+            identities: List<SimIdentity>,
+        ): List<ActiveSimInfo> {
             val defaultDataSubId = permissionManager.getDefaultDataSubscriptionId()
             val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
 

@@ -14,10 +14,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-// Подавление LongParameterList оправдано: UsageWorkerDependencies является Dependency Aggregator для
-// UsageCheckWorker. Группировка 12 зависимостей в один объект упрощает конструктор воркера и
-// облегчает его сопровождение без нарушения принципа единственной ответственности.
-@Suppress("LongParameterList")
 class UsageWorkerDependencies
     @Inject
     constructor(

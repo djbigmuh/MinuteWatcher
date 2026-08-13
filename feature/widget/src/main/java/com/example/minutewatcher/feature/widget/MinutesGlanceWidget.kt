@@ -102,7 +102,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     @Composable
     private fun FallbackContent(context: Context) {
         Box(
-            modifier = GlanceModifier.fillMaxSize().appWidgetBackground(),
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .appWidgetBackground(),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -152,33 +155,36 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             AppLogger.w("Widget: both snapshot refresh and settings load failed")
         }
 
-        val strings =
-            com.example.minutewatcher.core.model.WidgetStrings(
-                usedText = context.getString(R.string.used_text),
-                minutesAbbr = context.getString(R.string.minutes_abbr),
-                limitText = context.getString(R.string.limit_text),
-                gbAbbr = context.getString(R.string.gb_abbr),
-                fractionFormat = context.getString(R.string.fraction_format),
-            )
-
-        val operatorNames =
-            snapshot.simSnapshots.associate { sim ->
-                sim.slot to
-                    com.example.minutewatcher.core.android.util.SimUtils
-                        .getShortOperatorName(
-                            context,
-                            sim.operator,
-                        )
-            }
-
         return WidgetUiMapper.mapFromSnapshot(
-            strings = strings,
+            strings = getWidgetStrings(context),
             snapshot = snapshot,
             state = settingsState,
-            operatorNames = operatorNames,
+            operatorNames = getOperatorNames(context, snapshot.simSnapshots),
             refreshFailed = refreshFailed,
         )
     }
+
+    private fun getWidgetStrings(context: Context): com.example.minutewatcher.core.model.WidgetStrings =
+        com.example.minutewatcher.core.model.WidgetStrings(
+            usedText = context.getString(R.string.used_text),
+            minutesAbbr = context.getString(R.string.minutes_abbr),
+            limitText = context.getString(R.string.limit_text),
+            gbAbbr = context.getString(R.string.gb_abbr),
+            fractionFormat = context.getString(R.string.fraction_format),
+        )
+
+    private fun getOperatorNames(
+        context: Context,
+        simSnapshots: List<com.example.minutewatcher.core.model.SimSnapshot>,
+    ): Map<Int, String> =
+        simSnapshots.associate { sim ->
+            sim.slot to
+                com.example.minutewatcher.core.android.util.SimUtils
+                    .getShortOperatorName(
+                        context,
+                        sim.operator,
+                    )
+        }
 
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
@@ -294,25 +300,34 @@ private fun WidgetMainContent(
         }
 
         simUiStates.isNotEmpty() -> {
-            Column(
-                modifier = GlanceModifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (uiState.refreshFailed) {
-                    StaleDataIndicator(noDataColor)
-                }
-                Box(
-                    modifier = GlanceModifier.defaultWeight(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    MultiSimLayout(simUiStates, uiState)
-                }
-            }
+            SimCardsLayout(simUiStates, uiState, noDataColor)
         }
 
         else -> {
             WidgetMessage(context.getString(R.string.no_sim_found), noDataColor)
+        }
+    }
+}
+
+@Composable
+private fun SimCardsLayout(
+    simUiStates: List<SimUiState>,
+    uiState: WidgetUiState,
+    noDataColor: IColorProvider,
+) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (uiState.refreshFailed) {
+            StaleDataIndicator(noDataColor)
+        }
+        Box(
+            modifier = GlanceModifier.defaultWeight(),
+            contentAlignment = Alignment.Center,
+        ) {
+            MultiSimLayout(simUiStates, uiState)
         }
     }
 }
@@ -380,7 +395,10 @@ private fun HorizontalSimLayout(
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier = GlanceModifier.fillMaxHeight().defaultWeight(),
+                modifier =
+                    GlanceModifier
+                        .fillMaxHeight()
+                        .defaultWeight(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)
@@ -403,7 +421,10 @@ private fun VerticalSimLayout(
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                modifier =
+                    GlanceModifier
+                        .fillMaxWidth()
+                        .defaultWeight(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)
@@ -462,34 +483,46 @@ private fun SimItem(
     Column(
         modifier =
             GlanceModifier
-                .padding(
-                    Constants.Widget.PADDING_SIM_ITEM.dp,
-                ).semantics { contentDescription = summary },
+                .padding(Constants.Widget.PADDING_SIM_ITEM.dp)
+                .semantics { contentDescription = summary },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SimLayoutRender(
-            spec = sim.layoutSpec,
-            rowContainer = { content ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    content()
-                }
-            },
-            iconRenderer = { component ->
-                Image(
-                    provider = ImageProvider(component.iconRes),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(component.sizeDp.dp),
-                )
-            },
-            textRenderer = { component ->
-                SimItemText(component, sim, uiState)
-            },
-            spacerRenderer = { component ->
-                SimItemSpacer(component)
-            },
-        )
+        SimItemLayout(sim, uiState)
     }
+}
+
+@Composable
+private fun SimItemLayout(
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
+    SimLayoutRender(
+        spec = sim.layoutSpec,
+        rowContainer = { content ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                content()
+            }
+        },
+        iconRenderer = { component ->
+            SimItemIcon(component)
+        },
+        textRenderer = { component ->
+            SimItemText(component, sim, uiState)
+        },
+        spacerRenderer = { component ->
+            SimItemSpacer(component)
+        },
+    )
+}
+
+@Composable
+private fun SimItemIcon(component: com.example.minutewatcher.core.model.SimLayoutComponent.Icon) {
+    Image(
+        provider = ImageProvider(component.iconRes),
+        contentDescription = null,
+        modifier = GlanceModifier.size(component.sizeDp.dp),
+    )
 }
 
 @Composable

@@ -199,6 +199,8 @@ class MainViewModel
                     .observeSnapshot()
                     .value
                     .timestamp
+            // result == null означает, что обновление уже выполняется параллельно в другом потоке/корутине.
+            // В этом случае мы дожидаемся появления нового снимка данных (snapshot).
             val result = controllers.refresh.refreshSimCardsInternal()
 
             if (result == null) {
@@ -214,6 +216,9 @@ class MainViewModel
                     controllers.simData.notifyDataChanged(force = force)
                     return
                 }
+                // Snapshot получен успешно — обновляем timestamp последнего обновления,
+                // чтобы предотвратить избыточные повторные вызовы в onActivityResume.
+                lastRefreshAt = timeProvider.elapsedRealtime()
             }
 
             if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {

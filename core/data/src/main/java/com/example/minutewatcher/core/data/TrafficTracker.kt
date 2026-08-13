@@ -137,43 +137,11 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return
 
-                    /**
-                     * Защита от неограниченного роста baselineNeedsRetry.
-                     *
-                     * Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null
-                     * (timeout) при наличии активного SubscriptionManager и READ_PHONE_STATE.
-                     * Таймаут возможен только при деградации DataStore на кастомных прошивках,
-                     * не соответствующих документации Google.
-                     *
-                     * Стратегия: если количество записей превышает удвоенное число поддерживаемых
-                     * слотов (MAX_SUPPORTED_SIM_SLOTS * 2), карта очищается полностью.
-                     * Это допустимая эвристика в пределах критерия надёжности:
-                     * - Потеря записи в baselineNeedsRetry приводит лишь к повторному вызову
-                     *   resetBaseline при следующем успешном обновлении.
-                     * - Альтернатива (точечная очистка по identity) невозможна без получения
-                     *   актуального списка SIM, что и является причиной таймаута.
-                     */
-                    if (baselineNeedsRetry.size > (Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2)) {
-                        AppLogger.w(
-                            "TrafficTracker: baselineNeedsRetry map size exceeded limit, " +
-                                "force clearing to prevent leak.",
-                        )
-                        baselineNeedsRetry.clear()
-                    }
+                    ensureBaselineNeedsRetryCapacity()
 
                     val activeSims = getActiveSimsAndCleanup()
                     if (activeSims == null) {
-                        AppLogger.w(
-                            "TrafficTracker: observeActiveSims timed out, skipping update. " +
-                                "baselineNeedsRetry cleanup deferred due to activeSims timeout",
-                        )
-                        // Identity read timeout is a transient state; status will be restored
-                        // on the next successful update.
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.UNKNOWN,
-                                "Identity read timeout in TrafficTracker",
-                            )
+                        handleIdentityReadTimeout()
                         return
                     }
 
@@ -195,6 +163,44 @@ class TrafficTracker
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             }
+        }
+
+        /**
+         * Защита от неограниченного роста baselineNeedsRetry.
+         *
+         * Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null
+         * (timeout) при наличии активного SubscriptionManager и READ_PHONE_STATE.
+         * Таймаут возможен только при деградации DataStore на кастомных прошивках,
+         * не соответствующих документации Google.
+         *
+         * Стратегия: если количество записей превышает удвоенное число поддерживаемых
+         * слотов (MAX_SUPPORTED_SIM_SLOTS * 2), карта очищается полностью.
+         */
+        private fun ensureBaselineNeedsRetryCapacity() {
+            if (baselineNeedsRetry.size > (Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2)) {
+                AppLogger.w(
+                    "TrafficTracker: baselineNeedsRetry map size exceeded limit, " +
+                        "force clearing to prevent leak.",
+                )
+                baselineNeedsRetry.clear()
+            }
+        }
+
+        /**
+         * Обработка таймаута чтения идентичностей при обновлении трафика.
+         * Identity read timeout — это переходное состояние; статус будет восстановлен
+         * при следующем успешном обновлении.
+         */
+        private fun handleIdentityReadTimeout() {
+            AppLogger.w(
+                "TrafficTracker: observeActiveSims timed out, skipping update. " +
+                    "baselineNeedsRetry cleanup deferred due to activeSims timeout",
+            )
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "Identity read timeout in TrafficTracker",
+                )
         }
 
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
@@ -696,7 +702,9 @@ internal data class TargetInfo(
  *
  * Реализовано строгое соблюдение API и SDK. Отклонения кастомных прошивок
  * (например, отсутствие defaultDataSubscriptionId при наличии активных SIM)
- * не маскируются эвристиками, а возвращаются как [TargetResult.InconsistentFirmware].
+ * не маскируются, а обрабатываются как [TargetResult.InconsistentFirmware].
+ * Если кастомная прошивка не соответствует документации Google —
+ * это проблема кастомной прошивки.
  */
 internal class TrafficTargetResolver(
     private val permissionManager: PermissionManager,
@@ -717,7 +725,14 @@ internal class TrafficTargetResolver(
     fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
         if (activeSims.isEmpty()) return TargetResult.NoActiveSims
 
-        val (targetSim, currentDataSubId) = resolveTargetSim(activeSims) ?: return TargetResult.InconsistentFirmware
+        val (targetSim, currentDataSubId) =
+            resolveTargetSim(activeSims) ?: run {
+                // Строгое соблюдение API: на AOSP getDefaultDataSubscriptionId() всегда
+                // возвращает валидный ID при наличии активных SIM.
+                // Состояние "SIM есть, но default data не определена" возможно только
+                // на кастомных прошивках, не соответствующих документации Google.
+                return TargetResult.InconsistentFirmware
+            }
 
         return TargetResult.Success(
             TargetInfo(

@@ -41,3 +41,7 @@ audit_dump/
 # Generated benchmark config
 app/benchmark-config.txt
 
+# Diagnostic scripts (local only)
+diag_gradle.ps1
+diag_result.txt
+

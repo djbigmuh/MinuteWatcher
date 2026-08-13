@@ -22,15 +22,25 @@ object Constants {
     }
 
     object Widget {
+        /** Стандартный размер шрифта для виджета (sp). */
         const val FONT_SIZE_MEDIUM = 14f
 
+        /** Задержка debounce для реактивного обновления виджета (мс).
+         * Предотвращает множественные обновления при быстрых изменениях данных. */
         const val DEBOUNCE_MS = 300L
 
         const val SIM_ARRANGEMENT_HORIZONTAL = 0
 
+        /** Порог прозрачности (0-100), выше которого используются системные цвета.
+         * Выбран как компромисс между читаемостью и эстетикой. */
         const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80
 
+        /** Количество SIM, при котором превентивно ограничивается layout.
+         * На AOSP RemoteViews лимит ~1МБ. 3 SIM × 6 строк × ~500Б ≈ 9КБ — безопасно.
+         * Упрощённый layout применяется при widgetLimitExceeded = true. */
         const val PREEMPTIVE_LAYOUT_LIMIT_SIMS = 3
+
+        /** Минимальное количество SIM для отображения разделителя. */
         const val MIN_SIMS_FOR_SEPARATOR = 2
 
         const val PERCENT_MAX_FLOAT = 100f
@@ -42,7 +52,12 @@ object Constants {
         const val SEPARATOR_THICKNESS = 1
         const val ALPHA_FULL = 1f
 
+        /** Начальная задержка перед повторной попыткой обновления виджета (мс).
+         * Экспоненциальное удвоение: 500 → 1000 → 2000 → 4000. */
         const val RETRY_BACKOFF_MS = 500L
+
+        /** Максимальное количество попыток обновления виджета.
+         * Ограничивает общее время ожидания: 500+1000+2000+4000 = 7.5с. */
         const val MAX_UPDATE_ATTEMPTS = 4
         // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
     }
@@ -68,9 +83,17 @@ object Constants {
     }
 
     object Flow {
+        /** Таймаут остановки WhileSubscribed (мс).
+         * Достаточно для кратковременных поворотов экрана без перезапуска Flow. */
         const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MS = 5_000L
+
+        /** Общий debounce для UI-потоков (мс). */
         const val DEBOUNCE_MS = 300L
+
+        /** Таймаут для "быстрых" операций (мс), таких как проверка наличия данных. */
         const val SHORT_TIMEOUT_MS = 5_000L
+
+        /** Таймаут для "тяжелых" операций (мс), например, первичная генерация seed. */
         const val LONG_TIMEOUT_MS = 10_000L
 
         /**
@@ -83,9 +106,16 @@ object Constants {
          */
         const val CALL_SESSION_READ_TIMEOUT_MS = 2000L
 
+        /** Таймаут ожидания первичной генерации seed идентичности (мс). */
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
+
+        /** Задержка перед повторной попыткой при сетевых/дисковых сбоях (мс). */
         const val RETRY_DELAY_MS = 1_000L
+
+        /** Дополнительное время ожидания для завершения всех фоновых задач при генерации seed. */
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
+
+        /** Базовая задержка для повторных попыток наблюдения в UpdateCoordinator (мс). */
         const val WIDGET_RETRY_DELAY_MS = 5_000L
     }
 

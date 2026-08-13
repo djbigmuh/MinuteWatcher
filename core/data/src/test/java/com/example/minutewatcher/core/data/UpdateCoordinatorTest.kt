@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -115,19 +114,18 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    @Suppress("UNREACHABLE_CODE")
     fun `observation retries on repository failure with exponential backoff`() =
         runTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
-            // Объективная необходимость: наследование StateFlow используется для имитации сбоя метода collect(), что требуется для проверки механизмов retry в координаторе. Стабильные фабричные методы (stateIn) не позволяют пробросить исключение непосредственно в вызывающий collect().
-            @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
-            val mockStateFlow = object : StateFlow<GlobalSnapshot> by stateFlow {
-                override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+            // Проверка того, что координатор выполняет повторные попытки при сбое подписки на StateFlow.
+            val mockStateFlow =
+                FailingStateFlow(stateFlow.value) {
                     collectCount++
-                    throw RuntimeException("Temporary failure")
                 }
-            }
+
             whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
 
             UpdateCoordinator(
@@ -149,23 +147,18 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    @Suppress("UNREACHABLE_CODE")
     fun `observation resumes after repository failure`() =
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            var shouldFail = true
 
-            // Объективная необходимость: наследование StateFlow используется для имитации сбоя метода collect(), что требуется для проверки механизмов retry в координаторе. Стабильные фабричные методы (stateIn) не позволяют пробросить исключение непосредственно в вызывающий collect().
-            @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
-            val mockStateFlow = object : StateFlow<GlobalSnapshot> by stateFlow {
-                override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
-                    if (shouldFail) {
-                        shouldFail = false
-                        throw RuntimeException("Repository failure")
-                    }
-                    stateFlow.collect(collector)
-                }
-            }
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
+            // Проверка восстановления наблюдения после временного сбоя репозитория.
+            val mockStateFlow = FailingStateFlow(stateFlow.value) {}
+
+            // Возвращаем mock при первой попытке (вызовет сбой), затем реальный flow при повторной попытке.
+            whenever(usageStateRepository.observeSnapshot())
+                .thenReturn(mockStateFlow)
+                .thenReturn(stateFlow)
 
             UpdateCoordinator(
                 dataRefreshNotifier,
@@ -353,19 +346,18 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    @Suppress("UNREACHABLE_CODE")
     fun `observationRetryCount is reset by timer`() =
         runTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
-            // Объективная необходимость: наследование StateFlow используется для имитации сбоя метода collect(), что требуется для проверки механизмов retry в координаторе. Стабильные фабричные методы (stateIn) не позволяют пробросить исключение непосредственно в вызывающий collect().
-            @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
-            val mockStateFlow = object : StateFlow<GlobalSnapshot> by stateFlow {
-                override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+            // Проверка сброса счетчика попыток (observationRetryCount) после успешного восстановления и прохождения таймера.
+            val mockStateFlow =
+                FailingStateFlow(stateFlow.value) {
                     collectCount++
-                    throw RuntimeException("Persistent failure")
                 }
-            }
+
             whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
 
             val coordinator =
@@ -387,8 +379,10 @@ class UpdateCoordinatorTest {
             coordinator.restartObservation()
             testScheduler.runCurrent()
 
-            // Advance time to allow next retry
-            testScheduler.advanceTimeBy(100.seconds)
+            // Advance time for retry delay + debounce.
+            // We advance both the test scheduler and the fixed time provider to trigger the timer-based reset.
+            timeProvider.advance(UpdateCoordinator.RESET_RETRY_COUNTER_INTERVAL_MS + 1000)
+            testScheduler.advanceTimeBy(UpdateCoordinator.RESET_RETRY_COUNTER_INTERVAL_MS.milliseconds)
             testScheduler.runCurrent()
 
             val field = UpdateCoordinator::class.java.getDeclaredField("observationRetryCount")
@@ -411,6 +405,28 @@ class UpdateCoordinatorTest {
             simSnapshots = emptyList(),
             capabilities = emptyList(),
         )
+
+    /**
+     * Специальная реализация StateFlow для тестов, которая имитирует сбой при подписке (collect).
+     * Используется вместо мока, чтобы избежать KotlinNothingValueException.
+     *
+     * Наследование StateFlow помечено как экспериментальное (ExperimentalForInheritanceCoroutinesApi),
+     * так как требует реализации метода collect, возвращающего Nothing. В данном тестовом сценарии
+     * это единственный надежный способ имитировать сбой подписки без использования хрупких моков.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi::class)
+    private class FailingStateFlow(
+        private val snapshot: GlobalSnapshot,
+        private val onCollect: () -> Unit,
+    ) : StateFlow<GlobalSnapshot> {
+        override val value: GlobalSnapshot get() = snapshot
+        override val replayCache: List<GlobalSnapshot> get() = listOf(snapshot)
+
+        override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+            onCollect()
+            throw RuntimeException("FailingStateFlow: intentional collect failure")
+        }
+    }
 
     private fun createSnapshot(
         timestamp: Long,

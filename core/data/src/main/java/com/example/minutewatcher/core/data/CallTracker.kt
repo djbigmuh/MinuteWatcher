@@ -68,7 +68,7 @@ class CallTracker
                 telephonyManager = telephonyManager,
                 dataChangeNotifier = dataChangeNotifier,
                 endCall = { subId, notify -> endCall(subId, notify) },
-                setError = { error -> _status.value = error },
+                setError = { _status.value = it },
             )
 
         override suspend fun recover() {
@@ -161,10 +161,11 @@ class CallTracker
          * Для чтения сессий звонков используется [Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS] (2000 мс)
          * — см. документацию константы.
          */
+
+        @Suppress("LongParameterList")
         // Подавление LongParameterList оправдано: readWithRetry — это универсальный инфраструктурный метод,
         // где каждый из 5 параметров (label, attempts, timeout, delay, reader) необходим для точной
         // настройки стратегии повторов в различных сценариях деградации DataStore.
-        @Suppress("LongParameterList")
         private suspend fun <T : Any> readWithRetry(
             label: String,
             attempts: Int = READ_RETRY_ATTEMPTS,
@@ -192,7 +193,6 @@ class CallTracker
         // Подавление LongMethod и ReturnCount оправдано: метод инкапсулирует атомарную логику захвата
         // начала звонка, включая проверку разрешений, детекцию устаревших сессий и очистку стейта.
         // Разделение метода нарушит линейность восприятия критической секции старта сессии.
-        @Suppress("LongMethod", "ReturnCount")
         private suspend fun handleCallStartInternal(subId: Int): Boolean {
             val result =
                 readWithRetry(
@@ -233,7 +233,7 @@ class CallTracker
             val isStale = (startTime == 0L) || (savedBootTime == 0L) || (savedBootTime > currentBootTime)
 
             if (isStale) {
-                if (startTime != 0L || savedBootTime != 0L) {
+                if ((startTime != 0L) || (savedBootTime != 0L)) {
                     AppLogger.d("Clearing stale call session for subId $subId")
                     try {
                         clearSession(subId)
@@ -396,8 +396,15 @@ class CallTracker
             if (sessionData.startTime > 0) {
                 processActiveSessionEnd(subId, sessionData, currentBootTime, currentUptime, notify)
             } else {
-                // Строгое соблюдение API: на AOSP старт вызова всегда предшествует завершению и фиксируется в OFFHOOK. Отсутствие сессии при IDLE означает, что старт не был захвачен (приложение не работало, либо прошивка не доставила событие). Это не ошибка логики, а диагностический случай; он логируется для наблюдаемости.
-                AppLogger.w("Call ended but no active session found for subId=$subId (call start was not captured)", null)
+                // Строгое соблюдение API: на AOSP старт вызова всегда предшествует завершению и фиксируется в OFFHOOK.
+                // Отсутствие сессии при IDLE означает, что старт не был захвачен (приложение не работало, либо
+                // прошивка не доставила событие). Это не ошибка логики, а диагностический случай; он логируется
+                // для наблюдаемости.
+                AppLogger.w(
+                    "Call ended but no active session found for subId=$subId " +
+                        "(call start was not captured)",
+                    null,
+                )
             }
         }
 
@@ -437,7 +444,10 @@ class CallTracker
             val isValid = validateSession(subId, sessionData, currentBootTime)
             if (!isValid) return
 
-            // Строгое соблюдение API: проверка „протухшей“ сессии выполняется по монотонному SystemClock.elapsedRealtime() (savedBootTime → currentBootTime), а не по wall-clock. Это гарантирует корректность при изменении пользователем системного времени и после reboot. Wall-clock (startTime) для оценки длительности/протухания не используется.
+            // Строгое соблюдение API: проверка „протухшей“ сессии выполняется по монотонному
+            // SystemClock.elapsedRealtime() (savedBootTime → currentBootTime), а не по wall-clock.
+            // Это гарантирует корректность при изменении пользователем системного времени и после reboot.
+            // Wall-clock (startTime) для оценки длительности/протухания не используется.
             val isExpired = (currentBootTime - sessionData.savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS
 
             if (isExpired) {
@@ -567,8 +577,8 @@ class CallTracker
         private suspend fun refreshStatus(force: Boolean = false) {
             val current = _status.value
             val isIgnoredError =
-                current is TrackingStatus.Error &&
-                    !force &&
+                (current is TrackingStatus.Error) &&
+                    (!force) &&
                     (
                         current.type == TrackingStatus.ErrorType.UNKNOWN ||
                             current.type == TrackingStatus.ErrorType.PERMISSION_MISSING ||
@@ -616,11 +626,11 @@ class CallTracker
          * (отсутствие activeSubscriptionInfoList при наличии активного звонка).
          * В этом случае потеря данных одного звонка предпочтительнее перманентной блокировки трекинга.
          */
-        // Подавление LongMethod и ReturnCount оправдано: метод реализует сложную многошаговую логику атрибуции
-        // длительности звонка (валидация, разрешение identity, округление, запись в DataStore с повторами).
-        // Высокая плотность точек выхода (early returns) необходима для соблюдения критерия надёжности
-        // при работе с нестабильными системными API.
-        @Suppress("LongMethod", "ReturnCount")
+
+        @Suppress("ReturnCount")
+        // Подавление ReturnCount оправдано: метод содержит 3 точки выхода, соответствующие различным сценариям
+        // обработки длительности (нулевая длительность, трекинг отключен, успешная/неудачная атрибуция).
+        // Линейная структура с ранними выходами обеспечивает лучшую читаемость критической секции.
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun processCallDuration(
             durationSeconds: Int,
@@ -628,10 +638,39 @@ class CallTracker
             savedIdentity: String?,
             notify: Boolean = true,
         ): Boolean {
+            val (targetIdentity, isFallbackUsed) = resolveTargetIdentity(subId, savedIdentity)
+
+            if (durationSeconds == 0) {
+                AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
+                cleanupCounters(subId)
+                return true
+            }
+
+            if (!isCallTrackingEnabled()) {
+                AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
+                cleanupCounters(subId)
+                return true
+            }
+
+            val durationMinutes = calculateDurationMinutes(durationSeconds)
+
+            return targetIdentity?.let {
+                writeCallDuration(subId, it, durationMinutes, isFallbackUsed, notify)
+            } ?: handleAttributionFailure(subId)
+        }
+
+        private suspend fun resolveTargetIdentity(
+            subId: Int,
+            savedIdentity: String?,
+        ): Pair<String?, Boolean> {
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
             var isFallbackUsed = false
 
-            // Строгое соблюдение API: на AOSP subId вызова однозначно известен при наличии READ_PHONE_STATE, и identity сохраняется при старте вызова (savedIdentity). Fallback на SIM по умолчанию срабатывает только если identity не был сохранён, что возможно на кастомных прошивках, не соответствующих документации Google. Такая атрибуция считается неточной и учитывается в inaccurateCallAttributionsCount; это проблема кастомной прошивки, а не штатного пути.
+            // Строгое соблюдение API: на AOSP subId вызова однозначно известен при наличии READ_PHONE_STATE,
+            // и identity сохраняется при старте вызова (savedIdentity). Fallback на SIM по умолчанию срабатывает,
+            // только если identity не был сохранён, что возможно на кастомных прошивках, не соответствующих
+            // документации Google. Такая атрибуция считается неточной и учитывается в
+            // inaccurateCallAttributionsCount; это проблема кастомной прошивки, а не штатного пути.
             if (targetIdentity == null) {
                 val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
                 if (defaultVoiceSubId != -1) {
@@ -641,104 +680,110 @@ class CallTracker
                     }
                 }
             }
+            return targetIdentity to isFallbackUsed
+        }
 
-            if (durationSeconds == 0) {
-                AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
-                writeAttempts.remove(subId)
-                attributionFailures.remove(subId)
-                return true
-            }
+        private fun calculateDurationMinutes(durationSeconds: Int): Int =
+            (
+                (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
+                    Constants.SECONDS_PER_MINUTE
+            ).toInt()
 
-            if (!isCallTrackingEnabled()) {
-                AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
-                writeAttempts.remove(subId)
-                attributionFailures.remove(subId)
-                return true
-            }
-            val durationMinutes =
-                (
-                    (durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) /
-                        Constants.SECONDS_PER_MINUTE
-                ).toInt()
-
-            if (targetIdentity != null) {
-                return try {
-                    simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
-                    if (isFallbackUsed) {
-                        AppLogger.w("CallTracker: attribution fallback used for subId $subId (identity $targetIdentity)")
-                        appSettingsRepository.updateAppSettings {
-                            it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
-                        }
-                    }
-                    AppLogger.d("Added $durationMinutes min to identity $targetIdentity")
-                    if (notify) {
-                        dataChangeNotifier.notifyDataChanged()
-                    }
-                    writeAttempts.remove(subId)
-                    attributionFailures.remove(subId)
-                    true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    val attempts = (writeAttempts[subId] ?: 0) + 1
-                    writeAttempts[subId] = attempts
-
-                    /**
-                     * Handle DataStore write failure with a retry limit.
-                     *
-                     * Strategy:
-                     * 1. **Preserve Session**: Initially, we don't clear the session in DataStore, giving a chance
-                     *    for a retry on the next IDLE event (if any).
-                     * 2. **Avoid Deadlock**: However, an uncleared session blocks the tracking of the NEXT call
-                     *    on the same subId (it will be seen as a duplicate OFFHOOK).
-                     * 3. **Terminal Cleanup**: After [MAX_WRITE_ATTEMPTS], we prioritize future tracking over
-                     *    the current lost record. We clear the session and accept the data loss.
-                     *
-                     * This is a strict protection against permanent tracking loss for a specific SIM,
-                     * preventing a single failed write from "hanging" the tracker indefinitely.
-                     */
-                    if (attempts >= MAX_WRITE_ATTEMPTS) {
-                        val message =
-                            "Call duration write failed for identity $targetIdentity " +
-                                "(subId=$subId) after $attempts attempts. Session preserved."
-                        AppLogger.e(message, e)
-                        writeAttempts.remove(subId)
-                        attributionFailures.remove(subId)
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.DATABASE_ERROR,
-                                message,
-                            )
-                        false // Session is NOT closed
-                    } else {
-                        AppLogger.e(
-                            "Call duration write failed for identity $targetIdentity " +
-                                "(subId=$subId, attempt $attempts). Session preserved for retry.",
-                            e,
-                        )
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.UNKNOWN,
-                                "Call duration write failed, session preserved",
-                            )
-                        false
-                    }
-                }
-            } else {
-                val failures = (attributionFailures[subId] ?: 0) + 1
-                attributionFailures[subId] = failures
-                if (failures >= MAX_ATTRIBUTION_FAILURES) {
-                    AppLogger.e(
-                        "Call attribution failed $failures times for subId $subId. " +
-                            "Force-clearing session to prevent permanent block. " +
-                            "Call data for this session is lost.",
+        private suspend fun writeCallDuration(
+            subId: Int,
+            identity: String,
+            durationMinutes: Int,
+            isFallbackUsed: Boolean,
+            notify: Boolean,
+        ): Boolean =
+            try {
+                simUsageRepository.incrementMinutesUsed(identity, durationMinutes)
+                if (isFallbackUsed) {
+                    AppLogger.w(
+                        "CallTracker: attribution fallback used for subId $subId " +
+                            "(identity $identity)",
+                        null,
                     )
                     appSettingsRepository.updateAppSettings {
                         it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
                     }
-                    attributionFailures.remove(subId)
-                    return true // Сигнализируем endCall, что сессию нужно очистить
                 }
+                AppLogger.d("Added $durationMinutes min to identity $identity")
+                if (notify) {
+                    dataChangeNotifier.notifyDataChanged()
+                }
+                cleanupCounters(subId)
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                handleWriteFailure(subId, identity, e)
+            }
+
+        private fun handleWriteFailure(
+            subId: Int,
+            identity: String,
+            exception: Exception,
+        ): Boolean {
+            val attempts = (writeAttempts[subId] ?: 0) + 1
+            writeAttempts[subId] = attempts
+
+            /**
+             * Handle DataStore write failure with a retry limit.
+             *
+             * Strategy:
+             * 1. **Preserve Session**: Initially, we don't clear the session in DataStore, giving a chance
+             *    for a retry on the next IDLE event (if any).
+             * 2. **Avoid Deadlock**: However, an uncleared session blocks the tracking of the NEXT call
+             *    on the same subId (it will be seen as a duplicate OFFHOOK).
+             * 3. **Terminal Cleanup**: After [MAX_WRITE_ATTEMPTS], we prioritize future tracking over
+             *    the current lost record. We clear the session and accept the data loss.
+             *
+             * This is a strict protection against permanent tracking loss for a specific SIM,
+             * preventing a single failed write from "hanging" the tracker indefinitely.
+             */
+            return if (attempts >= MAX_WRITE_ATTEMPTS) {
+                val message =
+                    "Call duration write failed for identity $identity " +
+                        "(subId=$subId) after $attempts attempts. Session preserved."
+                AppLogger.e(message, exception)
+                cleanupCounters(subId)
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        message,
+                    )
+                false // Session is NOT closed
+            } else {
+                AppLogger.e(
+                    "Call duration write failed for identity $identity " +
+                        "(subId=$subId, attempt $attempts). Session preserved for retry.",
+                    exception,
+                )
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Call duration write failed, session preserved",
+                    )
+                false
+            }
+        }
+
+        private suspend fun handleAttributionFailure(subId: Int): Boolean {
+            val failures = (attributionFailures[subId] ?: 0) + 1
+            attributionFailures[subId] = failures
+            return if (failures >= MAX_ATTRIBUTION_FAILURES) {
+                AppLogger.e(
+                    "Call attribution failed $failures times for subId $subId. " +
+                        "Force-clearing session to prevent permanent block. " +
+                        "Call data for this session is lost.",
+                )
+                appSettingsRepository.updateAppSettings {
+                    it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
+                }
+                attributionFailures.remove(subId)
+                true // Сигнализируем endCall, что сессию нужно очистить
+            } else {
                 AppLogger.e(
                     "Could not attribute call duration for subId $subId " +
                         "(attempt $failures/$MAX_ATTRIBUTION_FAILURES)",
@@ -749,8 +794,13 @@ class CallTracker
                         "Attribution failed for subId $subId",
                     )
                 writeAttempts.remove(subId)
-                return false
+                false
             }
+        }
+
+        private fun cleanupCounters(subId: Int) {
+            writeAttempts.remove(subId)
+            attributionFailures.remove(subId)
         }
 
         companion object {

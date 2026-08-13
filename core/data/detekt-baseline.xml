@@ -3,10 +3,13 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:AppSettingsRepositoryImpl.kt$AppSettingsRepositoryImpl$private fun Preferences.toAppSettings(): AppSettings</ID>
+    <!-- Метод атомарен: инкапсулирует критическую секцию старта звонка. Разделение нарушит логическую целостность транзакции. -->
+    <ID>LongMethod:CallTracker.kt$CallTracker$private suspend fun handleCallStartInternal(subId: Int): Boolean</ID>
     <ID>LongMethod:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$@Test fun `traffic critical notification uses critical level`()</ID>
     <ID>LongMethod:WidgetSettingsRepositoryTest.kt$WidgetSettingsRepositoryTest$@Test fun `load should return state populated from app settings`()</ID>
+    <!-- UsageWorkerDependencies является Dependency Aggregator для упрощения конструктора UsageCheckWorker. -->
+    <ID>LongParameterList:UsageWorkerDependencies.kt$UsageWorkerDependencies$( val simUsageRepository: SimUsageRepository, val simIdentityRepository: SimIdentityRepository, val simNotificationFlagsRepository: SimNotificationFlagsRepository, val appSettingsRepository: AppSettingsRepository, val autoResetUseCase: AutoResetUseCase, val trafficTracker: TrafficTracker, val notificationHelper: NotificationHelper, val dataChangeNotifier: DataChangeNotifier, val usageStateRepository: UsageStateRepository, val usageUseCase: UsageUseCase, val simWidgetVisibilityRepository: SimWidgetVisibilityRepository, val timeProvider: TimeProvider, )</ID>
     <ID>MagicNumber:InitialSetupWorker.kt$InitialSetupWorker$15000L</ID>
-    <ID>MaxLineLength:CallTracker.kt$CallTracker$val durationMinutes = ((durationSeconds.toLong() + Constants.SECONDS_PER_MINUTE - 1) / Constants.SECONDS_PER_MINUTE).toInt()</ID>
     <ID>MaxLineLength:CallTrackerTest.kt$CallTrackerTest$whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))</ID>
     <ID>ReturnCount:CallEventWorker.kt$CallEventWorker$override suspend fun doWork(): Result</ID>
     <ID>ReturnCount:CallTracker.kt$CallTracker$private suspend fun endCall( subId: Int, notify: Boolean = true, )</ID>

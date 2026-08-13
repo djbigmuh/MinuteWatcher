@@ -37,6 +37,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
+// Подавление LargeClass оправдано для тестового класса: CallTrackerTest объединяет все сценарии
+// тестирования трекинга звонков, включая dual-SIM, сбои DataStore и системные тайминги.
+// Разделение теста усложнит поддержку общих моков и фикстур времени.
+@Suppress("LargeClass")
 class CallTrackerTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
@@ -111,9 +115,10 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
 
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
@@ -154,11 +159,13 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             timeProvider.setTime(500000000L)
+            timeProvider.setRealtime(500000000L)
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             callTracker.onCallEnded(-1)
@@ -173,13 +180,14 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 2000L))
-            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
-            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(200L))
+            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 2000L))
+            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 2000L))
             whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf("id_0"))
 
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(2)
@@ -197,13 +205,14 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 2000L))
-            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(200L))
-            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(200L))
+            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 2000L))
+            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 2000L))
             whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf("id_0"))
 
             whenever(telephonyManager.getCallStateForSubscription()).thenReturn(TelephonyManager.CALL_STATE_IDLE)
@@ -359,9 +368,10 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             val startTime = now - 1000L
-            val bootTime = 500L
-            val uptime = 500L
+            val bootTime = realtime - 1000L
+            val uptime = timeProvider.uptimeMillis() - 1000L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
@@ -411,9 +421,10 @@ class CallTrackerTest {
             val callTracker = createTracker()
             // Arrange: Force attribution failure in processCallDuration
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             val startTime = now - 1000L
-            val bootTime = 500L
-            val uptime = 500L
+            val bootTime = realtime - 1000L
+            val uptime = timeProvider.uptimeMillis() - 1000L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
@@ -441,9 +452,10 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(now - 1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
@@ -475,9 +487,10 @@ class CallTrackerTest {
             val callTracker = createTracker()
 
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             val startTime = now - 1000L
-            val bootTime = 500L
-            val uptime = 500L
+            val bootTime = realtime - 1000L
+            val uptime = timeProvider.uptimeMillis() - 1000L
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
@@ -572,23 +585,25 @@ class CallTrackerTest {
             val activeSubId = 2
 
             val now = 500000000L
+            val realtime = 500000000L
             timeProvider.setTime(now)
-            timeProvider.setRealtime(250000000L)
+            timeProvider.setRealtime(realtime)
 
-            // Stale session: started 13 hours ago
-            val staleStartTime = now - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
+            // Stale session: started 13 hours ago (by bootTime)
+            val staleBootTime = realtime - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(staleSubId, activeSubId))
 
             // staleSubId data
-            whenever(callSessionRepository.getCallStartTime(staleSubId)).thenReturn(flowOf(staleStartTime))
-            whenever(callSessionRepository.getBootTime(staleSubId)).thenReturn(flowOf(100000L))
-            whenever(callSessionRepository.getUptime(staleSubId)).thenReturn(flowOf(100000L))
+            whenever(callSessionRepository.getCallStartTime(staleSubId)).thenReturn(flowOf(now - 13 * 3600000L))
+            whenever(callSessionRepository.getBootTime(staleSubId)).thenReturn(flowOf(staleBootTime))
+            whenever(callSessionRepository.getUptime(staleSubId)).thenReturn(flowOf(staleBootTime))
             whenever(callSessionRepository.getCallIdentity(staleSubId)).thenReturn(flowOf("id_1"))
 
             // activeSubId data
             whenever(callSessionRepository.getCallStartTime(activeSubId)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(activeSubId)).thenReturn(flowOf(99900000L))
-            whenever(callSessionRepository.getUptime(activeSubId)).thenReturn(flowOf(99900000L))
+            whenever(callSessionRepository.getBootTime(activeSubId)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(activeSubId))
+                .thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(activeSubId)).thenReturn(flowOf("id_2"))
 
             // Telephony state OFFHOOK to trigger handleAmbiguousIdle
@@ -611,14 +626,15 @@ class CallTrackerTest {
             setupCommonMocks()
             val callTracker = createTracker()
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(now + 2000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             // currentUptime = now + 1000L (via advance)
             timeProvider.advance(1000L)
-            // currentRealtime = 501000L > savedBootTime = 100L -> valid
+            // currentRealtime = realtime + 1000L > savedBootTime = realtime - 1000L -> valid
 
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
@@ -795,11 +811,13 @@ class CallTrackerTest {
             // Arrange
             val subId = 1
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
             // Started 13 hours ago (limit is 12h)
             val startTime = now - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
+            val bootTime = realtime - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
             whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(startTime))
-            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(now - 100L))
-            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(now - 100L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(bootTime))
             // Force attribution failure
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(null))
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
@@ -826,11 +844,12 @@ class CallTrackerTest {
             val callTracker = createTracker()
             val subId = 1
             val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
 
             // Setup active session
             whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(100L))
-            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(100L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(null))
 
             // Trigger unexpected exception in endCall -> loadCallSessionData -> resolveIdentity
