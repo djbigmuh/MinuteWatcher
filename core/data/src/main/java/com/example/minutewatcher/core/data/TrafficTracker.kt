@@ -630,6 +630,22 @@ class TrafficTracker
             isLimitCheckOnly: Boolean = false,
         ): Boolean =
             when {
+                retryCount >= MAX_BASELINE_RETRIES -> {
+                    // Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+                    // возвращает корректные данные при наличии SIM и READ_PHONE_STATE.
+                    // Повторные неудачи возможны только при деградации системных сервисов
+                    // на кастомных прошивках, не соответствующих документации Google.
+                    // Лимит повторных попыток предотвращает бесконечный цикл.
+                    AppLogger.e("TrafficTracker: Baseline reset failed after $retryCount retries for $identity")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Baseline reset failed after $retryCount retries for $identity",
+                        )
+                    baselineNeedsRetry.remove(identity)
+                    true
+                }
+
                 isLimitCheckOnly -> false
 
                 else -> {
@@ -646,7 +662,7 @@ class TrafficTracker
                     )
                     // Мы не форсируем сброс (-1L), а сохраняем состояние ошибки.
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, reason)
-                    baselineNeedsRetry[identity] = (baselineNeedsRetry[identity] ?: 0) + 1
+                    baselineNeedsRetry[identity] = retryCount + 1
                     true
                 }
             }
@@ -662,7 +678,9 @@ class TrafficTracker
                 StatsResult.Unavailable
             }
 
-        companion object
+        private companion object {
+            private const val MAX_BASELINE_RETRIES = 3
+        }
     }
 
 internal data class TargetInfo(

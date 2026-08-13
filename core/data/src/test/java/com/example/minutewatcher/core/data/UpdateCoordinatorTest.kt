@@ -23,16 +23,22 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+// Opt-in для InternalCoroutinesApi: MutableSharedFlow реализует SharedFlow,
+// часть контрактов которого помечена как unstable. Использование ограничено
+// тестовым кодом и не влияет на production-контракты.
 @Suppress("MaxLineLength", "TooGenericExceptionThrown")
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()

@@ -3,14 +3,9 @@ package com.example.minutewatcher.core.data
 import android.content.Context
 import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
-import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
-import com.example.minutewatcher.core.domain.SimIdentityRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -49,18 +44,13 @@ class UsageStateRepositoryImpl
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        simIdentityRepository: SimIdentityRepository,
-        private val simUsageRepository: SimUsageRepository,
-        private val semanticCapabilities: SemanticCapabilities,
-        private val semanticVersion: SemanticVersion,
-        private val dataRefreshNotifier: DataRefreshNotifier,
+        private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
-        private val timeProvider: TimeProvider,
     ) : UsageStateRepository {
         private val refreshMutex = Mutex()
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
-            simIdentityRepository
+            deps.simIdentityRepository
                 .observeActiveSims()
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                 .distinctUntilChanged()
@@ -70,7 +60,7 @@ class UsageStateRepositoryImpl
                     } else {
                         combine(
                             sims.map { sim ->
-                                simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
+                                deps.simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
                                     usage.copy(slotIndex = sim.slotIndex)
                                 }
                             },
@@ -82,7 +72,7 @@ class UsageStateRepositoryImpl
                 }
 
         override fun observeSimUsages(): Flow<List<SimUsage>> =
-            combine(simUsagesFlow, dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
+            combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
 
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
             observeSimUsages()
@@ -93,7 +83,7 @@ class UsageStateRepositoryImpl
                 }
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =
-            combine(simUsagesFlow, dataRefreshNotifier.refreshFlow) { usages, event ->
+            combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, event ->
                 createSnapshot(usages, event)
             }.stateIn(scope, SharingStarted.Eagerly, createEmptySnapshot())
 
@@ -101,73 +91,77 @@ class UsageStateRepositoryImpl
             usages: List<SimUsage>,
             event: DataRefreshNotifier.RefreshEvent,
         ): GlobalSnapshot {
-            val timestamp = timeProvider.now()
-            val simSnapshots =
-                usages.map { usage ->
-                    val slot = usage.slotIndex
-                    val operator = usage.operator
-                    val isActive = true // Every item in usages corresponds to an active physical SIM
-
-                    val minutes =
-                        MinutesModel.calculate(
-                            used = usage.minutesUsed,
-                            limit = usage.minutesLimit,
-                            manualAdjustment = usage.manualAdjustment,
-                        )
-
-                    val traffic =
-                        TrafficModel.calculate(
-                            usedMb = usage.trafficUsedMb,
-                            limitMb = usage.trafficLimitMb,
-                            manualAdjustmentGb = usage.trafficAdjustmentGb,
-                        )
-
-                    val entities =
-                        mutableMapOf(
-                            PackageType.MINUTES to
-                                SemanticMapper.mapMinutes(
-                                    slot,
-                                    operator,
-                                    minutes,
-                                    usage.autoResetDay,
-                                    timestamp,
-                                ),
-                            PackageType.DATA to
-                                SemanticMapper.mapTraffic(
-                                    slot,
-                                    operator,
-                                    traffic,
-                                    usage.autoResetDay,
-                                    timestamp,
-                                ),
-                        )
-
-                    SimSnapshot(
-                        slot = slot,
-                        identity = usage.identity,
-                        operator = operator,
-                        isActive = isActive,
-                        entities = entities,
-                        autoResetDay = usage.autoResetDay,
-                    )
-                }
+            val timestamp = deps.timeProvider.now()
+            val simSnapshots = usages.map { mapSimSnapshot(it, timestamp) }
 
             return GlobalSnapshot(
-                version = semanticVersion.getVersion(),
+                version = deps.semanticVersion.getVersion(),
                 timestamp = timestamp,
                 simSnapshots = simSnapshots,
-                capabilities = semanticCapabilities.getCapabilities(),
+                capabilities = deps.semanticCapabilities.getCapabilities(),
                 isManualUpdate = event.isManual,
                 suppressWidgetUpdate = event.suppressWidgetUpdate,
             )
         }
 
+        private fun mapSimSnapshot(
+            usage: SimUsage,
+            timestamp: Long,
+        ): SimSnapshot {
+            val slot = usage.slotIndex
+            val operator = usage.operator
+            val isActive = true // Every item in usages corresponds to an active physical SIM
+
+            val minutes =
+                MinutesModel.calculate(
+                    used = usage.minutesUsed,
+                    limit = usage.minutesLimit,
+                    manualAdjustment = usage.manualAdjustment,
+                )
+
+            val traffic =
+                TrafficModel.calculate(
+                    usedMb = usage.trafficUsedMb,
+                    limitMb = usage.trafficLimitMb,
+                    manualAdjustmentGb = usage.trafficAdjustmentGb,
+                )
+
+            val entities =
+                mutableMapOf(
+                    PackageType.MINUTES to
+                        SemanticMapper.mapMinutes(
+                            slot,
+                            operator,
+                            minutes,
+                            usage.autoResetDay,
+                            timestamp,
+                        ),
+                    PackageType.DATA to
+                        SemanticMapper.mapTraffic(
+                            slot,
+                            operator,
+                            traffic,
+                            usage.autoResetDay,
+                            timestamp,
+                        ),
+                )
+
+            return SimSnapshot(
+                slot = slot,
+                identity = usage.identity,
+                operator = operator,
+                isActive = isActive,
+                entities = entities,
+                autoResetDay = usage.autoResetDay,
+            )
+        }
+
         private fun createEmptySnapshot() =
             GlobalSnapshot(
-                version = semanticVersion.getVersion(),
+                version = deps.semanticVersion.getVersion(),
                 timestamp = 0L,
                 simSnapshots = emptyList(),
-                capabilities = semanticCapabilities.getCapabilities(),
+                capabilities = deps.semanticCapabilities.getCapabilities(),
                 isManualUpdate = false,
                 suppressWidgetUpdate = false,
             )
@@ -189,7 +183,7 @@ class UsageStateRepositoryImpl
         override suspend fun refresh(): RefreshResult =
             refreshMutex.withLock {
                 val currentTimestamp = snapshotFlow.value.timestamp
-                dataRefreshNotifier.notifyRefresh(isManual = true)
+                deps.dataRefreshNotifier.notifyRefresh(isManual = true)
                 val newSnapshot =
                     withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
                         snapshotFlow.first { it.timestamp > currentTimestamp }

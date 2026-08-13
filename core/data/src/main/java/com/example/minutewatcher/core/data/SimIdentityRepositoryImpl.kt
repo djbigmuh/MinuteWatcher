@@ -246,18 +246,19 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         /**
-         * Retrieves the identity for a given SIM slot.
+         * Возвращает стабильную идентичность SIM для указанного слота.
          *
-         * **Contract (AOSP):**
-         * This method attempts to resolve a stable SIM identity using a cryptographically
-         * secure seed. In standard AOSP with proper permissions, it uniquely identifies
-         * a SIM card based on hardware attributes.
+         * Контракт (AOSP): при наличии READ_PHONE_STATE и корректного DataStore
+         * метод всегда возвращает идентичность. Исключения:
+         * - [IllegalArgumentException] — слот вне диапазона SUPPORTED_SLOT_INDICES.
+         * - [IllegalStateException] — seed недоступен (таймаут генерации).
+         *   На AOSP генерация seed завершается успешно; таймаут возможен только
+         *   при деградации DataStore на кастомных прошивках.
+         * - [IllegalStateException] — нет активной SIM в указанном слоте.
          *
-         * **Strict Compliance:**
-         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
-         * а обрабатываются как системные сбои с уведомлением пользователя.
-         * Любое нарушение контракта (некорректный слот, отсутствие seed, ошибка чтения SubscriptionManager)
-         * приводит к исключению, которое должно обрабатываться вызывающей стороной (трекером).
+         * Вызывающая сторона обязана обрабатывать исключения.
+         * Эвристика не применяется: если данные недоступны — это ошибка,
+         * а не повод для угадывания.
          */
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {

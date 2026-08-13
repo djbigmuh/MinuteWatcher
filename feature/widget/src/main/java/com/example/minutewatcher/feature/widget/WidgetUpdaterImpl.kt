@@ -120,13 +120,6 @@ class WidgetUpdaterImpl
                          * На AOSP это всегда выполняется. На кастомных прошивках с нестандартной реализацией
                          * StateFlow, если значение не видно, рендер продолжается с текущим layout; упрощённый
                          * layout будет применён при следующем цикле обновления.
-                         *
-                         * Детерминированное ожидание: читаем из StateFlow напрямую,
-                         * пока не увидим обновлённое значение. StateFlow.update()
-                         * синхронно обновляет value, поэтому значение доступно сразу
-                         * после возврата из updateAppSettings(). На AOSP updateAppSettings
-                         * завершается синхронно; на кастомных прошивках с асинхронным
-                         * DataStore ожидание гарантирует корректность.
                          */
                         val updated = appSettingsRepository.observeAppSettings().value
                         if (!updated.widgetLimitExceeded) {
@@ -146,19 +139,18 @@ class WidgetUpdaterImpl
                             AppLogger.e("Immediate widget re-render after limit exceeded failed", e)
                             renderSucceeded = false
                         }
+                        // Если первичный re-render после установки флага упал —
+                        // возвращаем (false, true) для транзиентного retry.
+                        // Если на следующей итерации флаг уже true, сработает ветка ниже.
                         return Pair(renderSucceeded, !renderSucceeded)
                     }
-                    /**
-                     * Строгое соблюдение контракта: если обновление не произошло (виджет не был перерисован),
-                     * метод ОБЯЗАН вернуть false в первом элементе Pair. Это предотвращает обновление
-                     * lastSnapshotHash в вызывающем коде (UpdateCoordinator), что гарантирует
-                     * повторную попытку обновления при следующем изменении данных.
-                     *
-                     * На AOSP GlanceAppWidget.updateAll() не бросает TransactionTooLargeException
-                     * при корректном lifecycle; превышение лимита Binder (~1 МБ) предотвращается
-                     * упрощённым layout при widgetLimitExceeded = true. Если кастомная прошивка
-                     * не соответствует документации Google — это проблема кастомной прошивки.
-                     */
+
+                    // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
+                    // TransactionTooLargeException при корректном lifecycle. Превышение лимита
+                    // Binder (~1 МБ) предотвращается упрощённым layout при widgetLimitExceeded.
+                    // Если кастомная прошивка не соответствует документации Google — это
+                    // проблема кастомной прошивки. Повторные попытки после уже установленного
+                    // флага не имеют смысла и пресекаются.
                     Pair(false, false)
                 }
 

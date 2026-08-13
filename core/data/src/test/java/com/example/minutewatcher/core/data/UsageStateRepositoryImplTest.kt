@@ -42,29 +42,47 @@ class UsageStateRepositoryImplTest {
     }
 
     @Test
-    fun `refresh finishes within timeout when snapshot does not update`() = runTest {
-        // We use a mock that doesn't emit to refreshFlow, so snapshotFlow will never update
-        whenever(dataRefreshNotifier.refreshFlow).thenReturn(MutableSharedFlow())
+    fun `refresh finishes within timeout when snapshot does not update`() =
+        runTest {
+            // We use a mock that doesn't emit to refreshFlow, so snapshotFlow will never update
+            whenever(dataRefreshNotifier.refreshFlow).thenReturn(MutableSharedFlow())
 
-        val repository = UsageStateRepositoryImpl(
-            context = context,
-            simIdentityRepository = simIdentityRepository,
-            simUsageRepository = simUsageRepository,
-            semanticCapabilities = semanticCapabilities,
-            semanticVersion = semanticVersion,
-            dataRefreshNotifier = dataRefreshNotifier,
-            scope = backgroundScope,
-            timeProvider = timeProvider
-        )
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
 
-        val startTime = testScheduler.currentTime
-        val result = repository.refresh()
-        val endTime = testScheduler.currentTime
+            val startTime = testScheduler.currentTime
+            val result = repository.refresh()
+            val endTime = testScheduler.currentTime
 
-        assertTrue("Result should be Timeout, was $result", result is RefreshResult.Timeout)
-        val duration = endTime - startTime
-        // SNAPSHOT_TIMEOUT_MS is 2000ms.
-        assertTrue("Refresh should finish within timeout (duration: $duration)", duration <= Constants.Data.SNAPSHOT_TIMEOUT_MS + 500L)
-        assertTrue("Refresh should take at least the timeout duration (duration: $duration)", duration >= Constants.Data.SNAPSHOT_TIMEOUT_MS)
+            assertTrue("Result should be Timeout, was $result", result is RefreshResult.Timeout)
+            val duration = endTime - startTime
+            // SNAPSHOT_TIMEOUT_MS is 2000ms.
+            assertTrue(
+                "Refresh should finish within timeout (duration: $duration)",
+                duration <=
+                    Constants.Data.SNAPSHOT_TIMEOUT_MS +
+                    TIMEOUT_TOLERANCE_MS,
+            )
+            assertTrue(
+                "Refresh should take at least the timeout duration (duration: $duration)",
+                duration >=
+                    Constants.Data.SNAPSHOT_TIMEOUT_MS,
+            )
+        }
+
+    companion object {
+        private const val TIMEOUT_TOLERANCE_MS = 500L
     }
 }

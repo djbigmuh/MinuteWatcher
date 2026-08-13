@@ -389,25 +389,28 @@ class CallTracker
         }
 
         /**
-         * Обработка таймаута при завершении звонка.
-         * Реализовано строгое соблюдение API. Отклонения кастомных прошивок не маскируются эвристиками,
-         * а обрабатываются как системные сбои с уведомлением пользователя.
+         * Обработка таймаута чтения данных сессии при завершении звонка.
+         *
+         * Строгое соблюдение контракта: сессия с ненулевым startTime блокирует
+         * следующий звонок на том же subId. При таймауте чтения сессия
+         * принудительно очищается, чтобы не допустить перманентной блокировки.
+         * На AOSP чтение DataStore завершается успешно; таймаут возможен только
+         * при деградации хранилища на кастомных прошивках.
+         * Потеря данных одного звонка предпочтительнее перманентной блокировки.
          */
         private suspend fun handleEndCallTimeout(subId: Int) {
             val message = "Session read timed out for subId $subId"
             AppLogger.e(message, null)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, message)
-            // Строгое соблюдение контракта: сессия с ненулевым startTime блокирует
-            // следующий звонок. Потеря данных одного звонка предпочтительнее
-            // полной блокировки трекинга. На AOSP clearSession завершается успешно;
-            // на кастомных прошивках с деградацией DataStore очистка может не
-            // сработать — это проблема прошивки, не приложения.
-            try {
-                clearSession(subId)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("Failed to clear session for subId $subId after timeout", e)
+
+            withContext(NonCancellable) {
+                try {
+                    clearSession(subId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to clear session for subId $subId after timeout", e)
+                }
             }
         }
 

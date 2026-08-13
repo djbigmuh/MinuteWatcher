@@ -59,11 +59,14 @@ class MainSimDataController
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
                 }.retryWhen { cause, attempt ->
-                    // Экспоненциальная задержка при повторах I/O-ошибок.
-                    // На AOSP observeSimCardUiModels() не бросает IOException.
-                    // Таймаут/IO-ошибка возможны только при деградации DataStore
-                    // на кастомных прошивках. Экспоненциальная задержка снижает
-                    // нагрузку на деградирующее хранилище.
+                    // Строгое соблюдение API kotlinx.coroutines: CancellationException должен
+                    // пробрасываться для корректной отмены. TimeoutCancellationException —
+                    // подкласс CancellationException, но является retryable по контракту
+                    // withTimeoutOrNull. На AOSP observeSimCardUiModels() не бросает IOException;
+                    // таймаут возможен только при деградации DataStore на кастомных прошивках.
+                    if (cause is CancellationException && cause !is TimeoutCancellationException) {
+                        throw cause
+                    }
                     if ((attempt < MAX_RETRY_ATTEMPTS) &&
                         ((cause is IOException) || (cause is TimeoutCancellationException))
                     ) {
