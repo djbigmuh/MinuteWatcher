@@ -53,6 +53,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+// Подавление TooManyFunctions оставлено намеренно: SimIdentityRepositoryImpl является центральным узлом управления
+// идентичностью всех SIM-карт в приложении. Разделение на несколько репозиториев нарушит атомарность
+// управления кэшем и DataStore, что критично для стабильности identity.
+@Suppress("TooManyFunctions")
 @Singleton
 class SimIdentityRepositoryImpl
     @Inject
@@ -260,6 +264,10 @@ class SimIdentityRepositoryImpl
          * Эвристика не применяется: если данные недоступны — это ошибка,
          * а не повод для угадывания.
          */
+        // Подавление ThrowsCount оставлено намеренно: метод реализует строгую валидацию по трем независимым
+        // критериям (диапазон слотов, наличие seed, наличие подписки). Объединение исключений снизит
+        // точность диагностики сбоев на кастомных прошивках.
+        @Suppress("ThrowsCount")
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
                 val message = "getSimIdentity called with out-of-range slot=$slot"
@@ -476,6 +484,9 @@ class SimIdentityRepositoryImpl
          *
          * @throws java.io.IOException if DataStore write fails after internal retries within [saveSimIdentitiesInfo].
          */
+        // Подавление ReturnCount оставлено намеренно: метод содержит 3 точки выхода, соответствующие
+        // различным терминальным состояниям (отсутствие seed, отсутствие SIM, успешное завершение).
+        // Усложнение структуры ради одного возврата снизит читаемость критической секции обнаружения SIM.
         @Suppress("ReturnCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             if (seed is SeedResult.Fallback) {

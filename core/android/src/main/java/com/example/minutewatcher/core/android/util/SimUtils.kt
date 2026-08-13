@@ -17,7 +17,6 @@ object SimUtils {
             else -> R.drawable.ic_unknown
         }
 
-    @Suppress("ReturnCount")
     fun getShortOperatorName(
         context: Context,
         operatorName: String,
@@ -25,12 +24,10 @@ object SimUtils {
         val localizedContext = getLocalizedContext(context)
         return try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
-            if (resId != null) {
-                getStringSafe(localizedContext, resId, operatorName.uppercase())
-            } else if (operatorName.isNotEmpty()) {
-                truncateName(operatorName)
-            } else {
-                localizedContext.getString(R.string.no_sim_found)
+            when {
+                resId != null -> getStringSafe(localizedContext, resId, operatorName.uppercase())
+                operatorName.isNotEmpty() -> truncateName(operatorName)
+                else -> localizedContext.getString(R.string.no_sim_found)
             }
         } catch (e: CancellationException) {
             throw e

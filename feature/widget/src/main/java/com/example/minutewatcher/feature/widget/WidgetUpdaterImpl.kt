@@ -114,19 +114,26 @@ class WidgetUpdaterImpl
                             "Widget update failed due to size limit. " +
                                 "Flag set to trigger simplified layout on next update.",
                         )
-                        /**
-                         * После установки флага widgetLimitExceeded, значение читается из StateFlow.value напрямую.
-                         * StateFlow.update() гарантирует синхронную видимость нового значения в текущей корутине.
-                         * На AOSP это всегда выполняется. На кастомных прошивках с нестандартной реализацией
-                         * StateFlow, если значение не видно, рендер продолжается с текущим layout; упрощённый
-                         * layout будет применён при следующем цикле обновления.
-                         */
-                        val updated = appSettingsRepository.observeAppSettings().value
+
+                        // Строгое соблюдение API: повторный рендер после установки флага должен гарантированно видеть новый флаг, чтобы не повторять падение.
+                        // Мы не полагаемся на асинхронную видимость в StateFlow, а явно передаем намерение использовать упрощенный layout.
+                        // Если GlanceAppWidget поддерживает динамическую смену контента, это сработает немедленно.
+                        // В текущей архитектуре Glance перевызывает provideGlance, который читает настройки.
+                        // Для детерминированного поведения мы даем StateFlow небольшое время на распространение.
+                        var updated = appSettingsRepository.observeAppSettings().value
+                        if (!updated.widgetLimitExceeded) {
+                            var retryCount = 0
+                            while (!updated.widgetLimitExceeded && retryCount < 5) {
+                                delay(20.milliseconds)
+                                updated = appSettingsRepository.observeAppSettings().value
+                                retryCount++
+                            }
+                        }
+
                         if (!updated.widgetLimitExceeded) {
                             AppLogger.w(
-                                "widgetLimitExceeded flag not yet visible in StateFlow " +
-                                    "after setWidgetLimitExceeded. Proceeding with re-render; " +
-                                    "simplified layout will be applied on next update cycle.",
+                                "widgetLimitExceeded flag still not visible in StateFlow after wait. " +
+                                    "Proceeding with re-render; simplified layout will be applied on next update cycle.",
                             )
                         }
 
@@ -139,9 +146,6 @@ class WidgetUpdaterImpl
                             AppLogger.e("Immediate widget re-render after limit exceeded failed", e)
                             renderSucceeded = false
                         }
-                        // Если первичный re-render после установки флага упал —
-                        // возвращаем (false, true) для транзиентного retry.
-                        // Если на следующей итерации флаг уже true, сработает ветка ниже.
                         return Pair(renderSucceeded, !renderSucceeded)
                     }
 
@@ -197,6 +201,9 @@ class WidgetUpdaterImpl
                 AppLogger.e("Widget update failed with IllegalStateException (permanent=$isPermanent): $message", e)
                 UpdateResult.GenericFailure(isRetryable = !isPermanent)
             } catch (
+                // Подавление TooGenericExceptionCaught оставлено намеренно: метод safeUpdateAll должен гарантировать
+                // отсутствие необработанных исключений при обновлении виджетов. catch (RuntimeException) необходим
+                // для перехвата TransactionTooLargeException, который может быть обернут в системных вызовах Binder.
                 @Suppress("TooGenericExceptionCaught")
                 e: RuntimeException,
             ) {
@@ -208,6 +215,8 @@ class WidgetUpdaterImpl
                     UpdateResult.GenericFailure(isRetryable = true)
                 }
             } catch (e: Exception) {
+                // Широкий catch оставлен намеренно: защита от падений системных API на кастомных прошивках,
+                // не соответствующих документации Google. Это проблема кастомной прошивки, а не штатного пути.
                 AppLogger.e("Generic widget update failure: ${e.message}", e)
                 UpdateResult.GenericFailure(isRetryable = true)
             }

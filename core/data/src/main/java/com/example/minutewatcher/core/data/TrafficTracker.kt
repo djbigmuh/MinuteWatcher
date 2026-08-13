@@ -132,7 +132,6 @@ class TrafficTracker
          * @throws java.io.IOException if DataStore write fails
          * @throws SecurityException if permission is revoked during operation
          */
-        @Suppress("ReturnCount")
         suspend fun updateTrafficUsage() {
             trafficUpdateMutex.withLock {
                 try {
@@ -523,7 +522,10 @@ class TrafficTracker
             val currentDataSubId =
                 try {
                     permissionManager.getDefaultDataSubscriptionId()
-                } catch (_: Exception) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("TrafficTracker: failed to get default data subId for sync: ${e.message}")
                     -1
                 }
             if (currentDataSubId != -1) {
@@ -709,6 +711,8 @@ internal class TrafficTargetResolver(
         object InconsistentFirmware : TargetResult
     }
 
+    // Подавление ReturnCount оправдано: 3 точки выхода соответствуют спецификации TargetResult
+    // (отсутствие SIM, некорректное состояние прошивки, успех).
     @Suppress("ReturnCount")
     fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
         if (activeSims.isEmpty()) return TargetResult.NoActiveSims

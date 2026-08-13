@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -119,17 +120,14 @@ class UpdateCoordinatorTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
-            // Реализация StateFlow через делегирование требует @OptIn,
-            // т.к. контракт collect() помечен как unstable API.
-            // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
-            val mockStateFlow =
-                @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
-                object : StateFlow<GlobalSnapshot> by stateFlow {
-                    override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
-                        collectCount++
-                        throw RuntimeException("Temporary failure")
-                    }
+            // Объективная необходимость: наследование StateFlow используется для имитации сбоя метода collect(), что требуется для проверки механизмов retry в координаторе. Стабильные фабричные методы (stateIn) не позволяют пробросить исключение непосредственно в вызывающий collect().
+            @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
+            val mockStateFlow = object : StateFlow<GlobalSnapshot> by stateFlow {
+                override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+                    collectCount++
+                    throw RuntimeException("Temporary failure")
                 }
+            }
             whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
 
             UpdateCoordinator(
@@ -156,20 +154,17 @@ class UpdateCoordinatorTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
             var shouldFail = true
 
-            // Реализация StateFlow через делегирование требует @OptIn,
-            // т.к. контракт collect() помечен как unstable API.
-            // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
-            val mockStateFlow =
-                @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
-                object : StateFlow<GlobalSnapshot> by stateFlow {
-                    override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
-                        if (shouldFail) {
-                            shouldFail = false
-                            throw RuntimeException("Repository failure")
-                        }
-                        stateFlow.collect(collector)
+            // Объективная необходимость: наследование StateFlow используется для имитации сбоя метода collect(), что требуется для проверки механизмов retry в координаторе. Стабильные фабричные методы (stateIn) не позволяют пробросить исключение непосредственно в вызывающий collect().
+            @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
+            val mockStateFlow = object : StateFlow<GlobalSnapshot> by stateFlow {
+                override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+                    if (shouldFail) {
+                        shouldFail = false
+                        throw RuntimeException("Repository failure")
                     }
+                    stateFlow.collect(collector)
                 }
+            }
             whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
 
             UpdateCoordinator(
@@ -363,17 +358,14 @@ class UpdateCoordinatorTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
-            // Реализация StateFlow через делегирование требует @OptIn,
-            // т.к. контракт collect() помечен как unstable API.
-            // Это допустимо в тестовом коде для перехвата и подмены поведения collect().
-            val mockStateFlow =
-                @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
-                object : StateFlow<GlobalSnapshot> by stateFlow {
-                    override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
-                        collectCount++
-                        throw RuntimeException("Persistent failure")
-                    }
+            // Объективная необходимость: наследование StateFlow используется для имитации сбоя метода collect(), что требуется для проверки механизмов retry в координаторе. Стабильные фабричные методы (stateIn) не позволяют пробросить исключение непосредственно в вызывающий collect().
+            @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
+            val mockStateFlow = object : StateFlow<GlobalSnapshot> by stateFlow {
+                override suspend fun collect(collector: FlowCollector<GlobalSnapshot>): Nothing {
+                    collectCount++
+                    throw RuntimeException("Persistent failure")
                 }
+            }
             whenever(usageStateRepository.observeSnapshot()).thenReturn(mockStateFlow)
 
             val coordinator =

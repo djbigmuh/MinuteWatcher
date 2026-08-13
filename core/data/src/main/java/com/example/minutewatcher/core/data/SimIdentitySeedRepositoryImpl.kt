@@ -49,25 +49,49 @@ class SimIdentitySeedRepositoryImpl
         }
 
         /**
-         * Returns the existing seed or generates and saves a new one.
-         * If the DataStore is corrupted or inaccessible, generates an ephemeral seed
-         * that will not be persisted.
+         * Возвращает существующий seed или генерирует и сохраняет новый.
+         *
+         * **Штатный путь:** seed читается/создаётся один раз и сохраняется в DataStore. Это обеспечивает стабильность
+         * identity всех SIM-карт между перезапусками приложения, что критично для накопления статистики.
+         *
+         * **Error-путь (деградация):** При недоступности или повреждении DataStore (например, на кастомных прошивках
+         * с некорректно работающим API хранилища) возвращается **эфемерный** seed. Этот seed не сохраняется.
+         *
+         * **ВАЖНО:** Использование эфемерного seed приводит к тому, что после перезапуска приложения будет
+         * сгенерирован новый seed, вследствие чего все identity SIM-карт изменятся. Накопленная статистика
+         * и лимиты для старых identity станут «осиротевшими». Это поведение является осознанным компромиссом
+         * для сохранения работоспособности приложения при системных сбоях хранилища.
+         *
+         * Строгое соблюдение API: на AOSP DataStore работает стабильно. Проблемы с сохранением seed —
+         * это проблема окружения (кастомной прошивки), а не логики приложения.
+         *
+         * @param generator Функция для генерации нового seed, если он отсутствует.
+         * @return Стабильный seed из DataStore или эфемерный seed при сбое.
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String =
             seedMutex.withLock {
+                var generatedSeed: String? = null
                 try {
-                    var seed = dataStore.data.first()[SIM_IDENTITY_SEED] ?: ""
-                    if (seed.isEmpty()) {
-                        seed = generator()
-                        dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
+                    val existingSeed = dataStore.data.first()[SIM_IDENTITY_SEED] ?: ""
+                    if (existingSeed.isNotEmpty()) {
+                        cachedEphemeralSeed = null
+                        return@withLock existingSeed
                     }
+
+                    val seed = generator()
+                    generatedSeed = seed
+                    dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
                     cachedEphemeralSeed = null
                     seed
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("Failed to read/write identity seed, generating ephemeral seed", e)
-                    cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+                    AppLogger.e("Failed to read/write identity seed, generating/using ephemeral seed", e)
+                    // Используем уже сгенерированный в этом вызове seed, если он есть,
+                    // либо ранее закэшированный эфемерный, либо создаем новый.
+                    val fallback = generatedSeed ?: cachedEphemeralSeed ?: generator()
+                    cachedEphemeralSeed = fallback
+                    fallback
                 }
             }
     }

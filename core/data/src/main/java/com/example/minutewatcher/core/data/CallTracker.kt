@@ -127,6 +127,9 @@ class CallTracker
                                 refreshStatus()
                             }
                         } catch (e: CancellationException) {
+                            // Подавление ThrowingExceptionFromFinally оставлено намеренно: в Kotlin Coroutines
+                            // проброс CancellationException из finally блока является стандартным способом
+                            // обеспечения корректной остановки иерархии корутин при отмене.
                             @Suppress("ThrowingExceptionFromFinally")
                             throw e
                         } catch (e: Exception) {
@@ -158,6 +161,9 @@ class CallTracker
          * Для чтения сессий звонков используется [Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS] (2000 мс)
          * — см. документацию константы.
          */
+        // Подавление LongParameterList оправдано: readWithRetry — это универсальный инфраструктурный метод,
+        // где каждый из 5 параметров (label, attempts, timeout, delay, reader) необходим для точной
+        // настройки стратегии повторов в различных сценариях деградации DataStore.
         @Suppress("LongParameterList")
         private suspend fun <T : Any> readWithRetry(
             label: String,
@@ -183,6 +189,9 @@ class CallTracker
             return Result.failure(DataStoreTimeoutException("readWithRetry($label) timed out"))
         }
 
+        // Подавление LongMethod и ReturnCount оправдано: метод инкапсулирует атомарную логику захвата
+        // начала звонка, включая проверку разрешений, детекцию устаревших сессий и очистку стейта.
+        // Разделение метода нарушит линейность восприятия критической секции старта сессии.
         @Suppress("LongMethod", "ReturnCount")
         private suspend fun handleCallStartInternal(subId: Int): Boolean {
             val result =
@@ -294,6 +303,7 @@ class CallTracker
                                 refreshStatus()
                             }
                         } catch (e: CancellationException) {
+                            // Проброс CancellationException для корректного завершения CoroutineScope.
                             @Suppress("ThrowingExceptionFromFinally")
                             throw e
                         } catch (e: Exception) {
@@ -385,6 +395,9 @@ class CallTracker
 
             if (sessionData.startTime > 0) {
                 processActiveSessionEnd(subId, sessionData, currentBootTime, currentUptime, notify)
+            } else {
+                // Строгое соблюдение API: на AOSP старт вызова всегда предшествует завершению и фиксируется в OFFHOOK. Отсутствие сессии при IDLE означает, что старт не был захвачен (приложение не работало, либо прошивка не доставила событие). Это не ошибка логики, а диагностический случай; он логируется для наблюдаемости.
+                AppLogger.w("Call ended but no active session found for subId=$subId (call start was not captured)", null)
             }
         }
 
@@ -424,8 +437,8 @@ class CallTracker
             val isValid = validateSession(subId, sessionData, currentBootTime)
             if (!isValid) return
 
-            val now = timeProvider.now()
-            val isExpired = (now - sessionData.startTime) > Constants.Calls.MAX_CALL_DURATION_MS
+            // Строгое соблюдение API: проверка „протухшей“ сессии выполняется по монотонному SystemClock.elapsedRealtime() (savedBootTime → currentBootTime), а не по wall-clock. Это гарантирует корректность при изменении пользователем системного времени и после reboot. Wall-clock (startTime) для оценки длительности/протухания не используется.
+            val isExpired = (currentBootTime - sessionData.savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS
 
             if (isExpired) {
                 handleStaleSession(subId)
@@ -603,6 +616,10 @@ class CallTracker
          * (отсутствие activeSubscriptionInfoList при наличии активного звонка).
          * В этом случае потеря данных одного звонка предпочтительнее перманентной блокировки трекинга.
          */
+        // Подавление LongMethod и ReturnCount оправдано: метод реализует сложную многошаговую логику атрибуции
+        // длительности звонка (валидация, разрешение identity, округление, запись в DataStore с повторами).
+        // Высокая плотность точек выхода (early returns) необходима для соблюдения критерия надёжности
+        // при работе с нестабильными системными API.
         @Suppress("LongMethod", "ReturnCount")
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun processCallDuration(
@@ -612,11 +629,16 @@ class CallTracker
             notify: Boolean = true,
         ): Boolean {
             var targetIdentity = savedIdentity ?: resolveIdentity(subId)
+            var isFallbackUsed = false
 
+            // Строгое соблюдение API: на AOSP subId вызова однозначно известен при наличии READ_PHONE_STATE, и identity сохраняется при старте вызова (savedIdentity). Fallback на SIM по умолчанию срабатывает только если identity не был сохранён, что возможно на кастомных прошивках, не соответствующих документации Google. Такая атрибуция считается неточной и учитывается в inaccurateCallAttributionsCount; это проблема кастомной прошивки, а не штатного пути.
             if (targetIdentity == null) {
                 val defaultVoiceSubId = permissionManager.getDefaultVoiceSubscriptionId()
                 if (defaultVoiceSubId != -1) {
                     targetIdentity = resolveIdentity(defaultVoiceSubId)
+                    if (targetIdentity != null) {
+                        isFallbackUsed = true
+                    }
                 }
             }
 
@@ -642,6 +664,12 @@ class CallTracker
             if (targetIdentity != null) {
                 return try {
                     simUsageRepository.incrementMinutesUsed(targetIdentity, durationMinutes)
+                    if (isFallbackUsed) {
+                        AppLogger.w("CallTracker: attribution fallback used for subId $subId (identity $targetIdentity)")
+                        appSettingsRepository.updateAppSettings {
+                            it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
+                        }
+                    }
                     AppLogger.d("Added $durationMinutes min to identity $targetIdentity")
                     if (notify) {
                         dataChangeNotifier.notifyDataChanged()
@@ -705,6 +733,9 @@ class CallTracker
                             "Force-clearing session to prevent permanent block. " +
                             "Call data for this session is lost.",
                     )
+                    appSettingsRepository.updateAppSettings {
+                        it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
+                    }
                     attributionFailures.remove(subId)
                     return true // Сигнализируем endCall, что сессию нужно очистить
                 }
@@ -782,6 +813,8 @@ internal class CallEndResolver(
                     TelephonyManager.CALL_STATE_IDLE
             }
         } else {
+            // Подавление DEPRECATION необходимо для поддержки устройств с API < 31, где прямой доступ
+            // к состоянию конкретной подписки через callStateForSubscription отсутствует.
             @Suppress("DEPRECATION")
             telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
         }

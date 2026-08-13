@@ -26,6 +26,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltWorker
+// Подавление TooManyFunctions оправдано: UsageCheckWorker инкапсулирует единый цикл фоновой проверки
+// использования лимитов по всем активным SIM-картам. Разделение на несколько воркеров увеличит нагрузку
+// на систему и усложнит координацию уведомлений.
 @Suppress("TooManyFunctions")
 class UsageCheckWorker
     @AssistedInject
