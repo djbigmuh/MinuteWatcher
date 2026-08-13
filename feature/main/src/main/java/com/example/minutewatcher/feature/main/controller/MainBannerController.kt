@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.main.controller
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
@@ -18,9 +19,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
@@ -32,6 +35,7 @@ class MainBannerController
         permissionRepository: PermissionRepository,
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
+        private val timeProvider: TimeProvider,
     ) {
         private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
 
@@ -43,6 +47,13 @@ class MainBannerController
 
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
             isNotificationPermissionPermanentlyDenied.value = denied
+        }
+
+        private val observationRetryCount = AtomicLong(0L)
+        private var lastResetTime = 0L
+
+        init {
+            lastResetTime = timeProvider.now()
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -92,14 +103,24 @@ class MainBannerController
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
                 )
-            }.retryWhen { cause, attempt ->
+            }.onEach {
+                observationRetryCount.set(0)
+                lastResetTime = timeProvider.now()
+            }.retryWhen { cause, _ ->
                 // CancellationException пробрасывается для корректной остановки корутин.
                 if (cause is CancellationException) throw cause
 
-                AppLogger.e("Failed to compute banner state (attempt $attempt)", cause)
+                val now = timeProvider.now()
+                if ((now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                    observationRetryCount.set(0)
+                    lastResetTime = now
+                }
+
+                val currentRetry = observationRetryCount.incrementAndGet()
+                AppLogger.e("Failed to compute banner state (attempt $currentRetry)", cause)
 
                 val delayMillis =
-                    (2.0.pow(attempt.toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
+                    (2.0.pow(currentRetry.toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
                 true // Retrying infinitely with capped delay; UI retains last successful state
@@ -112,5 +133,8 @@ class MainBannerController
         companion object {
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val MAX_RETRY_DELAY_MS = 30_000L
+
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+            internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
         }
     }

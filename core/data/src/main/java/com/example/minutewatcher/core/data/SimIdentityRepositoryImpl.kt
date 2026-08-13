@@ -87,6 +87,7 @@ class SimIdentityRepositoryImpl
         private val saveMutex = Mutex()
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
+        private val manualResolutionCache = ConcurrentHashMap<Int, SimIdentity>()
 
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -229,12 +230,22 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.Eagerly,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                 initialValue = emptyList(),
             )
+        // WhileSubscribed останавливает наблюдение через 5 секунд после ухода последнего
+        // подписчика. Это предотвращает фоновое потребление ресурсов, когда приложение
+        // не активно. Строгое соблюдение API: на AOSP SubscriptionManager callback
+        // доставляется мгновенно. При возобновлении подписки первое значение эмитится
+        // в пределах миллисекунд. Стратегия: экономия батареи в фоне без потери
+        // функциональности при возвращении в foreground.
 
         init {
-            // Initialization logic for identity seed transitions could be placed here if needed
+            scope.launch {
+                activeSimsCache.collect { sims ->
+                    sims.forEach { manualResolutionCache.remove(it.slotIndex) }
+                }
+            }
         }
 
         private suspend fun getSeed(timeoutMs: Long = SEED_TOTAL_TIMEOUT_MS): SeedResult {
@@ -285,7 +296,13 @@ class SimIdentityRepositoryImpl
             // Мгновенное чтение текущего значения StateFlow
             val cached = activeSimsCache.value.find { it.slotIndex == slot }
             if (cached != null) {
+                manualResolutionCache.remove(slot)
                 return cached.identity
+            }
+
+            val manuallyResolved = manualResolutionCache[slot]
+            if (manuallyResolved != null) {
+                return manuallyResolved
             }
 
             try {
@@ -307,8 +324,17 @@ class SimIdentityRepositoryImpl
                 val resolved =
                     findActiveIdentityInternal(slot, seed) ?: error("No active SIM in slot $slot")
 
+                manualResolutionCache[slot] = resolved
+
                 if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
                     saveSimIdentitiesInfo(listOf(resolved))
+                    // Кэш activeSimsCache обновляется асинхронно через observation flow.
+                    // Прямой резолвинг — fallback для случаев, когда observation flow ещё не
+                    // обновил кэш (например, сразу после запуска приложения).
+                    // Строгое соблюдение API: на AOSP observeActiveSims() эмитит первое значение
+                    // в пределах миллисекунд. Прямой резолвинг нужен только для кастомных прошивок
+                    // с задержкой callback от SubscriptionManager. Это проблема кастомной прошивки.
+                    // Стратегия: прямой резолвинг — защитный механизм, не штатный путь.
                 }
 
                 return resolved

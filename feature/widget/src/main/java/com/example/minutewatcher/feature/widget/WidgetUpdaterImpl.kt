@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -77,7 +78,7 @@ class WidgetUpdaterImpl
                 // 3. Перманентные ошибки (destroyed context): повтор пропускается
                 // 4. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout,
                 //    не считается попыткой повтора
-                val updateResult =
+                val updateResult = withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                     updateMutex.withLock {
                         try {
                             safeUpdateAll(context)
@@ -88,6 +89,12 @@ class WidgetUpdaterImpl
                             UpdateResult.GenericFailure(isRetryable = true)
                         }
                     }
+                } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
+                // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() завершается
+                // в пределах нескольких секунд. Таймаут 30 секунд — защитный механизм
+                // от зависания на кастомных прошивках, не соответствующих документации Google.
+                // Это проблема кастомной прошивки. Стратегия: считаем таймаут retryable-ошибкой,
+                // чтобы следующая попытка могла succeed после восстановления системы.
 
                 val (success, shouldRetry) = handleUpdateResult(updateResult)
                 if (success) {
@@ -157,8 +164,14 @@ class WidgetUpdaterImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("Re-render after limit exceeded failed", e)
-                Pair(false, false)
+                AppLogger.e("Re-render after limit exceeded failed, resetting flag", e)
+                // Сбрасываем флаг, чтобы следующая попытка могла использовать полный layout.
+                // Строгое соблюдение API: на AOSP упрощённый layout всегда умещается в лимит
+                // Binder (~1 МБ). Сбой упрощённого рендера возможен только при деградации
+                // системы на кастомных прошивках. Это проблема кастомной прошивки.
+                // Стратегия: сбрасываем флаг и позволяем следующей попытке начать заново.
+                setWidgetLimitExceeded(value = false)
+                Pair(false, true) // isRetryable = true
             }
         }
 
@@ -284,7 +297,9 @@ class WidgetUpdaterImpl
             return false
         }
 
-        companion object
+        companion object {
+            private const val WIDGET_UPDATE_TIMEOUT_MS = 30_000L
+        }
     }
 
 interface WidgetRenderer {

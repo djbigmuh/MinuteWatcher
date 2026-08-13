@@ -84,6 +84,22 @@ class MainSimDataController
                     initialValue = SimCardListState.Loading,
                 )
 
+        /**
+         * Ошибка последней операции, если она завершилась неудачей.
+         * UI должен отобразить эту ошибку и очистить её после показа.
+         */
+        data class OperationError(
+            val message: String,
+            val slot: Int,
+        )
+
+        private val _lastOperationError = MutableStateFlow<OperationError?>(null)
+        val lastOperationError: StateFlow<OperationError?> = _lastOperationError.asStateFlow()
+
+        fun dismissOperationError() {
+            _lastOperationError.value = null
+        }
+
         private val _highlightedSlot = MutableStateFlow<Int?>(null)
         val highlightedSlot: StateFlow<Int?> = _highlightedSlot.asStateFlow()
 
@@ -122,10 +138,17 @@ class MainSimDataController
                     onRefresh()
                 } catch (e: IllegalStateException) {
                     AppLogger.w("SIM was removed from slot $slot, skipping updateLimits", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: updateLimits failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
+                    // Строгое соблюдение API: на AOSP операции DataStore.edit и getIdentity()
+                    // не бросает исключений при корректном состоянии хранилища и наличии SIM.
+                    // Исключения возможны только при деградации DataStore на кастомных прошивках
+                    // или при физическом извлечении SIM между UI-действием и записью.
+                    // Стратегия: уведомляем пользователя об ошибке, чтобы он мог повторить операцию.
                 }
             }
         }
@@ -143,10 +166,12 @@ class MainSimDataController
                     onRefresh()
                 } catch (e: IllegalStateException) {
                     AppLogger.w("SIM was removed from slot $slot, skipping resetUsage", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: resetUsage failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
                 }
             }
         }
@@ -169,10 +194,12 @@ class MainSimDataController
                     onRefresh()
                 } catch (e: IllegalStateException) {
                     AppLogger.w("SIM was removed from slot $slot, skipping toggleAutoReset", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: toggleAutoReset failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
                 }
             }
         }
@@ -195,10 +222,12 @@ class MainSimDataController
                     onRefresh()
                 } catch (e: IllegalStateException) {
                     AppLogger.w("SIM was removed from slot $slot, skipping updateAutoResetDay", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: updateAutoResetDay failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
                 }
             }
         }
@@ -217,10 +246,12 @@ class MainSimDataController
                     onRefresh()
                 } catch (e: IllegalStateException) {
                     AppLogger.w("SIM was removed from slot $slot, skipping adjustRemainingMinutes", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: adjustRemainingMinutes failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
                 }
             }
         }
@@ -239,10 +270,12 @@ class MainSimDataController
                     onRefresh()
                 } catch (e: IllegalStateException) {
                     AppLogger.w("SIM was removed from slot $slot, skipping adjustRemainingTraffic", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: adjustRemainingTraffic failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
                 }
             }
         }

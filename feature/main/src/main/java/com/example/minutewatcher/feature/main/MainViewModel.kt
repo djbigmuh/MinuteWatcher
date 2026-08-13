@@ -84,6 +84,10 @@ class MainViewModel
 
         val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
 
+        val lastOperationError = controllers.simData.lastOperationError
+
+        fun dismissOperationError() = controllers.simData.dismissOperationError()
+
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
 
         init {

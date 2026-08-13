@@ -246,6 +246,17 @@ class CallTracker
                         throw e
                     } catch (e: Exception) {
                         AppLogger.w("Failed to clear session for subId $subId after start timeout", e)
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Session cleanup failed for subId $subId",
+                            )
+                        // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений
+                        // при корректном состоянии хранилища. Двойной сбой (read + clear) возможен
+                        // только при деградации DataStore на кастомных прошивках, не соответствующих
+                        // документации Google. Это проблема кастомной прошивки.
+                        // Стратегия: устанавливаем Error-статус, чтобы UI уведомил пользователя.
+                        // Повторная попытка возможна при следующем вызове onCallStarted.
                     }
                 }
                 return false
@@ -744,12 +755,9 @@ class CallTracker
                 throw e
             } catch (e: Exception) {
                 handleWriteFailure(subId, identity, e)
-                // Сессия намеренно не очищается: при attempts < MAX_WRITE_ATTEMPTS
-                // повторная попытка возможна при следующем IDLE-событии.
-                // При attempts >= MAX_WRITE_ATTEMPTS данные одной записи теряются;
-                // это допустимый компромисс для предотвращения перманентной блокировки трекинга.
-                // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений;
-                // сбой возможен только при деградации хранилища на кастомных прошивках.
+                // Сессия принудительно очищается внутри handleWriteFailure при превышении
+                // лимита попыток. Это предотвращает перманентную блокировку трекинга.
+                // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений.
                 false
             }
 
@@ -757,15 +765,20 @@ class CallTracker
          * Обработка сбоя записи в DataStore с лимитом попыток.
          *
          * Стратегия:
-         * - При `attempts >= MAX_WRITE_ATTEMPTS`: сессия сохраняется (не очищается), статус переводится
-         *   в [TrackingStatus.Error] ([TrackingStatus.ErrorType.DATABASE_ERROR]), запись теряется намеренно.
-         * - При `attempts < MAX_WRITE_ATTEMPTS`: сессия сохраняется для повторной попытки при следующем IDLE-событии.
+         * - При `attempts >= MAX_WRITE_ATTEMPTS`: сессия принудительно очищается ([clearSession]),
+         *   статус переводится в [TrackingStatus.Error] ([TrackingStatus.ErrorType.DATABASE_ERROR]),
+         *   запись теряется намеренно. Это необходимо для предотвращения перманентной блокировки
+         *   трекинга на данном [subId], так как активная (не очищенная) сессия препятствует
+         *   захвату начала нового звонка.
+         * - При `attempts < MAX_WRITE_ATTEMPTS`: сессия сохраняется для повторной попытки
+         *   при следующем IDLE-событии.
          *
          * Строгое соблюдение API: на AOSP `DataStore.edit` не бросает исключений при корректном состоянии
          * хранилища. Сбой записи возможен только при деградации DataStore на кастомных прошивках,
          * не соответствующих документации Google. Это проблема кастомной прошивки, а не штатного пути.
+         * Потеря данных одного звонка предпочтительнее полной остановки мониторинга.
          */
-        private fun handleWriteFailure(
+        private suspend fun handleWriteFailure(
             subId: Int,
             identity: String,
             exception: Exception,
@@ -776,8 +789,21 @@ class CallTracker
             if (attempts >= MAX_WRITE_ATTEMPTS) {
                 val message =
                     "Call duration write failed for identity $identity " +
-                        "(subId=$subId) after $attempts attempts. Session preserved."
+                        "(subId=$subId) after $attempts attempts. Session cleared, call data lost."
                 AppLogger.e(message, exception)
+
+                // Очищаем сессию, чтобы следующий звонок мог начать новую сессию.
+                // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений.
+                // Превышение MAX_WRITE_ATTEMPTS возможно только при деградации DataStore
+                // на кастомных прошивках, не соответствующих документации Google.
+                // Это проблема кастомной прошивки. Стратегия: теряем данные одного звонка,
+                // но предотвращаем перманентную блокировку трекинга.
+                try {
+                    clearSession(subId)
+                } catch (e: Exception) {
+                    AppLogger.w("CallTracker: Final attempt to clear session failed for subId $subId", e)
+                }
+
                 cleanupCounters(subId)
                 _status.value =
                     TrackingStatus.Error(

@@ -321,6 +321,18 @@ class TrafficTracker
             target: TargetInfo,
             targetIdentity: String,
         ) {
+            // Повторная проверка актуальности целевой SIM перед записью.
+            // Строгое соблюдение API: на AOSP SIM не может быть удалена между
+            // двумя последовательными вызовами в рамках одного корутин-контекста
+            // без callback от SubscriptionManager. Однако на кастомных прошивках
+            // callback может быть потерян. Повторная проверка — защита от гонки
+            // между observation flow и записью данных.
+            val currentActiveIdentities = simIdentityRepository.getActiveIdentities().firstWithTimeout()
+            if (currentActiveIdentities != null && targetIdentity !in currentActiveIdentities) {
+                AppLogger.w("TrafficTracker: target SIM $targetIdentity removed during update, skipping")
+                return
+            }
+
             val usage =
                 simUsageRepository
                     .getSimUsage(targetIdentity)

@@ -76,6 +76,12 @@ class WidgetSettingsViewModel
             slot: Int,
             update: (SimSettingsState) -> SimSettingsState,
         ) {
+            // Защитная валидация: UI должен передавать только валидные слоты,
+            // но проверяем на случай изменения UI или программной ошибки.
+            if (slot !in Constants.SimConstants.SUPPORTED_SLOT_INDICES) {
+                AppLogger.w("updateSimSettings called with invalid slot $slot, ignoring")
+                return
+            }
             _settingsState.update { currentState ->
                 if (currentState == null) return@update null
 
