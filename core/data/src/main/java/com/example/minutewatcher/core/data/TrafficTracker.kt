@@ -167,6 +167,8 @@ class TrafficTracker
 
         /**
          * Защита от неограниченного роста baselineNeedsRetry.
+         * Это аварийный предохранитель, а не штатный механизм очистки. Штатная очистка —
+         * cleanupStaleRetryEntries при успешном получении списка SIM.
          *
          * Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null
          * (timeout) при наличии активного SubscriptionManager и READ_PHONE_STATE.
@@ -196,6 +198,14 @@ class TrafficTracker
                 "TrafficTracker: observeActiveSims timed out, skipping update. " +
                     "baselineNeedsRetry cleanup deferred due to activeSims timeout",
             )
+            // Записи baselineNeedsRetry не очищаются при таймауте observeActiveSims,
+            // поскольку без актуального списка SIM невозможно определить, какие записи устарели.
+            // Очистка выполняется:
+            //   1. При успешном вызове updateTrafficUsage (cleanupStaleRetryEntries).
+            //   2. Грубой проверкой ёмкости (ensureBaselineNeedsRetryCapacity) как аварийный предохранитель.
+            // Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null (таймаут)
+            // при корректном состоянии DataStore. Таймаут возможен только при деградации
+            // хранилища на кастомных прошивках, не соответствующих документации Google.
             _status.value =
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.UNKNOWN,
@@ -314,9 +324,16 @@ class TrafficTracker
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Timeout reading simUsage",
                     )
-                // G-484: Очищаем запись retry при таймауте, чтобы избежать
-                // накопления stale-записей. На AOSP getSimUsage не таймаутится;
-                // таймаут возможен только при деградации DataStore.
+                // Таймаут чтения simUsage не повторяется немедленно, в отличие от
+                // handleBaselineRetry для статистики. Обоснование:
+                //   - simUsage читается из DataStore, который на AOSP отвечает < 100 мс.
+                //   - Таймаут означает деградацию хранилища на кастомной прошивке.
+                //   - Следующий вызов updateTrafficUsage (через 15 мин или по событию)
+                //     повторит попытку автоматически.
+                //   - Немедленный повтор бесполезен: если DataStore не отвечает,
+                //     повторный запрос тоже не ответит.
+                // Строгое соблюдение API: на AOSP getSimUsage() не таймаутится
+                // при корректном состоянии DataStore. Это проблема кастомной прошивки.
                 baselineNeedsRetry.remove(targetIdentity)
                 return
             }

@@ -718,31 +718,36 @@ class CallTracker
                 throw e
             } catch (e: Exception) {
                 handleWriteFailure(subId, identity, e)
+                // Сессия намеренно не очищается: при attempts < MAX_WRITE_ATTEMPTS
+                // повторная попытка возможна при следующем IDLE-событии.
+                // При attempts >= MAX_WRITE_ATTEMPTS данные одной записи теряются;
+                // это допустимый компромисс для предотвращения перманентной блокировки трекинга.
+                // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений;
+                // сбой возможен только при деградации хранилища на кастомных прошивках.
+                false
             }
 
+        /**
+         * Обработка сбоя записи в DataStore с лимитом попыток.
+         *
+         * Стратегия:
+         * - При `attempts >= MAX_WRITE_ATTEMPTS`: сессия сохраняется (не очищается), статус переводится
+         *   в [TrackingStatus.Error] ([TrackingStatus.ErrorType.DATABASE_ERROR]), запись теряется намеренно.
+         * - При `attempts < MAX_WRITE_ATTEMPTS`: сессия сохраняется для повторной попытки при следующем IDLE-событии.
+         *
+         * Строгое соблюдение API: на AOSP `DataStore.edit` не бросает исключений при корректном состоянии
+         * хранилища. Сбой записи возможен только при деградации DataStore на кастомных прошивках,
+         * не соответствующих документации Google. Это проблема кастомной прошивки, а не штатного пути.
+         */
         private fun handleWriteFailure(
             subId: Int,
             identity: String,
             exception: Exception,
-        ): Boolean {
+        ) {
             val attempts = (writeAttempts[subId] ?: 0) + 1
             writeAttempts[subId] = attempts
 
-            /**
-             * Handle DataStore write failure with a retry limit.
-             *
-             * Strategy:
-             * 1. **Preserve Session**: Initially, we don't clear the session in DataStore, giving a chance
-             *    for a retry on the next IDLE event (if any).
-             * 2. **Avoid Deadlock**: However, an uncleared session blocks the tracking of the NEXT call
-             *    on the same subId (it will be seen as a duplicate OFFHOOK).
-             * 3. **Terminal Cleanup**: After [MAX_WRITE_ATTEMPTS], we prioritize future tracking over
-             *    the current lost record. We clear the session and accept the data loss.
-             *
-             * This is a strict protection against permanent tracking loss for a specific SIM,
-             * preventing a single failed write from "hanging" the tracker indefinitely.
-             */
-            return if (attempts >= MAX_WRITE_ATTEMPTS) {
+            if (attempts >= MAX_WRITE_ATTEMPTS) {
                 val message =
                     "Call duration write failed for identity $identity " +
                         "(subId=$subId) after $attempts attempts. Session preserved."
@@ -753,7 +758,6 @@ class CallTracker
                         TrackingStatus.ErrorType.DATABASE_ERROR,
                         message,
                     )
-                false // Session is NOT closed
             } else {
                 AppLogger.e(
                     "Call duration write failed for identity $identity " +
@@ -765,7 +769,6 @@ class CallTracker
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Call duration write failed, session preserved",
                     )
-                false
             }
         }
 

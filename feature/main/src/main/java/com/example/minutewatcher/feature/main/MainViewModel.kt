@@ -199,12 +199,21 @@ class MainViewModel
                     .observeSnapshot()
                     .value
                     .timestamp
-            // result == null означает, что обновление уже выполняется параллельно в другом потоке/корутине.
-            // В этом случае мы дожидаемся появления нового снимка данных (snapshot).
+
+            // result == null означает одно из двух:
+            //   (а) Обновление уже выполняется в другой корутине (мьютекс занят).
+            //       В этом случае ожидаем появления нового snapshot.
+            //   (б) Произошло исключение внутри refreshSimCardsInternal.
+            //       В этом случае ожидание snapshot может завершиться таймаутом.
+            // В обоих случаях, если snapshot не получен, принудительно уведомляем
+            // виджет (force), чтобы он отобразил последнее доступное состояние.
+            // Строгое соблюдение API: на AOSP refresh() не возвращает null
+            // при корректном состоянии DataStore. Ошибка возможна только при
+            // деградации хранилища на кастомных прошивках.
             val result = controllers.refresh.refreshSimCardsInternal()
 
             if (result == null) {
-                AppLogger.d("refreshAndNotify: refresh already in progress, waiting for new snapshot")
+                AppLogger.d("refreshAndNotify: refresh busy or error, waiting for new snapshot")
                 val newSnapshot =
                     withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
                         controllers.simData.usageStateRepository

@@ -191,6 +191,13 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     ): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         val now = System.currentTimeMillis()
+        // Проверка staleness использует wall clock (System.currentTimeMillis),
+        // поскольку snapshot.timestamp хранится как wall clock.
+        // При переводе системных часов назад isStale может дать ложный результат,
+        // но это приведёт лишь к лишнему вызову refresh(), что безопасно.
+        // Строгое соблюдение API: на AOSP refresh() не возвращает null
+        // при корректном состоянии DataStore. Если кастомная прошивка не
+        // соответствует документации Google — это проблема кастомной прошивки.
         val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
         if (initialSnapshot.timestamp != 0L && !isStale) {

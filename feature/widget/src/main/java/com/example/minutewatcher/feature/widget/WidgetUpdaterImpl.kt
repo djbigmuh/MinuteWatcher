@@ -106,8 +106,10 @@ class WidgetUpdaterImpl
             when (result) {
                 is UpdateResult.Success -> {
                     // Если предыдущее обновление упало с LimitExceeded и флаг был установлен,
-                    // но текущее обновление прошло успешно (упрощённый layout), сбрасываем флаг.
-                    // Это позволяет следующему обновлению попытаться использовать полный layout.
+                    // но текущее обновление прошло успешно (упрощённый layout или данные уменьшились),
+                    // сбрасываем флаг. Это позволяет следующему обновлению попытаться
+                    // использовать полный layout. Осцилляция невозможна: если данные снова
+                    // превысят лимит, updateAll упадёт и флаг будет установлен повторно.
                     val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
                     if (current) {
                         setWidgetLimitExceeded(value = false)
@@ -171,9 +173,16 @@ class WidgetUpdaterImpl
                     "widgetLimitExceeded flag still not visible in StateFlow after wait. " +
                         "Simplified layout will be applied on next update cycle.",
                 )
-                // Не повторяем немедленно — флаг станет виден к следующему циклу.
-                // Повторный рендер сейчас с высокой вероятностью снова упадёт с LimitExceeded,
-                // так как он всё ещё пытается отрисовать полный layout.
+                // Флаг widgetLimitExceeded установлен, но ещё не виден в StateFlow.
+                // Немедленный повторный рендер бесполезен — он снова попытается
+                // отрисовать полный layout и упадёт с LimitExceeded.
+                // Флаг станет виден к следующему циклу обновления (reactive path
+                // в UpdateCoordinator или принудительный вызов updateAll).
+                // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
+                // TransactionTooLargeException при корректном lifecycle. Превышение лимита
+                // Binder (~1 МБ) предотвращается упрощённым layout при widgetLimitExceeded = true.
+                // Если кастомная прошивка не соответствует документации Google — это проблема
+                // кастомной прошивки.
                 Pair(false, false)
             }
         }

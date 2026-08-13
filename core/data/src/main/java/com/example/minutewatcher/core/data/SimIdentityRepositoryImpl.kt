@@ -260,6 +260,11 @@ class SimIdentityRepositoryImpl
          *   На AOSP генерация seed завершается успешно; таймаут возможен только
          *   при деградации DataStore на кастомных прошивках.
          * - [IllegalStateException] — нет активной SIM в указанном слоте.
+         *   Это штатная ситуация при извлечении SIM-карты. Вызывающий код обязан
+         *   обрабатывать это исключение.
+         *
+         * @throws IllegalStateException если нет активной SIM в указанном слоте или seed недоступен.
+         * @throws IllegalArgumentException если slot вне диапазона SUPPORTED_SLOT_INDICES.
          *
          * Вызывающая сторона обязана обрабатывать исключения.
          * Эвристика не применяется: если данные недоступны — это ошибка,
@@ -332,6 +337,9 @@ class SimIdentityRepositoryImpl
                     }
                 } ?: run {
                     AppLogger.d("getSimIdentity: no active subscription found for slot $slot, using fallback identity")
+                    // Строгое соблюдение API: на AOSP getActiveSubscriptions() возвращает
+                    // актуальный список при наличии READ_PHONE_STATE. Возврат null означает,
+                    // что SIM физически отсутствует в слоте. Это штатная ситуация, а не ошибка.
                     null
                 }
             } catch (e: CancellationException) {

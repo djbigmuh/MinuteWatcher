@@ -868,4 +868,57 @@ class CallTrackerTest {
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
             assertEquals("Unexpected crash", (status as TrackingStatus.Error).message)
         }
+
+    @Test
+    fun `write failure at MAX_WRITE_ATTEMPTS preserves session and sets DATABASE_ERROR status`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val subId = 1
+            val identity = "id_1"
+            val now = timeProvider.now()
+            val currentRealtime = timeProvider.elapsedRealtime()
+            val currentUptime = timeProvider.uptimeMillis()
+
+            // Setup active session data that will persist across attempts
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 60000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(currentRealtime - 60000L))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(currentUptime - 60000L))
+            whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
+
+            // Simulate write failure in simUsageRepository
+            whenever(simUsageRepository.incrementMinutesUsed(eq(identity), any()))
+                .thenThrow(RuntimeException("Write failed"))
+
+            // Attempt 1
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+            assertEquals(
+                "Call duration write failed, session preserved",
+                (callTracker.status.value as TrackingStatus.Error).message,
+            )
+
+            // Attempt 2
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+            assertEquals(
+                "Call duration write failed, session preserved",
+                (callTracker.status.value as TrackingStatus.Error).message,
+            )
+
+            // Attempt 3 (MAX_WRITE_ATTEMPTS)
+            // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений.
+            // Сбой записи возможен только при деградации хранилища на кастомных прошивках.
+            // Тест проверяет поведение при MAX_WRITE_ATTEMPTS: сессия сохраняется,
+            // данные одной записи теряются намеренно для предотвращения перманентной блокировки.
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+
+            val status = callTracker.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
+            assertTrue(status.message?.contains("after 3 attempts") == true)
+
+            // Verify session was NEVER cleared (setCallStartTime(subId, 0L) never called)
+            verify(callSessionRepository, never()).setCallStartTime(eq(subId), eq(0L))
+        }
 }
