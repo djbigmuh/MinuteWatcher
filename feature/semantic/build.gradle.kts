@@ -9,9 +9,6 @@ kotlin {
     jvmToolchain(21)
 }
 
-ksp {
-    arg("appsearch.compiler.incremental", "false")
-}
 
 android {
     namespace = "com.example.minutewatcher.feature.semantic"
