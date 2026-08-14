@@ -23,6 +23,12 @@ interface WidgetModule {
     fun bindWidgetUpdater(impl: WidgetUpdaterImpl): WidgetUpdater
 
     companion object {
+        /**
+         * Дефолтная реализация [WidgetRenderer], используемая при отсутствии кастомного биндинга.
+         *
+         * ВАЖНО: Строгое соблюдение контракта интерфейса обязательно. Несовпадение сигнатуры
+         * (например, отсутствие параметра forceFull) является ошибкой компиляции и причиной краша.
+         */
         @Provides
         @Singleton
         fun provideWidgetRenderer(): WidgetRenderer =
@@ -30,12 +36,15 @@ interface WidgetModule {
                 override suspend fun renderAll(
                     context: Context,
                     forceSimplified: Boolean,
+                    forceFull: Boolean,
                 ) {
                     MinutesGlanceWidget.setForceSimplified(context, forceSimplified)
+                    MinutesGlanceWidget.setForceFull(context, forceFull)
                     try {
                         MinutesGlanceWidget().updateAll(context)
                     } finally {
                         MinutesGlanceWidget.setForceSimplified(context, false)
+                        MinutesGlanceWidget.setForceFull(context, false)
                     }
                 }
             }

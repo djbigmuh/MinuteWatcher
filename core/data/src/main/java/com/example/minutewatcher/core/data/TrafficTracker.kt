@@ -56,10 +56,13 @@ class TrafficTracker
          * Без него два параллельных воркера прочитают одинаковый lastTotalBytes
          * и дважды прибавят дельту к trafficUsedMb.
          *
-         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-         * детерминирован для одного и того же интервала. Сериализация полностью
-         * устраняет гонку. Если кастомная прошивка возвращает разные значения
-         * для одного интервала — это проблема кастомной прошивки.
+         * **Контракт AOSP:** на AOSP NetworkStatsManager.querySummaryForDevice
+         * детерминирован для одного и того же интервала.
+         *
+         * **Отклонение кастомной прошивки:** Если прошивка возвращает разные значения для одного
+         * интервала — это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** Сериализация полностью устраняет гонку.
          */
         private val trafficUpdateMutex = Mutex()
 
@@ -76,9 +79,13 @@ class TrafficTracker
          * Обрабатываются в [performTrafficUpdate] при следующем вызове.
          * Очищаются при успешном сбросе или при превышении [MAX_BASELINE_RETRIES].
          *
-         * Строгое соблюдение API: на AOSP NetworkStatsManager возвращает данные
-         * при наличии SIM и READ_PHONE_STATE. Повторная недоступность возможна
-         * только на кастомных прошивках, не соответствующих документации Google.
+         * **Контракт AOSP:** на AOSP NetworkStatsManager возвращает данные при наличии
+         * SIM и READ_PHONE_STATE.
+         *
+         * **Отклонение кастомной прошивки:** Повторная недоступность возможна только на
+         * кастомных прошивках. Это проблема кастомной прошивки, а не приложения.
+         *
+         * **Стратегия приложения:** используется механизм повторных попыток с лимитом [MAX_BASELINE_RETRIES].
          */
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
@@ -182,13 +189,13 @@ class TrafficTracker
          * Это аварийный предохранитель, а не штатный механизм очистки. Штатная очистка —
          * cleanupStaleRetryEntries при успешном получении списка SIM.
          *
-         * Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null
-         * (timeout) при наличии активного SubscriptionManager и READ_PHONE_STATE.
-         * Таймаут возможен только при деградации DataStore на кастомных прошивках,
-         * не соответствующих документации Google.
+         * **Контракт AOSP:** на AOSP observeActiveSims() не возвращает null (timeout)
+         * при наличии активного SubscriptionManager и READ_PHONE_STATE.
          *
-         * Стратегия: если количество записей превышает удвоенное число поддерживаемых
-         * слотов (MAX_SUPPORTED_SIM_SLOTS * 2), карта очищается полностью.
+         * **Отклонение кастомной прошивки:** Таймаут возможен только при деградации DataStore на
+         * кастомных прошивках, не соответствующих документации Google. Это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** если количество записей превышает лимит, карта очищается полностью.
          */
         private fun ensureBaselineNeedsRetryCapacity() {
             if (baselineNeedsRetry.size > (Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2)) {
@@ -210,14 +217,13 @@ class TrafficTracker
                 "TrafficTracker: observeActiveSims timed out, skipping update. " +
                     "baselineNeedsRetry cleanup deferred due to activeSims timeout",
             )
-            // Записи baselineNeedsRetry не очищаются при таймауте observeActiveSims,
-            // поскольку без актуального списка SIM невозможно определить, какие записи устарели.
-            // Очистка выполняется:
-            //   1. При успешном вызове updateTrafficUsage (cleanupStaleRetryEntries).
-            //   2. Грубой проверкой ёмкости (ensureBaselineNeedsRetryCapacity) как аварийный предохранитель.
-            // Строгое соблюдение API: на AOSP observeActiveSims() не возвращает null (таймаут)
-            // при корректном состоянии DataStore. Таймаут возможен только при деградации
-            // хранилища на кастомных прошивках, не соответствующих документации Google.
+            // **Контракт AOSP:** на AOSP observeActiveSims() не возвращает null (таймаут) при
+            // корректном состоянии DataStore.
+            //
+            // **Отклонение кастомной прошивки:** Таймаут указывает на деградацию хранилища на
+            // кастомных прошивках, не соответствующих документации Google. Это проблема кастомной прошивки.
+            //
+            // **Стратегия приложения:** обновление пропускается, статус переводится в Error.
             _status.value =
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.UNKNOWN,
@@ -329,12 +335,13 @@ class TrafficTracker
             targetIdentity: String,
         ) {
             // === ДОБАВЛЕНИЕ НАЧАЛО ===
-            // Если предыдущая попытка сброса базлайна после смены SIM не удалась,
-            // повторяем сброс перед вычислением дельты.
-            // Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-            // возвращает корректные данные при наличии SIM и READ_PHONE_STATE.
-            // Повторная недоступность возможна только на кастомных прошивках,
-            // не соответствующих документации Google.
+            // **Контракт AOSP:** на AOSP NetworkStatsManager.querySummaryForDevice возвращает
+            // корректные данные при наличии SIM и READ_PHONE_STATE.
+            //
+            // **Отклонение кастомной прошивки:** Повторная недоступность возможна только на кастомных
+            // прошивках, не соответствующих документации Google. Это проблема кастомной прошивки.
+            //
+            // **Стратегия приложения:** повторяем сброс перед вычислением дельты с лимитом [MAX_BASELINE_RETRIES].
             val pendingRetry = baselineNeedsRetry[targetIdentity]
             if (pendingRetry != null) {
                 if (pendingRetry >= MAX_BASELINE_RETRIES) {
@@ -368,12 +375,13 @@ class TrafficTracker
             }
             // === ДОБАВЛЕНИЕ КОНЕЦ ===
 
-            // Повторная проверка актуальности целевой SIM перед записью.
-            // Строгое соблюдение API: на AOSP SIM не может быть удалена между
-            // двумя последовательными вызовами в рамках одного корутин-контекста
-            // без callback от SubscriptionManager. Однако на кастомных прошивках
-            // callback может быть потерян. Повторная проверка — защита от гонки
-            // между observation flow и записью данных.
+            // **Контракт AOSP:** на AOSP SIM не может быть удалена между двумя последовательными вызовами
+            // в рамках одного корутин-контекста без callback от SubscriptionManager.
+            //
+            // **Отклонение кастомной прошивки:** Callback может быть потерян на кастомных прошивках.
+            // Это проблема кастомной прошивки.
+            //
+            // **Стратегия приложения:** Повторная проверка актуальности целевой SIM перед записью.
             val currentActiveIdentities = simIdentityRepository.getActiveIdentities().firstWithTimeout()
             if (currentActiveIdentities != null && (targetIdentity !in currentActiveIdentities)) {
                 AppLogger.w("TrafficTracker: target SIM $targetIdentity removed during update, skipping")
@@ -391,16 +399,12 @@ class TrafficTracker
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Timeout reading simUsage",
                     )
-                // Таймаут чтения simUsage не повторяется немедленно, в отличие от
-                // handleBaselineRetry для статистики. Обоснование:
-                //   - simUsage читается из DataStore, который на AOSP отвечает < 100 мс.
-                //   - Таймаут означает деградацию хранилища на кастомной прошивке.
-                //   - Следующий вызов updateTrafficUsage (через 15 мин или по событию)
-                //     повторит попытку автоматически.
-                //   - Немедленный повтор бесполезен: если DataStore не отвечает,
-                //     повторный запрос тоже не ответит.
-                // Строгое соблюдение API: на AOSP getSimUsage() не таймаутится
-                // при корректном состоянии DataStore. Это проблема кастомной прошивки.
+                // **Контракт AOSP:** на AOSP getSimUsage() не таймаутится при корректном состоянии DataStore.
+                //
+                // **Отклонение кастомной прошивки:** Таймаут означает деградацию хранилища на кастомной прошивке.
+                // Это проблема кастомной прошивки.
+                //
+                // **Стратегия приложения:** следующая попытка будет выполнена в новом цикле обновления.
                 baselineNeedsRetry.remove(targetIdentity)
                 return
             }
@@ -500,20 +504,13 @@ class TrafficTracker
             lastTotalBytes: Long,
             target: TargetInfo,
         ) {
-            // Защита от неверного базлайна после смены SIM.
-            // Если currentBytes < lastTotalBytes, это означает одно из:
-            // 1. SIM была заменена на новую с меньшим накопленным трафиком.
-            // 2. Произошёл сброс счётчиков на уровне системы.
-            // В обоих случаях корректно сбросить базлайн на текущее значение.
+            // **Контракт AOSP:** на AOSP NetworkStatsManager.querySummaryForDevice возвращает монотонно
+            // возрастающее значение для одной SIM.
             //
-            // Случай currentBytes > lastTotalBytes при смене SIM обрабатывается
-            // через baselineNeedsRetry (см. handleSimChange и performTrafficUpdate).
-            //
-            // Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-            // возвращает монотонно возрастающее значение для одной SIM.
-            // Уменьшение значения возможно только при смене SIM или сбросе счётчиков.
-            // Если кастомная прошивка возвращает немонотонные значения без смены SIM —
+            // **Отклонение кастомной прошивки:** Если прошивка возвращает немонотонные значения без смены SIM —
             // это проблема кастомной прошивки.
+            //
+            // **Стратегия приложения:** при уменьшении значения базлайн принудительно сбрасывается.
             if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
                 simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
                 AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
@@ -656,22 +653,13 @@ class TrafficTracker
         /**
          * Обработка смены SIM-карты по умолчанию.
          *
-         * Scenarios:
-         * 1. Success: Current mobile stats are available. We reset the baseline to the current value
-         *    and update [inMemoryLastDataSubId]. Future updates will track delta from this point.
-         * 2. Retry: Stats are temporarily unavailable (e.g., system busy). We record the attempt
-         *    in [baselineNeedsRetry]. The next [updateTrafficUsage] call will retry the reset.
+         * **Контракт AOSP:** на AOSP NetworkStatsManager.querySummaryForDevice возвращает
+         * корректные данные при наличии SIM и READ_PHONE_STATE.
          *
-         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-         * возвращает корректные данные при наличии SIM и READ_PHONE_STATE.
-         * Недоступность статистики при смене SIM возможна только на кастомных
-         * прошивках, не соответствующих документации Google.
-         * Это проблема кастомной прошивки.
+         * **Отклонение кастомной прошивки:** Недоступность статистики при смене SIM возможна
+         * только на кастомных прошивках. Это проблема кастомной прошивки, а не приложения.
          *
-         * Стратегия: при недоступности статистики базлайн не сбрасывается,
-         * lastDataSubId не обновляется. На следующем вызове будет повторная
-         * попытка. После MAX_BASELINE_RETRIES неудач — принудительное
-         * обновление lastDataSubId и прекращение попыток.
+         * **Стратегия приложения:** используется механизм повторных попыток [MAX_BASELINE_RETRIES].
          */
         private suspend fun handleSimChange(
             targetSim: Int,
@@ -750,13 +738,14 @@ internal data class TargetInfo(
 
 /**
  * Вспомогательный класс для определения целевой SIM-карты для отслеживания трафика.
- * Вынесен из [TrafficTracker] для упрощения основного класса.
  *
- * Реализовано строгое соблюдение API и SDK. Отклонения кастомных прошивок
- * (например, отсутствие defaultDataSubscriptionId при наличии активных SIM)
- * не маскируются, а обрабатываются как [TargetResult.InconsistentFirmware].
- * Если кастомная прошивка не соответствует документации Google —
- * это проблема кастомной прошивки.
+ * **Контракт AOSP:** на AOSP getDefaultDataSubscriptionId() всегда возвращает валидный ID
+ * при наличии активных SIM.
+ *
+ * **Отклонение кастомной прошивки:** Состояние "SIM есть, но default data не определена"
+ * возможно только на кастомных прошивках. Это проблема кастомной прошивки, а не приложения.
+ *
+ * **Стратегия приложения:** Отклонения обрабатываются как [TargetResult.InconsistentFirmware].
  */
 internal class TrafficTargetResolver(
     private val permissionManager: PermissionManager,
@@ -779,10 +768,13 @@ internal class TrafficTargetResolver(
 
         val (targetSim, currentDataSubId) =
             resolveTargetSim(activeSims) ?: run {
-                // Строгое соблюдение API: на AOSP getDefaultDataSubscriptionId() всегда
-                // возвращает валидный ID при наличии активных SIM.
-                // Состояние "SIM есть, но default data не определена" возможно только
-                // на кастомных прошивках, не соответствующих документации Google.
+                // **Контракт AOSP:** на AOSP getDefaultDataSubscriptionId() всегда возвращает
+                // валидный ID при наличии активных SIM.
+                //
+                // **Отклонение кастомной прошивки:** Состояние "SIM есть, но default data не определена"
+                // возможно только на кастомных прошивках. Это проблема кастомной прошивки.
+                //
+                // **Стратегия приложения:** Отклонение обрабатывается как InconsistentFirmware.
                 return TargetResult.InconsistentFirmware
             }
 

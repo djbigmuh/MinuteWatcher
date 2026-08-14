@@ -68,10 +68,12 @@ class MinutesGlanceWidget : GlanceAppWidget() {
          * Флаг сохраняется в SharedPreferences, чтобы быть доступным
          * при асинхронном вызове provideGlance системой.
          *
-         * Хрупкая эвристика: GlanceAppWidget.updateAll() является suspend-функцией,
-         * однако момент вызова provideGlance определяется системой. Строгое соблюдение
-         * API не гарантирует синхронность. Передача через SharedPreferences устраняет
-         * зависимость от тайминга.
+         * **Контракт AOSP:** GlanceAppWidget.updateAll() является suspend-функцией.
+         *
+         * **Отклонение кастомной прошивки:** Момент вызова provideGlance определяется системой асинхронно.
+         * Это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** Передача через SharedPreferences устраняет зависимость от тайминга.
          */
         fun setForceSimplified(
             context: Context,
@@ -195,7 +197,13 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val refreshResult = getSnapshot(usageRepository, timeProvider)
         val snapshot = refreshResult.snapshot
         val refreshFailed =
-            refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout
+            when (refreshResult) {
+                is com.example.minutewatcher.core.domain.RefreshResult.Success -> false
+                is com.example.minutewatcher.core.domain.RefreshResult.Timeout -> {
+                    AppLogger.w("Widget: using stale snapshot, timestamp=${refreshResult.snapshot.timestamp}")
+                    true
+                }
+            }
 
         val forceSimplified = getForceSimplified(context.applicationContext)
         val forceFull = getForceFull(context.applicationContext)
@@ -253,20 +261,13 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     /**
      * Получает актуальный snapshot для рендера виджета.
      *
-     * **Strict Compliance:**
-     * 1. Проверка staleness использует wall clock (TimeProvider.now()), так как
-     *    `snapshot.timestamp` сохраняется в репозитории именно как wall clock.
-     * 2. Поведение при переводе часов:
-     *    - Вперёд: Snapshot может быть помечен как stale раньше времени, что приведет
-     *      к безопасному внеплановому обновлению.
-     *    - Назад: Разница `now - timestamp` становится отрицательной, что всегда меньше
-     *      порога STALE_SNAPSHOT_THRESHOLD_MS. Snapshot не будет помечен как stale,
-     *      лишний вызов refresh() не выполнится. Это безопасно и не ведет к потере данных.
+     * **Контракт AOSP:** на AOSP UsageStateRepository.refresh() возвращает Success.
+     * Монотонное время (elapsedRealtime) гарантирует корректность интервалов.
      *
-     * Строгое соблюдение API: на AOSP UsageStateRepository.refresh()
-     * не возвращает null при корректном состоянии DataStore.
-     * Если кастомная прошивка не соответствует документации Google —
-     * это проблема кастомной прошивки.
+     * **Отклонение кастомной прошивки:** Timeout возможен только при деградации хранилища.
+     * Это проблема кастомной прошивки.
+     *
+     * **Стратегия приложения:** Виджет показывает последние данные и индикатор устаревания.
      */
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,

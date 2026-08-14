@@ -98,6 +98,18 @@ class WidgetSettingsViewModel
             }
         }
 
+        /**
+         * Сохраняет текущие настройки и уведомляет систему об изменениях.
+         *
+         * ВАЖНО: Сохранение при [WidgetSettingsState.settingsLoadFailed] = true запрещено,
+         * так как в этом случае состояние содержит дефолтные значения (fallback),
+         * а не реальные настройки пользователя из DataStore. Сохранение перезаписало бы
+         * данные пользователя некорректными значениями.
+         *
+         * На AOSP settingsLoadFailed всегда false при корректной работе DataStore.
+         * Если кастомная прошивка не обеспечивает своевременный ответ DataStore —
+         * это проблема кастомной прошивки.
+         */
         suspend fun saveAndNotify(): SaveResult {
             if (!saveMutex.tryLock()) {
                 // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
@@ -108,6 +120,9 @@ class WidgetSettingsViewModel
                 val currentState = _settingsState.value
                 if (currentState == null) {
                     AppLogger.w("saveAndNotify called before settings were loaded")
+                    SaveResult.Failed
+                } else if (currentState.settingsLoadFailed) {
+                    AppLogger.w("saveAndNotify: skipping save because settings were not loaded successfully")
                     SaveResult.Failed
                 } else {
                     val validatedState = validateSettings(currentState)

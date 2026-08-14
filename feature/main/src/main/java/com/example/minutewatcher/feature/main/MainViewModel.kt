@@ -84,8 +84,16 @@ class MainViewModel
 
         val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
 
+        /**
+         * Ошибка последней операции (например, сброса или обновления лимитов).
+         * Является однократным событием: UI должен отобразить ошибку пользователю
+         * (например, через Snackbar или Toast) и затем вызвать [dismissOperationError].
+         */
         val lastOperationError = controllers.simData.lastOperationError
 
+        /**
+         * Сбрасывает последнюю ошибку операции. Должен вызываться UI после показа ошибки.
+         */
         fun dismissOperationError() = controllers.simData.dismissOperationError()
 
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme

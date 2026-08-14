@@ -5,8 +5,10 @@ import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
@@ -320,18 +322,33 @@ class MainSimDataController
             }
         }
 
+        /**
+         * Обрабатывает ошибки резолва идентичности SIM.
+         *
+         * Строгое соблюдение API: на AOSP getIdentity() не бросает исключений при
+         * корректном состоянии DataStore и наличии SIM. Если кастомная прошивка
+         * не обеспечивает своевременный ответ — это проблема кастомной прошивки.
+         */
         private fun handleSimIdentityError(
             slot: Int,
             operation: String,
             e: IllegalStateException,
         ) {
-            val message = e.message ?: "Unknown error"
-            if (message.contains("seed unavailable", ignoreCase = true)) {
-                AppLogger.e("SIM identity resolution failed for slot $slot: seed unavailable", e)
-                _lastOperationError.value = OperationError("Storage error for slot $slot", slot)
-            } else {
-                AppLogger.w("SIM was removed from slot $slot, skipping $operation", e)
-                _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+            when (e) {
+                is SeedUnavailableException -> {
+                    AppLogger.e("SIM identity resolution failed for slot $slot: seed unavailable", e)
+                    _lastOperationError.value = OperationError("Storage error for slot $slot", slot)
+                }
+
+                is SimNotFoundException -> {
+                    AppLogger.w("SIM was removed from slot $slot, skipping $operation", e)
+                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                }
+
+                else -> {
+                    AppLogger.e("MainSimDataController: $operation failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
+                }
             }
         }
 

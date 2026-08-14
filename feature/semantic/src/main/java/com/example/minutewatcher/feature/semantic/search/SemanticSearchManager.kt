@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
+import android.os.DeadObjectException
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.di.ApplicationScope
@@ -140,13 +141,13 @@ class SemanticSearchManager
                 session = newSession
                 _status.value = TrackingStatus.Active
                 true
+            } catch (e: CancellationException) {
+                newSession?.close()
+                throw e
             } catch (e: AppSearchException) {
                 newSession?.close()
                 handleSchemaException(e, forceOverride)
                 false
-            } catch (e: CancellationException) {
-                newSession?.close()
-                throw e
             } catch (e: Exception) {
                 newSession?.close()
                 handleInitializationError(e)
@@ -165,14 +166,32 @@ class SemanticSearchManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
         }
 
+        /**
+         * Обрабатывает ошибки инициализации AppSearch.
+         *
+         * На AOSP LocalStorage.createSearchSessionAsync() (вызываемый через обертку)
+         * бросает [IllegalStateException], если сервис AppSearch недоступен (например,
+         * в GMS-free сборках без установленного провайдера). Также возможен [DeadObjectException],
+         * если системный сервис AppSearch аварийно завершился во время привязки.
+         *
+         * ВАЖНО:
+         * 1. Строковая детекция (проверка e.message) исключена как хрупкая эвристика,
+         *    так как текст исключения не является частью контракта API и может отличаться
+         *    между прошивками (LineageOS и др.).
+         * 2. Если кастомная прошивка не соответствует документации Google (бросает иной тип
+         *    исключения при отсутствии сервиса) — это проблема кастомной прошивки.
+         *
+         * @param e Исключение, возникшее при инициализации.
+         */
         private fun handleInitializationError(e: Exception) {
+            if (e is CancellationException) throw e
+
             val isUnsupported =
-                (e is IllegalStateException) ||
-                    (e.message?.contains("AppSearch", ignoreCase = true) == true) ||
-                    (e.message?.contains("Service not found", ignoreCase = true) == true)
+                hasCause(e, IllegalStateException::class.java) ||
+                    hasCause(e, DeadObjectException::class.java)
 
             if (isUnsupported) {
-                AppLogger.w("AppSearch is not supported on this device.")
+                AppLogger.w("AppSearch is not supported or service failed on this device.", e)
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -182,6 +201,18 @@ class SemanticSearchManager
                 AppLogger.e("Fatal AppSearch initialization error", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
+        }
+
+        private fun hasCause(
+            e: Throwable,
+            targetClass: Class<out Throwable>,
+        ): Boolean {
+            var current: Throwable? = e
+            while (current != null) {
+                if (targetClass.isInstance(current)) return true
+                current = current.cause
+            }
+            return false
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
@@ -196,6 +227,8 @@ class SemanticSearchManager
                 if (ensureSession()) {
                     try {
                         result = executeIndexing(snapshot, currentHash)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: AppSearchException) {
                         if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
                             AppLogger.w("AppSearch schema mismatch, retrying with force override")
@@ -225,8 +258,6 @@ class SemanticSearchManager
                                     e.message,
                                 )
                         }
-                    } catch (e: CancellationException) {
-                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch non-AppSearch error during indexing", e)
                         lastSnapshotHash = null

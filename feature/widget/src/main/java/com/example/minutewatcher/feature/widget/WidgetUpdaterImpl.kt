@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -59,23 +60,16 @@ class WidgetUpdaterImpl
          * Обновляет все экземпляры виджета с ограниченной экспоненциальной
          * стратегией повторных попыток.
          *
-         * Стратегия:
-         * 1. Транзиентные ошибки (Binder congestion): повтор до
-         *    [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой,
-         *    старт [Constants.Widget.RETRY_BACKOFF_MS], удвоение (capped at
-         *    [Constants.Widget.MAX_RETRY_DELAY_MS]).
-         * 2. Перманентные ошибки (destroyed context, not registered):
-         *    повтор пропускается, возврат false.
-         * 3. Превышение лимита RemoteViews (TransactionTooLargeException):
-         *    немедленный рендер с упрощённым layout, не считается попыткой повтора.
-         *    Флаг widgetLimitExceeded сохраняется в настройках.
+         * **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() не бросает исключений при корректном lifecycle.
+         * TransactionTooLargeException возможен только при превышении лимита Binder (~1 МБ).
          *
-         * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
-         * исключений при корректном lifecycle. TransactionTooLargeException возможен
-         * только при превышении лимита Binder (~1 МБ), что предотвращается
-         * упрощённым layout при widgetLimitExceeded = true.
-         * Если кастомная прошивка не соответствует документации Google —
+         * **Отклонение кастомной прошивки:** Если кастомная прошивка не соответствует документации Google —
          * это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:**
+         * 1. Транзиентные ошибки: повтор до [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой.
+         * 2. Перманентные ошибки: повтор пропускается.
+         * 3. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout.
          *
          * @return true если обновление завершилось успешно, false в противном случае.
          */
@@ -97,7 +91,9 @@ class WidgetUpdaterImpl
                         updateMutex.withLock {
                             try {
                                 val settings = appSettingsRepository.observeAppSettings().value
-                                if (settings.widgetLimitExceeded && (++updateCounter % PROBE_INTERVAL_UPDATES == 0)) {
+                                if (settings.widgetLimitExceeded &&
+                                    (updateCounter.incrementAndGet() % PROBE_INTERVAL_UPDATES == 0)
+                                ) {
                                     // Пробуем полный рендер. Если он удастся, handleUpdateResult сбросит флаг.
                                     val probeResult = safeUpdateAll(context, forceFull = true)
                                     if (probeResult is UpdateResult.Success) {
@@ -117,11 +113,11 @@ class WidgetUpdaterImpl
                             }
                         }
                     } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
-                // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() завершается
-                // в пределах нескольких секунд. Таймаут 30 секунд — защитный механизм
-                // от зависания на кастомных прошивках, не соответствующих документации Google.
-                // Это проблема кастомной прошивки. Стратегия: считаем таймаут retryable-ошибкой,
-                // чтобы следующая попытка могла succeed после восстановления системы.
+                // **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() завершается в пределах нескольких секунд.
+                //
+                // **Отклонение кастомной прошивки:** Зависание на кастомных прошивках. Это проблема кастомной прошивки.
+                //
+                // **Стратегия приложения:** Таймаут 30 секунд — защитный механизм; считается retryable-ошибкой.
 
                 val (success, shouldRetry) = handleUpdateResult(updateResult)
                 if (success) {
@@ -177,11 +173,13 @@ class WidgetUpdaterImpl
             AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
 
             /**
-             * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
-             * TransactionTooLargeException при корректном lifecycle. Превышение лимита
-             * Binder (~1 МБ) предотвращается упрощённым layout при widgetLimitExceeded.
-             * Если кастомная прошивка не соответствует документации Google —
+             * **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() не бросает
+             * TransactionTooLargeException при корректном lifecycle.
+             *
+             * **Отклонение кастомной прошивки:** Если кастомная прошивка не соответствует документации Google —
              * это проблема кастомной прошивки.
+             *
+             * **Стратегия приложения:** Превышение лимита Binder (~1 МБ) предотвращается упрощённым layout.
              */
             return try {
                 renderer.renderAll(context, forceSimplified = true, forceFull = false)
@@ -190,11 +188,12 @@ class WidgetUpdaterImpl
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Re-render after limit exceeded failed, resetting flag", e)
-                // Сбрасываем флаг, чтобы следующая попытка могла использовать полный layout.
-                // Строгое соблюдение API: на AOSP упрощённый layout всегда умещается в лимит
-                // Binder (~1 МБ). Сбой упрощённого рендера возможен только при деградации
-                // системы на кастомных прошивках. Это проблема кастомной прошивки.
-                // Стратегия: сбрасываем флаг и позволяем следующей попытке начать заново.
+                // **Контракт AOSP:** на AOSP упрощённый layout всегда умещается в лимит Binder (~1 МБ).
+                //
+                // **Отклонение кастомной прошивки:** Сбой упрощённого рендера возможен только при
+                // деградации системы на кастомных прошивках. Это проблема кастомной прошивки.
+                //
+                // **Стратегия приложения:** сбрасываем флаг и позволяем следующей попытке начать заново.
                 setWidgetLimitExceeded(value = false)
                 Pair(false, true) // isRetryable = true
             }
@@ -217,20 +216,14 @@ class WidgetUpdaterImpl
         /**
          * Выполняет обновление виджетов с перехватом и классификацией ошибок.
          *
-         * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() завершается
-         * в пределах нескольких секунд. TransactionTooLargeException возможен только
-         * при превышении лимита Binder (~1 МБ), что предотвращается упрощённым layout
-         * при widgetLimitExceeded = true. Если кастомная прошивка не соответствует
-         * документации Google — это проблема кастомной прошивки.
+         * **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() завершается в пределах нескольких секунд.
+         * TransactionTooLargeException возможен только при превышении лимита Binder (~1 МБ).
          *
-         * Стратегия обработки исключений:
-         * - [CancellationException]: пробрасывается немедленно для корректной остановки корутин.
-         * - [IllegalArgumentException]: проверяется на превышение лимита RemoteViews. Если это
-         *   не лимит, классифицируется как невосстанавливаемая ошибка.
-         * - [IllegalStateException]: проверяется на "перманентность" (например, уничтоженный контекст).
-         *   Перманентные ошибки не вызывают повторных попыток.
-         * - [RuntimeException]: проверяется на обернутый [android.os.TransactionTooLargeException].
-         * - [Exception]: общий перехват для защиты от нестабильных системных API на кастомных прошивках.
+         * **Отклонение кастомной прошивки:** Если кастомная прошивка не соответствует документации Google —
+         * это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** Превышение лимита предотвращается упрощённым layout при
+         * widgetLimitExceeded = true.
          */
         private suspend fun safeUpdateAll(
             context: Context,
@@ -278,11 +271,13 @@ class WidgetUpdaterImpl
                     }
 
                     is IllegalStateException -> {
-                        // Строгое соблюдение API: классификация по тексту сообщения ("context", "not registered")
-                        // исключена как хрупкая эвристика. Все IllegalStateException считаются retryable,
-                        // так как общее количество попыток ограничено MAX_UPDATE_ATTEMPTS.
+                        // **Контракт AOSP:** на AOSP IllegalStateException сигнализирует о некорректном состоянии.
+                        //
+                        // **Отклонение кастомной прошивки:** Классификация по тексту сообщения исключена.
                         // Если состояние системы перманентно нарушено на кастомной прошивке —
                         // это проблема кастомной прошивки.
+                        //
+                        // **Стратегия приложения:** Все IllegalStateException считаются retryable.
                         AppLogger.e("Widget update failed with IllegalStateException: ${e.message}", e)
                         UpdateResult.GenericFailure(isRetryable = true)
                     }
@@ -319,21 +314,13 @@ class WidgetUpdaterImpl
         /**
          * Детектирует, вызван ли сбой обновления виджета превышением лимита RemoteViews.
          *
-         * **Строгое соблюдение API:**
-         * Единственный надёжный критерий переполнения Binder-транзакции — наличие
+         * **Контракт AOSP:** Единственный надёжный критерий переполнения Binder-транзакции — наличие
          * [android.os.TransactionTooLargeException] в cause-цепочке.
-         * Попытки определить переполнение по тексту ошибки (например, "RemoteViews for
-         * widget... exceeded maximum size") исключены как хрупкая эвристика, не
-         * гарантирующая стабильность между версиями Android.
          *
-         * Если на специфических устройствах/прошивках переполнение RemoteViews
-         * проявляется как IllegalArgumentException без TransactionTooLargeException
-         * в причинах — обработку следует расширять через дополнительные типы
-         * исключений или поведенческие паттерны, но НЕ через строковые проверки.
+         * **Отклонение кастомной прошивки:** Попытки определить переполнение по тексту ошибки исключены.
+         * Если прошивка бросает TransactionTooLargeException — это проблема кастомной прошивки.
          *
-         * На AOSP GlanceAppWidget.updateAll() не бросает TransactionTooLargeException
-         * при корректном рендере. Если прошивка бросает его — это считается сигналом
-         * для перехода на упрощённый layout.
+         * **Стратегия приложения:** Переход на упрощённый layout при детекции.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean =
@@ -355,8 +342,13 @@ class WidgetUpdaterImpl
             private const val WIDGET_UPDATE_TIMEOUT_MS = 30_000L
             private const val PROBE_INTERVAL_UPDATES = 10
 
+            /**
+             * Счетчик обновлений для периодической проверки ("пробы") полного рендера.
+             * Используется AtomicInteger, так как updateAll() может вызываться конкурентно
+             * из разных корутин (например, UpdateCoordinator и WidgetSettingsSaver).
+             */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal var updateCounter = 0
+            internal val updateCounter = AtomicInteger(0)
         }
     }
 

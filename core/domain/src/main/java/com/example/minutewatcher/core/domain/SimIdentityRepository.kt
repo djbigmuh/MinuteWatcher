@@ -36,3 +36,17 @@ interface SimIdentityRepository {
         code: String,
     )
 }
+
+/**
+ * Исключение, выбрасываемое при отсутствии активной подписки SIM в указанном слоте.
+ */
+class SimNotFoundException(
+    val slot: Int,
+) : IllegalStateException("No active SIM in slot $slot")
+
+/**
+ * Исключение, выбрасываемое при недоступности identity seed (сбой хранилища).
+ */
+class SeedUnavailableException(
+    val slot: Int,
+) : IllegalStateException("Identity seed unavailable for slot $slot")

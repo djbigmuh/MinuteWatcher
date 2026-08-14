@@ -13,8 +13,10 @@ import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
@@ -93,11 +95,12 @@ class SimIdentityRepositoryImpl
          * Заполняется при вызове getSimIdentity, когда activeSimsCache ещё не содержит данных.
          * Очищается при получении актуального списка активных SIM из activeSimsCache.
          *
-         * Хрупкая эвристика: если activeSimsCache не эмитит значение в течение длительного
-         * времени (деградация DataStore на кастомной прошивке), записи могут устареть.
-         * Строгое соблюдение API: на AOSP observeActiveSims() эмитит значение
-         * в пределах SHORT_TIMEOUT_MS. Проблема возможна только на кастомных прошивках,
-         * не соответствующих документации Google.
+         * **Контракт AOSP:** на AOSP observeActiveSims() эмитит значение в пределах SHORT_TIMEOUT_MS.
+         *
+         * **Отклонение кастомной прошивки:** Если activeSimsCache не эмитит значение в течение длительного времени
+         * (деградация DataStore на кастомной прошивке), записи могут устареть. Это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** используется manualResolutionCache как защитный механизм.
          */
         private val manualResolutionCache = ConcurrentHashMap<Int, SimIdentity>()
 
@@ -245,20 +248,24 @@ class SimIdentityRepositoryImpl
                 started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                 initialValue = emptyList(),
             )
-        // WhileSubscribed останавливает наблюдение через 5 секунд после ухода последнего
-        // подписчика. Это предотвращает фоновое потребление ресурсов, когда приложение
-        // не активно. Строгое соблюдение API: на AOSP SubscriptionManager callback
-        // доставляется мгновенно. При возобновлении подписки первое значение эмитится
-        // в пределах миллисекунд. Стратегия: экономия батареи в фоне без потери
-        // функциональности при возвращении в foreground.
+        // **Контракт AOSP:** на AOSP SubscriptionManager callback доставляется при каждом изменении подписок.
+        //
+        // **Отклонение кастомной прошивки:** Если кастомная прошивка не доставляет callback —
+        // это проблема кастомной прошивки.
+        //
+        // **Стратегия приложения:** экономия батареи в фоне через WhileSubscribed без потери функциональности.
 
         init {
             scope.launch {
                 activeSimsCache.collect { sims ->
-                    // Очищаем manualResolutionCache для слотов, которых нет в активном списке.
-                    // Строгое соблюдение API: на AOSP SubscriptionManager callback доставляется
-                    // при каждом изменении подписок. Если кастомная прошивка не доставляет
-                    // callback — это проблема кастомной прошивки.
+                    // **Контракт AOSP:** на AOSP SubscriptionManager callback доставляется при
+                    // каждом изменении подписок.
+                    //
+                    // **Отклонение кастомной прошивки:** Если кастомная прошивка не доставляет callback —
+                    // это проблема кастомной прошивки.
+                    //
+                    // **Стратегия приложения:** Очищаем manualResolutionCache для слотов,
+                    // которых нет в активном списке.
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     manualResolutionCache.keys.removeAll { it !in activeSlots }
                 }
@@ -313,33 +320,31 @@ class SimIdentityRepositoryImpl
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
-                    // Seed недоступен — это НЕ "SIM удалена", а деградация хранилища.
-                    // Строгое соблюдение API: на AOSP генерация seed завершается успешно.
-                    // Таймаут возможен только при деградации DataStore на кастомных
-                    // прошивках, не соответствующих документации Google.
-                    val message =
-                        "Identity seed unavailable for slot $slot. " +
-                            "Possible DataStore degradation on non-AOSP firmware."
-                    AppLogger.e(message, null)
-                    throw IllegalStateException(message)
+                    // **Контракт AOSP:** на AOSP генерация seed завершается успешно.
+                    //
+                    // **Отклонение кастомной прошивки:** Таймаут генерации возможен только при деградации DataStore
+                    // на кастомных прошивках. Это проблема кастомной прошивки.
+                    //
+                    // **Стратегия приложения:** выбрасывается SeedUnavailableException.
+                    AppLogger.e("Identity seed unavailable for slot $slot. Possible DataStore degradation.", null)
+                    throw SeedUnavailableException(slot)
                 }
 
                 // If not found in cache, try direct resolution
                 val resolved =
                     findActiveIdentityInternal(slot, seed)
-                        ?: error("No active SIM subscription found in slot $slot")
+                        ?: throw SimNotFoundException(slot)
 
                 manualResolutionCache[slot] = resolved
 
                 if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
                     saveSimIdentitiesInfo(listOf(resolved))
-                    // Кэш activeSimsCache обновляется асинхронно через observation flow.
-                    // Прямой резолвинг — fallback для случаев, когда observation flow ещё не
-                    // обновил кэш (например, сразу после запуска приложения).
-                    // Строгое соблюдение API: на AOSP observeActiveSims() эмитит первое значение
-                    // в пределах миллисекунд. Прямой резолвинг нужен только для кастомных прошивок
-                    // с задержкой callback от SubscriptionManager. Это проблема кастомной прошивки.
-                    // Стратегия: прямой резолвинг — защитный механизм, не штатный путь.
+                    // **Контракт AOSP:** на AOSP observeActiveSims() эмитит первое значение в пределах миллисекунд.
+                    //
+                    // **Отклонение кастомной прошивки:** Прямой резолвинг нужен только для кастомных
+                    // прошивок с задержкой callback от SubscriptionManager. Это проблема кастомной прошивки.
+                    //
+                    // **Стратегия приложения:** прямой резолвинг используется как защитный механизм.
                 }
 
                 return resolved
@@ -368,9 +373,12 @@ class SimIdentityRepositoryImpl
                     }
                 } ?: run {
                     AppLogger.d("getSimIdentity: no active subscription found for slot $slot, using fallback identity")
-                    // Строгое соблюдение API: на AOSP getActiveSubscriptions() возвращает
-                    // актуальный список при наличии READ_PHONE_STATE. Возврат null означает,
-                    // что SIM физически отсутствует в слоте. Это штатная ситуация, а не ошибка.
+                    // **Контракт AOSP:** на AOSP getActiveSubscriptions() возвращает актуальный
+                    // список при наличии READ_PHONE_STATE.
+                    //
+                    // **Отклонение кастомной прошивки:** Возврат null означает, что SIM физически отсутствует в слоте.
+                    //
+                    // **Стратегия приложения:** Это штатная ситуация, возвращается null для обработки вызывающим кодом.
                     null
                 }
             } catch (e: CancellationException) {
@@ -537,11 +545,12 @@ class SimIdentityRepositoryImpl
         // Усложнение структуры ради одного возврата снизит читаемость критической секции обнаружения SIM.
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             if (seed is SeedResult.Fallback) {
-                // Строгое соблюдение API: на AOSP генерация seed завершается успешно.
-                // Таймаут генерации возможен только при деградации DataStore
-                // на кастомных прошивках, не соответствующих документации Google.
-                // Если кастомная прошивка не соответствует документации Google —
-                // это проблема кастомной прошивки.
+                // **Контракт AOSP:** на AOSP генерация seed завершается успешно.
+                //
+                // **Отклонение кастомной прошивки:** Таймаут генерации возможен только при деградации DataStore
+                // на кастомных прошивках. Это проблема кастомной прошивки.
+                //
+                // **Стратегия приложения:** логируется ошибка, возвращается пустой список.
                 AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
                 return emptyList()
             }

@@ -50,10 +50,16 @@ class MainBannerController
         }
 
         private val observationRetryCount = AtomicLong(0L)
-        private var lastResetTime = 0L
+
+        /**
+         * Время последнего успешного обновления или сброса счетчика попыток.
+         * Используется AtomicLong, потому что onEach и retryWhen могут выполняться
+         * на разных потоках в рамках ApplicationScope.
+         */
+        private val lastResetTime = AtomicLong(0L)
 
         init {
-            lastResetTime = timeProvider.now()
+            lastResetTime.set(timeProvider.now())
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -77,14 +83,13 @@ class MainBannerController
         /**
          * Состояние баннеров отслеживания.
          *
-         * Использует WhileSubscribed(5000): upstream flow активен пока есть
-         * подписчики и в течение 5 секунд после ухода последнего подписчика.
-         * Это штатное поведение: при пересоздании UI (поворот экрана, переход
-         * между экранами) flow пересоздаётся и баннеры обновляются.
+         * **Контракт AOSP:** на AOSP combine из StateFlow не бросает исключений.
          *
-         * Строгое соблюдение API: на AOSP combine из StateFlow не бросает
-         * исключений. Сбой возможен только при деградации DataStore
-         * на кастомных прошивках, не соответствующих документации Google.
+         * **Отклонение кастомной прошивки:** Сбой возможен только при деградации DataStore
+         * на кастомных прошивках. Это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** Используется WhileSubscribed(5000); при сбое выполняется
+         * бесконечный ретрай с capped delay.
          */
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
@@ -105,15 +110,15 @@ class MainBannerController
                 )
             }.onEach {
                 observationRetryCount.set(0)
-                lastResetTime = timeProvider.now()
+                lastResetTime.set(timeProvider.now())
             }.retryWhen { cause, _ ->
                 // CancellationException пробрасывается для корректной остановки корутин.
                 if (cause is CancellationException) throw cause
 
                 val now = timeProvider.now()
-                if ((now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                if ((now - lastResetTime.get()) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                     observationRetryCount.set(0)
-                    lastResetTime = now
+                    lastResetTime.set(now)
                 }
 
                 val currentRetry = observationRetryCount.incrementAndGet()

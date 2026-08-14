@@ -1,8 +1,12 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -18,6 +22,18 @@ fun SimCardScreen(
     val showOnboardingDialog by viewModel.showOnboardingDialog.collectAsStateWithLifecycle()
     val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
 
+    val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(lastOperationError) {
+        val error = lastOperationError ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = error.message,
+            withDismissAction = true,
+        )
+        viewModel.dismissOperationError()
+    }
+
     Scaffold(
         topBar = {
             SimCardTopBar(
@@ -29,6 +45,7 @@ fun SimCardScreen(
             )
         },
         floatingActionButton = { MainFab(onAddWidget = actions.onAddWidget) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { paddingValues ->
         MainScreenContent(
             uiState = uiState,
