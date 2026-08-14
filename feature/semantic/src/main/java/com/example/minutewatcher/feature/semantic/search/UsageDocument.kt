@@ -9,31 +9,31 @@ import com.example.minutewatcher.core.model.util.ColorProvider
 @Document
 data class UsageDocument(
     @get:Document.Namespace
-    val namespace: String,
+    val namespace: String = "",
     @get:Document.Id
-    val id: String,
+    val id: String = "",
     @get:Document.Score
     val score: Int = 0,
     @get:Document.StringProperty(indexingType = AppSearchSchema.StringPropertyConfig.INDEXING_TYPE_PREFIXES)
-    val operatorName: String,
+    val operatorName: String = "",
     @get:Document.StringProperty
-    val packageType: String,
+    val packageType: String = "",
     @get:Document.LongProperty
-    val remainingValue: Long,
+    val remainingValue: Long = 0L,
     @get:Document.StringProperty
-    val unit: String,
+    val unit: String = "",
     @get:Document.LongProperty
-    val usedValue: Long,
+    val usedValue: Long = 0L,
     @get:Document.LongProperty
-    val limitValue: Long,
+    val limitValue: Long = 0L,
     @get:Document.LongProperty
-    val remainingPercent: Long,
+    val remainingPercent: Long = 0L,
     @get:Document.LongProperty
-    val periodEnd: Long,
+    val periodEnd: Long = 0L,
     @get:Document.LongProperty
-    val slot: Long,
+    val slot: Long = 0L,
     @get:Document.StringProperty
-    val status: String,
+    val status: String = "",
 ) {
     companion object {
         private const val PERCENT_MULTIPLIER = 100L

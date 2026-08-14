@@ -110,9 +110,6 @@ dependencies {
 
     coreLibraryDesugaring(libs.desugarJdkLibs)
     implementation(libs.skydovesColorpickerview)
-    implementation(libs.androidxAppsearch)
-    ksp(libs.androidxAppsearchCompiler)
-    implementation(libs.androidxAppsearchLocalStorage)
 
     // Hilt
     implementation(libs.daggerHiltAndroid)
