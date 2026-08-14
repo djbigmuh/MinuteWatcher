@@ -120,7 +120,7 @@ class MainBannerController
                 AppLogger.e("Failed to compute banner state (attempt $currentRetry)", cause)
 
                 val delayMillis =
-                    (2.0.pow(currentRetry.toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
+                    (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
                 true // Retrying infinitely with capped delay; UI retains last successful state

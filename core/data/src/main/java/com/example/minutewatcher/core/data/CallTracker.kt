@@ -38,6 +38,10 @@ private class DataStoreTimeoutException(
     message: String,
 ) : Exception(message)
 
+// Подавление LargeClass оправдано: CallTracker является центральным узлом обработки событий звонков,
+// объединяющим логику старта, завершения, атрибуции и восстановления состояния после сбоев.
+// Дальнейшее дробление класса усложнит координацию критической секции трекинга.
+@Suppress("LargeClass")
 @Singleton
 class CallTracker
     @Inject

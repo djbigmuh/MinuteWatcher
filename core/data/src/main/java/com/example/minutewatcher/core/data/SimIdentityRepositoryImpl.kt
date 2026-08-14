@@ -282,10 +282,10 @@ class SimIdentityRepositoryImpl
          * а не повод для угадывания.
          */
 
-        @Suppress("ThrowsCount")
-        // Подавление ThrowsCount оставлено намеренно: метод реализует строгую валидацию по трем независимым
-        // критериям (диапазон слотов, наличие seed, наличие подписки). Объединение исключений снизит
-        // точность диагностики сбоев на кастомных прошивках.
+        @Suppress("ThrowsCount", "ReturnCount")
+        // Подавление ThrowsCount и ReturnCount оставлено намеренно: метод реализует строгую валидацию по трем
+        // независимым критериям (диапазон слотов, наличие seed, наличие подписки). Объединение исключений
+        // и точек выхода снизит точность диагностики сбоев на кастомных прошивках.
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
                 val message = "getSimIdentity called with out-of-range slot=$slot"

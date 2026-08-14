@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
@@ -35,6 +36,8 @@ class MainBannerControllerTest {
     private val trackingStatusFlow =
         MutableStateFlow(emptyMap<String, com.example.minutewatcher.core.model.TrackingStatus>())
 
+    private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
+
     @Before
     fun setup() {
         AppLogger.init(mock(), NoOpLogger())
@@ -55,6 +58,7 @@ class MainBannerControllerTest {
                     permissionRepository,
                     appSettingsRepository,
                     backgroundScope,
+                    timeProvider,
                 )
 
             // Start collecting to activate WhileSubscribed
@@ -97,6 +101,7 @@ class MainBannerControllerTest {
                     permissionRepository,
                     appSettingsRepository,
                     backgroundScope,
+                    timeProvider,
                 )
 
             backgroundScope.launch { controller.trackingBannerState.collect {} }

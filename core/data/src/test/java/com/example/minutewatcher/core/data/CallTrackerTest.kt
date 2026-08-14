@@ -870,7 +870,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `write failure at MAX_WRITE_ATTEMPTS preserves session and sets DATABASE_ERROR status`() =
+    fun `write failure at MAX_WRITE_ATTEMPTS clears session and sets DATABASE_ERROR status`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -909,16 +909,16 @@ class CallTrackerTest {
             // Attempt 3 (MAX_WRITE_ATTEMPTS)
             // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений.
             // Сбой записи возможен только при деградации хранилища на кастомных прошивках.
-            // Тест проверяет поведение при MAX_WRITE_ATTEMPTS: сессия сохраняется,
-            // данные одной записи теряются намеренно для предотвращения перманентной блокировки.
+            // Тест проверяет поведение при MAX_WRITE_ATTEMPTS: сессия принудительно очищается,
+            // чтобы не допустить перманентной блокировки трекинга.
             callTracker.onCallEnded(subId)
             advanceUntilIdle()
 
             val status = callTracker.status.value as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
-            assertTrue(status.message?.contains("after 3 attempts") == true)
+            assertTrue(status.message?.contains("Session cleared, call data lost") == true)
 
-            // Verify session was NEVER cleared (setCallStartTime(subId, 0L) never called)
-            verify(callSessionRepository, never()).setCallStartTime(eq(subId), eq(0L))
+            // Verify session WAS cleared
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
         }
 }

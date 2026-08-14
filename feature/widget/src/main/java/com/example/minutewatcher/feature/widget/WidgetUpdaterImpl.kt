@@ -10,9 +10,9 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -78,18 +78,19 @@ class WidgetUpdaterImpl
                 // 3. Перманентные ошибки (destroyed context): повтор пропускается
                 // 4. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout,
                 //    не считается попыткой повтора
-                val updateResult = withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                    updateMutex.withLock {
-                        try {
-                            safeUpdateAll(context)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
-                            UpdateResult.GenericFailure(isRetryable = true)
+                val updateResult =
+                    withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                        updateMutex.withLock {
+                            try {
+                                safeUpdateAll(context)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
+                                UpdateResult.GenericFailure(isRetryable = true)
+                            }
                         }
-                    }
-                } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
+                    } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
                 // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() завершается
                 // в пределах нескольких секунд. Таймаут 30 секунд — защитный механизм
                 // от зависания на кастомных прошивках, не соответствующих документации Google.

@@ -136,6 +136,7 @@ class MainViewModelTest {
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 scope = scope,
+                timeProvider = timeProvider,
             )
         val refreshController =
             MainSimRefreshController(

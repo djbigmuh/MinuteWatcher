@@ -317,6 +317,9 @@ class TrafficTracker
             }
         }
 
+        @Suppress("ReturnCount")
+        // Подавление ReturnCount оправдано: метод содержит несколько защитных проверок (таймаут DataStore,
+        // удаление SIM), ранний выход из которых обеспечивает линейную читаемость основного пути обновления.
         private suspend fun performTrafficUpdate(
             target: TargetInfo,
             targetIdentity: String,
