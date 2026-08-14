@@ -119,6 +119,7 @@ class WidgetUpdaterImplTest {
                             override suspend fun renderAll(
                                 context: Context,
                                 forceSimplified: Boolean,
+                                forceFull: Boolean,
                             ) {
                                 error("Unexpected crash")
                             }
@@ -151,6 +152,7 @@ class WidgetUpdaterImplTest {
                             override suspend fun renderAll(
                                 context: Context,
                                 forceSimplified: Boolean,
+                                forceFull: Boolean,
                             ) {
                                 callCount++
                                 if (callCount == 1) {

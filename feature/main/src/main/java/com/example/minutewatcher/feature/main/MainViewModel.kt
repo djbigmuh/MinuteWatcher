@@ -378,6 +378,12 @@ internal class AutoResetScheduler(
         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
 
+        /**
+         * Использование монотонного времени (elapsedRealtime) для проверки интервала.
+         * Это гарантирует, что перевод системных часов пользователем не приведет
+         * к ложным срабатываниям или пропуску проверок. Интервал между проверками
+         * остается стабильным независимо от манипуляций с wall-clock.
+         */
         val now = timeProvider.elapsedRealtime()
 
         val isInitialOrReboot: Boolean

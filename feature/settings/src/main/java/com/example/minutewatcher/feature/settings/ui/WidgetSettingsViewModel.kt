@@ -153,5 +153,8 @@ class WidgetSettingsViewModel
                         Constants.Widget.MIN_FONT_SIZE,
                         Constants.Widget.MAX_FONT_SIZE,
                     ),
+                // Сбрасываем флаг превышения лимита при сохранении настроек пользователем.
+                // Это позволяет вручную "вылечить" виджет, если пользователь изменил состав данных.
+                widgetLimitExceeded = false,
             )
     }

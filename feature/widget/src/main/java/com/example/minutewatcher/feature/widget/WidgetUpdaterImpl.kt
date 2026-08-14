@@ -28,12 +28,15 @@ class WidgetUpdaterImpl
                 override suspend fun renderAll(
                     context: Context,
                     forceSimplified: Boolean,
+                    forceFull: Boolean,
                 ) {
                     MinutesGlanceWidget.setForceSimplified(context, forceSimplified)
+                    MinutesGlanceWidget.setForceFull(context, forceFull)
                     try {
                         MinutesGlanceWidget().updateAll(context)
                     } finally {
                         MinutesGlanceWidget.setForceSimplified(context, false)
+                        MinutesGlanceWidget.setForceFull(context, false)
                     }
                 }
             },
@@ -41,7 +44,9 @@ class WidgetUpdaterImpl
         private val updateMutex = Mutex()
 
         private sealed class UpdateResult {
-            object Success : UpdateResult()
+            data class Success(
+                val wasFull: Boolean,
+            ) : UpdateResult()
 
             object LimitExceeded : UpdateResult()
 
@@ -57,7 +62,8 @@ class WidgetUpdaterImpl
          * Стратегия:
          * 1. Транзиентные ошибки (Binder congestion): повтор до
          *    [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой,
-         *    старт [Constants.Widget.RETRY_BACKOFF_MS], удвоение.
+         *    старт [Constants.Widget.RETRY_BACKOFF_MS], удвоение (capped at
+         *    [Constants.Widget.MAX_RETRY_DELAY_MS]).
          * 2. Перманентные ошибки (destroyed context, not registered):
          *    повтор пропускается, возврат false.
          * 3. Превышение лимита RemoteViews (TransactionTooLargeException):
@@ -90,7 +96,19 @@ class WidgetUpdaterImpl
                     withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                         updateMutex.withLock {
                             try {
-                                safeUpdateAll(context)
+                                val settings = appSettingsRepository.observeAppSettings().value
+                                if (settings.widgetLimitExceeded && (++updateCounter % PROBE_INTERVAL_UPDATES == 0)) {
+                                    // Пробуем полный рендер. Если он удастся, handleUpdateResult сбросит флаг.
+                                    val probeResult = safeUpdateAll(context, forceFull = true)
+                                    if (probeResult is UpdateResult.Success) {
+                                        probeResult
+                                    } else {
+                                        // Проба не удалась — выполняем штатный упрощённый рендер.
+                                        safeUpdateAll(context, forceFull = false)
+                                    }
+                                } else {
+                                    safeUpdateAll(context, forceFull = false)
+                                }
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
@@ -114,7 +132,7 @@ class WidgetUpdaterImpl
                 } else {
                     AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
                     delay(delayMs.milliseconds)
-                    delayMs *= 2
+                    delayMs = (delayMs * 2).coerceAtMost(Constants.Widget.MAX_RETRY_DELAY_MS)
                     attempt++
                 }
             }
@@ -129,13 +147,11 @@ class WidgetUpdaterImpl
         private suspend fun handleUpdateResult(result: UpdateResult): Pair<Boolean, Boolean> =
             when (result) {
                 is UpdateResult.Success -> {
-                    // Если предыдущее обновление упало с LimitExceeded и флаг был установлен,
-                    // но текущее обновление прошло успешно (упрощённый layout или данные уменьшились),
-                    // сбрасываем флаг. Это позволяет следующему обновлению попытаться
-                    // использовать полный layout. Осцилляция невозможна: если данные снова
-                    // превысят лимит, updateAll упадёт и флаг будет установлен повторно.
-                    val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
-                    if (current) {
+                    // Сбрасываем флаг только если реально был предпринят и удался ПОЛНЫЙ рендер.
+                    // Если рендер был упрощённым (из-за установленного флага или принудительно),
+                    // успех не означает, что полный рендер теперь пройдёт.
+                    // Это предотвращает осцилляцию флага и лишние TransactionTooLargeException.
+                    if (result.wasFull) {
                         setWidgetLimitExceeded(value = false)
                     }
                     Pair(true, false)
@@ -168,7 +184,7 @@ class WidgetUpdaterImpl
              * это проблема кастомной прошивки.
              */
             return try {
-                renderer.renderAll(context, forceSimplified = true)
+                renderer.renderAll(context, forceSimplified = true, forceFull = false)
                 Pair(true, false)
             } catch (e: CancellationException) {
                 throw e
@@ -216,26 +232,44 @@ class WidgetUpdaterImpl
          * - [RuntimeException]: проверяется на обернутый [android.os.TransactionTooLargeException].
          * - [Exception]: общий перехват для защиты от нестабильных системных API на кастомных прошивках.
          */
-        private suspend fun safeUpdateAll(context: Context): UpdateResult =
-            try {
-                renderer.renderAll(context, forceSimplified = false)
-                UpdateResult.Success
+        private suspend fun safeUpdateAll(
+            context: Context,
+            forceFull: Boolean = false,
+        ): UpdateResult {
+            val limitExceeded = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
+            val isFullAttempt = forceFull || !limitExceeded
+
+            return try {
+                renderer.renderAll(context, forceSimplified = false, forceFull = forceFull)
+                UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 // Должен перехватываться ПЕРВЫМ и пробрасываться дальше для корректной остановки корутин.
                 throw e
             } catch (e: Exception) {
-                classifyUpdateError(e)
+                classifyUpdateError(e, isFullAttempt = isFullAttempt, isProbe = forceFull)
             }
+        }
 
         /**
          * Классифицирует ошибку обновления виджетов для определения стратегии восстановления.
          */
-        private fun classifyUpdateError(e: Exception): UpdateResult {
+        private fun classifyUpdateError(
+            e: Exception,
+            isFullAttempt: Boolean,
+            isProbe: Boolean,
+        ): UpdateResult {
             val result =
                 when (e) {
                     is IllegalArgumentException -> {
                         if (isRemoteViewsLimitException(e)) {
-                            AppLogger.e("Widget update failed due to size limit. Detection confirmed.", e)
+                            if (isProbe) {
+                                AppLogger.d("Widget full layout probe failed: still too large")
+                            } else if (isFullAttempt) {
+                                AppLogger.e("Widget update failed due to size limit. Detection confirmed.", e)
+                            } else {
+                                // Этого не должно происходить при упрощённом рендере на AOSP.
+                                AppLogger.e("CRITICAL: Widget size limit exceeded even with simplified layout!", e)
+                            }
                             UpdateResult.LimitExceeded
                         } else {
                             AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
@@ -244,21 +278,27 @@ class WidgetUpdaterImpl
                     }
 
                     is IllegalStateException -> {
-                        val message = e.message ?: ""
-                        val isPermanent =
-                            message.contains("context", ignoreCase = true) ||
-                                message.contains("not registered", ignoreCase = true) ||
-                                message.contains("destroyed", ignoreCase = true)
-                        AppLogger.e(
-                            "Widget update failed with IllegalStateException (permanent=$isPermanent): $message",
-                            e,
-                        )
-                        UpdateResult.GenericFailure(isRetryable = !isPermanent)
+                        // Строгое соблюдение API: классификация по тексту сообщения ("context", "not registered")
+                        // исключена как хрупкая эвристика. Все IllegalStateException считаются retryable,
+                        // так как общее количество попыток ограничено MAX_UPDATE_ATTEMPTS.
+                        // Если состояние системы перманентно нарушено на кастомной прошивке —
+                        // это проблема кастомной прошивки.
+                        AppLogger.e("Widget update failed with IllegalStateException: ${e.message}", e)
+                        UpdateResult.GenericFailure(isRetryable = true)
                     }
 
                     is RuntimeException -> {
                         if (isRemoteViewsLimitException(e)) {
-                            AppLogger.e("Widget update failed due to size limit (wrapped).", e)
+                            if (isProbe) {
+                                AppLogger.d("Widget full layout probe failed (wrapped): still too large")
+                            } else if (isFullAttempt) {
+                                AppLogger.e("Widget update failed due to size limit (wrapped).", e)
+                            } else {
+                                AppLogger.e(
+                                    "CRITICAL: Widget size limit exceeded (wrapped) even with simplified layout!",
+                                    e,
+                                )
+                            }
                             UpdateResult.LimitExceeded
                         } else {
                             AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
@@ -282,23 +322,22 @@ class WidgetUpdaterImpl
          * **Строгое соблюдение API:**
          * Единственный надёжный критерий переполнения Binder-транзакции — наличие
          * [android.os.TransactionTooLargeException] в cause-цепочке.
-         * Попытки определить переполнение по тексту ошибки исключены как хрупкая эвристика.
+         * Попытки определить переполнение по тексту ошибки (например, "RemoteViews for
+         * widget... exceeded maximum size") исключены как хрупкая эвристика, не
+         * гарантирующая стабильность между версиями Android.
+         *
+         * Если на специфических устройствах/прошивках переполнение RemoteViews
+         * проявляется как IllegalArgumentException без TransactionTooLargeException
+         * в причинах — обработку следует расширять через дополнительные типы
+         * исключений или поведенческие паттерны, но НЕ через строковые проверки.
          *
          * На AOSP GlanceAppWidget.updateAll() не бросает TransactionTooLargeException
-         * при корректном lifecycle. Превышение лимита Binder (~1 МБ) предотвращается
-         * упрощённым layout при widgetLimitExceeded = true.
-         * Если кастомная прошивка не соответствует документации Google —
-         * это проблема кастомной прошивки.
+         * при корректном рендере. Если прошивка бросает его — это считается сигналом
+         * для перехода на упрощённый layout.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal fun isRemoteViewsLimitException(e: Throwable): Boolean {
-            if (hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)) {
-                AppLogger.e("RemoteViews size limit detected via TransactionTooLargeException", e)
-                return true
-            }
-
-            return false
-        }
+        internal fun isRemoteViewsLimitException(e: Throwable): Boolean =
+            hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
 
         private fun hasCauseOfType(
             e: Throwable,
@@ -314,6 +353,10 @@ class WidgetUpdaterImpl
 
         companion object {
             private const val WIDGET_UPDATE_TIMEOUT_MS = 30_000L
+            private const val PROBE_INTERVAL_UPDATES = 10
+
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+            internal var updateCounter = 0
         }
     }
 
@@ -321,5 +364,6 @@ interface WidgetRenderer {
     suspend fun renderAll(
         context: Context,
         forceSimplified: Boolean = false,
+        forceFull: Boolean = false,
     )
 }

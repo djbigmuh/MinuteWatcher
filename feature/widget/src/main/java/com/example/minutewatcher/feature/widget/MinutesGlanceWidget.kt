@@ -61,6 +61,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     companion object {
         private const val PREFS_NAME = "widget_render_flags"
         private const val KEY_FORCE_SIMPLIFIED = "force_simplified"
+        private const val KEY_FORCE_FULL = "force_full"
 
         /**
          * Устанавливает флаг принудительного упрощённого рендера.
@@ -87,6 +88,25 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             context
                 .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(KEY_FORCE_SIMPLIFIED, false)
+
+        /**
+         * Устанавливает флаг принудительного ПОЛНОГО рендера (игнорируя лимит).
+         */
+        fun setForceFull(
+            context: Context,
+            value: Boolean,
+        ) {
+            context
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit {
+                    putBoolean(KEY_FORCE_FULL, value)
+                }
+        }
+
+        private fun getForceFull(context: Context): Boolean =
+            context
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_FORCE_FULL, false)
     }
 
     @EntryPoint
@@ -178,10 +198,15 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout
 
         val forceSimplified = getForceSimplified(context.applicationContext)
+        val forceFull = getForceFull(context.applicationContext)
         val settingsState =
             try {
                 val loaded = widgetSettingsLoader.load()
-                if (forceSimplified) loaded.copy(widgetLimitExceeded = true) else loaded
+                when {
+                    forceSimplified -> loaded.copy(widgetLimitExceeded = true)
+                    forceFull -> loaded.copy(widgetLimitExceeded = false)
+                    else -> loaded
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -228,14 +253,15 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     /**
      * Получает актуальный snapshot для рендера виджета.
      *
-     * Проверка staleness использует wall clock (TimeProvider.now()), поскольку
-     * snapshot.timestamp хранится как wall clock.
-     *
-     * Известное ограничение: при переводе системных часов назад
-     * (now - timestamp > STALE_THRESHOLD при отрицательном now - timestamp)
-     * isStale может дать ложный результат. Это безопасно: лишний вызов
-     * refresh() не приводит к потере данных, а лишь выполняет
-     * дополнительное обновление.
+     * **Strict Compliance:**
+     * 1. Проверка staleness использует wall clock (TimeProvider.now()), так как
+     *    `snapshot.timestamp` сохраняется в репозитории именно как wall clock.
+     * 2. Поведение при переводе часов:
+     *    - Вперёд: Snapshot может быть помечен как stale раньше времени, что приведет
+     *      к безопасному внеплановому обновлению.
+     *    - Назад: Разница `now - timestamp` становится отрицательной, что всегда меньше
+     *      порога STALE_SNAPSHOT_THRESHOLD_MS. Snapshot не будет помечен как stale,
+     *      лишний вызов refresh() не выполнится. Это безопасно и не ведет к потере данных.
      *
      * Строгое соблюдение API: на AOSP UsageStateRepository.refresh()
      * не возвращает null при корректном состоянии DataStore.

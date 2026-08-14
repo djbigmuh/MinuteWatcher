@@ -77,17 +77,25 @@ class SimWidgetVisibilityRepositoryImpl
         }
 
         /**
-         * Clears settings for SIMs that are no longer active.
+         * Очищает настройки для SIM-карт, которые больше не активны.
          *
          * **Strict Compliance:**
-         * Identity extraction uses strict prefix matching from longest to shortest.
-         * Fragile substring methods are avoided to prevent accidental deletion of unrelated keys.
-         * Fallback identities (sim_$slot) are protected using a strict regex pattern.
+         * 1. Извлечение identity использует строгое сопоставление префиксов от самых длинных
+         *    к самым коротким (см. [WidgetSettingsKeys.ALL_PREFIXES]).
+         * 2. Identity считается валидным, если он соответствует одному из известных форматов:
+         *    - `icc_<hash>` (стабильный ID на базе ICCID)
+         *    - `sub_<id>` (ID подписки)
+         *    - `sim_<slot>` (fallback ID на базе слота)
+         *    Это защищает от удаления ключей с некорректно извлеченными identity в случае
+         *    непредвиденных коллизий префиксов.
+         * 3. Fallback-ключи (`sim_<slot>`) никогда не удаляются автоматически, так как они
+         *    служат последним уровнем защиты при отсутствии других идентификаторов.
          */
         override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
             val activeSet = activeIdentities.toSet()
             val prefixes = WidgetSettingsKeys.ALL_PREFIXES
             val fallbackRegex = Regex("^sim_\\d+$")
+            val validIdentityRegex = Regex("^(icc_|sub_|sim_).+$")
 
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys
@@ -103,7 +111,9 @@ class SimWidgetVisibilityRepositoryImpl
                                 }
                             }
 
-                            if (identity.isEmpty()) return@filter false
+                            if (identity.isEmpty() || !validIdentityRegex.matches(identity)) {
+                                return@filter false
+                            }
 
                             // Protect sim_$slot fallback keys
                             val isFallbackKey = fallbackRegex.matches(identity)

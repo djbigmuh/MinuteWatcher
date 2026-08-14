@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -15,8 +16,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class SimIdentitySeedRepositoryImpl
@@ -62,6 +65,10 @@ class SimIdentitySeedRepositoryImpl
          * и лимиты для старых identity станут «осиротевшими». Это поведение является осознанным компромиссом
          * для сохранения работоспособности приложения при системных сбоях хранилища.
          *
+         * **Защита от зависаний:** Чтение и запись в DataStore ограничены таймаутом [Constants.Flow.SHORT_TIMEOUT_MS].
+         * Это гарантирует, что мьютекс [seedMutex] не будет заблокирован на неопределённое время при деградации
+         * файловой системы или системных сервисов (актуально для кастомных прошивок).
+         *
          * Строгое соблюдение API: на AOSP DataStore работает стабильно. Проблемы с сохранением seed —
          * это проблема окружения (кастомной прошивки), а не логики приложения.
          *
@@ -72,7 +79,11 @@ class SimIdentitySeedRepositoryImpl
             seedMutex.withLock {
                 var generatedSeed: String? = null
                 try {
-                    val existingSeed = dataStore.data.first()[SIM_IDENTITY_SEED] ?: ""
+                    val existingSeed =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            dataStore.data.first()[SIM_IDENTITY_SEED]
+                        } ?: ""
+
                     if (existingSeed.isNotEmpty()) {
                         cachedEphemeralSeed = null
                         return@withLock existingSeed
@@ -80,8 +91,17 @@ class SimIdentitySeedRepositoryImpl
 
                     val seed = generator()
                     generatedSeed = seed
-                    dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
-                    cachedEphemeralSeed = null
+
+                    val saveSuccess =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            dataStore.edit { it[SIM_IDENTITY_SEED] = seed }
+                        } != null
+
+                    if (!saveSuccess) {
+                        AppLogger.e("Timeout writing identity seed to DataStore")
+                    }
+
+                    cachedEphemeralSeed = if (saveSuccess) null else seed
                     seed
                 } catch (e: CancellationException) {
                     throw e
