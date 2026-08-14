@@ -7,14 +7,17 @@ import com.example.minutewatcher.core.model.SimLayoutSpec
 /**
  * Renders a [SimLayoutSpec] using the provided renderer lambdas.
  * This allows sharing the iteration logic between standard Compose and Glance.
+ *
+ * IMPORTANT: The order and signature of parameters MUST be consistent to avoid
+ * NoSuchMethodError during runtime, especially when used across different modules.
  */
 @Composable
-fun SimLayoutRender(
+fun SimLayoutRenderV2(
     spec: SimLayoutSpec,
-    rowContainer: @Composable (content: @Composable () -> Unit) -> Unit,
     iconRenderer: @Composable (SimLayoutComponent.Icon) -> Unit,
     textRenderer: @Composable (SimLayoutComponent.Text) -> Unit,
     spacerRenderer: @Composable (SimLayoutComponent.Spacer) -> Unit,
+    rowContainer: @Composable (content: @Composable () -> Unit) -> Unit,
 ) {
     spec.rows.forEach { row ->
         rowContainer {

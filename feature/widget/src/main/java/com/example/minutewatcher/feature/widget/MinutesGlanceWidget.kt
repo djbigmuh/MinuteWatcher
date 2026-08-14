@@ -36,7 +36,7 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.example.minutewatcher.core.android.ui.SimLayoutRender
+import com.example.minutewatcher.core.android.ui.SimLayoutRenderV2
 import com.example.minutewatcher.core.android.util.WidgetColorResolver
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -581,13 +581,8 @@ private fun SimItemLayout(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    SimLayoutRender(
+    SimLayoutRenderV2(
         spec = sim.layoutSpec,
-        rowContainer = { content ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                content()
-            }
-        },
         iconRenderer = { component ->
             SimItemIcon(component)
         },
@@ -596,6 +591,11 @@ private fun SimItemLayout(
         },
         spacerRenderer = { component ->
             SimItemSpacer(component)
+        },
+        rowContainer = { content ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                content()
+            }
         },
     )
 }

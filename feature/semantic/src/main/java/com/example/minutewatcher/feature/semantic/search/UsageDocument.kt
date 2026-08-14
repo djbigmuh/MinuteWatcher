@@ -8,31 +8,31 @@ import com.example.minutewatcher.core.model.util.ColorProvider
 
 @Document
 data class UsageDocument(
-    @Document.Namespace
+    @get:Document.Namespace
     val namespace: String,
-    @Document.Id
+    @get:Document.Id
     val id: String,
-    @Document.Score
+    @get:Document.Score
     val score: Int = 0,
-    @Document.StringProperty(indexingType = AppSearchSchema.StringPropertyConfig.INDEXING_TYPE_PREFIXES)
+    @get:Document.StringProperty(indexingType = AppSearchSchema.StringPropertyConfig.INDEXING_TYPE_PREFIXES)
     val operatorName: String,
-    @Document.StringProperty
+    @get:Document.StringProperty
     val packageType: String,
-    @Document.LongProperty
+    @get:Document.LongProperty
     val remainingValue: Long,
-    @Document.StringProperty
+    @get:Document.StringProperty
     val unit: String,
-    @Document.LongProperty
+    @get:Document.LongProperty
     val usedValue: Long,
-    @Document.LongProperty
+    @get:Document.LongProperty
     val limitValue: Long,
-    @Document.LongProperty
+    @get:Document.LongProperty
     val remainingPercent: Long,
-    @Document.LongProperty
+    @get:Document.LongProperty
     val periodEnd: Long,
-    @Document.LongProperty
+    @get:Document.LongProperty
     val slot: Long,
-    @Document.StringProperty
+    @get:Document.StringProperty
     val status: String,
 ) {
     companion object {

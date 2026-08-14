@@ -352,10 +352,3 @@ class WidgetUpdaterImpl
         }
     }
 
-interface WidgetRenderer {
-    suspend fun renderAll(
-        context: Context,
-        forceSimplified: Boolean = false,
-        forceFull: Boolean = false,
-    )
-}

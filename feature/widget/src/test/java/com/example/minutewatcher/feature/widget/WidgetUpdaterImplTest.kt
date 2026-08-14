@@ -13,7 +13,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -24,6 +26,7 @@ import org.robolectric.annotation.Config
 class WidgetUpdaterImplTest {
     private val context: Context = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
+    private val renderer: WidgetRenderer = mock()
 
     private lateinit var updater: WidgetUpdaterImpl
 
@@ -33,8 +36,24 @@ class WidgetUpdaterImplTest {
             WidgetUpdaterImpl(
                 context = context,
                 appSettingsRepository = appSettingsRepository,
+                renderer = renderer,
             )
     }
+
+    @Test
+    fun `updateAll calls renderer with correct parameters`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+
+            updater.updateAll()
+
+            verify(renderer).renderAll(
+                context = eq(context),
+                forceSimplified = eq(false),
+                forceFull = eq(false),
+            )
+        }
 
     @Test
     fun `isRemoteViewsLimitException returns false for generic IllegalArgumentException`() {
@@ -149,21 +168,21 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceSimplified: Boolean,
-                                forceFull: Boolean,
-                            ) {
-                                callCount++
-                                if (callCount == 1) {
-                                    // Simulate LimitExceeded on first call
-                                    throw IllegalArgumentException(
-                                        "RemoteViews too large",
-                                        android.os.TransactionTooLargeException(),
-                                    )
-                                }
-                            }
-                        },
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceSimplified: Boolean,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            // Simulate LimitExceeded on first call
+                            throw IllegalArgumentException(
+                                "RemoteViews too large",
+                                android.os.TransactionTooLargeException(),
+                            )
+                        }
+                    }
+                },
                 )
 
             val result = updater.updateAll()
