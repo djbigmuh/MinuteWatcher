@@ -351,4 +351,3 @@ class WidgetUpdaterImpl
             internal val updateCounter = AtomicInteger(0)
         }
     }
-

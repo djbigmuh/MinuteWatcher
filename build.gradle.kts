@@ -12,10 +12,10 @@ plugins {
     alias(libs.plugins.kotlinKsp) apply false
     alias(libs.plugins.androidxBaselineprofile) apply false
     alias(libs.plugins.ktlint) apply false
-    alias(libs.plugins.detekt)
+    alias(libs.plugins.detekt) apply false
 }
 
-allprojects {
+subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
     configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {

@@ -168,21 +168,21 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceSimplified: Boolean,
-                        forceFull: Boolean,
-                    ) {
-                        callCount++
-                        if (callCount == 1) {
-                            // Simulate LimitExceeded on first call
-                            throw IllegalArgumentException(
-                                "RemoteViews too large",
-                                android.os.TransactionTooLargeException(),
-                            )
-                        }
-                    }
-                },
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceSimplified: Boolean,
+                                forceFull: Boolean,
+                            ) {
+                                callCount++
+                                if (callCount == 1) {
+                                    // Simulate LimitExceeded on first call
+                                    throw IllegalArgumentException(
+                                        "RemoteViews too large",
+                                        android.os.TransactionTooLargeException(),
+                                    )
+                                }
+                            }
+                        },
                 )
 
             val result = updater.updateAll()
