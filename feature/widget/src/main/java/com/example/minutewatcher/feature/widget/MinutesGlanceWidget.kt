@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -39,6 +40,7 @@ import com.example.minutewatcher.core.android.ui.SimLayoutRender
 import com.example.minutewatcher.core.android.util.WidgetColorResolver
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -57,13 +59,34 @@ import androidx.glance.unit.ColorProvider as IColorProvider
 
 class MinutesGlanceWidget : GlanceAppWidget() {
     companion object {
+        private const val PREFS_NAME = "widget_render_flags"
+        private const val KEY_FORCE_SIMPLIFIED = "force_simplified"
+
         /**
-         * Принудительно использует упрощённый layout для виджета.
-         * Используется [WidgetUpdaterImpl] для немедленного восстановления
-         * после TransactionTooLargeException, не дожидаясь распространения
-         * изменений через StateFlow/DataStore.
+         * Устанавливает флаг принудительного упрощённого рендера.
+         * Флаг сохраняется в SharedPreferences, чтобы быть доступным
+         * при асинхронном вызове provideGlance системой.
+         *
+         * Хрупкая эвристика: GlanceAppWidget.updateAll() является suspend-функцией,
+         * однако момент вызова provideGlance определяется системой. Строгое соблюдение
+         * API не гарантирует синхронность. Передача через SharedPreferences устраняет
+         * зависимость от тайминга.
          */
-        var isForceSimplified: Boolean = false
+        fun setForceSimplified(
+            context: Context,
+            value: Boolean,
+        ) {
+            context
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit {
+                    putBoolean(KEY_FORCE_SIMPLIFIED, value)
+                }
+        }
+
+        private fun getForceSimplified(context: Context): Boolean =
+            context
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_FORCE_SIMPLIFIED, false)
     }
 
     @EntryPoint
@@ -74,6 +97,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         fun widgetSettingsLoader(): WidgetSettingsLoader
 
         fun navigationProvider(): NavigationProvider
+
+        fun timeProvider(): TimeProvider
     }
 
     override suspend fun provideGlance(
@@ -145,22 +170,24 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             )
         val usageRepository = entryPoint.usageStateRepository()
         val widgetSettingsLoader = entryPoint.widgetSettingsLoader()
+        val timeProvider = entryPoint.timeProvider()
 
-        val refreshResult = getSnapshot(usageRepository)
+        val refreshResult = getSnapshot(usageRepository, timeProvider)
         val snapshot = refreshResult.snapshot
         val refreshFailed =
             refreshResult is com.example.minutewatcher.core.domain.RefreshResult.Timeout
 
+        val forceSimplified = getForceSimplified(context.applicationContext)
         val settingsState =
             try {
                 val loaded = widgetSettingsLoader.load()
-                if (isForceSimplified) loaded.copy(widgetLimitExceeded = true) else loaded
+                if (forceSimplified) loaded.copy(widgetLimitExceeded = true) else loaded
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to load widget settings, using defaults", e)
                 val fallback = WidgetSettingsState(settingsLoadFailed = true)
-                if (isForceSimplified) fallback.copy(widgetLimitExceeded = true) else fallback
+                if (forceSimplified) fallback.copy(widgetLimitExceeded = true) else fallback
             }
 
         if (refreshFailed && settingsState.settingsLoadFailed) {
@@ -201,8 +228,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     /**
      * Получает актуальный snapshot для рендера виджета.
      *
-     * Проверка staleness использует wall clock (System.currentTimeMillis),
-     * поскольку snapshot.timestamp хранится как wall clock.
+     * Проверка staleness использует wall clock (TimeProvider.now()), поскольку
+     * snapshot.timestamp хранится как wall clock.
      *
      * Известное ограничение: при переводе системных часов назад
      * (now - timestamp > STALE_THRESHOLD при отрицательном now - timestamp)
@@ -217,9 +244,10 @@ class MinutesGlanceWidget : GlanceAppWidget() {
      */
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
+        timeProvider: TimeProvider,
     ): com.example.minutewatcher.core.domain.RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
-        val now = System.currentTimeMillis()
+        val now = timeProvider.now()
         val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
         if (initialSnapshot.timestamp != 0L && !isStale) {

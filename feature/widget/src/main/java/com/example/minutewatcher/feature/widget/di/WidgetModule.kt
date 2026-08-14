@@ -31,11 +31,11 @@ interface WidgetModule {
                     context: Context,
                     forceSimplified: Boolean,
                 ) {
+                    MinutesGlanceWidget.setForceSimplified(context, forceSimplified)
                     try {
-                        MinutesGlanceWidget.isForceSimplified = forceSimplified
                         MinutesGlanceWidget().updateAll(context)
                     } finally {
-                        MinutesGlanceWidget.isForceSimplified = false
+                        MinutesGlanceWidget.setForceSimplified(context, false)
                     }
                 }
             }

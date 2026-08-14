@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,7 +57,12 @@ class WidgetSettingsViewModel
             loadJob =
                 viewModelScope.launch {
                     try {
-                        _settingsState.value = loader.load()
+                        val loaded = loader.load()
+                        // Защита от записи результата отменённого job.
+                        // Если job был отменён между loader.load() и этой строкой,
+                        // ensureActive() бросит CancellationException.
+                        ensureActive()
+                        _settingsState.value = loaded
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {

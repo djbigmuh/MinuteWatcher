@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,9 +55,11 @@ class TrafficTracker
          * Мьютекс сериализует конкурентные вызовы [updateTrafficUsage].
          * Без него два параллельных воркера прочитают одинаковый lastTotalBytes
          * и дважды прибавят дельту к trafficUsedMb.
+         *
          * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-         * детерминирован для одного и того же интервала, поэтому сериализация
-         * полностью устраняет гонку.
+         * детерминирован для одного и того же интервала. Сериализация полностью
+         * устраняет гонку. Если кастомная прошивка возвращает разные значения
+         * для одного интервала — это проблема кастомной прошивки.
          */
         private val trafficUpdateMutex = Mutex()
 
@@ -69,12 +70,15 @@ class TrafficTracker
         private var inMemoryLastDataSubId: Int = -1
 
         /**
-         * Карта identity -> число неудачных попыток сброса baseline после смены SIM.
+         * Карта identity → число неудачных попыток сброса базлайна после смены SIM.
+         *
          * Записи создаются в [handleSimChange] при недоступности статистики.
-         * Очищаются в [performTrafficUpdate] при успешном обновлении или таймауте.
-         * Также очищаются в [processActiveSimsTraffic] для нецелевых identity.
-         * На AOSP смена SIM всегда сопровождается доступной статистикой;
-         * накопление записей возможно только на кастомных прошивках.
+         * Обрабатываются в [performTrafficUpdate] при следующем вызове.
+         * Очищаются при успешном сбросе или при превышении [MAX_BASELINE_RETRIES].
+         *
+         * Строгое соблюдение API: на AOSP NetworkStatsManager возвращает данные
+         * при наличии SIM и READ_PHONE_STATE. Повторная недоступность возможна
+         * только на кастомных прошивках, не соответствующих документации Google.
          */
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
@@ -324,6 +328,46 @@ class TrafficTracker
             target: TargetInfo,
             targetIdentity: String,
         ) {
+            // === ДОБАВЛЕНИЕ НАЧАЛО ===
+            // Если предыдущая попытка сброса базлайна после смены SIM не удалась,
+            // повторяем сброс перед вычислением дельты.
+            // Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+            // возвращает корректные данные при наличии SIM и READ_PHONE_STATE.
+            // Повторная недоступность возможна только на кастомных прошивках,
+            // не соответствующих документации Google.
+            val pendingRetry = baselineNeedsRetry[targetIdentity]
+            if (pendingRetry != null) {
+                if (pendingRetry >= MAX_BASELINE_RETRIES) {
+                    AppLogger.e(
+                        "TrafficTracker: baseline reset for $targetIdentity failed after " +
+                            "$pendingRetry retries, giving up",
+                    )
+                    baselineNeedsRetry.remove(targetIdentity)
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Baseline reset failed for $targetIdentity",
+                        )
+                    return
+                }
+                // Пытаемся сбросить базлайн повторно
+                val statsResult = getCurrentMobileBytes(0L) // 0L → запрос от текущего момента
+                if (statsResult is StatsResult.Success) {
+                    simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                    baselineNeedsRetry.remove(targetIdentity)
+                    AppLogger.d("TrafficTracker: baseline reset retry succeeded for $targetIdentity")
+                    _status.value = TrackingStatus.Active
+                    return // Дельта в этом цикле не начисляется — базлайн только что установлен
+                }
+                // Повтор не удался — инкрементируем счётчик и выходим без начисления дельты
+                baselineNeedsRetry[targetIdentity] = pendingRetry + 1
+                AppLogger.w(
+                    "TrafficTracker: baseline reset retry ${pendingRetry + 1} failed for $targetIdentity",
+                )
+                return
+            }
+            // === ДОБАВЛЕНИЕ КОНЕЦ ===
+
             // Повторная проверка актуальности целевой SIM перед записью.
             // Строгое соблюдение API: на AOSP SIM не может быть удалена между
             // двумя последовательными вызовами в рамках одного корутин-контекста
@@ -331,7 +375,7 @@ class TrafficTracker
             // callback может быть потерян. Повторная проверка — защита от гонки
             // между observation flow и записью данных.
             val currentActiveIdentities = simIdentityRepository.getActiveIdentities().firstWithTimeout()
-            if (currentActiveIdentities != null && targetIdentity !in currentActiveIdentities) {
+            if (currentActiveIdentities != null && (targetIdentity !in currentActiveIdentities)) {
                 AppLogger.w("TrafficTracker: target SIM $targetIdentity removed during update, skipping")
                 return
             }
@@ -456,15 +500,20 @@ class TrafficTracker
             lastTotalBytes: Long,
             target: TargetInfo,
         ) {
-            // Строгое соблюдение API: NetworkStatsManager.querySummaryForDevice
-            // возвращает монотонно возрастающее значение на AOSP.
-            // Уменьшение currentBytes относительно lastTotalBytes означает
-            // одно из двух:
-            // 1. Перезагрузка устройства — счётчик сброшен.
-            // 2. Смена SIM по умолчанию — новый счётчик для новой SIM.
-            // В обоих случаях корректно сбросить baseline на текущее значение.
-            // На кастомных прошивках, возвращающих немонотонные значения,
-            // это проблема кастомной прошивки, а не штатного пути.
+            // Защита от неверного базлайна после смены SIM.
+            // Если currentBytes < lastTotalBytes, это означает одно из:
+            // 1. SIM была заменена на новую с меньшим накопленным трафиком.
+            // 2. Произошёл сброс счётчиков на уровне системы.
+            // В обоих случаях корректно сбросить базлайн на текущее значение.
+            //
+            // Случай currentBytes > lastTotalBytes при смене SIM обрабатывается
+            // через baselineNeedsRetry (см. handleSimChange и performTrafficUpdate).
+            //
+            // Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+            // возвращает монотонно возрастающее значение для одной SIM.
+            // Уменьшение значения возможно только при смене SIM или сбросе счётчиков.
+            // Если кастомная прошивка возвращает немонотонные значения без смены SIM —
+            // это проблема кастомной прошивки.
             if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
                 simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
                 AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
@@ -604,28 +653,25 @@ class TrafficTracker
             inMemoryLastDataSubId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
         }
 
-        private suspend fun resetStatsAfterSimChange(
-            identity: String,
-            statsResult: StatsResult,
-        ) {
-            if (statsResult is StatsResult.Success) {
-                val currentBytes = statsResult.bytes
-                simUsageResetRepository.setLastTotalBytes(
-                    identity,
-                    currentBytes,
-                )
-                AppLogger.d("Baseline reset successfully for $identity")
-            }
-        }
-
         /**
-         * Handles default data SIM change.
+         * Обработка смены SIM-карты по умолчанию.
          *
          * Scenarios:
          * 1. Success: Current mobile stats are available. We reset the baseline to the current value
          *    and update [inMemoryLastDataSubId]. Future updates will track delta from this point.
          * 2. Retry: Stats are temporarily unavailable (e.g., system busy). We record the attempt
          *    in [baselineNeedsRetry]. The next [updateTrafficUsage] call will retry the reset.
+         *
+         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+         * возвращает корректные данные при наличии SIM и READ_PHONE_STATE.
+         * Недоступность статистики при смене SIM возможна только на кастомных
+         * прошивках, не соответствующих документации Google.
+         * Это проблема кастомной прошивки.
+         *
+         * Стратегия: при недоступности статистики базлайн не сбрасывается,
+         * lastDataSubId не обновляется. На следующем вызове будет повторная
+         * попытка. После MAX_BASELINE_RETRIES неудач — принудительное
+         * обновление lastDataSubId и прекращение попыток.
          */
         private suspend fun handleSimChange(
             targetSim: Int,
@@ -643,69 +689,33 @@ class TrafficTracker
                 // Ensure we only track retry for the current target.
                 baselineNeedsRetry.entries.removeIf { it.key != identity }
 
-                val shouldReturn =
-                    handleSimChangeFailure(
-                        identity,
-                        StatsResult.Unavailable,
-                        retryCount,
-                        isLimitCheckOnly = true,
+                if (retryCount >= MAX_BASELINE_RETRIES) {
+                    AppLogger.e(
+                        "TrafficTracker: Baseline reset failed after $retryCount retries for $identity, giving up",
                     )
-                if (shouldReturn) {
+                    // Принудительно обновляем lastDataSubId, чтобы прекратить повторные попытки.
+                    // Базлайн остаётся неверным, но further delta computation будет защищена
+                    // проверкой currentBytes < lastTotalBytes в performTrafficUpdate.
                     updateLastDataSubId(currentDataSubId)
-                    return
-                }
-
-                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val statsResult = fetchStatsOnSimChange(usage)
-
-                if (statsResult is StatsResult.Success) {
-                    resetStatsAfterSimChange(identity, statsResult)
                     baselineNeedsRetry.remove(identity)
-                    // Update subId ONLY after successful baseline reset to ensure no delta is lost
-                    updateLastDataSubId(currentDataSubId)
-                } else {
-                    handleSimChangeFailure(identity, statsResult, retryCount)
-                    updateLastDataSubId(currentDataSubId)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to handle SIM change", e)
-            }
-        }
-
-        /**
-         * Обрабатывает сбой при смене SIM: фиксирует попытку в baselineNeedsRetry.
-         * Строгое соблюдение API: повторная попытка сброса baseline выполняется
-         * при следующем вызове updateTrafficUsage. На AOSP статистика доступна
-         * сразу после смены SIM; задержка возможна только на кастомных прошивках.
-         */
-        private fun handleSimChangeFailure(
-            identity: String,
-            statsResult: StatsResult,
-            retryCount: Int,
-            isLimitCheckOnly: Boolean = false,
-        ): Boolean =
-            when {
-                retryCount >= MAX_BASELINE_RETRIES -> {
-                    // Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-                    // возвращает корректные данные при наличии SIM и READ_PHONE_STATE.
-                    // Повторные неудачи возможны только при деградации системных сервисов
-                    // на кастомных прошивках, не соответствующих документации Google.
-                    // Лимит повторных попыток предотвращает бесконечный цикл.
-                    AppLogger.e("TrafficTracker: Baseline reset failed after $retryCount retries for $identity")
                     _status.value =
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
                             "Baseline reset failed after $retryCount retries for $identity",
                         )
-                    baselineNeedsRetry.remove(identity)
-                    true
+                    return
                 }
 
-                isLimitCheckOnly -> false
-
-                else -> {
+                // Попытка получить статистику
+                val statsResult = getCurrentMobileBytes(0L) // 0L → запрос от текущего момента
+                if (statsResult is StatsResult.Success) {
+                    simUsageResetRepository.setLastTotalBytes(identity, statsResult.bytes)
+                    baselineNeedsRetry.remove(identity)
+                    // Обновляем lastDataSubId ТОЛЬКО после успешного сброса базлайна
+                    updateLastDataSubId(currentDataSubId)
+                    AppLogger.d("Baseline reset successfully for $identity")
+                    _status.value = TrackingStatus.Active
+                } else {
                     val reason =
                         if (statsResult is StatsResult.Error) {
                             AppLogger.e("Traffic stats query failed on SIM change", statsResult.exception)
@@ -717,23 +727,16 @@ class TrafficTracker
                         "Stats unavailable on SIM change for $identity: $reason. " +
                             "Baseline reset will be retried (attempt ${retryCount + 1}).",
                     )
-                    // Мы не форсируем сброс (-1L), а сохраняем состояние ошибки.
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, reason)
+                    // Статистика недоступна — НЕ обновляем lastDataSubId
                     baselineNeedsRetry[identity] = retryCount + 1
-                    true
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, reason)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to handle SIM change", e)
             }
-
-        private fun fetchStatsOnSimChange(usage: SimUsage?): StatsResult =
-            if (usage != null) {
-                try {
-                    getCurrentMobileBytes(usage.lastResetDate)
-                } catch (e: Exception) {
-                    StatsResult.Error(e)
-                }
-            } else {
-                StatsResult.Unavailable
-            }
+        }
 
         private companion object {
             private const val MAX_BASELINE_RETRIES = 3

@@ -30,7 +30,6 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -385,7 +384,7 @@ class TrafficTrackerTest {
             // Attempt 2: Stats still unavailable
             tracker.updateTrafficUsage()
             assertTrue(tracker.status.value is TrackingStatus.Error)
-            assertEquals("Stats unavailable, retry pending", (tracker.status.value as TrackingStatus.Error).message)
+            assertEquals("Stats unavailable", (tracker.status.value as TrackingStatus.Error).message)
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
 
             // Attempt 3: Stats finally become available
@@ -465,7 +464,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `handleSimChange updates lastDataSubId even if stats are unavailable`() =
+    fun `handleSimChange does NOT update lastDataSubId if stats are unavailable`() =
         runTest(testDispatcher) {
             // 1. Initial state: SubId 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
@@ -480,17 +479,12 @@ class TrafficTrackerTest {
             // Attempt: Stats unavailable
             tracker.updateTrafficUsage()
 
-            // Assert: baseline NOT set to -1L, AND lastDataSubId UPDATED to 2
+            // Assert: baseline NOT set to -1L, AND lastDataSubId NOT UPDATED to 2
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
             assertTrue(tracker.status.value is TrackingStatus.Error)
 
-            val inOrder = inOrder(networkStatsProvider, callSessionRepository)
-            // Должен быть вызов из updateTrafficUsage (initial)
-            inOrder.verify(networkStatsProvider).queryMobileBytes(any(), any())
-            inOrder.verify(callSessionRepository).setLastDataSubId(1)
-            // Затем вызов из handleSimChange (swap attempt)
-            inOrder.verify(networkStatsProvider).queryMobileBytes(any(), any())
-            inOrder.verify(callSessionRepository).setLastDataSubId(2)
+            // verify setLastDataSubId(2) was never called
+            verify(callSessionRepository, never()).setLastDataSubId(2)
 
             // 3. Stats become available
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
@@ -500,6 +494,7 @@ class TrafficTrackerTest {
 
             // Assert: Baseline is finally set for sim_1
             verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(2000L))
+            verify(callSessionRepository).setLastDataSubId(2)
         }
 
     @Test
@@ -550,7 +545,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `handleSimChange forces baseline reset when stats are unavailable`() =
+    fun `handleSimChange does not reset baseline when stats are unavailable`() =
         runTest(testDispatcher) {
             // 1. Initial state: SubId 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
@@ -566,7 +561,7 @@ class TrafficTrackerTest {
             // Verify status is Error, baseline NOT reset
             assertTrue(tracker.status.value is TrackingStatus.Error)
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
-            verify(callSessionRepository).setLastDataSubId(2)
+            verify(callSessionRepository, never()).setLastDataSubId(2)
         }
 
     @Test

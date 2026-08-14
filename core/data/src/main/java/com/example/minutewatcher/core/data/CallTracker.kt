@@ -60,21 +60,38 @@ class CallTracker
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        /**
+         * Счётчики неудачных попыток записи длительности звонка.
+         * Ключ — subId, значение — число последовательных неудач.
+         *
+         * Записи создаются в [handleWriteFailure] и удаляются в [cleanupCounters]
+         * при успешном завершении звонка. Дополнительно очищаются в [onBoot]
+         * для предотвращения накопления устаревших записей.
+         *
+         * Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений
+         * при корректном состоянии хранилища. Сбой записи возможен только
+         * при деградации DataStore на кастомных прошивках, не соответствующих
+         * документации Google. Это проблема кастомной прошивки.
+         */
         private val writeAttempts = ConcurrentHashMap<Int, Int>()
+
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
         /**
-         * Мьютекс сериализует обработку событий звонков.
+         * Мьютекс сериализует обработку событий звонков (старт, завершение, boot).
          * Удерживается на время чтения и записи в DataStore.
          *
-         * Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
-         * На кастомных прошивках с деградацией хранилища время удержания
-         * может увеличиться, что приведёт к задержке обработки следующего
-         * события звонка. Это проблема кастомной прошивки.
+         * Необходимость: без мьютекса два события OFFHOOK для разных subId могут
+         * прочитать/записать пересекающиеся ключи DataStore и повредить состояние
+         * сессии. Мьютекс гарантирует атомарность операции "чтение → проверка →
+         * запись" для каждого события.
          *
-         * Мьютекс необходим для корректности: без него два события
-         * OFFHOOK для разных subId могут прочитать/записать пересекающиеся
-         * ключи DataStore и повредить состояние сессии.
+         * Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+         * На кастомных прошивках с деградацией хранилища время удержания мьютекса
+         * может увеличиться, что приведёт к задержке обработки следующего события
+         * звонка. Это проблема кастомной прошивки, не соответствующей документации
+         * Google. Стратегия: мьютекс необходим для корректности; задержка при
+         * деградации хранилища предпочтительнее повреждения данных.
          */
         private val callMutex = Mutex()
 
@@ -109,6 +126,11 @@ class CallTracker
                 val activeSessions = callSessionRepository.getActiveCallSubIds()
                 callSessionRepository.clearAllCallSessions()
                 _status.value = TrackingStatus.Idle
+                // Очистка счётчиков неудачных попыток при загрузке.
+                // После перезагрузки все предыдущие сессии неактуальны,
+                // поэтому счётчики попыток также сбрасываются.
+                writeAttempts.clear()
+                attributionFailures.clear()
                 AppLogger.d("Cleared ${activeSessions.size} stale call sessions on boot")
             }
         }
@@ -451,12 +473,14 @@ class CallTracker
         /**
          * Обработка таймаута чтения данных сессии при завершении звонка.
          *
-         * Строгое соблюдение контракта: сессия с ненулевым startTime блокирует
-         * следующий звонок на том же subId. При таймауте чтения сессия
-         * принудительно очищается, чтобы не допустить перманентной блокировки.
-         * На AOSP чтение DataStore завершается успешно; таймаут возможен только
-         * при деградации хранилища на кастомных прошивках.
-         * Потеря данных одного звонка предпочтительнее перманентной блокировки.
+         * Trade-off: сессия принудительно очищается, длительность звонка теряется.
+         * Альтернатива (сохранение сессии) приведёт к блокировке трекинга:
+         * сессия с ненулевым startTime блокирует начало нового звонка на том же subId.
+         * Потеря данных одного звонка предпочтительнее перманентной блокировки трекинга.
+         *
+         * Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+         * Таймаут срабатывает только при деградации хранилища на кастомных прошивках,
+         * не соответствующих документации Google. Это проблема кастомной прошивки.
          */
         private suspend fun handleEndCallTimeout(subId: Int) {
             val message = "Session read timed out for subId $subId"
@@ -558,6 +582,16 @@ class CallTracker
             val savedIdentity: String?,
         )
 
+        /**
+         * Читает данные сессии звонка с retry и timeout.
+         *
+         * Возвращает null при таймауте после всех попыток.
+         * Вызывающий код обязан обработать null (см. handleEndCallTimeout).
+         *
+         * Строгое соблюдение API: на AOSP DataStore.data эмитит значение
+         * в пределах SHORT_TIMEOUT_MS. Таймаут возможен только при деградации
+         * хранилища на кастомных прошивках, не соответствующих документации Google.
+         */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         private suspend fun loadCallSessionData(subId: Int): CallSessionData? {
             val result =
@@ -621,10 +655,10 @@ class CallTracker
                 (current is TrackingStatus.Error) &&
                     (!force) &&
                     (
-                        current.type == TrackingStatus.ErrorType.UNKNOWN ||
-                            current.type == TrackingStatus.ErrorType.PERMISSION_MISSING ||
-                            current.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
-                            current.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
+                        (current.type == TrackingStatus.ErrorType.UNKNOWN) ||
+                            (current.type == TrackingStatus.ErrorType.PERMISSION_MISSING) ||
+                            (current.type == TrackingStatus.ErrorType.DATABASE_ERROR) ||
+                            (current.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
                     )
 
             if (!isIgnoredError) {

@@ -87,6 +87,18 @@ class SimIdentityRepositoryImpl
         private val saveMutex = Mutex()
         private val migratedIdentities = ConcurrentHashMap.newKeySet<String>()
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
+
+        /**
+         * Кэш результатов прямого резолва SIM-идентичности.
+         * Заполняется при вызове getSimIdentity, когда activeSimsCache ещё не содержит данных.
+         * Очищается при получении актуального списка активных SIM из activeSimsCache.
+         *
+         * Хрупкая эвристика: если activeSimsCache не эмитит значение в течение длительного
+         * времени (деградация DataStore на кастомной прошивке), записи могут устареть.
+         * Строгое соблюдение API: на AOSP observeActiveSims() эмитит значение
+         * в пределах SHORT_TIMEOUT_MS. Проблема возможна только на кастомных прошивках,
+         * не соответствующих документации Google.
+         */
         private val manualResolutionCache = ConcurrentHashMap<Int, SimIdentity>()
 
         private val seedFlow: Flow<SeedResult> =
@@ -243,7 +255,12 @@ class SimIdentityRepositoryImpl
         init {
             scope.launch {
                 activeSimsCache.collect { sims ->
-                    sims.forEach { manualResolutionCache.remove(it.slotIndex) }
+                    // Очищаем manualResolutionCache для слотов, которых нет в активном списке.
+                    // Строгое соблюдение API: на AOSP SubscriptionManager callback доставляется
+                    // при каждом изменении подписок. Если кастомная прошивка не доставляет
+                    // callback — это проблема кастомной прошивки.
+                    val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
+                    manualResolutionCache.keys.removeAll { it !in activeSlots }
                 }
             }
         }
@@ -264,33 +281,21 @@ class SimIdentityRepositoryImpl
         /**
          * Возвращает стабильную идентичность SIM для указанного слота.
          *
-         * Контракт (AOSP): при наличии READ_PHONE_STATE и корректного DataStore
-         * метод всегда возвращает идентичность. Исключения:
-         * - [IllegalArgumentException] — слот вне диапазона SUPPORTED_SLOT_INDICES.
-         * - [IllegalStateException] — seed недоступен (таймаут генерации).
-         *   На AOSP генерация seed завершается успешно; таймаут возможен только
-         *   при деградации DataStore на кастомных прошивках.
-         * - [IllegalStateException] — нет активной SIM в указанном слоте.
-         *   Это штатная ситуация при извлечении SIM-карты. Вызывающий код обязан
-         *   обрабатывать это исключение.
-         *
-         * @throws IllegalStateException если нет активной SIM в указанном слоте или seed недоступен.
-         * @throws IllegalArgumentException если slot вне диапазона SUPPORTED_SLOT_INDICES.
-         *
-         * Вызывающая сторона обязана обрабатывать исключения.
-         * Эвристика не применяется: если данные недоступны — это ошибка,
-         * а не повод для угадывания.
+         * @param slot Индекс слота SIM. Должен быть в диапазоне
+         *   [SimConstants.SUPPORTED_SLOT_INDICES].
+         * @throws IllegalArgumentException если slot вне допустимого диапазона.
+         * @throws IllegalStateException если SIM не найдена в указанном слоте
+         *   или identity seed недоступен (деградация DataStore на кастомной
+         *   прошивке, не соответствующей документации Google).
          */
-
         @Suppress("ThrowsCount", "ReturnCount")
         // Подавление ThrowsCount и ReturnCount оставлено намеренно: метод реализует строгую валидацию по трем
         // независимым критериям (диапазон слотов, наличие seed, наличие подписки). Объединение исключений
         // и точек выхода снизит точность диагностики сбоев на кастомных прошивках.
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                val message = "getSimIdentity called with out-of-range slot=$slot"
-                AppLogger.e(message, null)
-                throw IllegalArgumentException(message)
+            require(slot in SimConstants.SUPPORTED_SLOT_INDICES) {
+                "getSimIdentity called with out-of-range slot=$slot. " +
+                    "Supported range: ${SimConstants.SUPPORTED_SLOT_INDICES}"
             }
 
             // Мгновенное чтение текущего значения StateFlow
@@ -301,28 +306,28 @@ class SimIdentityRepositoryImpl
             }
 
             val manuallyResolved = manualResolutionCache[slot]
-            if (manuallyResolved != null) {
-                return manuallyResolved
-            }
+            if (manuallyResolved != null) return manuallyResolved
 
             try {
                 // Используем уменьшенный таймаут для UI-операций
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
+                    // Seed недоступен — это НЕ "SIM удалена", а деградация хранилища.
                     // Строгое соблюдение API: на AOSP генерация seed завершается успешно.
-                    // Таймаут генерации возможен только при деградации DataStore
-                    // на кастомных прошивках, не соответствующих документации Google.
-                    // Если кастомная прошивка не соответствует документации Google —
-                    // это проблема кастомной прошивки.
-                    val message = "Identity seed unavailable for slot $slot"
+                    // Таймаут возможен только при деградации DataStore на кастомных
+                    // прошивках, не соответствующих документации Google.
+                    val message =
+                        "Identity seed unavailable for slot $slot. " +
+                            "Possible DataStore degradation on non-AOSP firmware."
                     AppLogger.e(message, null)
                     throw IllegalStateException(message)
                 }
 
                 // If not found in cache, try direct resolution
                 val resolved =
-                    findActiveIdentityInternal(slot, seed) ?: error("No active SIM in slot $slot")
+                    findActiveIdentityInternal(slot, seed)
+                        ?: error("No active SIM subscription found in slot $slot")
 
                 manualResolutionCache[slot] = resolved
 
@@ -397,8 +402,8 @@ class SimIdentityRepositoryImpl
                 val validIdentities =
                     identities
                         .filter {
-                            it.source != IdentitySource.SLOT_FALLBACK &&
-                                !it.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)
+                            (it.source != IdentitySource.SLOT_FALLBACK) &&
+                                (!it.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX))
                         }
                 if (validIdentities.isEmpty()) return@withLock
 

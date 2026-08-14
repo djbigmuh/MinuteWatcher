@@ -137,8 +137,7 @@ class MainSimDataController
                     simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
                     onRefresh()
                 } catch (e: IllegalStateException) {
-                    AppLogger.w("SIM was removed from slot $slot, skipping updateLimits", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                    handleSimIdentityError(slot, "updateLimits", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -165,8 +164,7 @@ class MainSimDataController
                     usageUseCase.resetCounters(slot)
                     onRefresh()
                 } catch (e: IllegalStateException) {
-                    AppLogger.w("SIM was removed from slot $slot, skipping resetUsage", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                    handleSimIdentityError(slot, "resetUsage", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -193,8 +191,7 @@ class MainSimDataController
                     simLimitsRepository.setAutoReset(identity, currentDay, enabled)
                     onRefresh()
                 } catch (e: IllegalStateException) {
-                    AppLogger.w("SIM was removed from slot $slot, skipping toggleAutoReset", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                    handleSimIdentityError(slot, "toggleAutoReset", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -221,8 +218,7 @@ class MainSimDataController
                     simLimitsRepository.setAutoReset(identity, day, enabled)
                     onRefresh()
                 } catch (e: IllegalStateException) {
-                    AppLogger.w("SIM was removed from slot $slot, skipping updateAutoResetDay", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                    handleSimIdentityError(slot, "updateAutoResetDay", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -245,8 +241,7 @@ class MainSimDataController
                     usageUseCase.adjustMinutes(slot, remainingMinutes)
                     onRefresh()
                 } catch (e: IllegalStateException) {
-                    AppLogger.w("SIM was removed from slot $slot, skipping adjustRemainingMinutes", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                    handleSimIdentityError(slot, "adjustRemainingMinutes", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -269,8 +264,7 @@ class MainSimDataController
                     usageUseCase.adjustTraffic(slot, remainingGb)
                     onRefresh()
                 } catch (e: IllegalStateException) {
-                    AppLogger.w("SIM was removed from slot $slot, skipping adjustRemainingTraffic", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
+                    handleSimIdentityError(slot, "adjustRemainingTraffic", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -323,6 +317,21 @@ class MainSimDataController
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
                 }
+            }
+        }
+
+        private fun handleSimIdentityError(
+            slot: Int,
+            operation: String,
+            e: IllegalStateException,
+        ) {
+            val message = e.message ?: "Unknown error"
+            if (message.contains("seed unavailable", ignoreCase = true)) {
+                AppLogger.e("SIM identity resolution failed for slot $slot: seed unavailable", e)
+                _lastOperationError.value = OperationError("Storage error for slot $slot", slot)
+            } else {
+                AppLogger.w("SIM was removed from slot $slot, skipping $operation", e)
+                _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
             }
         }
 

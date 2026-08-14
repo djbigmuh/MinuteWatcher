@@ -410,15 +410,16 @@ internal class AutoResetScheduler(
             throw e
         } catch (e: Exception) {
             AppLogger.e("Auto-reset failed during initialization", e)
+            // KEY_LAST_AUTO_RESET_CHECK намеренно НЕ обновляется при неудаче.
+            // Это позволяет повторить попытку при следующем вызове checkOnStart.
+            // effectiveFailCount инкрементируется для ограничения числа попыток.
+            // После MAX_AUTO_RESET_RETRIES неудач попытки прекращаются.
+            //
+            // Строгое соблюдение API: на AOSP performAutoReset не бросает
+            // исключений при корректном состоянии DataStore. Сбой возможен
+            // только при деградации хранилища на кастомных прошивках,
+            // не соответствующих документации Google.
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
-            /**
-             * При сбое авто-сброса KEY_LAST_AUTO_RESET_CHECK не обновляется,
-             * чтобы следующая проверка могла сработать немедленно.
-             * Строгое соблюдение API: на AOSP performAutoReset() не бросает исключений
-             * при корректном состоянии DataStore; сбой возможен только при деградации
-             * хранилища на кастомных прошивках. Если кастомная прошивка не соответствует
-             * документации Google — это проблема кастомной прошивки.
-             */
             isCheckStarted.set(false) // G-484: Reset flag to allow retry after failure
         }
     }

@@ -29,11 +29,11 @@ class WidgetUpdaterImpl
                     context: Context,
                     forceSimplified: Boolean,
                 ) {
+                    MinutesGlanceWidget.setForceSimplified(context, forceSimplified)
                     try {
-                        MinutesGlanceWidget.isForceSimplified = forceSimplified
                         MinutesGlanceWidget().updateAll(context)
                     } finally {
-                        MinutesGlanceWidget.isForceSimplified = false
+                        MinutesGlanceWidget.setForceSimplified(context, false)
                     }
                 }
             },
@@ -51,19 +51,27 @@ class WidgetUpdaterImpl
         }
 
         /**
-         * Обновляет все экземпляры виджета с ограниченной экспоненциальной стратегией повторов.
+         * Обновляет все экземпляры виджета с ограниченной экспоненциальной
+         * стратегией повторных попыток.
          *
          * Стратегия:
-         * 1. Транзиентные ошибки (Binder congestion): повтор до [Constants.Widget.MAX_UPDATE_ATTEMPTS].
-         * 2. Экспоненциальная задержка: старт [Constants.Widget.RETRY_BACKOFF_MS], удвоение.
-         * 3. Перманентные ошибки (destroyed context): повтор пропускается.
-         * 4. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout,
-         *    не считается попыткой повтора.
+         * 1. Транзиентные ошибки (Binder congestion): повтор до
+         *    [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой,
+         *    старт [Constants.Widget.RETRY_BACKOFF_MS], удвоение.
+         * 2. Перманентные ошибки (destroyed context, not registered):
+         *    повтор пропускается, возврат false.
+         * 3. Превышение лимита RemoteViews (TransactionTooLargeException):
+         *    немедленный рендер с упрощённым layout, не считается попыткой повтора.
+         *    Флаг widgetLimitExceeded сохраняется в настройках.
          *
          * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() не бросает
          * исключений при корректном lifecycle. TransactionTooLargeException возможен
          * только при превышении лимита Binder (~1 МБ), что предотвращается
          * упрощённым layout при widgetLimitExceeded = true.
+         * Если кастомная прошивка не соответствует документации Google —
+         * это проблема кастомной прошивки.
+         *
+         * @return true если обновление завершилось успешно, false в противном случае.
          */
         override suspend fun updateAll(): Boolean {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
@@ -192,6 +200,12 @@ class WidgetUpdaterImpl
 
         /**
          * Выполняет обновление виджетов с перехватом и классификацией ошибок.
+         *
+         * Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() завершается
+         * в пределах нескольких секунд. TransactionTooLargeException возможен только
+         * при превышении лимита Binder (~1 МБ), что предотвращается упрощённым layout
+         * при widgetLimitExceeded = true. Если кастомная прошивка не соответствует
+         * документации Google — это проблема кастомной прошивки.
          *
          * Стратегия обработки исключений:
          * - [CancellationException]: пробрасывается немедленно для корректной остановки корутин.
