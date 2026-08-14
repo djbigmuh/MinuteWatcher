@@ -9,7 +9,6 @@ kotlin {
     jvmToolchain(21)
 }
 
-
 android {
     namespace = "com.example.minutewatcher.feature.semantic"
     compileSdk = 37
@@ -28,6 +27,10 @@ android {
             isIncludeAndroidResources = true
         }
     }
+}
+
+ksp {
+    arg("androidx.appsearch.compiler.generateKotlin", "true")
 }
 
 dependencies {

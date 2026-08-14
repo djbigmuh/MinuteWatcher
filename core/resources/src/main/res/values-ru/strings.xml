@@ -29,7 +29,7 @@
     <string name="call_tracking_title">Отслеживание звонков</string>
     <string name="usage_access_dialog_title">Учет использования трафика</string>
     <string name="usage_access_dialog_description">Для учета мобильного трафика приложению необходимо разрешение «Доступ к использованию данных». \n\nЭто системное разрешение, которое позволяет приложению видеть объем переданных и полученных данных через мобильную сеть. \n\nМы не отслеживаем, какие приложения вы используете, и не храним историю просмотров.</string>
-    <string name="phone_permission_permanent_denial">Доступ к телефону запрещен навсегда. Некоторые функции не будут работать, пока вы не включите его в Настройках приложения.</string>
+    <string name="phone_permission_permanent_denial">Для работы приложения нужен доступ к телефону, но запрос разрешений заблокирован настройкой «Больше не спрашивать». Пожалуйста, включите его вручную в настройках.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Настройки виджета</string>
@@ -62,7 +62,7 @@
     <string name="settings_load_error">Ошибка загрузки настроек</string>
     <string name="refresh_error">Ошибка обновления данных</string>
     <string name="stale_data_warning">Данные могут быть неактуальны</string>
-    <string name="notification_permission_permanent_denial">Уведомления отключены. Пожалуйста, включите их в настройках приложения для получения алертов.</string>
+    <string name="notification_permission_permanent_denial">Запрос уведомлений заблокирован. Пожалуйста, включите их в настройках приложения для получения важных алертов о расходе.</string>
     <string name="action_grant">Предоставить</string>
     <string name="action_settings">Настройки</string>
     <string name="action_app_settings">Настройки приложения</string>

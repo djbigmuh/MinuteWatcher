@@ -464,7 +464,7 @@ class SemanticSearchManagerTest {
             SetSchemaRequest
                 .Builder()
                 .setForceOverride(forceOverride)
-                .addSchemas(AppSearchSchema.Builder("UsageDocument").build())
+                .addDocumentClasses(UsageDocument::class.java)
                 .build()
 
         override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {

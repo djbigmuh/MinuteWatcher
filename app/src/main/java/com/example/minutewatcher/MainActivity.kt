@@ -258,12 +258,18 @@ class MainActivity : AppCompatActivity() {
                         checkNotifications(autoRequest = true)
                     }
                 } else if (settings.phonePermissionRequested) {
-                    val permanentlyDenied =
-                        !ActivityCompat.shouldShowRequestPermissionRationale(
+                    // Если разрешение не выдано, но мы его уже запрашивали ранее,
+                    // проверяем, заблокирован ли запрос.
+                    val shouldShowRationale =
+                        ActivityCompat.shouldShowRequestPermissionRationale(
                             this@MainActivity,
                             Manifest.permission.READ_PHONE_STATE,
                         )
-                    viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
+                    // Если рациональ НЕ должна показываться при отсутствующем разрешении,
+                    // значит оно либо еще не запрашивалось (но флаг true?), либо заблокировано "Don't ask again".
+                    // На некоторых устройствах флаг рациональности сбрасывается.
+                    // Безопаснее считать заблокированным только если рациональ была true, а стала false после отказа.
+                    viewModel.setPhonePermissionPermanentlyDenied(!shouldShowRationale)
                 } else {
                     viewModel.setPhonePermissionRequested()
                     phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
