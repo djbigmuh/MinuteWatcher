@@ -52,19 +52,16 @@ class TrafficTracker
         private suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 
         /**
-         * Мьютекс сериализует конкурентные вызовы [updateTrafficUsage].
-         * Без него два параллельных воркера прочитают одинаковый lastTotalBytes
-         * и дважды прибавят дельту к trafficUsedMb.
+         * Мьютекс сериализует read-modify-write над lastTotalBytes.
+         * На AOSP DataStore.edit сериализует записи, но паттерн
+         * «прочитать baseline → вычислить дельту → записать baseline + дельту»
+         * не является атомарным на уровне приложения.
          *
-         * **Контракт AOSP:** на AOSP NetworkStatsManager.querySummaryForDevice
-         * детерминирован для одного и того же интервала.
-         *
-         * **Отклонение кастомной прошивки:** Если прошивка возвращает разные значения для одного
-         * интервала — это проблема кастомной прошивки.
-         *
-         * **Стратегия приложения:** Сериализация полностью устраняет гонку.
+         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+         * детерминирован для одного интервала; мьютекс защищает только
+         * приложение от конкурентных вызовов updateTrafficUsage.
          */
-        private val trafficUpdateMutex = Mutex()
+        private val trafficMutex = Mutex()
 
         /**
          * The subscription ID of the last default data SIM seen by the tracker.
@@ -97,11 +94,11 @@ class TrafficTracker
          * @throws SecurityException if permission is revoked during operation
          */
         suspend fun resetBaseline(identity: String) {
-            if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
-                AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
-                return
-            }
-            trafficUpdateMutex.withLock {
+            trafficMutex.withLock {
+                if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+                    AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
+                    return@withLock
+                }
                 withSimChangeLock {
                     try {
                         if (!checkPermissions()) return@withSimChangeLock
@@ -147,12 +144,31 @@ class TrafficTracker
         }
 
         /**
-         * Checks and updates traffic usage for the current active SIM.
+         * Обновляет данные о трафике для текущей default data SIM.
+         *
+         * Метод выполняет паттерн read-modify-write над lastTotalBytes:
+         * 1. Прочитать lastTotalBytes из DataStore.
+         * 2. Получить текущий totalBytes из NetworkStatsManager.
+         * 3. Вычислить дельту и записать новую lastTotalBytes + инкрементировать usage.
+         *
+         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
+         * возвращает монотонно возрастающее значение для одного интервала.
+         * DataStore.edit сериализует записи на уровне хранилища.
+         *
+         * Мьютекс [trafficMutex] защищает паттерн read-modify-write на уровне
+         * приложения. Без него два конкурентных вызова прочитают одинаковый
+         * lastTotalBytes и дважды прибавят одну дельту.
+         *
+         * Отклонение кастомной прошивки: если NetworkStatsManager возвращает
+         * немонотонные значения без смены SIM — это проблема кастомной прошивки.
+         * Приложение детектирует уменьшение (currentBytes < lastTotalBytes)
+         * и выполняет сброс baseline.
+         *
          * @throws java.io.IOException if DataStore write fails
          * @throws SecurityException if permission is revoked during operation
          */
         suspend fun updateTrafficUsage() {
-            trafficUpdateMutex.withLock {
+            trafficMutex.withLock {
                 try {
                     if (!checkPermissions()) return
 

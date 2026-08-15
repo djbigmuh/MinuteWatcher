@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import androidx.glance.appwidget.updateAll
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -24,23 +23,7 @@ class WidgetUpdaterImpl
     constructor(
         @param:ApplicationContext private val context: Context,
         private val appSettingsRepository: AppSettingsRepository,
-        private val renderer: WidgetRenderer =
-            object : WidgetRenderer {
-                override suspend fun renderAll(
-                    context: Context,
-                    forceSimplified: Boolean,
-                    forceFull: Boolean,
-                ) {
-                    MinutesGlanceWidget.setForceSimplified(context, forceSimplified)
-                    MinutesGlanceWidget.setForceFull(context, forceFull)
-                    try {
-                        MinutesGlanceWidget().updateAll(context)
-                    } finally {
-                        MinutesGlanceWidget.setForceSimplified(context, false)
-                        MinutesGlanceWidget.setForceFull(context, false)
-                    }
-                }
-            },
+        private val renderer: WidgetRenderer,
     ) : WidgetUpdater {
         private val updateMutex = Mutex()
 
@@ -97,32 +80,36 @@ class WidgetUpdaterImpl
                         updateMutex.withLock {
                             try {
                                 val settings = appSettingsRepository.observeAppSettings().value
-                                if (settings.widgetLimitExceeded &&
-                                    (updateCounter.incrementAndGet() % PROBE_INTERVAL_UPDATES == 0L)
-                                ) {
-                                    // Стратегия восстановления после превышения лимита RemoteViews:
-                                    //
-                                    // При установленном widgetLimitExceeded рендер выполняется в упрощённом режиме.
-                                    // Каждое PROBE_INTERVAL_UPDATES-е обновление пытается выполнить ПОЛНЫЙ рендер
-                                    // (forceFull = true) для проверки, не устранена ли причина превышения
-                                    // (например, пользователь удалил SIM-карты и объём данных уменьшился).
-                                    //
-                                    // Если проба успешна — handleUpdateResult сбросит widgetLimitExceeded.
-                                    // Если проба неудачна — выполняется штатный упрощённый рендер.
-                                    //
-                                    // **Контракт AOSP:** На AOSP RemoteViews лимит ~1 МБ на Binder-транзакцию.
-                                    // Упрощённый layout всегда укладывается в этот лимит.
-                                    //
-                                    // **Отклонение кастомной прошивки:** Если кастомная прошивка имеет
-                                    // уменьшенный лимит Binder — это проблема кастомной прошивки.
-                                    // Упрощённый layout является защитным механизмом.
-                                    val probeResult = safeUpdateAll(context, forceFull = true)
-                                    if (probeResult is UpdateResult.Success) {
-                                        probeResult
+                                if (settings.widgetLimitExceeded) {
+                                    val count = exceededUpdateCounter.incrementAndGet()
+                                    if (count % PROBE_INTERVAL_UPDATES == 0L) {
+                                        // Стратегия восстановления после превышения лимита RemoteViews:
+                                        //
+                                        // При установленном widgetLimitExceeded рендер выполняется в упрощённом режиме.
+                                        // Каждое PROBE_INTERVAL_UPDATES-е обновление пытается выполнить ПОЛНЫЙ рендер
+                                        // (forceFull = true) для проверки, не устранена ли причина превышения
+                                        // (например, пользователь удалил SIM-карты и объём данных уменьшился).
+                                        //
+                                        // Если проба успешна — handleUpdateResult сбросит widgetLimitExceeded.
+                                        // Если проба неудачна — выполняется штатный упрощённый рендер.
+                                        //
+                                        // **Контракт AOSP:** На AOSP RemoteViews лимит ~1 МБ на Binder-транзакцию.
+                                        // Упрощённый layout всегда укладывается в этот лимит.
+                                        //
+                                        // **Отклонение кастомной прошивки:** Если кастомная прошивка имеет
+                                        // уменьшенный лимит Binder — это проблема кастомной прошивки.
+                                        // Упрощённый layout является защитным механизмом.
+                                        val probeResult = safeUpdateAll(context, forceFull = true)
+                                        if (probeResult is UpdateResult.Success) {
+                                            probeResult
+                                        } else {
+                                            safeUpdateAll(context, forceFull = false)
+                                        }
                                     } else {
                                         safeUpdateAll(context, forceFull = false)
                                     }
                                 } else {
+                                    exceededUpdateCounter.set(0) // сброс при выходе из режима
                                     safeUpdateAll(context, forceFull = false)
                                 }
                             } catch (e: CancellationException) {
@@ -249,6 +236,14 @@ class WidgetUpdaterImpl
             context: Context,
             forceFull: Boolean = false,
         ): UpdateResult {
+            // Флаги forceSimplified / forceFull передаются через SharedPreferences,
+            // поскольку GlanceAppWidget.provideGlance вызывается системой асинхронно
+            // и не принимает параметров.
+            //
+            // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() является
+            // suspend-функцией и завершается до возврата управления. Флаги
+            // устанавливаются до вызова updateAll и сбрасываются в finally,
+            // что гарантирует консистентность в рамках одного вызова.
             val limitExceeded = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
             val isFullAttempt = forceFull || !limitExceeded
 
@@ -265,6 +260,18 @@ class WidgetUpdaterImpl
 
         /**
          * Классифицирует ошибку обновления виджетов для определения стратегии восстановления.
+         *
+         * Критерий переполнения RemoteViews: наличие [android.os.TransactionTooLargeException]
+         * в cause-цепочке. Это единственный надёжный критерий для AOSP.
+         * Попытки определить переполнение по тексту сообщения исключения намеренно
+         * исключены: текст может меняться между версиями Android и OEM-сборками.
+         *
+         * Строгое соблюдение API: на AOSP TransactionTooLargeException бросается
+         * при превышении лимита Binder-транзакции (~1 МБ).
+         * Если кастомная прошивка бросает иное исключение при переполнении Binder —
+         * это проблема кастомной прошивки. В этом случае ошибка будет классифицирована
+         * как GenericFailure(retryable=true), что приведёт к повторным попыткам
+         * без перехода в упрощённый режим.
          */
         private fun classifyUpdateError(
             e: Exception,
@@ -363,12 +370,16 @@ class WidgetUpdaterImpl
             private const val PROBE_INTERVAL_UPDATES = 10
 
             /**
-             * Счётчик обновлений для периодической проверки ("пробы") полного рендера.
-             * Используется AtomicLong для исключения переполнения при длительной работе.
-             * Каждое PROBE_INTERVAL_UPDATES-е обновление при установленном widgetLimitExceeded
-             * пытается выполнить полный рендер для проверки, не устранена ли причина превышения.
+             * Счётчик обновлений, выполненных в режиме widgetLimitExceeded.
+             * Каждое PROBE_INTERVAL_UPDATES-е обновление в этом режиме
+             * выполняет полное (forceFull) рендер для проверки,
+             * не устранена ли причина превышения.
+             *
+             * Строгое соблюдение API: на AOSP RemoteViews-лимит ~1 МБ на
+             * Binder-транзакцию. Упрощённый layout всегда укладывается в лимит.
+             * Если кастомная прошивка имеет уменьшенный лимит Binder —
+             * это проблема кастомной прошивки.
              */
-            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal val updateCounter = AtomicLong(0)
+            private val exceededUpdateCounter = AtomicLong(0)
         }
     }

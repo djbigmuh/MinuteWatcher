@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.pow
@@ -57,6 +59,24 @@ class MainBannerController
          * на разных потоках в рамках ApplicationScope.
          */
         private val lastResetTime = AtomicLong(0L)
+
+        private val resetMutex = Mutex()
+
+        // Мьютекс защищает check-then-act над парой (observationRetryCount, lastResetTime).
+        // Без него при смене диспетчера на многопоточный возможен race:
+        // два потока одновременно прочитают lastResetTime, оба сбросят счётчик
+        // и оба запишут now, что приведёт к двойному сбросу.
+        private suspend fun resetRetryCounterIfNeeded(
+            now: Long,
+            force: Boolean = false,
+        ) {
+            resetMutex.withLock {
+                if (force || (now - lastResetTime.get()) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                    observationRetryCount.set(0)
+                    lastResetTime.set(now)
+                }
+            }
+        }
 
         init {
             lastResetTime.set(timeProvider.now())
@@ -109,8 +129,7 @@ class MainBannerController
                     settings = extra.third,
                 )
             }.onEach {
-                observationRetryCount.set(0)
-                lastResetTime.set(timeProvider.now())
+                resetRetryCounterIfNeeded(timeProvider.now(), force = true)
             }.retryWhen { cause, _ ->
                 // Стратегия повторных попыток:
                 // 1. CancellationException пробрасывается для корректной кооперативной отмены.
@@ -127,10 +146,7 @@ class MainBannerController
                 if (cause is CancellationException) throw cause
 
                 val now = timeProvider.now()
-                if ((now - lastResetTime.get()) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                    observationRetryCount.set(0)
-                    lastResetTime.set(now)
-                }
+                resetRetryCounterIfNeeded(now)
 
                 val currentRetry = observationRetryCount.incrementAndGet()
                 AppLogger.e("Failed to compute banner state (attempt $currentRetry)", cause)
@@ -139,7 +155,21 @@ class MainBannerController
                     (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
-                true // Бесконечный retry с потолком задержки
+
+                // Бесконечный retry с capped delay (MAX_RETRY_DELAY_MS).
+                // Остановка подписки приведёт к потере баннеров статуса для пользователя.
+                //
+                // Строгое соблюдение API: на AOSP combine из StateFlow не бросает
+                // исключений. Сбой возможен только при деградации DataStore
+                // на кастомных прошивках.
+                //
+                // Отклонение кастомной прошивки: если прошивка не обеспечивает
+                // корректную работу StateFlow — это проблема кастомной прошивки.
+                // Бесконечный retry с capped delay — защитный механизм,
+                // гарантирующий восстановление без вмешательства пользователя.
+                // UI сохраняет последнее успешное состояние во время повторов —
+                // нет мерцания.
+                true
             }.stateIn(
                 scope = scope,
                 started =

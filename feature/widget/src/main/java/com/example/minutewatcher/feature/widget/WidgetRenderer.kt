@@ -3,11 +3,17 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 
 /**
- * Interface for rendering the widget content.
+ * Контракт рендера виджетов.
  *
- * IMPORTANT: This interface is used across modules. Any change to the signature of [renderAll]
- * MUST be reflected in all implementations and call sites to avoid binary incompatibility
- * (e.g., AbstractMethodError).
+ * ВНИМАНИЕ: интерфейс используется跨модульно. Любое изменение сигнатуры
+ * [renderAll] требует одновременного обновления:
+ * 1. Всех реализаций (WidgetModule.provideWidgetRenderer, тестовые фейки).
+ * 2. Всех точек вызова (WidgetUpdaterImpl.safeUpdateAll, handleLimitExceeded).
+ * Несоблюдение приведёт к AbstractMethodError (бинарная несовместимость).
+ *
+ * Строгое соблюдение API: параметры forceSimplified и forceFull
+ * передаются в MinutesGlanceWidget через SharedPreferences,
+ * поскольку GlanceAppWidget.provideGlance не принимает параметров.
  */
 interface WidgetRenderer {
     /**

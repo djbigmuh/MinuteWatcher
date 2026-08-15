@@ -262,15 +262,18 @@ class SimIdentityRepositoryImpl
                 }
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                started = SharingStarted.Eagerly,
                 initialValue = emptyList(),
             )
-        // **Контракт AOSP:** на AOSP SubscriptionManager callback доставляется при каждом изменении подписок.
+        // Eagerly гарантирует, что upstream активен с момента создания репозитория
+        // и не зависит от наличия внешних коллекторов.
+        // Ранее использовался WhileSubscribed(5000), что создавало хрупкую
+        // зависимость от внутреннего коллектора в init-блоке: его отмена
+        // или удаление заморозило бы кэш на последнем значении.
         //
-        // **Отклонение кастомной прошивки:** Если кастомная прошивка не доставляет callback —
-        // это проблема кастомной прошивки.
-        //
-        // **Стратегия приложения:** экономия батареи в фоне через WhileSubscribed без потери функциональности.
+        // Строгое соблюдение API: на AOSP SubscriptionManager.OnSubscriptionsChangedListener
+        // доставляет callback при каждом изменении подписок. Eagerly гарантирует,
+        // что ни один callback не будет пропущен из-за остановки upstream.
 
         init {
             scope.launch {
@@ -337,12 +340,18 @@ class SimIdentityRepositoryImpl
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
-                    // **Контракт AOSP:** на AOSP генерация seed завершается успешно.
+                    // SeedUnavailableException бросается, когда identity seed недоступен
+                    // в пределах SHORT_TIMEOUT_MS.
                     //
-                    // **Отклонение кастомной прошивки:** Таймаут генерации возможен только при деградации DataStore
-                    // на кастомных прошивках. Это проблема кастомной прошивки.
+                    // Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+                    // Таймаут генерации seed возможен только при деградации DataStore
+                    // на кастомных прошивках, не соответствующих документации Google.
+                    // Это проблема кастомной прошивки.
                     //
-                    // **Стратегия приложения:** выбрасывается SeedUnavailableException.
+                    // Стратегия приложения: выбрасываем исключение, чтобы вызывающий код
+                    // мог информировать пользователя. Fallback на slot-based identity
+                    // намеренно исключён: он приведёт к потере привязки данных к SIM
+                    // при восстановлении хранилища.
                     AppLogger.e("Identity seed unavailable for slot $slot. Possible DataStore degradation.", null)
                     throw SeedUnavailableException(slot)
                 }

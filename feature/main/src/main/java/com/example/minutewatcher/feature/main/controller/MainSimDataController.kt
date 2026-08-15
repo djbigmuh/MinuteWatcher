@@ -111,6 +111,12 @@ class MainSimDataController
          * Подсвечивает карточку SIM в указанном слоте на короткое время.
          */
         fun highlightSlot(slot: Int) {
+            // Повторный вызов для того же слота не перезапускает таймер.
+            // Это предотвращает «вечную» подсветку при быстрых повторных нажатиях.
+            // Длительность подсветки фиксирована: HIGHLIGHT_DELAY_MS от первого вызова.
+            if (_highlightedSlot.value == slot && highlightJob?.isActive == true) {
+                return
+            }
             highlightJob?.cancel()
             _highlightedSlot.value = slot
             highlightJob =

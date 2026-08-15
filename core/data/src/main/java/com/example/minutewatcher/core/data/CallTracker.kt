@@ -150,9 +150,9 @@ class CallTracker
                 val activeSessions = callSessionRepository.getActiveCallSubIds()
                 callSessionRepository.clearAllCallSessions()
                 _status.value = TrackingStatus.Idle
-                // Очистка счётчиков неудачных попыток при загрузке.
-                // После перезагрузки все предыдущие сессии неактуальны,
-                // поэтому счётчики попыток также сбрасываются.
+                // Очистка мап попыток: после перезагрузки все предыдущие сессии неактуальны.
+                // Строгое соблюдение API: на AOSP onBoot вызывается один раз при загрузке;
+                // мапы не должны содержать записей от предыдущего сеанса работы устройства.
                 writeAttempts.clear()
                 attributionFailures.clear()
                 AppLogger.d("Cleared ${activeSessions.size} stale call sessions on boot")
@@ -583,6 +583,8 @@ class CallTracker
 
             if (success) {
                 clearSession(subId)
+                writeAttempts.remove(subId)
+                attributionFailures.remove(subId)
             } else {
                 AppLogger.e(
                     "Call duration write failed for subId $subId (duration: $durationSeconds s), " +
@@ -960,6 +962,26 @@ internal class CallEndResolver(
     private val endCall: suspend (Int, Boolean) -> Unit,
     private val setError: (TrackingStatus.Error) -> Unit,
 ) {
+    /**
+     * Разрешение завершения звонка при subId == -1.
+     *
+     * Строгое соблюдение API: на AOSP subId всегда известен при наличии
+     * READ_PHONE_STATE. subId == -1 возможен только на кастомных прошивках,
+     * не передающих subscription ID в intent.
+     *
+     * Стратегия (без хрупких эвристик):
+     * 1. Если все активные сессии в IDLE — закрыть все (однозначно).
+     * 2. Если ровно одна сессия в IDLE — закрыть её (однозначно).
+     * 3. Если неоднозначно — НЕ закрывать ничего, установить Error.
+     *    Эвристики «закрыть самую старую» или «закрыть default voice»
+     *    намеренно исключены: они могут привести к потере данных
+     *    при одновременных звонках на dual-SIM.
+     *
+     * Отклонение кастомной прошивки: если прошивка не передаёт subId
+     * и при этом не обеспечивает корректное состояние IDLE — это проблема
+     * кастомной прошивки. Приложение устанавливает Error для информирования
+     * пользователя, но не пытается угадать.
+     */
     suspend fun resolveUnknownSubIdEnd() {
         if (!permissionManager.hasPhoneStatePermission()) {
             AppLogger.w("CallEndResolver: permission revoked during resolveUnknownSubIdEnd")
