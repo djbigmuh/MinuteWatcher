@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -63,6 +63,13 @@ class SemanticSearchManager
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        /**
+         * Восстанавливает работу менеджера после ошибки.
+         * Строгое соблюдение API: функция гарантирует, что после возврата
+         * инициализация завершена и менеджер готов к работе.
+         * На AOSP восстановление занимает миллисекунды.
+         * Задержка возможна только при деградации хранилища на кастомной прошивке.
+         */
         override suspend fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
         }
@@ -93,33 +100,31 @@ class SemanticSearchManager
          * кастомной прошивки.
          */
         @OptIn(FlowPreview::class)
-        fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            scope.launch {
-                initMutex.withLock {
-                    // Присваивание lastSnapshotFlow внутри initMutex.withLock гарантирует
-                    // потокобезопасность при вызове initialize() из recover() (suspend-контекст).
-                    // На AOSP initialize() вызывается однократно из Main-thread;
-                    // защита мьютексом — защита от конкурентных вызовов recover().
-                    lastSnapshotFlow = snapshotFlow
-                    job?.cancel()
-                    job?.join() // дожидаемся реальной остановки
-                    job =
-                        launch {
-                            _status.value = TrackingStatus.Active
-                            snapshotFlow
-                                .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
-                                .collect { snapshot ->
-                                    ensureActive()
-                                    try {
-                                        indexSnapshot(snapshot)
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                    }
+        suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            initMutex.withLock {
+                // Присваивание lastSnapshotFlow внутри initMutex.withLock гарантирует
+                // потокобезопасность при вызове initialize() из recover() (suspend-контекст).
+                // На AOSP initialize() вызывается однократно из Main-thread;
+                // защита мьютексом — защита от конкурентных вызовов recover().
+                lastSnapshotFlow = snapshotFlow
+                job?.cancel()
+                job?.join() // дожидаемся реальной остановки
+                job =
+                    scope.launch {
+                        _status.value = TrackingStatus.Active
+                        snapshotFlow
+                            .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
+                            .collect { snapshot ->
+                                ensureActive()
+                                try {
+                                    indexSnapshot(snapshot)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
                                 }
-                        }
-                }
+                            }
+                    }
             }
         }
 
@@ -289,37 +294,39 @@ class SemanticSearchManager
             currentHash: Int?,
         ): Boolean =
             withContext(ioDispatcher) {
-                try {
-                    withTimeout(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
-                        val documents = UsageDocument.fromGlobalSnapshot(snapshot)
-                        performIndexUpdate(documents)
-                        lastSnapshotHash = currentHash
-                        _status.value = TrackingStatus.Active
-                        true
+                // Строгое соблюдение API kotlinx.coroutines: withTimeoutOrNull при таймауте
+                // возвращает null, а НЕ бросает TimeoutCancellationException.
+                // Таймаут обрабатывается проверкой результата, а не catch-блоком.
+                // На AOSP индексация завершается в пределах SEARCH_INDEX_TIMEOUT_MS.
+                // Таймаут возможен только при деградации хранилища на кастомной прошивке.
+                val result: Boolean? =
+                    try {
+                        withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
+                            val documents = UsageDocument.fromGlobalSnapshot(snapshot)
+                            performIndexUpdate(documents)
+                            lastSnapshotHash = currentHash
+                            _status.value = TrackingStatus.Active
+                            true
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: AppSearchException) {
+                        // Bubble up to indexSnapshot for retry
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("AppSearch indexing error", e)
+                        lastSnapshotHash = null
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                        false
                     }
-                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                    // TimeoutCancellationException — подкласс CancellationException.
-                    // Его необходимо перехватить ДО общего catch(CancellationException),
-                    // иначе таймаут будет интерпретирован как кооперативная отмена
-                    // и подписка в initialize() будет разорвана.
-                    // Строгое соблюдение API: на AOSP индексация завершается в пределах
-                    // SEARCH_INDEX_TIMEOUT_MS; таймаут возможен только при деградации
-                    // хранилища на кастомной прошивке.
-                    AppLogger.e("AppSearch indexing timed out after ${Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS}ms", e)
+
+                if (result == null) {
+                    AppLogger.e("AppSearch indexing timed out after ${Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS}ms")
                     lastSnapshotHash = null
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Indexing timeout")
-                    false
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: AppSearchException) {
-                    // Bubble up to indexSnapshot for retry
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("AppSearch indexing error", e)
-                    lastSnapshotHash = null
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    false
+                    return@withContext false
                 }
+                result
             }
 
         private suspend fun performIndexUpdate(documents: List<UsageDocument>) {

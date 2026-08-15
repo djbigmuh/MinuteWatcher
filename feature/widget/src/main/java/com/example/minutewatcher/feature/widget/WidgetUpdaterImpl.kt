@@ -92,37 +92,12 @@ class WidgetUpdaterImpl
             var attempt = 1
             var keepGoing = true
 
+            // Стратегия повторных попыток: экспоненциальная задержка с потолком.
+            // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll() завершается
+            // за несколько секунд. Исчерпание попыток указывает на системную проблему.
+            // На кастомной прошивке это может быть проблема прошивки.
             while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && keepGoing) {
-                // Стратегия повторных попыток:
-                // 1. Транзиентные ошибки (Binder congestion): повтор до MAX_UPDATE_ATTEMPTS
-                // 2. Экспоненциальная задержка: старт RETRY_BACKOFF_MS, удвоение
-                // 3. Перманентные ошибки (destroyed context): повтор пропускается
-                // 4. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout,
-                //    не считается попыткой повтора
-                val updateResult =
-                    withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        updateMutex.withLock {
-                            try {
-                                val settings = appSettingsRepository.observeAppSettings().value
-                                if (settings.widgetLimitExceeded) {
-                                    val count = ++exceededUpdateCounter
-                                    if (count % PROBE_INTERVAL_UPDATES == 0L) {
-                                        performProbeUpdate()
-                                    } else {
-                                        safeUpdateAll(context, isProbe = false)
-                                    }
-                                } else {
-                                    exceededUpdateCounter = 0L // сброс при выходе из режима
-                                    safeUpdateAll(context, isProbe = false)
-                                }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
-                                UpdateResult.GenericFailure(isRetryable = true)
-                            }
-                        }
-                    } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
+                val updateResult = performSingleUpdate(attempt)
                 // **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() завершается в пределах нескольких секунд.
                 //
                 // **Отклонение кастомной прошивки:** Зависание на кастомных прошивках. Это проблема кастомной прошивки.
@@ -140,6 +115,11 @@ class WidgetUpdaterImpl
                     }
                     is UpdateOutcome.Retry -> {
                         if (attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                            AppLogger.e(
+                                "Widget update exhausted all ${Constants.Widget.MAX_UPDATE_ATTEMPTS} retry attempts. " +
+                                    "Further retries suppressed. On AOSP this indicates a system-level issue. " +
+                                    "On custom firmware this may be a firmware-specific problem.",
+                            )
                             keepGoing = false
                         } else {
                             AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
@@ -157,6 +137,37 @@ class WidgetUpdaterImpl
             }
             return result
         }
+
+        /**
+         * Выполняет одну попытку обновления виджетов с перехватом системных исключений.
+         *
+         * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll() завершается
+         * за несколько секунд. Таймаут 10с — защитный механизм.
+         */
+        private suspend fun performSingleUpdate(attempt: Int): UpdateResult =
+            withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                updateMutex.withLock {
+                    try {
+                        val settings = appSettingsRepository.observeAppSettings().value
+                        if (settings.widgetLimitExceeded) {
+                            val count = ++exceededUpdateCounter
+                            if (count % PROBE_INTERVAL_UPDATES == 0L) {
+                                performProbeUpdate()
+                            } else {
+                                safeUpdateAll(context, isProbe = false)
+                            }
+                        } else {
+                            exceededUpdateCounter = 0L // сброс при выходе из режима
+                            safeUpdateAll(context, isProbe = false)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
+                        UpdateResult.GenericFailure(isRetryable = true)
+                    }
+                }
+            } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
 
         private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {

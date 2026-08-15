@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -81,16 +80,18 @@ class MainBannerControllerTest {
     fun `retry delay for the first attempt is not zero`() =
         runTest {
             var collectionCount = 0
+            // Flow передаётся в мок через thenReturn() и коллекционируется
+            // внутри MainBannerController при подписке на permissionRepository.
+            // Предупреждение IDE является ложным.
             val dynamicFlow =
                 kotlinx.coroutines.flow.flow<Boolean> {
                     collectionCount++
                     if (collectionCount == 1) {
                         throw IOException("Temporary failure")
                     }
-                    // flowOf(true) используется вместо MutableStateFlow, чтобы emitAll
-                    // корректно завершил flow после эмиссии. StateFlow никогда не завершается,
-                    // что приводит к бесконечной приостановке и предупреждению "Flow constructed but not used".
-                    emitAll(kotlinx.coroutines.flow.flowOf(true))
+                    // emit(true) вместо emitAll(flowOf(true)): устраняет предупреждение IDE
+                    // о неиспользуемом Flow и делает намерение явным.
+                    emit(true)
                 }
             whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(dynamicFlow)
 

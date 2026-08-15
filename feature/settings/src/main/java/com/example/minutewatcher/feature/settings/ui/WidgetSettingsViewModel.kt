@@ -78,10 +78,11 @@ class WidgetSettingsViewModel
             loadJob = null
             viewModelScope
                 .launch {
-                    // Явное использование Duration-overload для исключения неоднозначности.
+                    // Используется Duration-перегрузка withTimeoutOrNull (Kotlin 1.6+).
+                    // LOAD_TIMEOUT имеет тип Duration (5.seconds). Long-перегрузка не используется.
                     // На AOSP join() завершается за миллисекунды; таймаут 5с — защитный запас
                     // на случай деградации кастомной прошивки.
-                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) { previousJob?.join() }
+                    withTimeoutOrNull(LOAD_TIMEOUT) { previousJob?.join() }
 
                     try {
                         val loaded = loader.load()

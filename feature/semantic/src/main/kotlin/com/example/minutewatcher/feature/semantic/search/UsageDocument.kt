@@ -68,19 +68,18 @@ class UsageDocument {
     var status: String = ""
 
     /**
-     * Конструктор без аргументов требуется контрактом AppSearch для рефлективной десериализации.
+     * Конструктор без аргументов требуется контрактом AppSearch для рефлексивной
+     * десериализации. Метод [androidx.appsearch.app.GenericDocument.toDocumentClass]
+     * вызывает этот конструктор через reflection при чтении документов из индекса.
      *
-     * **Строгое соблюдение API:** [androidx.appsearch.annotation.Document] требует
-     * наличия публичного конструктора без аргументов. AppSearch вызывает его через
-     * рефлексию при чтении документов из индекса (метод `GenericDocument.toDocumentClass`).
+     * Строгое соблюдение API: [androidx.appsearch.annotation.Document] требует
+     * наличия публичного конструктора без аргументов. Удаление приведёт к
+     * AppSearchException (RESULT_INTERNAL_ERROR) в runtime.
      *
-     * **Отклонение кастомной прошивки:** если кастомная прошивка не обеспечивает
-     * корректную рефлексию для AppSearch — это проблема кастомной прошивки,
-     * не проекта. На AOSP рефлексия работает стабильно.
-     *
-     * Удаление конструктора приведёт к AppSearchException (RESULT_INTERNAL_ERROR) в runtime.
+     * Отклонение кастомной прошивки: если кастомная прошивка не обеспечивает
+     * корректную рефлексию для AppSearch — это проблема кастомной прошивки.
      */
-    @Suppress("unused", "UNUSED_PARAMETER")
+    @Suppress("unused")
     constructor()
 
     // UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.

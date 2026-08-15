@@ -1,3 +1,5 @@
+<!-- Namespace declaration не требуется: файл содержит только строковые ресурсы
+     без атрибутов, требующих пространства имён. -->
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM Cards</string>
