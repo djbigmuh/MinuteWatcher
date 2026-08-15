@@ -194,7 +194,7 @@ class SemanticSearchManager
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)
                 _status.value =
                     TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        TrackingStatus.ErrorType.NOT_SUPPORTED,
                         "AppSearch service not available on this device",
                     )
             } else {

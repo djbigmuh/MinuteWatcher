@@ -15,6 +15,7 @@ sealed interface TrackingStatus {
         PERMISSION_MISSING,
         DATABASE_ERROR,
         INACCURATE_ATTRIBUTION,
+        NOT_SUPPORTED,
         UNKNOWN,
     }
 }
