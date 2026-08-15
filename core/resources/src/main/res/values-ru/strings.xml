@@ -26,7 +26,6 @@
     <string name="language_ja">Японский</string>
     <string name="language_zh">Китайский</string>
     <string name="language_hi">Хинди</string>
-    <string name="call_tracking_title">Отслеживание звонков</string>
     <string name="usage_access_dialog_title">Учет использования трафика</string>
     <string name="usage_access_dialog_description">Для учета мобильного трафика приложению необходимо разрешение «Доступ к использованию данных». \n\nЭто системное разрешение, которое позволяет приложению видеть объем переданных и полученных данных через мобильную сеть. \n\nМы не отслеживаем, какие приложения вы используете, и не храним историю просмотров.</string>
     <string name="phone_permission_permanent_denial">Для работы приложения нужен доступ к телефону, но запрос разрешений заблокирован настройкой «Больше не спрашивать». Пожалуйста, включите его вручную в настройках.</string>

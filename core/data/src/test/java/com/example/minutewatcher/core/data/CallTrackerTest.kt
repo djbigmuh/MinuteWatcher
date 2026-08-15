@@ -478,36 +478,6 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `call tracking disabled does not increment minutes`() =
-        runTest(testDispatcher) {
-            // Arrange
-            whenever(
-                appSettingsRepository.getAppSettings(),
-            ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
-            val callTracker = createTracker()
-
-            val now = timeProvider.now()
-            val realtime = timeProvider.elapsedRealtime()
-            val startTime = now - 1000L
-            val bootTime = realtime - 1000L
-            val uptime = timeProvider.uptimeMillis() - 1000L
-            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
-            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
-
-            timeProvider.advance(10000)
-
-            // Act
-            callTracker.onCallEnded(subId = 1)
-            advanceUntilIdle()
-
-            // Assert
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
-        }
-
-    @Test
     fun `stale boot time does not increment minutes`() =
         runTest(testDispatcher) {
             setupCommonMocks()
@@ -715,31 +685,6 @@ class CallTrackerTest {
             verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
             // No calls cleared
             verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
-        }
-
-    @Test
-    fun `onCallEnded with unknown subId and call tracking disabled does NOT clear other sessions`() =
-        runTest(testDispatcher) {
-            setupCommonMocks()
-            val callTracker = createTracker()
-            // Arrange: Call tracking disabled
-            whenever(
-                appSettingsRepository.getAppSettings(),
-            ).thenReturn(
-                flowOf(
-                    AppSettings(callTrackingEnabled = false),
-                ),
-            )
-
-            // Multiple active calls
-            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-
-            // Act
-            callTracker.onCallEnded(-1)
-            advanceUntilIdle()
-
-            // Assert: No sessions cleared
-            verify(callSessionRepository, never()).setCallStartTime(any(), any())
         }
 
     @Test

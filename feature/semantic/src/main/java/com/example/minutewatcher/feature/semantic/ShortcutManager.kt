@@ -79,7 +79,13 @@ class ShortcutManager
                                 throw e
                             } catch (e: Exception) {
                                 AppLogger.e("Failed to update dynamic shortcuts", e)
-                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                                val type =
+                                    if (e is UnsupportedOperationException || e.message?.contains("Shortcut") == true) {
+                                        TrackingStatus.ErrorType.NOT_SUPPORTED
+                                    } else {
+                                        TrackingStatus.ErrorType.UNKNOWN
+                                    }
+                                _status.value = TrackingStatus.Error(type, e.message)
                             }
                         }
                 }
@@ -108,7 +114,13 @@ class ShortcutManager
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to update dynamic shortcuts", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                val type =
+                    if (e is UnsupportedOperationException || e.message?.contains("Shortcut") == true) {
+                        TrackingStatus.ErrorType.NOT_SUPPORTED
+                    } else {
+                        TrackingStatus.ErrorType.UNKNOWN
+                    }
+                _status.value = TrackingStatus.Error(type, e.message)
                 false
             }
 

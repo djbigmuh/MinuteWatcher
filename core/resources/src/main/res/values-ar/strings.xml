@@ -26,7 +26,6 @@
     <string name="language_ja">اليابانية</string>
     <string name="language_zh">الصينية</string>
     <string name="language_hi">الهندية</string>
-    <string name="call_tracking_title">تتبع المكالمات</string>
     <string name="usage_access_dialog_title">تتبع استخدام البيانات</string>
     <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".\n\nهذا إذن على مستوى النظام يسمح للتطبيق بمعرفة كمية البيانات التي تم إرسالها واستلامها عبر الشبكة الخلوية.\n\nنحن لا نتتبع التطبيقات التي تستخدمها أو سجل المتصفح الخاص بك.</string>
     <string name="phone_permission_permanent_denial">تم رفض إذن الهاتف بشكل دائم.</string>

@@ -41,7 +41,7 @@ object TrackingBannerMapper {
             trafficFallbackSlot = getTrafficFallbackSlot(traffic),
             showCallsErrorBanner = isCallsError(calls),
             showAppSearchErrorBanner = isAppSearchError(appsearch),
-            showShortcutsErrorBanner = shortcuts is TrackingStatus.Error,
+            showShortcutsErrorBanner = isShortcutsError(shortcuts),
             showWidgetErrorBanner = settings.widgetLimitExceeded,
             showInaccurateCallsBanner = settings.inaccurateCallAttributionsCount >= 3,
             notificationPermissionState =
@@ -102,6 +102,10 @@ object TrackingBannerMapper {
             status.type != TrackingStatus.ErrorType.PERMISSION_MISSING
 
     private fun isAppSearchError(status: TrackingStatus?): Boolean =
+        status is TrackingStatus.Error &&
+            status.type != TrackingStatus.ErrorType.NOT_SUPPORTED
+
+    private fun isShortcutsError(status: TrackingStatus?): Boolean =
         status is TrackingStatus.Error &&
             status.type != TrackingStatus.ErrorType.NOT_SUPPORTED
 }

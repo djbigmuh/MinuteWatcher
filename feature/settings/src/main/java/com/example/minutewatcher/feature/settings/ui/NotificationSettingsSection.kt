@@ -11,7 +11,6 @@ fun NotificationSettingsSection(
     enabled: Boolean = true,
     onUpdateNotifyMinutes: (Boolean) -> Unit,
     onUpdateNotifyTraffic: (Boolean) -> Unit,
-    onUpdateCallTracking: (Boolean) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.notifications_title))
     CheckboxSetting(
@@ -24,9 +23,4 @@ fun NotificationSettingsSection(
         checked = state.notifyLowTraffic,
         enabled = enabled,
     ) { onUpdateNotifyTraffic(it) }
-    CheckboxSetting(
-        label = stringResource(id = R.string.call_tracking_title),
-        checked = state.callTrackingEnabled,
-        enabled = enabled,
-    ) { onUpdateCallTracking(it) }
 }

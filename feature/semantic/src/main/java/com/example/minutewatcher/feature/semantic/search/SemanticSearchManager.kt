@@ -188,7 +188,9 @@ class SemanticSearchManager
 
             val isUnsupported =
                 hasCause(e, IllegalStateException::class.java) ||
-                    hasCause(e, DeadObjectException::class.java)
+                    hasCause(e, DeadObjectException::class.java) ||
+                    hasCause(e, SecurityException::class.java) ||
+                    e.message?.contains("AppSearch", ignoreCase = true) == true
 
             if (isUnsupported) {
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)

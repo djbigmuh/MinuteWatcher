@@ -218,7 +218,6 @@ private fun WidgetSettingsList(
             enabled = true,
             onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
             onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
-            onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
         )
 
         Spacer(modifier = Modifier.height(16.dp))

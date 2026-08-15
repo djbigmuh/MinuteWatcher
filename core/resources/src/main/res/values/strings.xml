@@ -26,7 +26,6 @@
     <string name="language_ja">Japanese</string>
     <string name="language_zh">Chinese</string>
     <string name="language_hi">Hindi</string>
-    <string name="call_tracking_title">Call Tracking</string>
     <string name="usage_access_dialog_title">Data Usage Tracking</string>
     <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission. \n\nThis is a system-level permission that allows the app to see how much data has been sent and received over the cellular network. \n\nWe do not track which apps you use or your browsing history.</string>
     <string name="phone_permission_permanent_denial">Phone permission is permanently denied. Some features will not work until you enable it in App Settings.</string>

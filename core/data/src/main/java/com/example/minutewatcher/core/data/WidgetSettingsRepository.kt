@@ -65,7 +65,6 @@ class WidgetSettingsRepository
                     backgroundColor = settings.widgetBackgroundColor,
                     notifyLowMinutes = settings.notifyLowMinutes,
                     notifyLowTraffic = settings.notifyLowTraffic,
-                    callTrackingEnabled = settings.callTrackingEnabled,
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
                     settingsLoadFailed = false,
@@ -131,7 +130,6 @@ class WidgetSettingsRepository
                         widgetBackgroundColor = state.backgroundColor,
                         notifyLowMinutes = state.notifyLowMinutes,
                         notifyLowTraffic = state.notifyLowTraffic,
-                        callTrackingEnabled = state.callTrackingEnabled,
                     )
                 }
             } else {
@@ -177,7 +175,6 @@ class WidgetSettingsRepository
                 backgroundColor = settings.widgetBackgroundColor,
                 notifyLowMinutes = settings.notifyLowMinutes,
                 notifyLowTraffic = settings.notifyLowTraffic,
-                callTrackingEnabled = settings.callTrackingEnabled,
                 simStates = emptyMap(),
                 widgetLimitExceeded = settings.widgetLimitExceeded,
                 settingsLoadFailed = settingsLoadFailed,

@@ -57,7 +57,7 @@ class CallTrackerRaceTest {
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
         whenever(appSettingsRepository.getAppSettings()).thenReturn(
-            flowOf(AppSettings(callTrackingEnabled = true)),
+            flowOf(AppSettings()),
         )
     }
 

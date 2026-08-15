@@ -26,7 +26,6 @@
     <string name="language_ja">日语</string>
     <string name="language_zh">中文</string>
     <string name="language_hi">印地语</string>
-    <string name="call_tracking_title">通话追踪</string>
     <string name="usage_access_dialog_title">数据使用追踪</string>
     <string name="usage_access_dialog_description">为了追踪您的移动数据使用量，MinuteWatcher 需要“使用情况访问”权限。\n\n这是一种系统级权限，允许应用程序查看通过蜂窝网络发送和接收的数据量。\n\n我们不会追踪您使用的应用程序或您的浏览历史。</string>
     <string name="phone_permission_permanent_denial">通话权限被永久拒绝。</string>

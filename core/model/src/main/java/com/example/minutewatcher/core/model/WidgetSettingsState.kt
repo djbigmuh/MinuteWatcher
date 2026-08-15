@@ -8,7 +8,6 @@ data class WidgetSettingsState(
     val backgroundColor: Int = 0xFF000000.toInt(),
     val notifyLowMinutes: Boolean = true,
     val notifyLowTraffic: Boolean = true,
-    val callTrackingEnabled: Boolean = true,
     val simStates: Map<Int, SimSettingsState> = emptyMap(),
     val widgetLimitExceeded: Boolean = false,
     /**

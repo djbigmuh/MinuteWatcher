@@ -26,7 +26,6 @@
     <string name="language_ja">Japanisch</string>
     <string name="language_zh">Chinesisch</string>
     <string name="language_hi">Hindi</string>
-    <string name="call_tracking_title">Anrufverfolgung</string>
     <string name="usage_access_dialog_title">Datenverbrauchsverfolgung</string>
     <string name="usage_access_dialog_description">Um Ihren mobilen Datenverbrauch zu verfolgen, benötigt MinuteWatcher die Berechtigung „Nutzungszugriff“.\n\nDies ist eine Berechtigung auf Systemebene, die es der App ermöglicht zu sehen, wie viele Daten über das Mobilfunknetz gesendet und empfangen wurden.\n\nWir verfolgen nicht, welche Apps Sie verwenden oder Ihren Browserverlauf.</string>
     <string name="phone_permission_permanent_denial">Telefonberechtigung dauerhaft verweigert.</string>

@@ -26,7 +26,6 @@
     <string name="language_ja">Japonés</string>
     <string name="language_zh">Chino</string>
     <string name="language_hi">Hindi</string>
-    <string name="call_tracking_title">Seguimiento de llamadas</string>
     <string name="usage_access_dialog_title">Seguimiento del uso de datos</string>
     <string name="usage_access_dialog_description">Para rastrear su consumo de datos móviles, MinuteWatcher necesita el permiso de \"Acceso de uso\".\n\nEste es un permiso a nivel de sistema que permite que la aplicación vea cuántos datos se han enviado y recibido a través de la red celular.\n\nNo rastreamos qué aplicaciones usa ni su historial de navegación.</string>
     <string name="phone_permission_permanent_denial">Permiso de teléfono denegado permanentemente.</string>

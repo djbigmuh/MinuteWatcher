@@ -121,10 +121,6 @@ class CallTracker
             }
         }
 
-        private suspend fun isCallTrackingEnabled(): Boolean =
-            appSettingsRepository.getAppSettings().firstWithTimeout()?.callTrackingEnabled
-                ?: throw DataStoreTimeoutException("Settings DataStore read timeout")
-
         /**
          * Called on device boot to clean up any stale state.
          */
@@ -149,7 +145,7 @@ class CallTracker
             callMutex.withLock {
                 var justStarted = false
                 try {
-                    if (!isCallTrackingEnabled() || !checkPermissions()) return@withLock
+                    if (!checkPermissions()) return@withLock
 
                     val effectiveSubId = resolveEffectiveSubId(subId)
                     if (effectiveSubId == -1) return@withLock
@@ -393,12 +389,6 @@ class CallTracker
 
         private suspend fun executeCallEnded(subId: Int) {
             if (!checkPermissions()) return
-
-            if (!isCallTrackingEnabled()) {
-                AppLogger.d("Call tracking disabled, cleaning up session for subId $subId")
-                if (subId != -1) clearSession(subId)
-                return
-            }
 
             if (subId == -1) {
                 try {
@@ -755,12 +745,6 @@ class CallTracker
 
             if (durationSeconds == 0) {
                 AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
-                cleanupCounters(subId)
-                return true
-            }
-
-            if (!isCallTrackingEnabled()) {
-                AppLogger.d("Call tracking disabled, skipping duration recording for subId $subId")
                 cleanupCounters(subId)
                 return true
             }

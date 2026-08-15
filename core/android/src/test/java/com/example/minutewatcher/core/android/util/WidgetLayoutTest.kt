@@ -205,7 +205,6 @@ class WidgetLayoutTest {
                 backgroundColor = 0,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                callTrackingEnabled = true,
                 simStates = mapOf(0 to simSettings),
             )
 

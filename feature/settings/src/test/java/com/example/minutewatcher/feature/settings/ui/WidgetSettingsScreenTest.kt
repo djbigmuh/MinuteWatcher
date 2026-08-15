@@ -41,7 +41,6 @@ class WidgetSettingsScreenTest {
             backgroundColor = 0xFF000000.toInt(),
             notifyLowMinutes = true,
             notifyLowTraffic = true,
-            callTrackingEnabled = true,
             simStates =
                 mapOf(
                     0 to SimSettingsState(true, true, true, true, true, true, true),

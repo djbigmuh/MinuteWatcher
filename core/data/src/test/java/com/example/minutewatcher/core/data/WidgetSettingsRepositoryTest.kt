@@ -188,7 +188,6 @@ class WidgetSettingsRepositoryTest {
             language = "en",
             notifyLowMinutes = true,
             notifyLowTraffic = false,
-            callTrackingEnabled = true,
             widgetLayoutMode = 1,
             widgetSimArrangement = 1,
             widgetTransparency = 80,

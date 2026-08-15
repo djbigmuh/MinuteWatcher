@@ -109,7 +109,6 @@ class AppSettingsRepositoryImpl
         ) {
             prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
             prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
-            prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
             prefs[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
         }
 
@@ -119,7 +118,6 @@ class AppSettingsRepositoryImpl
                 language = this[SettingsKeys.APP_LANGUAGE],
                 notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: DEFAULT_SETTINGS.notifyLowMinutes,
                 notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: DEFAULT_SETTINGS.notifyLowTraffic,
-                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: DEFAULT_SETTINGS.callTrackingEnabled,
                 widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: DEFAULT_SETTINGS.widgetLayoutMode,
                 widgetSimArrangement =
                     this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: DEFAULT_SETTINGS.widgetSimArrangement,

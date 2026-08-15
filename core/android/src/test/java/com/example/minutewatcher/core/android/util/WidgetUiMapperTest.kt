@@ -77,7 +77,6 @@ class WidgetUiMapperTest {
                 backgroundColor = Color.BLACK,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                callTrackingEnabled = true,
                 simStates =
                     mapOf(
                         0 to
@@ -118,7 +117,7 @@ class WidgetUiMapperTest {
     @Test
     fun testSnapshotToUiState_EmptySnapshot() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, true, emptyMap())
+        val settings = WidgetSettingsState(1, 0, 50, 2, Color.BLACK, true, true, emptyMap())
 
         val uiState =
             WidgetUiMapper.mapFromSnapshot(
@@ -212,7 +211,6 @@ class WidgetUiMapperTest {
                 backgroundColor = Color.WHITE,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                callTrackingEnabled = true,
                 simStates = emptyMap(),
             )
 
@@ -274,7 +272,6 @@ class WidgetUiMapperTest {
                 backgroundColor = Color.BLACK,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                callTrackingEnabled = true,
                 simStates =
                     mapOf(
                         0 to
@@ -326,7 +323,6 @@ class WidgetUiMapperTest {
                 backgroundColor = Color.BLACK,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                callTrackingEnabled = true,
                 simStates = emptyMap(),
             )
 

@@ -26,7 +26,6 @@
     <string name="language_ja">日本語</string>
     <string name="language_zh">中国語</string>
     <string name="language_hi">ヒンディー語</string>
-    <string name="call_tracking_title">通話トラッキング</string>
     <string name="usage_access_dialog_title">データ使用量の追跡</string>
     <string name="usage_access_dialog_description">モバイルデータ使用量を追跡するために、MinuteWatcherは「使用状況へのアクセス」権限を必要とします。\n\nこれは、モバイルネットワーク経由で送信および受信されたデータ量をアプリが確認できるようにするシステムレベルの権限です。\n\n弊社がお客様の使用しているアプリやブラウザの履歴を追跡することはありません。</string>
     <string name="phone_permission_permanent_denial">電話の権限が永続的に拒否されました。</string>

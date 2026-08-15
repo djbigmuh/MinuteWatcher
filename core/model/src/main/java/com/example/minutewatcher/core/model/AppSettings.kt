@@ -5,7 +5,6 @@ data class AppSettings(
     val language: String? = null,
     val notifyLowMinutes: Boolean = true,
     val notifyLowTraffic: Boolean = true,
-    val callTrackingEnabled: Boolean = true,
     val widgetLayoutMode: Int = 2,
     val widgetSimArrangement: Int = 0,
     val widgetTransparency: Int = 50,

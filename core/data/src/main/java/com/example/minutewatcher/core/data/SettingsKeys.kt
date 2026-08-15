@@ -14,7 +14,6 @@ object SettingsKeys {
     val WIDGET_BACKGROUND_COLOR = intPreferencesKey("widget_background_color")
     val NOTIFY_LOW_MINUTES = booleanPreferencesKey("notify_low_minutes")
     val NOTIFY_LOW_TRAFFIC = booleanPreferencesKey("notify_low_traffic")
-    val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
     val LAST_DATA_SUB_ID = intPreferencesKey("last_data_sub_id")
     val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")
     val MIGRATION_V1_SKIPPED_REASON = stringPreferencesKey("migration_v1_skipped_reason")
