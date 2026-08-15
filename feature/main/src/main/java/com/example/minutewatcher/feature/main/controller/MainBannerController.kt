@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +23,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
-import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.pow
@@ -112,7 +112,18 @@ class MainBannerController
                 observationRetryCount.set(0)
                 lastResetTime.set(timeProvider.now())
             }.retryWhen { cause, _ ->
-                // CancellationException пробрасывается для корректной остановки корутин.
+                // Стратегия повторных попыток:
+                // 1. CancellationException пробрасывается для корректной кооперативной отмены.
+                // 2. Задержка: экспоненциальная, 2^(attempt-1) секунд, потолок MAX_RETRY_DELAY_MS.
+                // 3. Сброс счётчика: каждые RESET_RETRY_COUNTER_INTERVAL_MS (10 мин)
+                //    после последнего успешного обновления или последнего сброса.
+                //
+                // **Контракт AOSP:** combine из StateFlow не бросает исключений.
+                // Сбой возможен только при деградации DataStore на кастомных прошивках.
+                //
+                // **Отклонение кастомной прошивки:** Если прошивка не обеспечивает
+                // корректную работу StateFlow — это проблема кастомной прошивки.
+                // Бесконечный retry с потолком задержки — защитный механизм.
                 if (cause is CancellationException) throw cause
 
                 val now = timeProvider.now()
@@ -128,10 +139,13 @@ class MainBannerController
                     (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
-                true // Retrying infinitely with capped delay; UI retains last successful state
+                true // Бесконечный retry с потолком задержки
             }.stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                started =
+                    SharingStarted.WhileSubscribed(
+                        stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
+                    ),
                 initialValue = TrackingBannerState(),
             )
 

@@ -61,7 +61,7 @@ class CallTrackerTest {
 
     @Before
     fun setup() {
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = true)))
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
         whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))

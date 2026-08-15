@@ -49,7 +49,8 @@ class SemanticSearchManager
         @ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
         private val appSearchWrapper: AppSearchWrapper,
-        @com.example.minutewatcher.core.common.di.IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @com.example.minutewatcher.core.common.di.IoDispatcher
+        private val ioDispatcher: CoroutineDispatcher,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
@@ -70,53 +71,59 @@ class SemanticSearchManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
-        private val initMutex = Mutex()
-
         /**
          * Инициализирует менеджер для наблюдения за изменениями snapshot.
          *
-         * Стратегия debounce:
-         * - Ручные обновления (isManualUpdate = true): задержка 0 мс —
-         *   немедленная индексация для быстрого отклика UI.
-         * - Автоматические обновления: задержка [Constants.Semantic.THROTTLE_MS]
-         *   (30 секунд) — предотвращение избыточных переиндексаций при
-         *   быстрых последовательных изменениях данных.
+         * Идемпотентен: повторный вызов отменяет предыдущее наблюдение и запускает новое.
+         * Отмена предыдущего job выполняется кооперативно — старая корутина завершится
+         * при ближайшей точке приостановки.
          *
-         * Предыдущий job отменяется при повторном вызове initialize.
-         * Это обеспечивает идемпотентность: только последний вызов активен.
+         * **Контракт AOSP:** StateFlow эмитит значения последовательно.
+         * Debounce гарантирует отсутствие дублирующих индексаций.
          *
-         * Строгое соблюдение API: на AOSP StateFlow эмитит значения
-         * последовательно. Debounce гарантирует отсутствие дубликатов.
-         * Если кастомная прошивка эмитит значения вне порядка —
-         * это проблема кастомной прошивки.
-         *
-         * Мьютекс предотвращает гонку при быстром повторном вызове initialize.
+         * **Отклонение кастомной прошивки:** Если прошивка эмитит значения
+         * вне порядка или дублирует эмиссии — это проблема кастомной прошивки.
+         * Debounce является защитным механизмом, а не штатной компенсацией.
          */
         @OptIn(FlowPreview::class)
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             lastSnapshotFlow = snapshotFlow
-            // Отменяем предыдущий job вне мьютекса (cancel идемпотентен)
             job?.cancel()
 
             scope.launch {
-                initMutex.withLock {
-                    job =
-                        launch {
-                            snapshotFlow
-                                .debounce { snapshot ->
-                                    if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
-                                }.collect { snapshot ->
-                                    ensureActive()
-                                    try {
-                                        indexSnapshot(snapshot)
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                    }
+                // Дожидаемся завершения предыдущей корутины для исключения гонки.
+                // join() безопасен: если job уже завершён, он вернётся мгновенно.
+                job?.join()
+
+                job =
+                    launch {
+                        // Стратегия debounce:
+                        // - Ручные обновления (isManualUpdate = true): задержка 0 мс.
+                        //   Пользователь ожидает немедленного отклика на своё действие.
+                        // - Автоматические обновления: задержка Constants.Semantic.THROTTLE_MS (30 сек).
+                        //   Предотвращает избыточные переиндексации при быстрых последовательных
+                        //   изменениях данных (например, при обновлении нескольких SIM подряд).
+                        //
+                        // **Контракт AOSP:** StateFlow эмитит значения последовательно.
+                        // Debounce гарантирует, что только последнее значение в окне будет обработано.
+                        //
+                        // **Отклонение кастомной прошивки:** Если прошивка эмитит дубликаты
+                        // или нарушает порядок эмиссии — это проблема кастомной прошивки.
+                        // Debounce является защитным механизмом, а не штатной компенсацией.
+                        snapshotFlow
+                            .debounce { snapshot ->
+                                if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                            }.collect { snapshot ->
+                                ensureActive()
+                                try {
+                                    indexSnapshot(snapshot)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
                                 }
-                        }
-                }
+                            }
+                    }
             }
         }
 
@@ -169,17 +176,24 @@ class SemanticSearchManager
         /**
          * Обрабатывает ошибки инициализации AppSearch.
          *
-         * На AOSP LocalStorage.createSearchSessionAsync() (вызываемый через обертку)
-         * бросает [IllegalStateException], если сервис AppSearch недоступен (например,
-         * в GMS-free сборках без установленного провайдера). Также возможен [DeadObjectException],
-         * если системный сервис AppSearch аварийно завершился во время привязки.
+         * **Строгое соблюдение API и SDK:**
+         * На AOSP LocalStorage.createSearchSessionAsync() бросает:
+         * - [IllegalStateException] если сервис AppSearch недоступен (GMS-free сборки)
+         * - [DeadObjectException] если системный сервис AppSearch аварийно завершился
+         * - [SecurityException] при отсутствии прав
          *
-         * ВАЖНО:
-         * 1. Строковая детекция (проверка e.message) исключена как хрупкая эвристика,
-         *    так как текст исключения не является частью контракта API и может отличаться
-         *    между прошивками (LineageOS и др.).
-         * 2. Если кастомная прошивка не соответствует документации Google (бросает иной тип
-         *    исключения при отсутствии сервиса) — это проблема кастомной прошивки.
+         * Эти три типа обрабатываются как NOT_SUPPORTED без эвристик.
+         *
+         * **Эвристика (последний рубеж):**
+         * Проверка `e.message?.contains("AppSearch")` применяется ТОЛЬКО для
+         * исключений, не попавших в три вышеуказанных типа. Это защитный
+         * механизм для кастомных прошивок, которые бросают иные типы исключений
+         * при недоступности AppSearch.
+         *
+         * **Отклонение кастомной прошивки:** Если кастомная прошивка бросает
+         * исключение, не содержащее "AppSearch" в сообщении и не являющееся
+         * одним из трёх стандартных типов — оно будет обработано как UNKNOWN.
+         * Это проблема кастомной прошивки, не соответствующей документации Google.
          *
          * @param e Исключение, возникшее при инициализации.
          */

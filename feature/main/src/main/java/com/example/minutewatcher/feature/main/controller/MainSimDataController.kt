@@ -138,18 +138,15 @@ class MainSimDataController
                     val identity = simIdentityRepository.getIdentity(slot)
                     simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
                     onRefresh()
-                } catch (e: IllegalStateException) {
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, "updateLimits", e)
+                } catch (e: SimNotFoundException) {
                     handleSimIdentityError(slot, "updateLimits", e)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: updateLimits failed for slot $slot", e)
                     _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                    // Строгое соблюдение API: на AOSP операции DataStore.edit и getIdentity()
-                    // не бросает исключений при корректном состоянии хранилища и наличии SIM.
-                    // Исключения возможны только при деградации DataStore на кастомных прошивках
-                    // или при физическом извлечении SIM между UI-действием и записью.
-                    // Стратегия: уведомляем пользователя об ошибке, чтобы он мог повторить операцию.
                 }
             }
         }
@@ -165,7 +162,9 @@ class MainSimDataController
                 try {
                     usageUseCase.resetCounters(slot)
                     onRefresh()
-                } catch (e: IllegalStateException) {
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, "resetUsage", e)
+                } catch (e: SimNotFoundException) {
                     handleSimIdentityError(slot, "resetUsage", e)
                 } catch (e: CancellationException) {
                     throw e
@@ -192,7 +191,9 @@ class MainSimDataController
                     val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
                     simLimitsRepository.setAutoReset(identity, currentDay, enabled)
                     onRefresh()
-                } catch (e: IllegalStateException) {
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, "toggleAutoReset", e)
+                } catch (e: SimNotFoundException) {
                     handleSimIdentityError(slot, "toggleAutoReset", e)
                 } catch (e: CancellationException) {
                     throw e
@@ -219,7 +220,9 @@ class MainSimDataController
                     val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
                     simLimitsRepository.setAutoReset(identity, day, enabled)
                     onRefresh()
-                } catch (e: IllegalStateException) {
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, "updateAutoResetDay", e)
+                } catch (e: SimNotFoundException) {
                     handleSimIdentityError(slot, "updateAutoResetDay", e)
                 } catch (e: CancellationException) {
                     throw e
@@ -242,7 +245,9 @@ class MainSimDataController
                 try {
                     usageUseCase.adjustMinutes(slot, remainingMinutes)
                     onRefresh()
-                } catch (e: IllegalStateException) {
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, "adjustRemainingMinutes", e)
+                } catch (e: SimNotFoundException) {
                     handleSimIdentityError(slot, "adjustRemainingMinutes", e)
                 } catch (e: CancellationException) {
                     throw e
@@ -265,7 +270,9 @@ class MainSimDataController
                 try {
                     usageUseCase.adjustTraffic(slot, remainingGb)
                     onRefresh()
-                } catch (e: IllegalStateException) {
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, "adjustRemainingTraffic", e)
+                } catch (e: SimNotFoundException) {
                     handleSimIdentityError(slot, "adjustRemainingTraffic", e)
                 } catch (e: CancellationException) {
                     throw e
@@ -325,9 +332,13 @@ class MainSimDataController
         /**
          * Обрабатывает ошибки резолва идентичности SIM.
          *
-         * Строгое соблюдение API: на AOSP getIdentity() не бросает исключений при
-         * корректном состоянии DataStore и наличии SIM. Если кастомная прошивка
-         * не обеспечивает своевременный ответ — это проблема кастомной прошивки.
+         * **Строгое соблюдение API:** На AOSP getIdentity() не бросает исключений
+         * при корректном состоянии DataStore и наличии SIM. SeedUnavailableException
+         * и SimNotFoundException возможны только при деградации хранилища
+         * или физическом извлечении SIM между UI-действием и записью.
+         *
+         * **Отклонение кастомной прошивки:** Если кастомная прошивка не обеспечивает
+         * своевременный ответ DataStore — это проблема кастомной прошивки.
          */
         private fun handleSimIdentityError(
             slot: Int,

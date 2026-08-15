@@ -130,6 +130,9 @@ class SimIdentityRepositoryImpl
                     callbackFlow {
                         var fetchJob: Job? = null
 
+                        // Запуск получения данных SIM.
+                        // Вызывается при регистрации listener и при изменении разрешения.
+                        // Повторные вызовы безопасны: предыдущий job отменяется перед запуском нового.
                         fun launchFetch() {
                             fetchJob?.cancel()
                             fetchJob =
@@ -185,18 +188,32 @@ class SimIdentityRepositoryImpl
                         fun updateListenerRegistration() {
                             val hasPermission = permissionManager.hasPhoneStatePermission()
                             if (hasPermission && !isListenerRegistered) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    subscriptionManager.addOnSubscriptionsChangedListener(
-                                        context.mainExecutor,
-                                        listener,
-                                    )
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    subscriptionManager.addOnSubscriptionsChangedListener(listener)
+                                try {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        subscriptionManager.addOnSubscriptionsChangedListener(
+                                            context.mainExecutor,
+                                            listener,
+                                        )
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        subscriptionManager.addOnSubscriptionsChangedListener(listener)
+                                    }
+                                    isListenerRegistered = true
+                                } catch (e: SecurityException) {
+                                    // Разрешение было отозвано между проверкой и регистрацией.
+                                    // **Контракт AOSP:** На AOSP SecurityException при регистрации
+                                    // listener невозможен при наличии READ_PHONE_STATE.
+                                    // **Отклонение кастомной прошивки:** Если прошивка бросает
+                                    // SecurityException при наличии разрешения — это проблема прошивки.
+                                    AppLogger.w("Failed to register SubscriptionsChangedListener", e)
+                                    isListenerRegistered = false
                                 }
-                                isListenerRegistered = true
                             } else if (!hasPermission && isListenerRegistered) {
-                                subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                                try {
+                                    subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                                } catch (e: Exception) {
+                                    AppLogger.w("Failed to unregister SubscriptionsChangedListener", e)
+                                }
                                 isListenerRegistered = false
                             }
                         }

@@ -53,13 +53,19 @@ class WidgetSettingsViewModel
 
         private fun loadSettings() {
             _loadError.value = false
-            loadJob?.cancel()
-            loadJob =
-                viewModelScope.launch {
+            val previousJob = loadJob
+            previousJob?.cancel()
+            loadJob = null // Сбрасываем ссылку до отмены для исключения повторного cancel
+            viewModelScope
+                .launch {
+                    // Дожидаемся завершения предыдущей загрузки для исключения гонки.
+                    // Если previousJob уже завершён, join() вернётся мгновенно.
+                    previousJob?.join()
+
                     try {
                         val loaded = loader.load()
                         // Защита от записи результата отменённого job.
-                        // Если job был отменён между loader.load() и этой строкой,
+                        // Если текущий job был отменён между loader.load() и этой строкой,
                         // ensureActive() бросит CancellationException.
                         ensureActive()
                         _settingsState.value = loaded
@@ -69,7 +75,7 @@ class WidgetSettingsViewModel
                         AppLogger.e("Failed to load widget settings", e)
                         _loadError.value = true
                     }
-                }
+                }.also { loadJob = it }
         }
 
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
@@ -122,7 +128,9 @@ class WidgetSettingsViewModel
                     AppLogger.w("saveAndNotify called before settings were loaded")
                     SaveResult.Failed
                 } else if (currentState.settingsLoadFailed) {
-                    AppLogger.w("saveAndNotify: skipping save because settings were not loaded successfully")
+                    AppLogger.w(
+                        "saveAndNotify: skipping save because settings were not loaded successfully",
+                    )
                     SaveResult.Failed
                 } else {
                     val validatedState = validateSettings(currentState)

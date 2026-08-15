@@ -87,7 +87,6 @@ class WidgetSettingsRepositoryTest {
                     backgroundColor = 0xFF00FF00.toInt(),
                     notifyLowMinutes = false,
                     notifyLowTraffic = true,
-                    callTrackingEnabled = false,
                     simStates =
                         mapOf(
                             0 to

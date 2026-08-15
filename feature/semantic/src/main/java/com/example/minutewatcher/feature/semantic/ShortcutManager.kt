@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,44 +52,48 @@ class ShortcutManager
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
 
-        /**
-         * Initializes the manager to observe snapshot changes and update dynamic shortcuts.
-         *
-         * Short-lived changes are debounced by 30 seconds to prevent excessive updates,
-         * while the first update and manual updates are processed immediately.
-         *
-         * @param snapshotFlow The flow of global snapshots to monitor.
-         */
         @OptIn(FlowPreview::class)
+        @Suppress("InstanceOfCheckForException")
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             lastSnapshotFlow = snapshotFlow
             job?.cancel()
-            job =
-                scope.launch {
-                    _status.value = TrackingStatus.Active
-                    snapshotFlow
-                        .debounce { snapshot ->
-                            if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
-                        }.collect { snapshot ->
-                            try {
-                                withContext(ioDispatcher) {
-                                    updateShortcuts(snapshot)
-                                }
-                                _status.value = TrackingStatus.Active
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to update dynamic shortcuts", e)
-                                val type =
-                                    if (e is UnsupportedOperationException || e.message?.contains("Shortcut") == true) {
-                                        TrackingStatus.ErrorType.NOT_SUPPORTED
-                                    } else {
-                                        TrackingStatus.ErrorType.UNKNOWN
+            scope.launch {
+                job?.join()
+                job =
+                    launch {
+                        _status.value = TrackingStatus.Active
+                        snapshotFlow
+                            .debounce { snapshot ->
+                                if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                            }.collect { snapshot ->
+                                try {
+                                    withContext(ioDispatcher) {
+                                        updateShortcuts(snapshot)
                                     }
-                                _status.value = TrackingStatus.Error(type, e.message)
+                                    _status.value = TrackingStatus.Active
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.e("Failed to update dynamic shortcuts", e)
+                                    // Эвристика определения NOT_SUPPORTED: проверяем тип исключения и сообщение.
+                                    // **Строгое соблюдение API:** На AOSP ShortcutManagerCompat бросает
+                                    // UnsupportedOperationException при отсутствии поддержки ярлыков.
+                                    // Проверка по сообщению "Shortcut" — последний рубеж для кастомных прошивок,
+                                    // которые бросают иные типы исключений. Если прошивка не соответствует
+                                    // документации Google — это проблема кастомной прошивки.
+                                    val type =
+                                        if (e is UnsupportedOperationException ||
+                                            e.message?.contains("Shortcut") == true
+                                        ) {
+                                            TrackingStatus.ErrorType.NOT_SUPPORTED
+                                        } else {
+                                            TrackingStatus.ErrorType.UNKNOWN
+                                        }
+                                    _status.value = TrackingStatus.Error(type, e.message)
+                                }
                             }
-                        }
-                }
+                    }
+            }
         }
 
         override suspend fun recover() {
@@ -102,6 +107,7 @@ class ShortcutManager
         /**
          * Updates shortcuts synchronously. Returns true if successful.
          */
+        @Suppress("InstanceOfCheckForException")
         suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean =
             try {
                 withContext(ioDispatcher) {
@@ -114,6 +120,12 @@ class ShortcutManager
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to update dynamic shortcuts", e)
+                // Эвристика определения NOT_SUPPORTED: проверяем тип исключения и сообщение.
+                // **Строгое соблюдение API:** На AOSP ShortcutManagerCompat бросает
+                // UnsupportedOperationException при отсутствии поддержки ярлыков.
+                // Проверка по сообщению "Shortcut" — последний рубеж для кастомных прошивок,
+                // которые бросают иные типы исключений. Если прошивка не соответствует
+                // документации Google — это проблема кастомной прошивки.
                 val type =
                     if (e is UnsupportedOperationException || e.message?.contains("Shortcut") == true) {
                         TrackingStatus.ErrorType.NOT_SUPPORTED
@@ -142,7 +154,7 @@ class ShortcutManager
             return shortcuts.take(MAX_DYNAMIC_SHORTCUTS)
         }
 
-        private fun createMinutesShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat? {
+        private fun createMinutesShortcut(sim: SimSnapshot): ShortcutInfoCompat? {
             val entity = sim.entities[PackageType.MINUTES]
             if (entity == null || entity.limit <= 0) return null
 
@@ -160,7 +172,7 @@ class ShortcutManager
                 .build()
         }
 
-        private fun createTrafficShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat? {
+        private fun createTrafficShortcut(sim: SimSnapshot): ShortcutInfoCompat? {
             val entity = sim.entities[PackageType.DATA]
             if (entity == null || entity.limit <= 0) return null
 

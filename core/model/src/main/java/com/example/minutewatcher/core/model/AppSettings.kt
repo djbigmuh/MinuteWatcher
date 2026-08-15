@@ -17,4 +17,5 @@ data class AppSettings(
     val benchmarkSimCount: Int = 0,
     val widgetLimitExceeded: Boolean = false,
     val inaccurateCallAttributionsCount: Int = 0,
+    val callTrackingEnabled: Boolean = true,
 )

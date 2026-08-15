@@ -310,6 +310,20 @@ class TrafficTracker
          * clearing entries during transient timeout states.
          */
         private fun cleanupStaleRetryEntries(activeIdentities: Set<String>) {
+            // Очистка записей baselineNeedsRetry для неактивных SIM.
+            //
+            // **Контракт AOSP:** На AOSP SIM не может быть удалена и возвращена
+            // между двумя последовательными вызовами updateTrafficUsage без
+            // промежуточного callback от SubscriptionManager.
+            //
+            // **Отклонение кастомной прошивки:** Если прошивка не доставляет
+            // callback при возврате SIM — это проблема кастомной прошивки.
+            // Запись в baselineNeedsRetry будет очищена при следующем успешном
+            // обновлении, когда SIM снова появится в активном наборе.
+            //
+            // **Стратегия:** Записи удаляются ТОЛЬКО для identity, отсутствующих
+            // в текущем активном наборе. Записи для активных SIM сохраняются,
+            // чтобы не сбрасывать счётчик повторов при временных сбоях статистики.
             baselineNeedsRetry.entries.removeIf { entry -> entry.key !in activeIdentities }
         }
 

@@ -168,15 +168,14 @@ class WidgetUiMapperTest {
             )
         val settings =
             WidgetSettingsState(
-                1,
-                0,
-                50,
-                2,
-                Color.BLACK,
-                true,
-                true,
-                true,
-                mapOf(0 to SimSettingsState(true, true, true, true, false, false, false)),
+                layoutMode = 1,
+                simArrangement = 0,
+                transparency = 50,
+                fontSize = 2,
+                backgroundColor = Color.BLACK,
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                simStates = mapOf(0 to SimSettingsState(true, true, true, true, false, false, false)),
             )
 
         val uiState =

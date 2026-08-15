@@ -110,6 +110,7 @@ class AppSettingsRepositoryImpl
             prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
             prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
             prefs[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
+            prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
         private fun Preferences.toAppSettings(): AppSettings =
@@ -138,6 +139,7 @@ class AppSettingsRepositoryImpl
                 inaccurateCallAttributionsCount =
                     this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
                         ?: DEFAULT_SETTINGS.inaccurateCallAttributionsCount,
+                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: DEFAULT_SETTINGS.callTrackingEnabled,
             )
 
         companion object {

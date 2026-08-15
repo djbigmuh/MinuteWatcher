@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
 import androidx.appsearch.app.AppSearchResult
-import androidx.appsearch.app.AppSearchSchema
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
@@ -27,6 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -460,12 +460,11 @@ class SemanticSearchManagerTest {
             return session
         }
 
-        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest =
-            SetSchemaRequest
-                .Builder()
-                .setForceOverride(forceOverride)
-                .addDocumentClasses(UsageDocument::class.java)
-                .build()
+        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest {
+            val mockRequest: SetSchemaRequest = mock()
+            whenever(mockRequest.isForceOverride).thenReturn(forceOverride)
+            return mockRequest
+        }
 
         override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest {
             val builder = PutDocumentsRequest.Builder()

@@ -13,7 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -57,19 +57,25 @@ class WidgetUpdaterImpl
         }
 
         /**
-         * Обновляет все экземпляры виджета с ограниченной экспоненциальной
-         * стратегией повторных попыток.
+         * Обновляет все экземпляры виджета с ограниченной экспоненциальной стратегией повторных попыток.
          *
-         * **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() не бросает исключений при корректном lifecycle.
-         * TransactionTooLargeException возможен только при превышении лимита Binder (~1 МБ).
+         * **Стратегия повторных попыток:**
+         * 1. Транзиентные ошибки (Binder congestion, IllegalStateException): повтор до
+         *    [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой.
+         *    Старт: [Constants.Widget.RETRY_BACKOFF_MS], удвоение на каждой попытке,
+         *    потолок: [Constants.Widget.MAX_RETRY_DELAY_MS].
+         * 2. Перманентные ошибки (destroyed context, не-RemoteViews IllegalArgumentException):
+         *    повтор НЕ выполняется.
+         * 3. Превышение лимита RemoteViews (TransactionTooLargeException в cause-цепочке):
+         *    немедленный рендер с упрощённым layout, НЕ считается попыткой повтора.
          *
-         * **Отклонение кастомной прошивки:** Если кастомная прошивка не соответствует документации Google —
-         * это проблема кастомной прошивки.
+         * **Контракт AOSP:** На AOSP GlanceAppWidget.updateAll() не бросает исключений
+         * при корректном lifecycle. TransactionTooLargeException возможен только при
+         * превышении лимита Binder (~1 МБ).
          *
-         * **Стратегия приложения:**
-         * 1. Транзиентные ошибки: повтор до [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой.
-         * 2. Перманентные ошибки: повтор пропускается.
-         * 3. Превышение лимита RemoteViews: немедленный рендер с упрощённым layout.
+         * **Отклонение кастомной прошивки:** Если кастомная прошивка бросает исключения
+         * при корректном lifecycle виджета — это проблема кастомной прошивки.
+         * Стратегия retry является защитным механизмом.
          *
          * @return true если обновление завершилось успешно, false в противном случае.
          */
@@ -92,14 +98,28 @@ class WidgetUpdaterImpl
                             try {
                                 val settings = appSettingsRepository.observeAppSettings().value
                                 if (settings.widgetLimitExceeded &&
-                                    (updateCounter.incrementAndGet() % PROBE_INTERVAL_UPDATES == 0)
+                                    (updateCounter.incrementAndGet() % PROBE_INTERVAL_UPDATES == 0L)
                                 ) {
-                                    // Пробуем полный рендер. Если он удастся, handleUpdateResult сбросит флаг.
+                                    // Стратегия восстановления после превышения лимита RemoteViews:
+                                    //
+                                    // При установленном widgetLimitExceeded рендер выполняется в упрощённом режиме.
+                                    // Каждое PROBE_INTERVAL_UPDATES-е обновление пытается выполнить ПОЛНЫЙ рендер
+                                    // (forceFull = true) для проверки, не устранена ли причина превышения
+                                    // (например, пользователь удалил SIM-карты и объём данных уменьшился).
+                                    //
+                                    // Если проба успешна — handleUpdateResult сбросит widgetLimitExceeded.
+                                    // Если проба неудачна — выполняется штатный упрощённый рендер.
+                                    //
+                                    // **Контракт AOSP:** На AOSP RemoteViews лимит ~1 МБ на Binder-транзакцию.
+                                    // Упрощённый layout всегда укладывается в этот лимит.
+                                    //
+                                    // **Отклонение кастомной прошивки:** Если кастомная прошивка имеет
+                                    // уменьшенный лимит Binder — это проблема кастомной прошивки.
+                                    // Упрощённый layout является защитным механизмом.
                                     val probeResult = safeUpdateAll(context, forceFull = true)
                                     if (probeResult is UpdateResult.Success) {
                                         probeResult
                                     } else {
-                                        // Проба не удалась — выполняем штатный упрощённый рендер.
                                         safeUpdateAll(context, forceFull = false)
                                     }
                                 } else {
@@ -343,11 +363,12 @@ class WidgetUpdaterImpl
             private const val PROBE_INTERVAL_UPDATES = 10
 
             /**
-             * Счетчик обновлений для периодической проверки ("пробы") полного рендера.
-             * Используется AtomicInteger, так как updateAll() может вызываться конкурентно
-             * из разных корутин (например, UpdateCoordinator и WidgetSettingsSaver).
+             * Счётчик обновлений для периодической проверки ("пробы") полного рендера.
+             * Используется AtomicLong для исключения переполнения при длительной работе.
+             * Каждое PROBE_INTERVAL_UPDATES-е обновление при установленном widgetLimitExceeded
+             * пытается выполнить полный рендер для проверки, не устранена ли причина превышения.
              */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal val updateCounter = AtomicInteger(0)
+            internal val updateCounter = AtomicLong(0)
         }
     }

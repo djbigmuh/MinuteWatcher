@@ -38,6 +38,11 @@ MAKE_AUDIT_DUMP.bat
 make_audit_dump.ps1
 audit_dump/
 
+# Debug/diagnostic artifacts (local only)
+build_log.txt
+deps_ksp.txt
+ksp_log.txt
+
 # Generated benchmark config
 app/benchmark-config.txt
 

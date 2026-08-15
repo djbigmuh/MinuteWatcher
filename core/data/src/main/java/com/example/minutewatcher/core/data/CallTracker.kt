@@ -7,7 +7,6 @@ import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -112,6 +111,28 @@ class CallTracker
                 setError = { _status.value = it },
             )
 
+        private suspend fun isCallTrackingEnabled(): Boolean {
+            val settings =
+                readWithRetry(
+                    label = "settings for call tracking check",
+                    attempts = READ_RETRY_ATTEMPTS,
+                    timeoutMs = Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS,
+                ) {
+                    appSettingsRepository.getAppSettings()
+                }.getOrNull()
+
+            if (settings == null) {
+                AppLogger.e("Failed to read settings for call tracking check, assuming disabled for safety")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Settings DataStore read timeout",
+                    )
+                return false
+            }
+            return settings.callTrackingEnabled
+        }
+
         override suspend fun recover() {
             callMutex.withLock {
                 _status.value = TrackingStatus.Idle
@@ -145,6 +166,10 @@ class CallTracker
             callMutex.withLock {
                 var justStarted = false
                 try {
+                    if (!isCallTrackingEnabled()) {
+                        AppLogger.d("Call tracking is disabled in settings, ignoring onCallStarted")
+                        return@withLock
+                    }
                     if (!checkPermissions()) return@withLock
 
                     val effectiveSubId = resolveEffectiveSubId(subId)
