@@ -52,12 +52,26 @@ class ShortcutManager
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
 
+        /**
+         * Инициализирует наблюдение за snapshot-потоком.
+         * Идемпотентен: повторный вызов отменяет предыдущее наблюдение
+         * и запускает новое. `job?.join()` гарантирует, что старая корутина
+         * полностью завершилась до запуска новой.
+         *
+         * **Строгое соблюдение API:** на AOSP StateFlow эмитит значения
+         * последовательно. Debounce гарантирует отсутствие дублирующих индексаций.
+         * Если кастомная прошивка эмитит значения вне порядка — это проблема
+         * кастомной прошивки.
+         */
         @OptIn(FlowPreview::class)
         @Suppress("InstanceOfCheckForException")
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             lastSnapshotFlow = snapshotFlow
-            job?.cancel()
             scope.launch {
+                // Отменяем предыдущее наблюдение и дожидаемся его завершения.
+                // join() гарантирует, что старая корутина полностью остановилась
+                // до запуска новой, исключая перекрытие потоков наблюдения.
+                job?.cancel()
                 job?.join()
                 job =
                     launch {

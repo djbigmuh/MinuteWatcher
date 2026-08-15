@@ -107,19 +107,14 @@ class SimIdentityRepositoryImpl
         /**
          * Поток seed-значения для генерации identity.
          *
-         * **Контракт AOSP:** на AOSP DataStore.data эмитит значение
-         * в пределах SHORT_TIMEOUT_MS. Генерация seed через getOrCreateSeed()
-         * завершается в пределах SEED_GENERATION_TIMEOUT_MS.
+         * **SharingStarted.Eagerly:** сборка начинается немедленно при создании
+         * репозитория, чтобы seed был доступен к моменту первого вызова getSimIdentity().
+         * Это намеренное поведение: задержка сбора seed привела бы к SeedUnavailableException
+         * при первом обращении.
          *
-         * **Отклонение кастомной прошивки:** таймаут срабатывает только
-         * при деградации хранилища на кастомных прошивках. Это проблема
-         * кастомной прошивки.
-         *
-         * **Стратегия приложения:** при таймауте эмитится SeedResult.Fallback.
-         * Вызывающий код (getSimIdentity) бросает SeedUnavailableException,
-         * чтобы UI мог показать ошибку. Fallback на slot-based identity
-         * намеренно ИСКЛЮЧЁН: он приведёт к потере привязки данных к SIM
-         * при восстановлении хранилища.
+         * **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс.
+         * Таймаут SEED_TOTAL_TIMEOUT_MS — защитный запас для кастомных прошивок.
+         * Если seed не доступен за это время — это проблема кастомной прошивки.
          */
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -375,7 +370,7 @@ class SimIdentityRepositoryImpl
 
                 // If not found in cache, try direct resolution
                 val resolved =
-                    findActiveIdentityInternal(slot, seed)
+                    findActiveIdentityInternal(slot, seed as SeedResult.Real)
                         ?: throw SimNotFoundException(slot)
 
                 manualResolutionCache[slot] = resolved
@@ -399,21 +394,20 @@ class SimIdentityRepositoryImpl
             }
         }
 
+        /**
+         * Разрешает identity для слота по подписке.
+         *
+         * @param seed Только [SeedResult.Real]. Вызывающий код обязан проверить
+         *   отсутствие [SeedResult.Fallback] до вызова этого метода.
+         */
         private fun findActiveIdentityInternal(
             slot: Int,
-            seed: SeedResult,
-        ): SimIdentity? =
-            try {
+            seed: SeedResult.Real,
+        ): SimIdentity? {
+            val seedValue = seed.value
+            return try {
                 permissionManager.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                    when (seed) {
-                        is SeedResult.Fallback -> {
-                            AppLogger.w("getSimIdentity: seed unavailable for slot $slot, using fallback identity")
-                            createFallbackIdentity(slot, "sim_$slot")
-                        }
-                        is SeedResult.Real -> {
-                            SimIdentityUtils.createIdentityFromInfo(it, seed.value)
-                        }
-                    }
+                    SimIdentityUtils.createIdentityFromInfo(it, seedValue)
                 } ?: run {
                     AppLogger.d("getSimIdentity: no active subscription found for slot $slot, using fallback identity")
                     // **Контракт AOSP:** на AOSP getActiveSubscriptions() возвращает актуальный
@@ -430,16 +424,9 @@ class SimIdentityRepositoryImpl
                 AppLogger.e("findActiveIdentityInternal failed for slot $slot", e)
                 null
             }
+        }
 
-        private fun createFallbackIdentity(
-            slot: Int,
-            stableId: String,
-        ) = SimIdentity(
-            stableId = stableId,
-            subscriptionId = null,
-            slotIndex = slot,
-            source = IdentitySource.SLOT_FALLBACK,
-        )
+
 
         /**
          * Saves SIM identities to DataStore and performs migrations if needed.

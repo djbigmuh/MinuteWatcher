@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,9 +59,19 @@ class WidgetSettingsViewModel
             loadJob = null // Сбрасываем ссылку до отмены для исключения повторного cancel
             viewModelScope
                 .launch {
-                    // Дожидаемся завершения предыдущей загрузки для исключения гонки.
-                    // Если previousJob уже завершён, join() вернётся мгновенно.
-                    previousJob?.join()
+                    // Ожидаем завершения предыдущей загрузки с таймаутом.
+                    // **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс.
+                    // Таймаут 5 с — защитный запас. Если загрузка не завершилась за 5 с —
+                    // это проблема кастомной прошивки. Не блокируем новую загрузку.
+                    // Таймаут join() предотвращает блокировку новой загрузки, если предыдущая
+                    // корутина зависла. На AOSP loader.load() завершается за миллисекунды.
+                    // Если кастомная прошивка не обеспечивает своевременный ответ DataStore —
+                    // это проблема кастомной прошивки.
+                    try {
+                        withTimeoutOrNull(5_000L) { previousJob?.join() }
+                    } catch (e: CancellationException) {
+                        throw e
+                    }
 
                     try {
                         val loaded = loader.load()

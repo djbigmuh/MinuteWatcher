@@ -372,6 +372,16 @@ internal class AutoResetScheduler(
     private val autoResetUseCase: AutoResetUseCase,
     private val timeProvider: TimeProvider,
 ) {
+    /**
+     * Флаг однократного запуска проверки авто-сброса.
+     *
+     * **Намеренно не сбрасывается при успехе:** проверка авто-сброса должна
+     * выполняться ровно один раз за время жизни ViewModel. Повторный вызов
+     * `checkOnStart()` после успешного завершения немедленно возвращает управление.
+     *
+     * Сбрасывается только при ошибке (включая CancellationException),
+     * чтобы позволить повторную попытку при следующем вызове.
+     */
     private val isCheckStarted = AtomicBoolean(false)
 
     fun setup() {
@@ -412,6 +422,8 @@ internal class AutoResetScheduler(
             if (isInitialOrReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
                 if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                     autoResetUseCase.performAutoReset(shouldNotify = false)
+                    // isCheckStarted НЕ сбрасывается: проверка выполнена успешно,
+                    // повторный вызов checkOnStart() не требуется.
                     savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
                     savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
                 } else {

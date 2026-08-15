@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -26,6 +25,15 @@ class WidgetUpdaterImpl
         private val renderer: WidgetRenderer,
     ) : WidgetUpdater {
         private val updateMutex = Mutex()
+
+        /**
+         * Счётчик обновлений, выполненных в режиме widgetLimitExceeded.
+         * Каждое PROBE_INTERVAL_UPDATES-е обновление в этом режиме выполняет
+         * пробный полный рендер для проверки, не устранена ли причина превышения.
+         *
+         * Доступ только внутри updateMutex.withLock — атомарность не требуется.
+         */
+        private var exceededUpdateCounter = 0L
 
         private sealed class UpdateResult {
             data class Success(
@@ -81,7 +89,7 @@ class WidgetUpdaterImpl
                             try {
                                 val settings = appSettingsRepository.observeAppSettings().value
                                 if (settings.widgetLimitExceeded) {
-                                    val count = exceededUpdateCounter.incrementAndGet()
+                                    val count = ++exceededUpdateCounter
                                     if (count % PROBE_INTERVAL_UPDATES == 0L) {
                                         // Стратегия восстановления после превышения лимита RemoteViews:
                                         //
@@ -110,7 +118,7 @@ class WidgetUpdaterImpl
                                         safeUpdateAll(context, isProbe = false)
                                     }
                                 } else {
-                                    exceededUpdateCounter.set(0) // сброс при выходе из режима
+                                    exceededUpdateCounter = 0L // сброс при выходе из режима
                                     safeUpdateAll(context, isProbe = false)
                                 }
                             } catch (e: CancellationException) {
@@ -170,6 +178,18 @@ class WidgetUpdaterImpl
                 }
             }
 
+        /**
+         * Обработка превышения лимита RemoteViews (TransactionTooLargeException).
+         *
+         * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll() бросает
+         * TransactionTooLargeException только при превышении лимита Binder (~1 МБ).
+         * Упрощённый layout (widgetLimitExceeded = true) всегда укладывается в этот лимит.
+         * Если упрощённый рендер тоже падает — это проблема кастомной прошивки
+         * или destroyed context, а не превышение лимита.
+         *
+         * Стратегия: при падении упрощённого рендера флаг НЕ сбрасывается,
+         * повтор не выполняется. Это предотвращает осцилляцию флага.
+         */
         private suspend fun handleLimitExceeded(): Pair<Boolean, Boolean> {
             val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
             if (current) {
@@ -195,15 +215,24 @@ class WidgetUpdaterImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("Re-render after limit exceeded failed, resetting flag", e)
-                // **Контракт AOSP:** на AOSP упрощённый layout всегда умещается в лимит Binder (~1 МБ).
-                //
-                // **Отклонение кастомной прошивки:** Сбой упрощённого рендера возможен только при
-                // деградации системы на кастомных прошивках. Это проблема кастомной прошивки.
-                //
-                // **Стратегия приложения:** сбрасываем флаг и позволяем следующей попытке начать заново.
-                setWidgetLimitExceeded(value = false)
-                Pair(false, true) // isRetryable = true
+                // Дифференцируем тип ошибки для диагностики:
+                // - TransactionTooLargeException в cause-цепочке: даже упрощённый layout
+                //   не укладывается в лимит Binder. На AOSP это невозможно для упрощённого
+                //   layout (~100 байт). Если происходит — проблема кастомной прошивки.
+                // - Иные исключения: destroyed context, SecurityException и т.п.
+                //   Повтор бессмысленен до устранения причины.
+                val isStillSizeLimit = isRemoteViewsLimitException(e)
+                if (isStillSizeLimit) {
+                    AppLogger.e(
+                        "CRITICAL: Simplified layout also exceeds Binder limit. " +
+                            "This should not happen on AOSP. Possible custom firmware issue.",
+                        e,
+                    )
+                } else {
+                    AppLogger.e("Re-render after limit exceeded failed (non-size error)", e)
+                }
+                setWidgetLimitExceeded(value = true)
+                Pair(false, false) // isRetryable = false — осцилляция бессмысленна
             }
         }
 
@@ -258,17 +287,19 @@ class WidgetUpdaterImpl
         }
 
         /**
-         * Классифицирует ошибку обновления виджетов.
+         * Классифицирует ошибку обновления виджета.
          *
          * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll()
-         * не бросает исключений при корректном lifecycle. Единственный
-         * критерий переполнения RemoteViews — TransactionTooLargeException
-         * в cause-цепочке. Классификация по тексту сообщения ИСКЛЮЧЕНА:
-         * текст может меняться между версиями Android и OEM-сборками.
+         * не бросает исключений при корректном lifecycle. Все исключения здесь —
+         * либо превышение лимита Binder (TransactionTooLargeException),
+         * либо проблема кастомной прошивки / destroyed context.
          *
-         * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
-         * исключения при корректном lifecycle виджета — это проблема
-         * кастомной прошивки. Все такие ошибки retryable.
+         * Классификация:
+         * - TransactionTooLargeException в cause → LimitExceeded (переход на упрощённый layout)
+         * - IllegalArgumentException без TransactionTooLargeException → GenericFailure
+         * - IllegalStateException → GenericFailure (destroyed context)
+         * - RuntimeException с TransactionTooLargeException → LimitExceeded
+         * - Иные → GenericFailure
          */
         private fun classifyUpdateError(
             e: Exception,
@@ -327,15 +358,19 @@ class WidgetUpdaterImpl
         }
 
         /**
-         * Детектирует, вызван ли сбой обновления виджета превышением лимита RemoteViews.
+         * Определяет, вызван ли сбой обновления виджета превышением лимита RemoteViews.
          *
-         * **Контракт AOSP:** Единственный надёжный критерий переполнения Binder-транзакции — наличие
-         * [android.os.TransactionTooLargeException] в cause-цепочке.
+         * **Строгое соблюдение API:** единственный надёжный критерий превышения
+         * лимита Binder-транзакции — наличие [android.os.TransactionTooLargeException]
+         * в cause-цепочке. На AOSP GlanceAppWidget.updateAll() бросает это исключение
+         * только при превышении лимита ~1 МБ на транзакцию.
          *
-         * **Отклонение кастомной прошивки:** Попытки определить переполнение по тексту ошибки исключены.
-         * Если прошивка бросает TransactionTooLargeException — это проблема кастомной прошивки.
+         * **Классификация по тексту сообщения ИСКЛЮЧЕНА:** текст может меняться
+         * между версиями Android и OEM-сборками. Если кастомная прошивка бросает
+         * TransactionTooLargeException при корректном lifecycle виджета —
+         * это проблема кастомной прошивки.
          *
-         * **Стратегия приложения:** Переход на упрощённый layout при детекции.
+         * @return true, если в cause-цепочке есть TransactionTooLargeException.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean =
@@ -384,18 +419,5 @@ class WidgetUpdaterImpl
              * при ~1 обновлении в час проба происходит раз в ~10 часов.
              */
             private const val PROBE_INTERVAL_UPDATES = 10
-
-            /**
-             * Счётчик обновлений, выполненных в режиме widgetLimitExceeded.
-             * Каждое PROBE_INTERVAL_UPDATES-е обновление в этом режиме
-             * выполняет пробный полный рендер для проверки,
-             * не устранена ли причина превышения.
-             *
-             * Строгое соблюдение API: на AOSP RemoteViews-лимит ~1 МБ на
-             * Binder-транзакцию. Упрощённый layout всегда укладывается в лимит.
-             * Если кастомная прошивка имеет уменьшенный лимит Binder —
-             * это проблема кастомной прошивки.
-             */
-            private val exceededUpdateCounter = AtomicLong(0)
         }
     }

@@ -53,7 +53,14 @@ class MainBannerController
         private var observationRetryCount = 0L
 
         /**
-         * Время последнего успешного обновления или сброса счетчика попыток.
+         * Время последнего успешного обновления или сброса счётчика повторных попыток.
+         *
+         * **Строгое соблюдение API:** используется `timeProvider.elapsedRealtime()`
+         * (монотонное время), а не `timeProvider.now()` (wall-clock).
+         * Монотонное время не зависит от изменений системных часов (NTP, ручная смена),
+         * что гарантирует корректность интервала сброса счётчика.
+         * На AOSP `SystemClock.elapsedRealtime()` монотонно по контракту.
+         * Если кастомная прошивка не обеспечивает монотонность — это проблема кастомной прошивки.
          */
         private var lastResetTime = 0L
 
@@ -84,7 +91,7 @@ class MainBannerController
         }
 
         init {
-            lastResetTime = timeProvider.now()
+            lastResetTime = timeProvider.elapsedRealtime()
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -134,8 +141,8 @@ class MainBannerController
                     settings = extra.third,
                 )
             }.onEach {
-                resetRetryCounterIfNeeded(timeProvider.now(), force = true)
-            }.retryWhen { cause, _ ->
+                resetRetryCounterIfNeeded(timeProvider.elapsedRealtime(), force = true)
+            }.retryWhen { cause, attempt ->
                 // Стратегия повторных попыток:
                 // 1. CancellationException пробрасывается для корректной кооперативной отмены.
                 // 2. Задержка: экспоненциальная, 2^(attempt-1) секунд, потолок MAX_RETRY_DELAY_MS.
@@ -150,7 +157,7 @@ class MainBannerController
                 // Бесконечный retry с потолком задержки — защитный механизм.
                 if (cause is CancellationException) throw cause
 
-                val now = timeProvider.now()
+                val now = timeProvider.elapsedRealtime()
                 resetRetryCounterIfNeeded(now)
 
                 val currentRetry =
@@ -158,7 +165,17 @@ class MainBannerController
                         observationRetryCount++
                         observationRetryCount
                     }
-                AppLogger.e("Failed to compute banner state (attempt $currentRetry)", cause)
+
+                // `attempt` — номер попытки, предоставляемый оператором retryWhen.
+                // `currentRetry` — внутренний счётчик с экспоненциальной задержкой.
+                // Оба значения логируются для диагностики: `attempt` показывает
+                // сколько раз retryWhen перезапустил поток, `currentRetry` —
+                // сколько раз сработала внутренняя логика задержки.
+                AppLogger.e(
+                    "Failed to compute banner state (internal attempt $currentRetry, " +
+                        "operator retry #$attempt)",
+                    cause,
+                )
 
                 val delayMillis =
                     (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
