@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
@@ -51,15 +50,21 @@ class MainBannerController
             isNotificationPermissionPermanentlyDenied.value = denied
         }
 
-        private val observationRetryCount = AtomicLong(0L)
+        private var observationRetryCount = 0L
 
         /**
          * Время последнего успешного обновления или сброса счетчика попыток.
-         * Используется AtomicLong, потому что onEach и retryWhen могут выполняться
-         * на разных потоках в рамках ApplicationScope.
          */
-        private val lastResetTime = AtomicLong(0L)
+        private var lastResetTime = 0L
 
+        /**
+         * Мьютекс сериализует обновление пары (retryCount, lastResetTime).
+         *
+         * **Строгое соблюдение API:** на AOSP StateFlow эмитит значения
+         * последовательно. Мьютекс защищает только инфраструктуру подписки,
+         * не данные. Если кастомная прошивка эмитит значения вне порядка —
+         * это проблема кастомной прошивки.
+         */
         private val resetMutex = Mutex()
 
         // Мьютекс защищает check-then-act над парой (observationRetryCount, lastResetTime).
@@ -71,15 +76,15 @@ class MainBannerController
             force: Boolean = false,
         ) {
             resetMutex.withLock {
-                if (force || (now - lastResetTime.get()) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                    observationRetryCount.set(0)
-                    lastResetTime.set(now)
+                if (force || (now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+                    observationRetryCount = 0L
+                    lastResetTime = now
                 }
             }
         }
 
         init {
-            lastResetTime.set(timeProvider.now())
+            lastResetTime = timeProvider.now()
         }
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
@@ -148,7 +153,11 @@ class MainBannerController
                 val now = timeProvider.now()
                 resetRetryCounterIfNeeded(now)
 
-                val currentRetry = observationRetryCount.incrementAndGet()
+                val currentRetry =
+                    resetMutex.withLock {
+                        observationRetryCount++
+                        observationRetryCount
+                    }
                 AppLogger.e("Failed to compute banner state (attempt $currentRetry)", cause)
 
                 val delayMillis =

@@ -127,6 +127,37 @@ class MainSimDataController
         }
 
         /**
+         * Выполняет операцию над SIM-картой с единой обработкой ошибок.
+         *
+         * **Строгое соблюдение API:** на AOSP getIdentity() не бросает
+         * исключений при корректном состоянии DataStore. SeedUnavailableException
+         * и SimNotFoundException возможны только при деградации хранилища
+         * на кастомных прошивках. Это проблема кастомной прошивки.
+         */
+        private fun executeSimOperation(
+            slot: Int,
+            operationName: String,
+            onRefresh: suspend () -> Unit,
+            block: suspend () -> Unit,
+        ) {
+            scope.launch(ioDispatcher) {
+                try {
+                    block()
+                    onRefresh()
+                } catch (e: SeedUnavailableException) {
+                    handleSimIdentityError(slot, operationName, e)
+                } catch (e: SimNotFoundException) {
+                    handleSimIdentityError(slot, operationName, e)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
+                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
+                }
+            }
+        }
+
+        /**
          * Обновляет лимиты для SIM в указанном слоте.
          * Если SIM была удалена между отображением UI и вызовом метода,
          * операция пропускается с логированием. Это штатная ситуация:
@@ -139,21 +170,9 @@ class MainSimDataController
             rolloverEnabled: Boolean = false,
             onRefresh: suspend () -> Unit,
         ) {
-            scope.launch(ioDispatcher) {
-                try {
-                    val identity = simIdentityRepository.getIdentity(slot)
-                    simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
-                    onRefresh()
-                } catch (e: SeedUnavailableException) {
-                    handleSimIdentityError(slot, "updateLimits", e)
-                } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, "updateLimits", e)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: updateLimits failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                }
+            executeSimOperation(slot, "updateLimits", onRefresh) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
             }
         }
 
@@ -164,20 +183,8 @@ class MainSimDataController
             slot: Int,
             onRefresh: suspend () -> Unit,
         ) {
-            scope.launch(ioDispatcher) {
-                try {
-                    usageUseCase.resetCounters(slot)
-                    onRefresh()
-                } catch (e: SeedUnavailableException) {
-                    handleSimIdentityError(slot, "resetUsage", e)
-                } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, "resetUsage", e)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: resetUsage failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                }
+            executeSimOperation(slot, "resetUsage", onRefresh) {
+                usageUseCase.resetCounters(slot)
             }
         }
 
@@ -191,22 +198,10 @@ class MainSimDataController
             enabled: Boolean,
             onRefresh: suspend () -> Unit,
         ) {
-            scope.launch(ioDispatcher) {
-                try {
-                    val identity = simIdentityRepository.getIdentity(slot)
-                    val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
-                    simLimitsRepository.setAutoReset(identity, currentDay, enabled)
-                    onRefresh()
-                } catch (e: SeedUnavailableException) {
-                    handleSimIdentityError(slot, "toggleAutoReset", e)
-                } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, "toggleAutoReset", e)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: toggleAutoReset failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                }
+            executeSimOperation(slot, "toggleAutoReset", onRefresh) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
+                simLimitsRepository.setAutoReset(identity, currentDay, enabled)
             }
         }
 
@@ -220,22 +215,10 @@ class MainSimDataController
             day: Int,
             onRefresh: suspend () -> Unit,
         ) {
-            scope.launch(ioDispatcher) {
-                try {
-                    val identity = simIdentityRepository.getIdentity(slot)
-                    val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
-                    simLimitsRepository.setAutoReset(identity, day, enabled)
-                    onRefresh()
-                } catch (e: SeedUnavailableException) {
-                    handleSimIdentityError(slot, "updateAutoResetDay", e)
-                } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, "updateAutoResetDay", e)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: updateAutoResetDay failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                }
+            executeSimOperation(slot, "updateAutoResetDay", onRefresh) {
+                val identity = simIdentityRepository.getIdentity(slot)
+                val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
+                simLimitsRepository.setAutoReset(identity, day, enabled)
             }
         }
 
@@ -247,20 +230,8 @@ class MainSimDataController
             remainingMinutes: Int,
             onRefresh: suspend () -> Unit,
         ) {
-            scope.launch(ioDispatcher) {
-                try {
-                    usageUseCase.adjustMinutes(slot, remainingMinutes)
-                    onRefresh()
-                } catch (e: SeedUnavailableException) {
-                    handleSimIdentityError(slot, "adjustRemainingMinutes", e)
-                } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, "adjustRemainingMinutes", e)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: adjustRemainingMinutes failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                }
+            executeSimOperation(slot, "adjustRemainingMinutes", onRefresh) {
+                usageUseCase.adjustMinutes(slot, remainingMinutes)
             }
         }
 
@@ -272,20 +243,8 @@ class MainSimDataController
             remainingGb: Float,
             onRefresh: suspend () -> Unit,
         ) {
-            scope.launch(ioDispatcher) {
-                try {
-                    usageUseCase.adjustTraffic(slot, remainingGb)
-                    onRefresh()
-                } catch (e: SeedUnavailableException) {
-                    handleSimIdentityError(slot, "adjustRemainingTraffic", e)
-                } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, "adjustRemainingTraffic", e)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: adjustRemainingTraffic failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                }
+            executeSimOperation(slot, "adjustRemainingTraffic", onRefresh) {
+                usageUseCase.adjustTraffic(slot, remainingGb)
             }
         }
 

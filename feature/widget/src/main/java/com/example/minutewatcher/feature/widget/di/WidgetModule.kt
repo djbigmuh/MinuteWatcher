@@ -28,28 +28,16 @@ interface WidgetModule {
          * Default-параметр в constructor WidgetUpdaterImpl удалён,
          * чтобы исключить дублирование и риск расхождения реализаций.
          *
-         * Строгое соблюдение API: сигнатура renderAll(context, forceSimplified, forceFull)
-         * является контрактом интерфейса WidgetRenderer. Любое изменение сигнатуры
-         * требует одновременного обновления всех реализаций и точек вызова
-         * во избежание AbstractMethodError (бинарная несовместимость).
+         * Строгое соблюдение API: режим рендера (упрощённый / полный)
+         * определяется внутри MinutesGlanceWidget.provideGlance.
+         * Внешние флаги не передаются, что исключает race condition.
          */
         @Provides
         @Singleton
         fun provideWidgetRenderer(): WidgetRenderer =
             object : WidgetRenderer {
-                override suspend fun renderAll(
-                    context: Context,
-                    forceSimplified: Boolean,
-                    forceFull: Boolean,
-                ) {
-                    MinutesGlanceWidget.setForceSimplified(context, forceSimplified)
-                    MinutesGlanceWidget.setForceFull(context, forceFull)
-                    try {
-                        MinutesGlanceWidget().updateAll(context)
-                    } finally {
-                        MinutesGlanceWidget.setForceSimplified(context, false)
-                        MinutesGlanceWidget.setForceFull(context, false)
-                    }
+                override suspend fun renderAll(context: Context) {
+                    MinutesGlanceWidget().updateAll(context)
                 }
             }
     }

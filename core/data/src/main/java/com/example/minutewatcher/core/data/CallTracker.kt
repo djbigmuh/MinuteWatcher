@@ -165,12 +165,16 @@ class CallTracker
         suspend fun onCallStarted(subId: Int) {
             callMutex.withLock {
                 var justStarted = false
+                var errorSetInThisCall = false
                 try {
                     if (!isCallTrackingEnabled()) {
                         AppLogger.d("Call tracking is disabled in settings, ignoring onCallStarted")
                         return@withLock
                     }
-                    if (!checkPermissions()) return@withLock
+                    if (!checkPermissions()) {
+                        errorSetInThisCall = true
+                        return@withLock
+                    }
 
                     val effectiveSubId = resolveEffectiveSubId(subId)
                     if (effectiveSubId == -1) return@withLock
@@ -179,18 +183,27 @@ class CallTracker
                     if (isNewSessionStarted) {
                         justStarted = true
                         _status.value = TrackingStatus.Active
+                    } else if (_status.value is TrackingStatus.Error) {
+                        // **Строгое соблюдение API:** на AOSP DataStore.data эмитит значение
+                        // в пределах SHORT_TIMEOUT_MS. Таймаут срабатывает только при деградации
+                        // хранилища на кастомных прошивках. Это проблема кастомной прошивки.
+                        // Стратегия: Error-статус НЕ перезаписывается refreshStatus(),
+                        // чтобы UI мог показать ошибку пользователю.
+                        errorSetInThisCall = true
                     }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
+                    errorSetInThisCall = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    errorSetInThisCall = true
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            if ((_status.value !is TrackingStatus.Error) && !justStarted) {
+                            if (!errorSetInThisCall && !justStarted) {
                                 refreshStatus()
                             }
                         } catch (e: CancellationException) {

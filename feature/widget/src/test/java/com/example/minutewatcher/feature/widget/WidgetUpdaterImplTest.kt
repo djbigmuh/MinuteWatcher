@@ -50,8 +50,6 @@ class WidgetUpdaterImplTest {
 
             verify(renderer).renderAll(
                 context = eq(context),
-                forceSimplified = eq(false),
-                forceFull = eq(false),
             )
         }
 
@@ -135,11 +133,7 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceSimplified: Boolean,
-                                forceFull: Boolean,
-                            ) {
+                            override suspend fun renderAll(context: Context) {
                                 error("Unexpected crash")
                             }
                         },
@@ -168,11 +162,7 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceSimplified: Boolean,
-                                forceFull: Boolean,
-                            ) {
+                            override suspend fun renderAll(context: Context) {
                                 callCount++
                                 if (callCount == 1) {
                                     // Simulate LimitExceeded on first call

@@ -122,6 +122,12 @@ class SemanticSearchManager
             }
         }
 
+        /**
+         * **Строгое соблюдение API:** на AOSP LocalStorage.createSearchSessionAsync
+         * бросает один из стандартных типов исключений. Повтор с forceOverride=true
+         * выполняется ТОЛЬКО при RESULT_INVALID_SCHEMA. Для остальных типов повтор
+         * бессмыслен — это проблема кастомной прошивки.
+         */
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
             val s = session
             if ((s != null) && (!s.isClosed) && (!forceOverride)) return true
@@ -129,31 +135,37 @@ class SemanticSearchManager
             session?.close()
             session = null
 
-            if (forceOverride) return tryOpenSession(forceOverride = true)
+            if (forceOverride) return tryOpenSession(forceOverride = true).isSuccess
 
-            if (tryOpenSession(false)) return true
-            return tryOpenSession(true)
+            val firstTry = tryOpenSession(false)
+            if (firstTry.isSuccess) return true
+
+            val error = firstTry.exceptionOrNull()
+            if (error is AppSearchException && error.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                return tryOpenSession(true).isSuccess
+            }
+            return false
         }
 
-        private suspend fun tryOpenSession(forceOverride: Boolean): Boolean {
+        private suspend fun tryOpenSession(forceOverride: Boolean): Result<Unit> {
             var newSession: AppSearchSessionWrapper? = null
             return try {
                 newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
                 newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
                 session = newSession
                 _status.value = TrackingStatus.Active
-                true
+                Result.success(Unit)
             } catch (e: CancellationException) {
                 newSession?.close()
                 throw e
             } catch (e: AppSearchException) {
                 newSession?.close()
                 handleSchemaException(e, forceOverride)
-                false
+                Result.failure(e)
             } catch (e: Exception) {
                 newSession?.close()
                 handleInitializationError(e)
-                false
+                Result.failure(e)
             }
         }
 
@@ -171,32 +183,29 @@ class SemanticSearchManager
         /**
          * Классифицирует ошибку инициализации AppSearch.
          *
-         * Три стандартных типа обрабатываются без эвристики:
+         * **Строгое соблюдение API:** на AOSP LocalStorage.createSearchSessionAsync
+         * бросает один из трёх стандартных типов. Проверка по тексту сообщения
+         * ИСКЛЮЧЕНА: текст может меняться между версиями Android и OEM-сборками.
+         *
+         * Три стандартных типа → NOT_SUPPORTED:
          * - [IllegalStateException] — сервис AppSearch недоступен (GMS-free сборки)
          * - [DeadObjectException] — системный сервис AppSearch аварийно завершился
          * - [SecurityException] — отсутствие прав
          *
-         * Эвристика (последний рубеж): проверка `e.message?.contains("AppSearch")`.
-         * Применяется ТОЛЬКО для исключений, не попавших в три вышеуказанных типа.
-         * Это защитный механизм для кастомных прошивок, которые бросают иные типы
-         * исключений при недоступности AppSearch.
+         * Все остальные типы → UNKNOWN.
          *
-         * Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
-         * бросает один из трёх стандартных типов. Если кастомная прошивка бросает
-         * исключение, не содержащее "AppSearch" в сообщении и не являющееся
-         * одним из трёх стандартных типов — оно будет обработано как UNKNOWN.
-         * Это проблема кастомной прошивки, не соответствующей документации Google.
+         * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
+         * иные типы при недоступности AppSearch — это проблема кастомной прошивки.
          */
         private fun handleInitializationError(e: Exception) {
             if (e is CancellationException) throw e
 
-            val isUnsupported =
+            val isNotSupported =
                 hasCause(e, IllegalStateException::class.java) ||
                     hasCause(e, DeadObjectException::class.java) ||
-                    hasCause(e, SecurityException::class.java) ||
-                    e.message?.contains("AppSearch", ignoreCase = true) == true
+                    hasCause(e, SecurityException::class.java)
 
-            if (isUnsupported) {
+            if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)
                 _status.value =
                     TrackingStatus.Error(

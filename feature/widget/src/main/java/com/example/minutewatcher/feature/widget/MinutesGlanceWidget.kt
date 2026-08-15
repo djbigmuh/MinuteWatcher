@@ -6,7 +6,6 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -58,59 +57,6 @@ import androidx.glance.color.ColorProvider as GlanceColorProvider
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 class MinutesGlanceWidget : GlanceAppWidget() {
-    companion object {
-        private const val PREFS_NAME = "widget_render_flags"
-        private const val KEY_FORCE_SIMPLIFIED = "force_simplified"
-        private const val KEY_FORCE_FULL = "force_full"
-
-        /**
-         * Устанавливает флаг принудительного упрощённого рендера.
-         * Флаг сохраняется в SharedPreferences, чтобы быть доступным
-         * при асинхронном вызове provideGlance системой.
-         *
-         * **Контракт AOSP:** GlanceAppWidget.updateAll() является suspend-функцией.
-         *
-         * **Отклонение кастомной прошивки:** Момент вызова provideGlance определяется системой асинхронно.
-         * Это проблема кастомной прошивки.
-         *
-         * **Стратегия приложения:** Передача через SharedPreferences устраняет зависимость от тайминга.
-         */
-        fun setForceSimplified(
-            context: Context,
-            value: Boolean,
-        ) {
-            context
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit {
-                    putBoolean(KEY_FORCE_SIMPLIFIED, value)
-                }
-        }
-
-        private fun getForceSimplified(context: Context): Boolean =
-            context
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(KEY_FORCE_SIMPLIFIED, false)
-
-        /**
-         * Устанавливает флаг принудительного ПОЛНОГО рендера (игнорируя лимит).
-         */
-        fun setForceFull(
-            context: Context,
-            value: Boolean,
-        ) {
-            context
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit {
-                    putBoolean(KEY_FORCE_FULL, value)
-                }
-        }
-
-        private fun getForceFull(context: Context): Boolean =
-            context
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(KEY_FORCE_FULL, false)
-    }
-
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
@@ -205,22 +151,14 @@ class MinutesGlanceWidget : GlanceAppWidget() {
                 }
             }
 
-        val forceSimplified = getForceSimplified(context.applicationContext)
-        val forceFull = getForceFull(context.applicationContext)
         val settingsState =
             try {
-                val loaded = widgetSettingsLoader.load()
-                when {
-                    forceSimplified -> loaded.copy(widgetLimitExceeded = true)
-                    forceFull -> loaded.copy(widgetLimitExceeded = false)
-                    else -> loaded
-                }
+                widgetSettingsLoader.load()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to load widget settings, using defaults", e)
-                val fallback = WidgetSettingsState(settingsLoadFailed = true)
-                if (forceSimplified) fallback.copy(widgetLimitExceeded = true) else fallback
+                WidgetSettingsState(settingsLoadFailed = true)
             }
 
         if (refreshFailed && settingsState.settingsLoadFailed) {

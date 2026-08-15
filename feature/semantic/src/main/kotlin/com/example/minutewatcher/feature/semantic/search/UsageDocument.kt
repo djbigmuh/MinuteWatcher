@@ -14,17 +14,19 @@ import com.example.minutewatcher.core.model.util.ColorProvider
 /**
  * DTO-документ для AppSearch-индексации.
  *
- * Плоская схема обусловлена требованием AppSearch: все поля одного документа
- * должны находиться в одном классе.
- *
- * Строгое соблюдение API: структура полей и аннотации соответствуют
+ * **Строгое соблюдение API:** структура полей и аннотации соответствуют
  * контракту [androidx.appsearch.annotation.Document].
- * Изменение набора полей требует инкремента версии схемы
- * и обработки миграции в [SemanticSearchManager].
+ *
+ * **ВНИМАНИЕ:** изменение набора полей требует:
+ * 1. Инкремента версии схемы в [SemanticSearchManager].
+ * 2. Обработки миграции через forceOverride в ensureSession().
+ * Несоблюдение приведёт к RESULT_INVALID_SCHEMA при запуске.
+ *
+ * **Отклонение кастомной прошивки:** если кастомная прошивка
+ * не поддерживает AppSearch — это проблема кастомной прошивки.
+ * Стратегия: TrackingStatus.ErrorType.NOT_SUPPORTED.
  */
 @Document
-// UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.
-@Suppress("LongParameterList")
 class UsageDocument {
     @Namespace
     var namespace: String = ""
@@ -67,6 +69,8 @@ class UsageDocument {
 
     constructor()
 
+    // UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.
+    @Suppress("LongParameterList")
     constructor(
         namespace: String,
         id: String,

@@ -172,20 +172,24 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return
 
-                    ensureBaselineNeedsRetryCapacity()
-
                     val activeSims = getActiveSimsAndCleanup()
                     if (activeSims == null) {
                         handleIdentityReadTimeout()
                         return
                     }
 
-                    val identities =
-                        activeSims
-                            .asSequence()
-                            .map { it.identity.stableId }
-                            .toSet()
-                    cleanupStaleRetryEntries(identities)
+                    val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
+                    /**
+                     * Очистка записей baselineNeedsRetry для неактивных SIM.
+                     *
+                     * **Строгое соблюдение API:** на AOSP observeActiveSims() возвращает
+                     * актуальный набор SIM. Очистка привязана к реальному набору,
+                     * а не к эвристическому лимиту размера.
+                     *
+                     * **Отклонение кастомной прошивки:** если кастомная прошивка
+                     * не обновляет список активных SIM — это проблема кастомной прошивки.
+                     */
+                    baselineNeedsRetry.entries.removeIf { it.key !in activeIdentities }
 
                     processActiveSimsTraffic(activeSims)
                 } catch (e: SecurityException) {
@@ -197,29 +201,6 @@ class TrafficTracker
                     AppLogger.e("Error updating traffic", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
-            }
-        }
-
-        /**
-         * Защита от неограниченного роста baselineNeedsRetry.
-         * Это аварийный предохранитель, а не штатный механизм очистки. Штатная очистка —
-         * cleanupStaleRetryEntries при успешном получении списка SIM.
-         *
-         * **Контракт AOSP:** на AOSP observeActiveSims() не возвращает null (timeout)
-         * при наличии активного SubscriptionManager и READ_PHONE_STATE.
-         *
-         * **Отклонение кастомной прошивки:** Таймаут возможен только при деградации DataStore на
-         * кастомных прошивках, не соответствующих документации Google. Это проблема кастомной прошивки.
-         *
-         * **Стратегия приложения:** если количество записей превышает лимит, карта очищается полностью.
-         */
-        private fun ensureBaselineNeedsRetryCapacity() {
-            if (baselineNeedsRetry.size > (Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS * 2)) {
-                AppLogger.w(
-                    "TrafficTracker: baselineNeedsRetry map size exceeded limit, " +
-                        "force clearing to prevent leak.",
-                )
-                baselineNeedsRetry.clear()
             }
         }
 
@@ -318,29 +299,6 @@ class TrafficTracker
             }
 
             return activeSims
-        }
-
-        /**
-         * Cleans up [baselineNeedsRetry] by removing entries for SIMs that are no longer active.
-         * This is only called when active SIM list is successfully retrieved to avoid
-         * clearing entries during transient timeout states.
-         */
-        private fun cleanupStaleRetryEntries(activeIdentities: Set<String>) {
-            // Очистка записей baselineNeedsRetry для неактивных SIM.
-            //
-            // **Контракт AOSP:** На AOSP SIM не может быть удалена и возвращена
-            // между двумя последовательными вызовами updateTrafficUsage без
-            // промежуточного callback от SubscriptionManager.
-            //
-            // **Отклонение кастомной прошивки:** Если прошивка не доставляет
-            // callback при возврате SIM — это проблема кастомной прошивки.
-            // Запись в baselineNeedsRetry будет очищена при следующем успешном
-            // обновлении, когда SIM снова появится в активном наборе.
-            //
-            // **Стратегия:** Записи удаляются ТОЛЬКО для identity, отсутствующих
-            // в текущем активном наборе. Записи для активных SIM сохраняются,
-            // чтобы не сбрасывать счётчик повторов при временных сбоях статистики.
-            baselineNeedsRetry.entries.removeIf { entry -> entry.key !in activeIdentities }
         }
 
         private fun handleSkipDelta(

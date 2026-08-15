@@ -104,6 +104,23 @@ class SimIdentityRepositoryImpl
          */
         private val manualResolutionCache = ConcurrentHashMap<Int, SimIdentity>()
 
+        /**
+         * Поток seed-значения для генерации identity.
+         *
+         * **Контракт AOSP:** на AOSP DataStore.data эмитит значение
+         * в пределах SHORT_TIMEOUT_MS. Генерация seed через getOrCreateSeed()
+         * завершается в пределах SEED_GENERATION_TIMEOUT_MS.
+         *
+         * **Отклонение кастомной прошивки:** таймаут срабатывает только
+         * при деградации хранилища на кастомных прошивках. Это проблема
+         * кастомной прошивки.
+         *
+         * **Стратегия приложения:** при таймауте эмитится SeedResult.Fallback.
+         * Вызывающий код (getSimIdentity) бросает SeedUnavailableException,
+         * чтобы UI мог показать ошибку. Fallback на slot-based identity
+         * намеренно ИСКЛЮЧЁН: он приведёт к потере привязки данных к SIM
+         * при восстановлении хранилища.
+         */
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
                 .filter { it.isNotEmpty() }
@@ -727,6 +744,10 @@ class SimIdentityRepositoryImpl
             }
 
         internal companion object {
+            /**
+             * Общий таймаут инициализации seed, включая генерацию и сохранение.
+             * Сумма [Constants.Flow.SEED_GENERATION_TIMEOUT_MS] и [Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS].
+             */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
