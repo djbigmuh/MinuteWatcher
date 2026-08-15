@@ -30,7 +30,9 @@ android {
 }
 
 ksp {
-    arg("androidx.appsearch.compiler.generateKotlin", "true")
+    arg("androidx.appsearch.compiler.generateKotlin", "false")
+    arg("androidx.appsearch.compiler.incremental", "false")
+    arg("appsearch.compiler.incremental", "false")
 }
 
 dependencies {
@@ -48,7 +50,7 @@ dependencies {
 
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppsearch)
-    ksp(libs.androidxAppsearchCompiler)
+    ksp("androidx.appsearch:appsearch-compiler:1.1.0")
     implementation(libs.androidxAppsearchLocalStorage)
     implementation(libs.kotlinxCoroutinesGuava)
 

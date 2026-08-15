@@ -3,6 +3,7 @@ plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinKsp)
+    alias(libs.plugins.kotlinCompose)
 }
 
 kotlin {
@@ -15,6 +16,10 @@ android {
 
     defaultConfig {
         minSdk = 26
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -38,6 +43,8 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:resources"))
 
+    implementation(platform(libs.androidxComposeBom))
+    implementation(libs.androidxComposeRuntime)
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppcompat)
     implementation(libs.googleMaterial)
