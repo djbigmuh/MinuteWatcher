@@ -1,3 +1,17 @@
+/**
+ * Файл содержит UI-компоненты виджета.
+ *
+ * **Обоснование TooManyFunctions:** разделение на подфункции
+ * (SimItemIcon, SimItemText, SimItemSpacer, SimSeparator и т.д.)
+ * необходимо для читаемости и переиспользования в SimLayoutRenderV2.
+ * Дальнейшее разделение на файлы снизит когезию UI-компонентов виджета.
+ *
+ * **Строгое соблюдение API:** все компоненты используют Glance API
+ * в соответствии с документацией. На AOSP Glance обеспечивает
+ * стабильный рендер; отклонения возможны только на кастомных прошивках.
+ */
+@file:Suppress("TooManyFunctions")
+
 package com.example.minutewatcher.feature.widget
 
 import android.content.ComponentName
@@ -37,6 +51,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.minutewatcher.core.android.ui.SimLayoutRenderV2
 import com.example.minutewatcher.core.android.util.WidgetColorResolver
+import com.example.minutewatcher.core.android.util.WidgetStringsFactory
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -166,35 +181,16 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         }
 
         return WidgetUiMapper.mapFromSnapshot(
-            strings = getWidgetStrings(context),
+            strings = WidgetStringsFactory.create(context),
             snapshot = snapshot,
             state = settingsState,
-            operatorNames = getOperatorNames(context, snapshot.simSnapshots),
+            operatorNames = WidgetStringsFactory.createOperatorNames(context, snapshot.simSnapshots),
             refreshFailed = refreshFailed,
         )
     }
 
-    private fun getWidgetStrings(context: Context): com.example.minutewatcher.core.model.WidgetStrings =
-        com.example.minutewatcher.core.model.WidgetStrings(
-            usedText = context.getString(R.string.used_text),
-            minutesAbbr = context.getString(R.string.minutes_abbr),
-            limitText = context.getString(R.string.limit_text),
-            gbAbbr = context.getString(R.string.gb_abbr),
-            fractionFormat = context.getString(R.string.fraction_format),
-        )
-
-    private fun getOperatorNames(
-        context: Context,
-        simSnapshots: List<com.example.minutewatcher.core.model.SimSnapshot>,
-    ): Map<Int, String> =
-        simSnapshots.associate { sim ->
-            sim.slot to
-                com.example.minutewatcher.core.android.util.SimUtils
-                    .getShortOperatorName(
-                        context,
-                        sim.operator,
-                    )
-        }
+    // Централизованное создание WidgetStrings и имён операторов перенесено в WidgetStringsFactory
+    // для исключения дублирования с экраном настроек и гарантии консистентности.
 
     /**
      * Получает актуальный snapshot для рендера виджета.

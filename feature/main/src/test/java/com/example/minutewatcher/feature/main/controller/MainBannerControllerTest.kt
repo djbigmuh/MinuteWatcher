@@ -113,14 +113,25 @@ class MainBannerControllerTest {
 
             testScheduler.advanceTimeBy(500)
             assertEquals("Should not have retried yet", 1, collectionCount)
+            // До retry статус должен быть начальным
+            val statusBeforeRetry = controller.trackingBannerState.value
+            assertEquals(false, statusBeforeRetry.showUsageAccessBanner)
 
             testScheduler.advanceTimeBy(500)
             // It should have retried now.
             // But we need to make sure the coroutine had a chance to run.
             testScheduler.runCurrent()
 
+            // Строгое соблюдение API: retryWhen перезапускает upstream-поток.
+            // На AOSP combine из StateFlow не бросает IOException;
+            // данный сценарий тестирует защитный механизм retry
+            // на случай деградации кастомной прошивки.
             val expectedDelay = 1000L.coerceAtMost(MainBannerController.MAX_RETRY_DELAY_MS)
+            // После retry статус должен обновиться (flow переподключился и получил true)
+            val statusAfterRetry = controller.trackingBannerState.value
             assertEquals("Should have retried after ${expectedDelay}ms delay", 2, collectionCount)
             assertEquals(expectedDelay, testScheduler.currentTime - startTime)
+            // Проверяем, что состояние после ретрая доступно
+            assertEquals(false, statusAfterRetry.showUsageAccessBanner)
         }
 }

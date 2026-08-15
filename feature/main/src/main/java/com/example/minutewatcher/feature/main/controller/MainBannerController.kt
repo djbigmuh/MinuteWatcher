@@ -14,6 +14,7 @@ import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -143,19 +144,18 @@ class MainBannerController
             }.onEach {
                 resetRetryCounterIfNeeded(timeProvider.elapsedRealtime(), force = true)
             }.retryWhen { cause, attempt ->
-                // Стратегия повторных попыток:
-                // 1. CancellationException пробрасывается для корректной кооперативной отмены.
-                // 2. Задержка: экспоненциальная, 2^(attempt-1) секунд, потолок MAX_RETRY_DELAY_MS.
-                // 3. Сброс счётчика: каждые RESET_RETRY_COUNTER_INTERVAL_MS (10 мин)
-                //    после последнего успешного обновления или последнего сброса.
+                // TimeoutCancellationException — подкласс CancellationException,
+                // но является retryable-ошибкой (таймаут загрузки данных).
+                // Обычный CancellationException означает отмену scope — не retryable.
                 //
-                // **Контракт AOSP:** combine из StateFlow не бросает исключений.
-                // Сбой возможен только при деградации DataStore на кастомных прошивках.
-                //
-                // **Отклонение кастомной прошивки:** Если прошивка не обеспечивает
-                // корректную работу StateFlow — это проблема кастомной прошивки.
-                // Бесконечный retry с потолком задержки — защитный механизм.
-                if (cause is CancellationException) throw cause
+                // Строгое соблюдение API kotlinx.coroutines: CancellationException
+                // пробрасывается для кооперативной отмены. TimeoutCancellationException
+                // является исключением — это таймаут операции, а не отмена scope.
+                // На AOSP StateFlow не бросает TimeoutCancellationException;
+                // данный сценарий возможен только при деградации кастомной прошивки.
+                if (cause is CancellationException && cause !is TimeoutCancellationException) {
+                    throw cause
+                }
 
                 val now = timeProvider.elapsedRealtime()
                 resetRetryCounterIfNeeded(now)

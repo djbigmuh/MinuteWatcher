@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
@@ -55,26 +56,32 @@ class WidgetSettingsViewModel
 
         private fun loadSettings() {
             _loadError.value = false
+
+            // Паттерн отмены предыдущей загрузки:
+            // 1. Сохраняем ссылку на предыдущий job (до обнуления).
+            // 2. Отменяем его (cancel — кооперативный, job может ещё выполняться).
+            // 3. Обнуляем loadJob до запуска нового, чтобы повторный вызов
+            //    loadSettings() в окне между cancel() и .also{} не пытался
+            //    отменить уже отменённый job.
+            // 4. Запускаем новую корутину и сохраняем ссылку.
+            //
+            // Безопасность: viewModelScope использует Dispatchers.Main.immediate,
+            // поэтому шаги 1-4 выполняются атомарно с точки зрения Main-thread.
+            // join() внутри новой корутины дожидается реального завершения
+            // предыдущей загрузки перед записью результата.
+            //
+            // Строгое соблюдение API: на AOSP DataStore.load() завершается
+            // за миллисекунды. Таймаут 5с — защитный запас на случай
+            // деградации кастомной прошивки.
             val previousJob = loadJob
             previousJob?.cancel()
-            // Сохраняем ссылку на предыдущую задачу в previousJob (до обнуления),
-            // чтобы иметь возможность отменить её. Обнуляем loadJob до запуска
-            // новой корутины, чтобы в момент между cancel() и .also { loadJob = it }
-            // повторный вызов loadSettings() не пытался отменить уже отменённую задачу.
-            // Безопасность: viewModelScope использует Dispatchers.Main.immediate,
-            // поэтому шаги выполняются атомарно с точки зрения главного потока.
             loadJob = null
             viewModelScope
                 .launch {
-                    // Ожидаем завершения предыдущей загрузки с таймаутом.
-                    // **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс.
-                    // Таймаут 5 с — защитный запас. Если загрузка не завершилась за 5 с —
-                    // это проблема кастомной прошивки. Не блокируем новую загрузку.
-                    // Таймаут join() предотвращает блокировку новой загрузки, если предыдущая
-                    // корутина зависла. На AOSP loader.load() завершается за миллисекунды.
-                    // Если кастомная прошивка не обеспечивает своевременный ответ DataStore —
-                    // это проблема кастомной прошивки.
-                    withTimeoutOrNull(LOAD_TIMEOUT) { previousJob?.join() }
+                    // Явное использование Duration-overload для исключения неоднозначности.
+                    // На AOSP join() завершается за миллисекунды; таймаут 5с — защитный запас
+                    // на случай деградации кастомной прошивки.
+                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) { previousJob?.join() }
 
                     try {
                         val loaded = loader.load()
@@ -146,6 +153,20 @@ class WidgetSettingsViewModel
                         "saveAndNotify: skipping save because settings were not loaded successfully",
                     )
                     SaveResult.Failed
+                } else if (currentState.simListLoadFailed) {
+                    // Если список SIM не загрузился (таймаут DataStore на кастомной прошивке),
+                    // сохраняем общие настройки, но логируем предупреждение.
+                    // На AOSP observeActiveSims() завершается за миллисекунды;
+                    // таймаут — проблема кастомной прошивки.
+                    AppLogger.w(
+                        "saveAndNotify: SIM list was not loaded successfully. " +
+                            "General settings will be saved, but SIM-specific settings may be incomplete.",
+                    )
+                    // Сохраняем общие настройки, но логируем предупреждение.
+                    // SIM-специфичные настройки могут быть неполными.
+                    val validatedState = validateSettings(currentState)
+                    val success = saver.save(validatedState)
+                    if (success) SaveResult.Success else SaveResult.Failed
                 } else {
                     val validatedState = validateSettings(currentState)
                     val success = saver.save(validatedState)
@@ -196,6 +217,6 @@ class WidgetSettingsViewModel
             )
 
         companion object {
-            private val LOAD_TIMEOUT = 5.seconds
+            private val LOAD_TIMEOUT: Duration = 5.seconds
         }
     }

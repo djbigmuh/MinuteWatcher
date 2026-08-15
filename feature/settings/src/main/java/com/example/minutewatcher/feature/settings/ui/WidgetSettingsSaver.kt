@@ -37,6 +37,9 @@ class WidgetSettingsSaver
                 dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
                 true
             } catch (e: CancellationException) {
+                // Пробрасываем для кооперативной отмены корутины.
+                // Строгое соблюдение API kotlinx.coroutines: CancellationException
+                // должен пробрасываться для корректной отмены scope.
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)

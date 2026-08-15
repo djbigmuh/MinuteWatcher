@@ -2,7 +2,5 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <!-- Файл содержит UI-компоненты виджета. Разделение на подфункции для улучшения читаемости и устранения LongMethod привело к превышению порога количества функций. -->
-    <ID>TooManyFunctions:MinutesGlanceWidget.kt$com.example.minutewatcher.feature.widget.MinutesGlanceWidget.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

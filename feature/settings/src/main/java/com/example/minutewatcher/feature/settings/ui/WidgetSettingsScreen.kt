@@ -30,10 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.minutewatcher.core.android.util.SimUtils
+import com.example.minutewatcher.core.android.util.WidgetStringsFactory
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.model.WidgetSettingsState
-import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
 
@@ -49,22 +48,14 @@ fun WidgetSettingsScreen(
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    val strings =
-        WidgetStrings(
-            usedText = stringResource(R.string.used_text),
-            minutesAbbr = stringResource(R.string.minutes_abbr),
-            limitText = stringResource(R.string.limit_text),
-            gbAbbr = stringResource(R.string.gb_abbr),
-            fractionFormat = stringResource(R.string.fraction_format),
-        )
+    // Централизованное создание WidgetStrings исключает дублирование
+    // и гарантирует консистентность между виджетом и его экраном настроек.
+    val strings = remember(context) { WidgetStringsFactory.create(context) }
 
     val uiState =
         remember(state, snapshot, strings, context) {
             val nonNullState = state ?: return@remember null
-            val operatorNames =
-                snapshot.simSnapshots.associate { sim ->
-                    sim.slot to SimUtils.getShortOperatorName(context, sim.operator)
-                }
+            val operatorNames = WidgetStringsFactory.createOperatorNames(context, snapshot.simSnapshots)
             WidgetUiMapper.mapFromSnapshot(
                 strings = strings,
                 snapshot = snapshot,
@@ -149,6 +140,20 @@ private fun WidgetSettingsContent(
     onBack: () -> Unit,
 ) {
     var showColorPicker by remember { mutableStateOf(false) }
+
+    // Защита от сохранения дефолтных значений поверх реальных настроек.
+    // Если DataStore не ответил (деградация кастомной прошивки),
+    // показываем ошибку и предлагаем повторить. На AOSP load()
+    // завершается за миллисекунды; таймаут — проблема кастомной прошивки.
+    if (state.settingsLoadFailed) {
+        // Настройки не загрузились — показываем ошибку вместо контента.
+        // Сохранение в этом состоянии запрещено в saveAndNotify().
+        ErrorState(
+            onRetry = { viewModel.retryLoad() },
+            onBack = onBack,
+        )
+        return
+    }
 
     if (showColorPicker) {
         ColorPickerWrapper(

@@ -47,6 +47,21 @@ class WidgetUpdaterImpl
             ) : UpdateResult()
         }
 
+        // Sealed class вместо Pair<Boolean, Boolean> исключает хрупкую эвристику
+        // перепутывания порядка булевых значений. Компилятор гарантирует
+        // исчерпывающую обработку всех вариантов.
+        private sealed class UpdateOutcome {
+            data class Success(
+                val shouldStop: Boolean = true,
+            ) : UpdateOutcome()
+
+            data class Retry(
+                val delayMs: Long,
+            ) : UpdateOutcome()
+
+            object Stop : UpdateOutcome()
+        }
+
         /**
          * Обновляет все экземпляры виджета с ограниченной экспоненциальной стратегией повторных попыток.
          *
@@ -69,6 +84,7 @@ class WidgetUpdaterImpl
          * Стратегия retry является защитным механизмом.
          *
          * @return true если обновление завершилось успешно, false в противном случае.
+         * @throws CancellationException при отмене корутины (пробрасывается для кооперативной отмены).
          */
         override suspend fun updateAll(): Boolean {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
@@ -91,30 +107,7 @@ class WidgetUpdaterImpl
                                 if (settings.widgetLimitExceeded) {
                                     val count = ++exceededUpdateCounter
                                     if (count % PROBE_INTERVAL_UPDATES == 0L) {
-                                        // === PROBE: пробный полный рендер для проверки восстановления ===
-                                        //
-                                        // Последовательность операций (все внутри updateMutex.withLock):
-                                        // 1. Сбрасываем widgetLimitExceeded = false, чтобы provideGlance()
-                                        //    выполнил ПОЛНЫЙ рендер (не упрощённый).
-                                        // 2. Вызываем safeUpdateAll(isProbe = true).
-                                        // 3a. Если успех → handleUpdateResult сбросит флаг (wasFull = true).
-                                        // 3b. Если LimitExceeded → handleLimitExceeded() вернёт флаг = true
-                                        //     и выполнит упрощённый рендер.
-                                        // 3c. Если GenericFailure → вручную возвращаем флаг = true.
-                                        //
-                                        // Безопасность: все операции внутри updateMutex.withLock,
-                                        // поэтому промежуточное состояние флага (false между шагами 1 и 3)
-                                        // не видно внешним наблюдателям.
-                                        //
-                                        // **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ.
-                                        // Упрощённый layout всегда укладывается в этот лимит.
-                                        // Если упрощённый рендер тоже падает — проблема кастомной прошивки.
-                                        setWidgetLimitExceeded(value = false)
-                                        val probeResult = safeUpdateAll(context, isProbe = true)
-                                        if (probeResult is UpdateResult.GenericFailure) {
-                                            setWidgetLimitExceeded(value = true)
-                                        }
-                                        probeResult
+                                        performProbeUpdate()
                                     } else {
                                         safeUpdateAll(context, isProbe = false)
                                     }
@@ -136,17 +129,25 @@ class WidgetUpdaterImpl
                 //
                 // **Стратегия приложения:** Таймаут 30 секунд — защитный механизм; считается retryable-ошибкой.
 
-                val (success, shouldRetry) = handleUpdateResult(updateResult)
-                if (success) {
-                    result = true
-                    keepGoing = false
-                } else if (!shouldRetry || attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
-                    keepGoing = false
-                } else {
-                    AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
-                    delay(delayMs.milliseconds)
-                    delayMs = (delayMs * 2).coerceAtMost(Constants.Widget.MAX_RETRY_DELAY_MS)
-                    attempt++
+                val updateOutcome = handleUpdateResult(updateResult)
+                when (updateOutcome) {
+                    is UpdateOutcome.Success -> {
+                        result = true
+                        keepGoing = false
+                    }
+                    is UpdateOutcome.Stop -> {
+                        keepGoing = false
+                    }
+                    is UpdateOutcome.Retry -> {
+                        if (attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                            keepGoing = false
+                        } else {
+                            AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
+                            delay(delayMs.milliseconds)
+                            delayMs = (delayMs * 2).coerceAtMost(Constants.Widget.MAX_RETRY_DELAY_MS)
+                            attempt++
+                        }
+                    }
                 }
             }
 
@@ -157,7 +158,7 @@ class WidgetUpdaterImpl
             return result
         }
 
-        private suspend fun handleUpdateResult(result: UpdateResult): Pair<Boolean, Boolean> =
+        private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {
                 is UpdateResult.Success -> {
                     // Сбрасываем флаг только если реально был предпринят и удался ПОЛНЫЙ рендер.
@@ -167,7 +168,7 @@ class WidgetUpdaterImpl
                     if (result.wasFull) {
                         setWidgetLimitExceeded(value = false)
                     }
-                    Pair(true, false)
+                    UpdateOutcome.Success()
                 }
 
                 is UpdateResult.LimitExceeded -> {
@@ -175,7 +176,11 @@ class WidgetUpdaterImpl
                 }
 
                 is UpdateResult.GenericFailure -> {
-                    Pair(false, result.isRetryable)
+                    if (result.isRetryable) {
+                        UpdateOutcome.Retry(0L) // delay рассчитывается снаружи
+                    } else {
+                        UpdateOutcome.Stop
+                    }
                 }
             }
 
@@ -191,11 +196,11 @@ class WidgetUpdaterImpl
          * Стратегия: при падении упрощённого рендера флаг НЕ сбрасывается,
          * повтор не выполняется. Это предотвращает осцилляцию флага.
          */
-        private suspend fun handleLimitExceeded(): Pair<Boolean, Boolean> {
+        private suspend fun handleLimitExceeded(): UpdateOutcome {
             val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
             if (current) {
                 // Повторные попытки после уже установленного флага не имеют смысла.
-                return Pair(false, false)
+                return UpdateOutcome.Stop
             }
 
             setWidgetLimitExceeded(value = true)
@@ -212,7 +217,7 @@ class WidgetUpdaterImpl
              */
             return try {
                 renderer.renderAll(context)
-                Pair(true, false)
+                UpdateOutcome.Success()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -233,8 +238,31 @@ class WidgetUpdaterImpl
                     AppLogger.e("Re-render after limit exceeded failed (non-size error)", e)
                 }
                 setWidgetLimitExceeded(value = true)
-                Pair(false, false) // isRetryable = false — осцилляция бессмысленна
+                UpdateOutcome.Stop // isRetryable = false — осцилляция бессмысленна
             }
+        }
+
+        /**
+         * Пробный полный рендер для проверки, устранена ли причина превышения лимита.
+         *
+         * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ на Binder-транзакцию.
+         * Упрощённый layout всегда укладывается в этот лимит. Если probe падает —
+         * это проблема кастомной прошивки.
+         *
+         * Последовательность операций (все внутри updateMutex.withLock):
+         * 1. Сбрасываем widgetLimitExceeded = false для полного рендера.
+         * 2. Вызываем safeUpdateAll(isProbe = true).
+         * 3a. Успех → handleUpdateResult сбросит флаг (wasFull = true).
+         * 3b. LimitExceeded → handleLimitExceeded() вернёт флаг = true.
+         * 3c. GenericFailure → вручную возвращаем флаг = true.
+         */
+        private suspend fun performProbeUpdate(): UpdateResult {
+            setWidgetLimitExceeded(value = false)
+            val probeResult = safeUpdateAll(context, isProbe = true)
+            if (probeResult is UpdateResult.GenericFailure) {
+                setWidgetLimitExceeded(value = true)
+            }
+            return probeResult
         }
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {
@@ -328,8 +356,23 @@ class WidgetUpdaterImpl
                 }
 
                 is IllegalStateException -> {
-                    AppLogger.e("Widget update failed with IllegalStateException: ${e.message}", e)
-                    UpdateResult.GenericFailure(isRetryable = !isDestroyed)
+                    // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll()
+                    // не бросает IllegalStateException при корректном lifecycle.
+                    // Исключение возможно только при destroyed context (поворот экрана
+                    // во время обновления) или на кастомной прошивке.
+                    // Повтор при destroyed context бесполезен — нужен новый context.
+
+                    // IllegalStateException с "destroyed" в сообщении — destroyed context.
+                    // Повтор бесполезен до пересоздания context.
+                    // Другие IllegalStateException (например, Glance не инициализирован)
+                    // могут быть retryable.
+                    val isDestroyedContext = e.message?.contains("destroyed", ignoreCase = true) == true
+                    AppLogger.e(
+                        "Widget update failed with IllegalStateException " +
+                            "(destroyed=$isDestroyedContext): ${e.message}",
+                        e,
+                    )
+                    UpdateResult.GenericFailure(isRetryable = !isDestroyedContext)
                 }
 
                 is RuntimeException -> {
@@ -372,8 +415,7 @@ class WidgetUpdaterImpl
          *
          * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
          * TransactionTooLargeException при корректном lifecycle виджета
-         * и объёме данных < 1 МБ — это проблема кастомной прошивки,
-         * не проекта. Приложение не маскирует такие сбои эвристиками.
+         * и объёме данных < 1 МБ — это проблема кастомной прошивки, не проекта.
          *
          * @return true, если в cause-цепочке есть TransactionTooLargeException.
          */
@@ -409,19 +451,10 @@ class WidgetUpdaterImpl
 
             /**
              * Интервал пробных полных рендеров в режиме widgetLimitExceeded.
-             *
-             * Каждое PROBE_INTERVAL_UPDATES-е обновление выполняет пробный полный рендер
-             * для проверки, не устранена ли причина превышения
-             * (например, пользователь удалил SIM-карты и объём данных уменьшился).
-             *
-             * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ
-             * на Binder-транзакцию. Упрощённый layout всегда укладывается в лимит.
-             *
-             * **Отклонение кастомной прошивки:** если кастомная прошивка имеет
-             * уменьшенный лимит Binder — это проблема кастомной прошивки.
-             *
-             * Значение 10 выбрано как баланс между частотой проб и нагрузкой:
-             * при ~1 обновлении в час проба происходит раз в ~10 часов.
+             * Значение 10 выбрано как баланс: при ~1 обновлении/час проба
+             * происходит раз в ~10 часов. На AOSP это не создаёт нагрузки;
+             * на кастомных прошивках с уменьшенным Binder-лимитом проба
+             * может падать — это проблема кастомной прошивки.
              */
             private const val PROBE_INTERVAL_UPDATES = 10
         }

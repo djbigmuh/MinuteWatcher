@@ -19,6 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -66,11 +67,17 @@ class CallTrackerRaceTest {
         runTest {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(1)
 
-            val callStartTimeFlow = flowOf(0L)
-            val bootTimeFlow = flowOf(0L)
+            whenever(timeProvider.now()).thenReturn(1000L)
+            whenever(timeProvider.elapsedRealtime()).thenReturn(2000L)
+            whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
 
-            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(callStartTimeFlow)
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(bootTimeFlow)
+            // Flow передаётся в мок для корректной симуляции DataStore.
+            // Без этого тест не покрывает путь чтения session-данных.
+            // Возвращаем 0L на первый запрос и 1000L на последующие,
+            // чтобы симулировать уже начатый звонок для 2-10 конкурентных вызовов.
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L), flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L), flowOf(2000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             // Launch multiple concurrent start events
@@ -85,6 +92,15 @@ class CallTrackerRaceTest {
 
             // Verification of interaction count
             verify(callSessionRepository, times(10)).getCallStartTime(1)
+
+            // Строгое соблюдение API: на AOSP DataStore.edit сериализует записи.
+            // Мьютекс callMutex в CallTracker дополнительно сериализует
+            // read-modify-write на уровне приложения. Тест верифицирует,
+            // что конкурентные вызовы не приводят к двойной записи session.
+            // Верификация: setCallStartTime вызван ровно 1 раз для subId=1,
+            // так как мьютекс сериализует доступ и только первый вызов
+            // должен записать session (остальные увидят startTime != 0).
+            verify(callSessionRepository, times(1)).setCallStartTime(eq(1), argThat { this > 0L })
         }
 
     @Test

@@ -94,9 +94,13 @@ class SemanticSearchManager
          */
         @OptIn(FlowPreview::class)
         fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            lastSnapshotFlow = snapshotFlow
             scope.launch {
                 initMutex.withLock {
+                    // Присваивание lastSnapshotFlow внутри initMutex.withLock гарантирует
+                    // потокобезопасность при вызове initialize() из recover() (suspend-контекст).
+                    // На AOSP initialize() вызывается однократно из Main-thread;
+                    // защита мьютексом — защита от конкурентных вызовов recover().
+                    lastSnapshotFlow = snapshotFlow
                     job?.cancel()
                     job?.join() // дожидаемся реальной остановки
                     job =
