@@ -426,8 +426,6 @@ class SimIdentityRepositoryImpl
             }
         }
 
-
-
         /**
          * Saves SIM identities to DataStore and performs migrations if needed.
          * @throws java.io.IOException if DataStore write fails

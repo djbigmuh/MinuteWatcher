@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
 class WidgetSettingsViewModel
@@ -56,7 +57,13 @@ class WidgetSettingsViewModel
             _loadError.value = false
             val previousJob = loadJob
             previousJob?.cancel()
-            loadJob = null // Сбрасываем ссылку до отмены для исключения повторного cancel
+            // Сохраняем ссылку на предыдущую задачу в previousJob (до обнуления),
+            // чтобы иметь возможность отменить её. Обнуляем loadJob до запуска
+            // новой корутины, чтобы в момент между cancel() и .also { loadJob = it }
+            // повторный вызов loadSettings() не пытался отменить уже отменённую задачу.
+            // Безопасность: viewModelScope использует Dispatchers.Main.immediate,
+            // поэтому шаги выполняются атомарно с точки зрения главного потока.
+            loadJob = null
             viewModelScope
                 .launch {
                     // Ожидаем завершения предыдущей загрузки с таймаутом.
@@ -67,11 +74,7 @@ class WidgetSettingsViewModel
                     // корутина зависла. На AOSP loader.load() завершается за миллисекунды.
                     // Если кастомная прошивка не обеспечивает своевременный ответ DataStore —
                     // это проблема кастомной прошивки.
-                    try {
-                        withTimeoutOrNull(5_000L) { previousJob?.join() }
-                    } catch (e: CancellationException) {
-                        throw e
-                    }
+                    withTimeoutOrNull(LOAD_TIMEOUT) { previousJob?.join() }
 
                     try {
                         val loaded = loader.load()
@@ -132,8 +135,8 @@ class WidgetSettingsViewModel
                 // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
                 return SaveResult.AlreadyInProgress
             }
-            _isSaving.value = true
             return try {
+                _isSaving.value = true
                 val currentState = _settingsState.value
                 if (currentState == null) {
                     AppLogger.w("saveAndNotify called before settings were loaded")
@@ -191,4 +194,8 @@ class WidgetSettingsViewModel
                 // Это позволяет вручную "вылечить" виджет, если пользователь изменил состав данных.
                 widgetLimitExceeded = false,
             )
+
+        companion object {
+            private val LOAD_TIMEOUT = 5.seconds
+        }
     }

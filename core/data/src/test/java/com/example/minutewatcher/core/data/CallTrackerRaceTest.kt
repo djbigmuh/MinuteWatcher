@@ -65,8 +65,12 @@ class CallTrackerRaceTest {
     fun `concurrent onCallStarted calls are handled safely by mutex`() =
         runTest {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(1)
-            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+
+            val callStartTimeFlow = flowOf(0L)
+            val bootTimeFlow = flowOf(0L)
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(callStartTimeFlow)
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(bootTimeFlow)
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             // Launch multiple concurrent start events

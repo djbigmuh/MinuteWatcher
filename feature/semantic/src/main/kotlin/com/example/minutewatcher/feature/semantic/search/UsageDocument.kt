@@ -67,6 +67,18 @@ class UsageDocument {
     @StringProperty
     var status: String = ""
 
+    /**
+     * Конструктор без аргументов необходим для рефлексивной десериализации AppSearch.
+     * AppSearch вызывает его при чтении документов из индекса.
+     * Удаление приведёт к AppSearchException (RESULT_INTERNAL_ERROR) в runtime.
+     *
+     * **Строгое соблюдение API:** контракт [androidx.appsearch.annotation.Document]
+     * требует наличия конструктора без аргументов. На AOSP AppSearch всегда
+     * использует рефлексию для создания экземпляров документов.
+     * Если кастомная прошивка не обеспечивает корректную рефлексию —
+     * это проблема кастомной прошивки.
+     */
+    @Suppress("unused") // Required by AppSearch reflection-based deserialization
     constructor()
 
     // UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.

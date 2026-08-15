@@ -91,23 +91,24 @@ class WidgetUpdaterImpl
                                 if (settings.widgetLimitExceeded) {
                                     val count = ++exceededUpdateCounter
                                     if (count % PROBE_INTERVAL_UPDATES == 0L) {
-                                        // Стратегия восстановления после превышения лимита RemoteViews:
+                                        // === PROBE: пробный полный рендер для проверки восстановления ===
                                         //
-                                        // При установленном widgetLimitExceeded рендер выполняется в упрощённом режиме.
-                                        // Каждое PROBE_INTERVAL_UPDATES-е обновление пытается выполнить ПОЛНЫЙ рендер
-                                        // для проверки, не устранена ли причина превышения
-                                        // (например, пользователь удалил SIM-карты и объём данных уменьшился).
+                                        // Последовательность операций (все внутри updateMutex.withLock):
+                                        // 1. Сбрасываем widgetLimitExceeded = false, чтобы provideGlance()
+                                        //    выполнил ПОЛНЫЙ рендер (не упрощённый).
+                                        // 2. Вызываем safeUpdateAll(isProbe = true).
+                                        // 3a. Если успех → handleUpdateResult сбросит флаг (wasFull = true).
+                                        // 3b. Если LimitExceeded → handleLimitExceeded() вернёт флаг = true
+                                        //     и выполнит упрощённый рендер.
+                                        // 3c. Если GenericFailure → вручную возвращаем флаг = true.
                                         //
-                                        // Если проба успешна — handleUpdateResult сбросит widgetLimitExceeded.
-                                        // Если проба неудачна (LimitExceeded) — handleLimitExceeded восстановит флаг.
-                                        // Если проба неудачна (GenericFailure) — восстанавливаем флаг вручную.
+                                        // Безопасность: все операции внутри updateMutex.withLock,
+                                        // поэтому промежуточное состояние флага (false между шагами 1 и 3)
+                                        // не видно внешним наблюдателям.
                                         //
-                                        // **Контракт AOSP:** На AOSP RemoteViews лимит ~1 МБ на Binder-транзакцию.
+                                        // **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ.
                                         // Упрощённый layout всегда укладывается в этот лимит.
-                                        //
-                                        // **Отклонение кастомной прошивки:** Если кастомная прошивка имеет
-                                        // уменьшенный лимит Binder — это проблема кастомной прошивки.
-                                        // Упрощённый layout является защитным механизмом.
+                                        // Если упрощённый рендер тоже падает — проблема кастомной прошивки.
                                         setWidgetLimitExceeded(value = false)
                                         val probeResult = safeUpdateAll(context, isProbe = true)
                                         if (probeResult is UpdateResult.GenericFailure) {
@@ -366,9 +367,13 @@ class WidgetUpdaterImpl
          * только при превышении лимита ~1 МБ на транзакцию.
          *
          * **Классификация по тексту сообщения ИСКЛЮЧЕНА:** текст может меняться
-         * между версиями Android и OEM-сборками. Если кастомная прошивка бросает
-         * TransactionTooLargeException при корректном lifecycle виджета —
-         * это проблема кастомной прошивки.
+         * между версиями Android и OEM-сборками. Проверка по типу исключения
+         * в cause-цепочке — единственный стабильный критерий.
+         *
+         * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
+         * TransactionTooLargeException при корректном lifecycle виджета
+         * и объёме данных < 1 МБ — это проблема кастомной прошивки,
+         * не проекта. Приложение не маскирует такие сбои эвристиками.
          *
          * @return true, если в cause-цепочке есть TransactionTooLargeException.
          */
