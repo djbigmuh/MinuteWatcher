@@ -80,9 +80,11 @@ class MainBannerControllerTest {
     fun `retry delay for the first attempt is not zero`() =
         runTest {
             var collectionCount = 0
+
             // Flow передаётся в мок через thenReturn() и коллекционируется
             // внутри MainBannerController при подписке на permissionRepository.
             // Предупреждение IDE является ложным.
+            @Suppress("UNUSED_VARIABLE")
             val dynamicFlow =
                 kotlinx.coroutines.flow.flow<Boolean> {
                     collectionCount++

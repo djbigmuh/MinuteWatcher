@@ -79,54 +79,79 @@ class SimWidgetVisibilityRepositoryImpl
         /**
          * Очищает настройки для SIM-карт, которые больше не активны.
          *
-         * **Strict Compliance:**
-         * 1. Извлечение identity использует строгое сопоставление префиксов от самых длинных
-         *    к самым коротким (см. [WidgetSettingsKeys.ALL_PREFIXES]).
-         * 2. Identity считается валидным, если он соответствует одному из известных форматов:
-         *    - `icc_<hash>` (стабильный ID на базе ICCID)
-         *    - `sub_<id>` (ID подписки)
-         *    - `sim_<slot>` (fallback ID на базе слота)
-         *    Это защищает от удаления ключей с некорректно извлеченными identity в случае
-         *    непредвиденных коллизий префиксов.
-         * 3. Fallback-ключи (`sim_<slot>`) никогда не удаляются автоматически, так как они
-         *    служат последним уровнем защиты при отсутствии других идентификаторов.
+         * Для предотвращения потери данных fallback-ключи формата `sim_<slot>` никогда не
+         * удаляются автоматически, так как они служат последним уровнем защиты при отсутствии
+         * стабильных идентификаторов (например, после сброса настроек сети или на старых API).
+         *
+         * @param activeIdentities Список identity SIM-карт, которые считаются активными в данный момент.
          */
         override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
             val activeSet = activeIdentities.toSet()
-            val prefixes = WidgetSettingsKeys.ALL_PREFIXES
             val fallbackRegex = Regex("^sim_\\d+$")
-            val validIdentityRegex = Regex("^(icc_|sub_|sim_).+$")
 
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys
                 val orphanedKeys =
                     allKeys.filter { key ->
-                        val name = key.name
-                        if (name.startsWith("widget_show_")) {
-                            var identity = ""
-                            for (prefix in prefixes) {
-                                if (name.startsWith(prefix)) {
-                                    identity = name.removePrefix(prefix)
-                                    break
-                                }
-                            }
+                        val identity = extractIdentity(key.name) ?: return@filter false
 
-                            if (identity.isEmpty() || !validIdentityRegex.matches(identity)) {
-                                return@filter false
-                            }
+                        // Protect sim_$slot fallback keys
+                        val isFallbackKey = fallbackRegex.matches(identity)
 
-                            // Protect sim_$slot fallback keys
-                            val isFallbackKey = fallbackRegex.matches(identity)
-
-                            identity !in activeSet && !isFallbackKey
-                        } else {
-                            false
-                        }
+                        identity !in activeSet && !isFallbackKey
                     }
                 if (orphanedKeys.isNotEmpty()) {
                     AppLogger.d("Clearing ${orphanedKeys.size} orphaned widget settings keys")
                     orphanedKeys.forEach { prefs.remove(it) }
                 }
             }
+        }
+
+        /**
+         * Извлекает identity из имени ключа DataStore.
+         *
+         * Допустимые форматы identity:
+         * - `icc_<hash>` (стабильный идентификатор на базе ICCID)
+         * - `sub_<id>` (идентификатор подписки)
+         * - `sim_<slot>` (fallback-идентификатор на базе индекса слота)
+         *
+         * Извлечение через [String.removePrefix] корректно только при соблюдении инварианта:
+         * identity не может начинаться с подстроки, совпадающей с суффиксом любого префикса ключа
+         * (например, identity не может начинаться с `icon_`, `name_`, `minutes_` и т.д.).
+         *
+         * Валидация через допустимые префиксы (`icc_`, `sub_`, `sim_`) защищает от нарушения
+         * этого инварианта, отсекая некорректно извлеченные identity.
+         *
+         * Если кастомная прошивка возвращает identity в недопустимом формате — это проблема
+         * кастомной прошивки.
+         *
+         * @param keyName Полное имя ключа в DataStore.
+         * @return Извлеченный identity или `null`, если ключ не относится к настройкам виджета
+         *         или identity имеет недопустимый формат.
+         */
+        @Suppress("ReturnCount")
+        // Подавление ReturnCount оправдано: метод реализует линейную логику извлечения и
+        // валидации identity с ранними выходами при несовпадении форматов.
+        private fun extractIdentity(keyName: String): String? {
+            if (!keyName.startsWith("widget_show_")) return null
+
+            val prefixes = WidgetSettingsKeys.ALL_PREFIXES
+            for (prefix in prefixes) {
+                if (keyName.startsWith(prefix)) {
+                    val identity = keyName.removePrefix(prefix)
+
+                    // Валидация: identity должен начинаться с одного из допустимых префиксов.
+                    // Это защищает от ситуаций, когда identity (например, "icon_foo") ошибочно
+                    // интерпретируется как "foo" из-за совпадения с суффиксом префикса
+                    // "widget_show_sim_icon_".
+                    val isValid =
+                        identity.startsWith("icc_") ||
+                            identity.startsWith("sub_") ||
+                            identity.startsWith("sim_")
+
+                    return if (isValid) identity else null
+                }
+            }
+            return null
         }
     }

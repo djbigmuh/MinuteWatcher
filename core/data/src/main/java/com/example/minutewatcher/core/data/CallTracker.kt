@@ -758,24 +758,37 @@ class CallTracker
         }
 
         /**
-         * Очистка данных сессии.
+         * Очищает данные сессии звонка.
          *
-         * **Контракт AOSP:** на AOSP DataStore.edit не бросает исключений при корректном
-         * состоянии хранилища.
+         * **Строгое соблюдение API:** на AOSP DataStore.edit не бросает исключений при
+         * корректном состоянии хранилища.
          *
-         * **Отклонение кастомной прошивки:** Сбой возможен только при деградации DataStore на
-         * кастомных прошивках. Это проблема кастомной прошивки, а не приложения.
+         * **Отклонение кастомной прошивки:** исключение возможно только при деградации DataStore
+         * на кастомной прошивке, не соответствующей документации Google.
          *
-         * **Стратегия приложения:** Отклонения не маскируются эвристиками, а обрабатываются как
-         * системные сбои с уведомлением.
+         * **Стратегия приложения:** логируем ошибку через [AppLogger.e], но не пробрасываем её
+         * дальше (кроме [CancellationException]). Частичная очистка сессии или лог об ошибке
+         * предпочтительнее полной блокировки трекинга из-за необработанного исключения.
+         *
+         * @param subId Идентификатор подписки, для которой очищается сессия.
          */
         private suspend fun clearSession(subId: Int) {
             withContext(NonCancellable) {
-                callSessionRepository.setCallStartTime(subId, 0L)
-                callSessionRepository.setBootTime(subId, 0L)
-                callSessionRepository.setUptime(subId, 0L)
-                callSessionRepository.setCallIdentity(subId, null)
-                attributionFailures.remove(subId)
+                try {
+                    callSessionRepository.setCallStartTime(subId, 0L)
+                    callSessionRepository.setBootTime(subId, 0L)
+                    callSessionRepository.setUptime(subId, 0L)
+                    callSessionRepository.setCallIdentity(subId, null)
+                    attributionFailures.remove(subId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // На AOSP DataStore.edit не бросает исключений при корректном
+                    // состоянии хранилища. Исключение здесь указывает на деградацию
+                    // DataStore на кастомной прошивке. Логируем, но не пробрасываем:
+                    // частичная очистка сессии предпочтительнее полной блокировки трекинга.
+                    AppLogger.e("CallTracker: failed to fully clear session for subId $subId", e)
+                }
             }
         }
 

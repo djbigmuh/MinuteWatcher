@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.time.Duration
@@ -42,6 +43,12 @@ class WidgetSettingsViewModel
         private val _isSaving = MutableStateFlow(false)
         val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
+        /**
+         * Мьютекс гарантирует, что результат отменённой загрузки не будет записан в
+         * [_settingsState], даже если [Job.cancel] вызван между launch и withLock.
+         */
+        private val loadMutex = Mutex()
+
         private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
@@ -54,50 +61,41 @@ class WidgetSettingsViewModel
             loadSettings()
         }
 
+        /**
+         * Загружает настройки виджета, используя паттерн отмены предыдущей загрузки.
+         *
+         * [Job.cancel] инициирует кооперативную отмену предыдущей корутины.
+         * [loadMutex] гарантирует, что только одна (последняя актуальная) корутина
+         * получит доступ к обновлению [_settingsState] после завершения работы [loader].
+         * Вызов [ensureActive] внутри блокировки мьютекса защищает от записи данных
+         * в состояние, если корутина была отменена во время загрузки.
+         */
         private fun loadSettings() {
             _loadError.value = false
-
-            // Паттерн отмены предыдущей загрузки:
-            // 1. Сохраняем ссылку на предыдущий job (до обнуления).
-            // 2. Отменяем его (cancel — кооперативный, job может ещё выполняться).
-            // 3. Обнуляем loadJob до запуска нового, чтобы повторный вызов
-            //    loadSettings() в окне между cancel() и .also{} не пытался
-            //    отменить уже отменённый job.
-            // 4. Запускаем новую корутину и сохраняем ссылку.
-            //
-            // Безопасность: viewModelScope использует Dispatchers.Main.immediate,
-            // поэтому шаги 1-4 выполняются атомарно с точки зрения Main-thread.
-            // join() внутри новой корутины дожидается реального завершения
-            // предыдущей загрузки перед записью результата.
-            //
-            // Строгое соблюдение API: на AOSP DataStore.load() завершается
-            // за миллисекунды. Таймаут 5с — защитный запас на случай
-            // деградации кастомной прошивки.
-            val previousJob = loadJob
-            previousJob?.cancel()
-            loadJob = null
-            viewModelScope
-                .launch {
-                    // withTimeoutOrNull использует Duration-перегрузку (Kotlin 1.6+).
-                    // Long-перегрузка не используется.
-                    // На AOSP join() завершается за миллисекунды; таймаут 10с — защитный запас
-                    // на случай деградации кастомной прошивки.
-                    withTimeoutOrNull(LOAD_TIMEOUT) { previousJob?.join() }
-
-                    try {
-                        val loaded = loader.load()
-                        // Защита от записи результата отменённого job.
-                        // Если текущий job был отменён между loader.load() и этой строкой,
-                        // ensureActive() бросит CancellationException.
-                        ensureActive()
-                        _settingsState.value = loaded
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to load widget settings", e)
-                        _loadError.value = true
+            loadJob?.cancel()
+            loadJob =
+                viewModelScope.launch {
+                    loadMutex.withLock {
+                        try {
+                            val loaded =
+                                withTimeoutOrNull(LOAD_TIMEOUT) {
+                                    loader.load()
+                                }
+                            ensureActive()
+                            if (loaded != null) {
+                                _settingsState.value = loaded
+                            } else {
+                                AppLogger.e("Failed to load widget settings: timeout")
+                                _loadError.value = true
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to load widget settings", e)
+                            _loadError.value = true
+                        }
                     }
-                }.also { loadJob = it }
+                }
         }
 
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
@@ -222,12 +220,10 @@ class WidgetSettingsViewModel
              * Таймаут загрузки настроек виджета.
              *
              * **Строгое соблюдение API:** на AOSP WidgetSettingsLoader.load() завершается
-             * за миллисекунды. Таймаут 10 секунд — защитный запас.
+             * за миллисекунды. 10 секунд — защитный запас.
              *
              * **Отклонение кастомной прошивки:** если DataStore деградирует и load()
              * занимает больше 10 секунд — это проблема кастомной прошивки.
-             * По истечении таймаута предыдущая загрузка считается завершённой
-             * и начинается новая.
              */
             private val LOAD_TIMEOUT: Duration = 10.seconds
         }

@@ -209,54 +209,25 @@ class MainViewModel
          * при изменении только настроек отображения.
          */
         private suspend fun refreshAndNotify(force: Boolean = false) {
-            val currentTimestamp =
-                controllers
-                    .simData
-                    .usageStateRepository
-                    .observeSnapshot()
-                    .value
-                    .timestamp
-
-            // result == null означает одно из двух:
-            //   (а) Обновление уже выполняется в другой корутине (мьютекс занят).
-            //       В этом случае ожидаем появления нового snapshot.
-            //   (б) Произошло исключение внутри refreshSimCardsInternal.
-            //       В этом случае ожидание snapshot может завершиться таймаутом.
-            // В обоих случаях, если snapshot не получен, принудительно уведомляем
-            // виджет (force), чтобы он отобразил последнее доступное состояние.
-            // Строгое соблюдение API: на AOSP refresh() не возвращает null
-            // при корректном состоянии DataStore. Ошибка возможна только при
-            // деградации хранилища на кастомных прошивках.
             val result = controllers.refresh.refreshSimCardsInternal()
-
-            if (result == null) {
-                AppLogger.d("refreshAndNotify: refresh busy or error, waiting for new snapshot")
-                val newSnapshot =
-                    withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                        controllers.simData.usageStateRepository
-                            .observeSnapshot()
-                            .first { it.timestamp > currentTimestamp }
-                    }
-                if (newSnapshot == null) {
-                    AppLogger.w("refreshAndNotify: timed out waiting for new snapshot, forcing widget notification")
-                    controllers.simData.notifyDataChanged(force = force)
-                    return
+            when (result) {
+                is RefreshResult.Success -> {
+                    lastRefreshAt = timeProvider.elapsedRealtime()
                 }
-                // Snapshot получен успешно — обновляем timestamp последнего обновления,
-                // чтобы предотвратить избыточные повторные вызовы в onActivityResume.
-                lastRefreshAt = timeProvider.elapsedRealtime()
+                is RefreshResult.Timeout -> {
+                    // Обновляем timestamp, чтобы предотвратить немедленный повторный
+                    // refresh при следующем onActivityResume. На AOSP refresh()
+                    // завершается за миллисекунды; таймаут указывает на деградацию
+                    // хранилища на кастомной прошивке. Повторная попытка будет
+                    // выполнена при следующем onActivityResume через RESUME_REFRESH_THRESHOLD_MS.
+                    lastRefreshAt = timeProvider.elapsedRealtime()
+                }
+                null -> {
+                    // result == null означает, что обновление уже выполняется в другой корутине.
+                    // В этом случае мы не обновляем lastRefreshAt, полагаясь на то, что
+                    // "активное" обновление обновит его само.
+                }
             }
-
-            if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
-                lastRefreshAt = timeProvider.elapsedRealtime()
-            }
-
-            /*
-             * force=true используется для операций, требующих немедленного визуального отклика (сброс, ручная правка).
-             * force=false уведомляет систему об изменениях.
-             * UpdateCoordinator в core-data берет на себя ответственность за сравнение хэшей
-             * и обновление виджета только при реальном изменении данных.
-             */
             controllers.simData.notifyDataChanged(force = force)
         }
 

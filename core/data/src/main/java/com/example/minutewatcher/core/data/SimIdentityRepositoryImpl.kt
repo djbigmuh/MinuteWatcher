@@ -93,24 +93,27 @@ class SimIdentityRepositoryImpl
         /**
          * Кэш результатов прямого резолва SIM-identity.
          *
-         * Заполняется при вызове getSimIdentity(), когда activeSimsCache
-         * ещё не содержит данных для запрашиваемого слота.
-         * Очищается при изменении списка активных SIM (в init-блоке).
+         * Используется только в случаях, когда [activeSimsCache] не содержит данных для
+         * запрашиваемого слота (например, сразу после запуска приложения или если разрешения
+         * были временно отозваны).
          *
-         * **Строгое соблюдение API:** на AOSP observeActiveSims() эмитит
-         * значение в течение миллисекунд. Кэш нужен только для первого
-         * вызова getSimIdentity() до первого эмита activeSimsCache.
+         * **Строгое соблюдение API:** на AOSP [observeActiveSims] эмитит значение в течение
+         * миллисекунд после изменения разрешений или состояния SIM. Кэш служит защитным
+         * механизмом для предотвращения избыточных вызовов [findActiveIdentityInternal]
+         * в короткие промежутки времени.
          *
-         * **Отклонение кастомной прошивки:** если observeActiveSims()
-         * не эмитит значение в течение длительного времени — это проблема
-         * кастомной прошивки. Кэш защищает от повторных дорогостоящих
-         * резолвов в этом случае.
+         * **Отклонение кастомной прошивки:** если [activeSimsCache] не обновляется немедленно
+         * при изменении разрешений — это проблема кастомной прошивки.
          *
-         * **Потокобезопасность:** ConcurrentHashMap обеспечивает потокобезопасность.
-         * Очистка выполняется в init-блоке внутри scope.launch, что гарантирует
-         * последовательность с getSimIdentity() на AOSP (Main-thread).
+         * **Безопасность (TTL):** записи в кэше имеют ограниченный срок жизни
+         * ([MANUAL_RESOLUTION_CACHE_TTL_MS]), что предотвращает использование устаревших
+         * identity в случае, если состав SIM-карт изменился, пока приложение не имело
+         * доступа к [SubscriptionManager].
+         *
+         * **Потокобезопасность:** [ConcurrentHashMap] обеспечивает безопасный доступ из
+         * разных потоков.
          */
-        private val manualResolutionCache = ConcurrentHashMap<Int, SimIdentity>()
+        private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
 
         /**
          * Поток seed-значения для генерации identity.
@@ -355,8 +358,15 @@ class SimIdentityRepositoryImpl
                 return cached.identity
             }
 
-            val manuallyResolved = manualResolutionCache[slot]
-            if (manuallyResolved != null) return manuallyResolved
+            val cachedManual = manualResolutionCache[slot]
+            if (cachedManual != null) {
+                val (identity, timestamp) = cachedManual
+                if (System.currentTimeMillis() - timestamp < MANUAL_RESOLUTION_CACHE_TTL_MS) {
+                    return identity
+                } else {
+                    manualResolutionCache.remove(slot)
+                }
+            }
 
             try {
                 // Используем уменьшенный таймаут для UI-операций
@@ -384,7 +394,7 @@ class SimIdentityRepositoryImpl
                     findActiveIdentityInternal(slot, seed as SeedResult.Real)
                         ?: throw SimNotFoundException(slot)
 
-                manualResolutionCache[slot] = resolved
+                manualResolutionCache[slot] = resolved to System.currentTimeMillis()
 
                 if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
                     saveSimIdentitiesInfo(listOf(resolved))
@@ -740,6 +750,12 @@ class SimIdentityRepositoryImpl
             }
 
         internal companion object {
+            /**
+             * Срок жизни записи в [manualResolutionCache] в миллисекундах.
+             * 60 секунд — достаточный интервал для предотвращения гонок при изменении разрешений.
+             */
+            private const val MANUAL_RESOLUTION_CACHE_TTL_MS = 60_000L
+
             /**
              * Общий таймаут инициализации seed, включая генерацию и сохранение.
              * Сумма [Constants.Flow.SEED_GENERATION_TIMEOUT_MS] и [Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS].

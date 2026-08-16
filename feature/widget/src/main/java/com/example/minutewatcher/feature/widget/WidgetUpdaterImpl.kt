@@ -261,15 +261,11 @@ class WidgetUpdaterImpl
          * Пробный полный рендер для проверки, устранена ли причина превышения лимита.
          *
          * Последовательность операций (все внутри updateMutex.withLock):
-         * 1. Сбрасываем widgetLimitExceeded = false для полного рендера.
-         * 2. Вызываем safeUpdateAll(isProbe = true).
-         * 3a. Успех → handleUpdateResult сбросит флаг (wasFull = true).
-         * 3b. LimitExceeded → handleLimitExceeded() вернёт флаг = true.
-         * 3c. GenericFailure → вручную возвращаем флаг = true.
-         *
-         * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ на
-         * Binder-транзакцию. Упрощённый layout всегда укладывается в этот лимит.
-         * Если probe падает — это проблема кастомной прошивки.
+         * - Сброс widgetLimitExceeded = false для полного рендера.
+         * - Вызов safeUpdateAll(isProbe = true).
+         * - При успехе: handleUpdateResult подтвердит успех (wasFull = true).
+         * - При LimitExceeded: handleLimitExceeded() вернёт флаг = true.
+         * - При GenericFailure: вручную возвращаем флаг = true.
          */
         private suspend fun performProbeUpdate(): UpdateResult {
             // Доступ только внутри updateMutex.withLock (вызывается из performSingleUpdate)
@@ -470,10 +466,19 @@ class WidgetUpdaterImpl
 
             /**
              * Интервал пробных полных рендеров в режиме widgetLimitExceeded.
-             * Значение 10 выбрано как баланс: при ~1 обновлении/час проба
-             * происходит раз в ~10 часов. На AOSP это не создаёт нагрузки;
-             * на кастомных прошивках с уменьшенным Binder-лимитом проба
-             * может падать — это проблема кастомной прошивки.
+             *
+             * Каждое [PROBE_INTERVAL_UPDATES]-е обновление в режиме widgetLimitExceeded
+             * выполняет пробный полный рендер для проверки, не устранена ли причина
+             * превышения лимита (например, пользователь уменьшил количество отображаемых SIM).
+             *
+             * Значение 10 выбрано как баланс: при ~1 обновлении/час пробный рендер
+             * выполняется раз в ~10 часов. На AOSP это не создаёт нагрузки; на кастомных
+             * прошивках с уменьшенным Binder-лимитом пробный рендер может падать —
+             * это проблема кастомной прошивки.
+             *
+             * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ на
+             * Binder-транзакцию. Упрощённый layout всегда укладывается в этот лимит.
+             * Если пробный рендер падает — это проблема кастомной прошивки.
              */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val PROBE_INTERVAL_UPDATES = 10

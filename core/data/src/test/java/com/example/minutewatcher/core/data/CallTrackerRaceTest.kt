@@ -63,6 +63,7 @@ class CallTrackerRaceTest {
     }
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun `concurrent onCallStarted calls are handled safely by mutex`() =
         runTest {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(1)
@@ -87,7 +88,7 @@ class CallTrackerRaceTest {
             jobs.joinAll()
             advanceUntilIdle()
 
-            // Verification of interaction count
+            // Verification of interaction count. Flow is matched by Mockito proxy.
             verify(callSessionRepository, times(10)).getCallStartTime(1)
 
             // Строгое соблюдение API: на AOSP DataStore.edit сериализует записи.
@@ -101,6 +102,7 @@ class CallTrackerRaceTest {
         }
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun `concurrent call start and end for different subIds`() =
         runTest {
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))

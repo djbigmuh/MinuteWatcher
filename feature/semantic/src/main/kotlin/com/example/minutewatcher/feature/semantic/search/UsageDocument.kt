@@ -80,6 +80,7 @@ class UsageDocument {
      * корректную рефлексию для AppSearch — это проблема кастомной прошивки.
      */
     @Suppress("unused")
+    @SuppressWarnings("unused")
     constructor()
 
     // UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.
