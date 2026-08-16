@@ -143,16 +143,40 @@ class MainSimDataController
             scope.launch(ioDispatcher) {
                 try {
                     block()
-                    onRefresh()
                 } catch (e: SeedUnavailableException) {
+                    // SeedUnavailableException — подкласс IllegalStateException.
+                    // Должен быть пойман ДО общего catch(Exception).
+                    // На AOSP getIdentity() не бросает SeedUnavailableException.
+                    // Отклонение кастомной прошивки: если DataStore деградирует —
+                    // это проблема кастомной прошивки.
                     handleSimIdentityError(slot, operationName, e)
+                    return@launch
                 } catch (e: SimNotFoundException) {
+                    // SimNotFoundException — подкласс IllegalStateException.
+                    // SIM была удалена между отображением UI и вызовом операции.
+                    // Это штатная ситуация: пользователь мог извлечь SIM-карту.
                     handleSimIdentityError(slot, operationName, e)
+                    return@launch
                 } catch (e: CancellationException) {
+                    // Проброс для кооперативной отмены — строгое соблюдение API.
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
                     _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
+                    return@launch
+                }
+
+                // Операция успешна. Refresh — отдельная операция, его ошибка
+                // не должна маскировать успех основной операции.
+                try {
+                    onRefresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // На AOSP refresh() не бросает исключений.
+                    // Отклонение кастомной прошивки: если DataStore деградирует —
+                    // это проблема кастомной прошивки.
+                    AppLogger.w("MainSimDataController: refresh after $operationName failed", e)
                 }
             }
         }

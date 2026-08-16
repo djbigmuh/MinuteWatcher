@@ -78,9 +78,9 @@ class WidgetSettingsViewModel
             loadJob = null
             viewModelScope
                 .launch {
-                    // Используется Duration-перегрузка withTimeoutOrNull (Kotlin 1.6+).
-                    // LOAD_TIMEOUT имеет тип Duration (5.seconds). Long-перегрузка не используется.
-                    // На AOSP join() завершается за миллисекунды; таймаут 5с — защитный запас
+                    // withTimeoutOrNull использует Duration-перегрузку (Kotlin 1.6+).
+                    // Long-перегрузка не используется.
+                    // На AOSP join() завершается за миллисекунды; таймаут 10с — защитный запас
                     // на случай деградации кастомной прошивки.
                     withTimeoutOrNull(LOAD_TIMEOUT) { previousJob?.join() }
 
@@ -218,6 +218,17 @@ class WidgetSettingsViewModel
             )
 
         companion object {
-            private val LOAD_TIMEOUT: Duration = 5.seconds
+            /**
+             * Таймаут загрузки настроек виджета.
+             *
+             * **Строгое соблюдение API:** на AOSP WidgetSettingsLoader.load() завершается
+             * за миллисекунды. Таймаут 10 секунд — защитный запас.
+             *
+             * **Отклонение кастомной прошивки:** если DataStore деградирует и load()
+             * занимает больше 10 секунд — это проблема кастомной прошивки.
+             * По истечении таймаута предыдущая загрузка считается завершённой
+             * и начинается новая.
+             */
+            private val LOAD_TIMEOUT: Duration = 10.seconds
         }
     }

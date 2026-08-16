@@ -71,13 +71,10 @@ class CallTrackerRaceTest {
             whenever(timeProvider.elapsedRealtime()).thenReturn(2000L)
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
 
-            // Flow передаётся в мок для корректной симуляции DataStore.
-            // Без этого тест не покрывает путь чтения session-данных.
-            // Возвращаем 0L на первый запрос и 1000L на последующие,
-            // чтобы симулировать уже начатый звонок для 2-10 конкурентных вызовов.
+            // handleCallStartInternal читает только getCallStartTime и getBootTime через combine().
+            // getUptime используется только в loadCallSessionData (путь endCall) и здесь не нужен.
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L), flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L), flowOf(2000L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             // Launch multiple concurrent start events

@@ -201,6 +201,9 @@ class CallTracker
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     errorSetInThisCall = true
                 } finally {
+                    // NonCancellable гарантирует, что refreshStatus выполнится даже при отмене
+                    // корутины, чтобы статус был актуальным. Это строгое соблюдение API:
+                    // на AOSP getActiveCallSubIds() не бросает исключений.
                     withContext(NonCancellable) {
                         try {
                             if (!errorSetInThisCall && !justStarted) {
@@ -213,6 +216,11 @@ class CallTracker
                             @Suppress("ThrowingExceptionFromFinally")
                             throw e
                         } catch (e: Exception) {
+                            // Логирование без проброса: ошибка refreshStatus не должна
+                            // маскировать оригинальное исключение из onCallStarted.
+                            // На AOSP refreshStatus не бросает исключений.
+                            // Отклонение кастомной прошивки: если DataStore деградирует —
+                            // это проблема кастомной прошивки.
                             AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                         }
                     }
@@ -408,6 +416,9 @@ class CallTracker
                         }
                     }
                 } finally {
+                    // NonCancellable гарантирует, что refreshStatus выполнится даже при отмене
+                    // корутины, чтобы статус был актуальным. Это строгое соблюдение API:
+                    // на AOSP getActiveCallSubIds() не бросает исключений.
                     withContext(NonCancellable) {
                         try {
                             if (!errorSetInThisCall) {
@@ -418,6 +429,11 @@ class CallTracker
                             @Suppress("ThrowingExceptionFromFinally")
                             throw e
                         } catch (e: Exception) {
+                            // Логирование без проброса: ошибка refreshStatus не должна
+                            // маскировать оригинальное исключение из onCallEnded.
+                            // На AOSP refreshStatus не бросает исключений.
+                            // Отклонение кастомной прошивки: если DataStore деградирует —
+                            // это проблема кастомной прошивки.
                             AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
                         }
                     }
@@ -1002,8 +1018,11 @@ internal class CallEndResolver(
      * - Если ровно одна сессия в IDLE → закрыть её (однозначно).
      * - Если неоднозначно → НЕ закрывать ничего, установить Error.
      *   Эвристики «закрыть самую старую» или «закрыть default voice»
-     *   намеренно исключены: они могут привести к потере данных
+     *   НАМЕРЕННО ИСКЛЮЧЕНЫ: они могут привести к потере данных
      *   при одновременных звонках на dual-SIM.
+     *
+     * **Отклонение кастомной прошивки:** если прошивка не передаёт subId
+     * в PHONE_STATE_CHANGED intent — это проблема кастомной прошивки.
      */
     suspend fun resolveUnknownSubIdEnd() {
         if (!permissionManager.hasPhoneStatePermission()) {

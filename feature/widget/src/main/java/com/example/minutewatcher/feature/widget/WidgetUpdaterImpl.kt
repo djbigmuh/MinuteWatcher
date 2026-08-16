@@ -33,7 +33,8 @@ class WidgetUpdaterImpl
          *
          * Доступ только внутри updateMutex.withLock — атомарность не требуется.
          */
-        private var exceededUpdateCounter = 0L
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal var exceededUpdateCounter = 0L
 
         private sealed class UpdateResult {
             data class Success(
@@ -210,7 +211,8 @@ class WidgetUpdaterImpl
         private suspend fun handleLimitExceeded(): UpdateOutcome {
             val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
             if (current) {
-                // Повторные попытки после уже установленного флага не имеют смысла.
+                // Флаг уже установлен — повторный рендер не нужен.
+                // Это защищает от осцилляции при конкурентных вызовах.
                 return UpdateOutcome.Stop
             }
 
@@ -248,7 +250,9 @@ class WidgetUpdaterImpl
                 } else {
                     AppLogger.e("Re-render after limit exceeded failed (non-size error)", e)
                 }
-                setWidgetLimitExceeded(value = true)
+                // Флаг уже установлен в true выше. Повторный вызов не нужен.
+                // На AOSP упрощённый layout всегда укладывается в лимит Binder.
+                // Если он тоже падает — это проблема кастомной прошивки.
                 UpdateOutcome.Stop // isRetryable = false — осцилляция бессмысленна
             }
         }
@@ -256,18 +260,19 @@ class WidgetUpdaterImpl
         /**
          * Пробный полный рендер для проверки, устранена ли причина превышения лимита.
          *
-         * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ на Binder-транзакцию.
-         * Упрощённый layout всегда укладывается в этот лимит. Если probe падает —
-         * это проблема кастомной прошивки.
-         *
          * Последовательность операций (все внутри updateMutex.withLock):
          * 1. Сбрасываем widgetLimitExceeded = false для полного рендера.
          * 2. Вызываем safeUpdateAll(isProbe = true).
          * 3a. Успех → handleUpdateResult сбросит флаг (wasFull = true).
          * 3b. LimitExceeded → handleLimitExceeded() вернёт флаг = true.
          * 3c. GenericFailure → вручную возвращаем флаг = true.
+         *
+         * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ на
+         * Binder-транзакцию. Упрощённый layout всегда укладывается в этот лимит.
+         * Если probe падает — это проблема кастомной прошивки.
          */
         private suspend fun performProbeUpdate(): UpdateResult {
+            // Доступ только внутри updateMutex.withLock (вызывается из performSingleUpdate)
             setWidgetLimitExceeded(value = false)
             val probeResult = safeUpdateAll(context, isProbe = true)
             if (probeResult is UpdateResult.GenericFailure) {
@@ -450,13 +455,16 @@ class WidgetUpdaterImpl
             /**
              * Таймаут обновления виджета.
              *
-             * **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() завершается
-             * в пределах нескольких секунд. 10 секунд — защитный запас.
+             * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll()
+             * завершается за несколько секунд. 10 секунд — защитный запас.
              *
-             * **Отклонение кастомной прошивки:** зависание на кастомных прошивках.
-             * Это проблема кастомной прошивки.
+             * **Отклонение кастомной прошивки:** если кастомная прошивка
+             * замедляет рендер виджета и updateAll() занимает больше 10 секунд —
+             * это проблема кастомной прошивки.
              *
              * **Стратегия приложения:** таймаут считается retryable-ошибкой.
+             * Повторная попытка выполняется с экспоненциальной задержкой.
+             * После исчерпания MAX_UPDATE_ATTEMPTS попытки прекращаются.
              */
             private const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
 
@@ -467,6 +475,7 @@ class WidgetUpdaterImpl
              * на кастомных прошивках с уменьшенным Binder-лимитом проба
              * может падать — это проблема кастомной прошивки.
              */
-            private const val PROBE_INTERVAL_UPDATES = 10
+            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+            internal const val PROBE_INTERVAL_UPDATES = 10
         }
     }

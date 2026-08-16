@@ -91,30 +91,41 @@ class SimIdentityRepositoryImpl
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         /**
-         * Кэш результатов прямого резолва SIM-идентичности.
-         * Заполняется при вызове getSimIdentity, когда activeSimsCache ещё не содержит данных.
-         * Очищается при получении актуального списка активных SIM из activeSimsCache.
+         * Кэш результатов прямого резолва SIM-identity.
          *
-         * **Контракт AOSP:** на AOSP observeActiveSims() эмитит значение в пределах SHORT_TIMEOUT_MS.
+         * Заполняется при вызове getSimIdentity(), когда activeSimsCache
+         * ещё не содержит данных для запрашиваемого слота.
+         * Очищается при изменении списка активных SIM (в init-блоке).
          *
-         * **Отклонение кастомной прошивки:** Если activeSimsCache не эмитит значение в течение длительного времени
-         * (деградация DataStore на кастомной прошивке), записи могут устареть. Это проблема кастомной прошивки.
+         * **Строгое соблюдение API:** на AOSP observeActiveSims() эмитит
+         * значение в течение миллисекунд. Кэш нужен только для первого
+         * вызова getSimIdentity() до первого эмита activeSimsCache.
          *
-         * **Стратегия приложения:** используется manualResolutionCache как защитный механизм.
+         * **Отклонение кастомной прошивки:** если observeActiveSims()
+         * не эмитит значение в течение длительного времени — это проблема
+         * кастомной прошивки. Кэш защищает от повторных дорогостоящих
+         * резолвов в этом случае.
+         *
+         * **Потокобезопасность:** ConcurrentHashMap обеспечивает потокобезопасность.
+         * Очистка выполняется в init-блоке внутри scope.launch, что гарантирует
+         * последовательность с getSimIdentity() на AOSP (Main-thread).
          */
         private val manualResolutionCache = ConcurrentHashMap<Int, SimIdentity>()
 
         /**
          * Поток seed-значения для генерации identity.
          *
-         * **SharingStarted.Eagerly:** сборка начинается немедленно при создании
-         * репозитория, чтобы seed был доступен к моменту первого вызова getSimIdentity().
-         * Это намеренное поведение: задержка сбора seed привела бы к SeedUnavailableException
-         * при первом обращении.
-         *
          * **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс.
-         * Таймаут SEED_TOTAL_TIMEOUT_MS — защитный запас для кастомных прошивок.
-         * Если seed не доступен за это время — это проблема кастомной прошивки.
+         * seedFlow эмитит Real(seed) при успешном чтении/генерации.
+         *
+         * **Отклонение кастомной прошивки:** если DataStore деградирует и
+         * seed недоступен в течение SEED_TOTAL_TIMEOUT_MS — эмитится Fallback.
+         * Это проблема кастомной прошивки.
+         *
+         * **Стратегия приложения:** при Fallback вызов getSimIdentity() бросает
+         * SeedUnavailableException. UI должен показать ошибку и предложить
+         * повторить. Fallback на slot-based identity НАМЕРЕННО ИСКЛЮЧЁН:
+         * он приведёт к потере привязки данных к SIM при восстановлении хранилища.
          */
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow

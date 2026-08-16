@@ -52,14 +52,14 @@ class TrafficTracker
         private suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 
         /**
-         * Мьютекс сериализует read-modify-write над lastTotalBytes.
-         * На AOSP DataStore.edit сериализует записи, но паттерн
-         * «прочитать baseline → вычислить дельту → записать baseline + дельту»
-         * не является атомарным на уровне приложения.
+         * Мьютекс сериализует операции чтения-модификации-записи над baseline и usage.
          *
-         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-         * детерминирован для одного интервала; мьютекс защищает только
-         * приложение от конкурентных вызовов updateTrafficUsage.
+         * **Строгое соблюдение API:** на AOSP NetworkStatsManager.querySummaryForDevice
+         * возвращает монотонно возрастающее значение. Мьютекс защищает только
+         * прикладной уровень от конкурентных вызовов updateTrafficUsage/resetBaseline.
+         *
+         * **Отклонение кастомной прошивки:** если NetworkStatsManager возвращает
+         * немонотонные значения без смены SIM — это проблема кастомной прошивки.
          */
         private val trafficMutex = Mutex()
 
@@ -70,19 +70,28 @@ class TrafficTracker
         private var inMemoryLastDataSubId: Int = -1
 
         /**
-         * Карта identity → число неудачных попыток сброса базлайна после смены SIM.
+         * Карта identity → число неудачных попыток сброса baseline после смены SIM.
          *
-         * Записи создаются в [handleSimChange] при недоступности статистики.
-         * Обрабатываются в [performTrafficUpdate] при следующем вызове.
-         * Очищаются при успешном сбросе или при превышении [MAX_BASELINE_RETRIES].
+         * Записи создаются в handleSimChange при недоступности статистики.
+         * Обрабатываются в performTrafficUpdate при следующем вызове.
+         * Очищаются при успешном сбросе или при удалении SIM из списка активных.
          *
-         * **Контракт AOSP:** на AOSP NetworkStatsManager возвращает данные при наличии
-         * SIM и READ_PHONE_STATE.
+         * **Строгое соблюдение API:** на AOSP NetworkStatsManager.querySummaryForDevice
+         * возвращает данные при наличии SIM и READ_PHONE_STATE.
          *
-         * **Отклонение кастомной прошивки:** Повторная недоступность возможна только на
-         * кастомных прошивках. Это проблема кастомной прошивки, а не приложения.
+         * **Отклонение кастомной прошивки:** если статистика недоступна
+         * при наличии SIM и разрешений — это проблема кастомной прошивки.
          *
-         * **Стратегия приложения:** используется механизм повторных попыток с лимитом [MAX_BASELINE_RETRIES].
+         * **Стратегия приложения:** при недоступности статистики baseline
+         * не сбрасывается, запись добавляется в baselineNeedsRetry.
+         * При следующем вызове updateTrafficUsage() выполняется повторная попытка.
+         * После MAX_BASELINE_RETRIES неудач запись удаляется и baseline
+         * принудительно сбрасывается.
+         *
+         * **Потокобезопасность:** ConcurrentHashMap обеспечивает потокобезопасность.
+         * Очистка по activeIdentities выполняется только при успешном получении
+         * списка активных SIM. При таймауте observeActiveSims() записи НЕ
+         * очищаются — мы не знаем, какие SIM активны.
          */
         private val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
 
@@ -146,23 +155,18 @@ class TrafficTracker
         /**
          * Обновляет данные о трафике для текущей default data SIM.
          *
-         * Метод выполняет паттерн read-modify-write над lastTotalBytes:
-         * 1. Прочитать lastTotalBytes из DataStore.
-         * 2. Получить текущий totalBytes из NetworkStatsManager.
-         * 3. Вычислить дельту и записать новую lastTotalBytes + инкрементировать usage.
-         *
-         * Строгое соблюдение API: на AOSP NetworkStatsManager.querySummaryForDevice
-         * возвращает монотонно возрастающее значение для одного интервала.
+         * **Строгое соблюдение API:** на AOSP NetworkStatsManager.querySummaryForDevice
+         * возвращает монотонно возрастающее значение для одной SIM.
          * DataStore.edit сериализует записи на уровне хранилища.
          *
-         * Мьютекс [trafficMutex] защищает паттерн read-modify-write на уровне
-         * приложения. Без него два конкурентных вызова прочитают одинаковый
-         * lastTotalBytes и дважды прибавят одну дельту.
-         *
-         * Отклонение кастомной прошивки: если NetworkStatsManager возвращает
+         * **Отклонение кастомной прошивки:** если NetworkStatsManager возвращает
          * немонотонные значения без смены SIM — это проблема кастомной прошивки.
-         * Приложение детектирует уменьшение (currentBytes < lastTotalBytes)
-         * и выполняет сброс baseline.
+         * Если observeActiveSims() не эмитит значение в течение таймаута —
+         * это проблема кастомной прошивки (деградация DataStore).
+         *
+         * **Стратегия приложения:** при таймауте observeActiveSims() обновление
+         * пропускается, статус переводится в Error. Повторная попытка при
+         * следующем вызове updateTrafficUsage().
          *
          * @throws java.io.IOException if DataStore write fails
          * @throws SecurityException if permission is revoked during operation
