@@ -66,6 +66,13 @@ class TrafficTracker
         /**
          * The subscription ID of the last default data SIM seen by the tracker.
          * Modified only within [withSimChangeLock]. Do not access without the lock.
+         *
+         * **Кэш последнего известного subscription ID для данных по умолчанию.**
+         * Обновляется в ensureInMemoryLastDataSubId() при первом вызове
+         * и в updateLastDataSubId() при обнаружении смены SIM.
+         * На AOSP getDefaultDataSubscriptionId() возвращает актуальный ID.
+         * Если кастомная прошивка возвращает устаревший ID — проблема прошивки.
+         * Обнаружение смены SIM выполняется сравнением с inMemoryLastDataSubId.
          */
         private var inMemoryLastDataSubId: Int = -1
 

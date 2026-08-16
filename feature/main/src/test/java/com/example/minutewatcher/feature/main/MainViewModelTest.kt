@@ -443,7 +443,8 @@ class MainViewModelTest {
             savedStateHandle[MainViewModel.KEY_LAST_REFRESH_ELAPSED] = 500_000L
 
             // nowElapsed = 1000L (SystemClock.elapsedRealtime() после перезагрузки)
-            viewModel.onActivityResume(1000L)
+            timeProvider.setRealtime(1000L)
+            viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
             // Проверяем, что обновление было вызвано
@@ -462,7 +463,8 @@ class MainViewModelTest {
             clearInvocations(usageStateRepository)
 
             // first call to onActivityResume
-            viewModel.onActivityResume(1000L)
+            timeProvider.setRealtime(1000L)
+            viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
             // Verify that data refresh WAS triggered because lastRefreshAt is still 0
@@ -485,7 +487,8 @@ class MainViewModelTest {
             clearInvocations(usageStateRepository)
 
             // call to onActivityResume within threshold
-            viewModel.onActivityResume(timeProvider.elapsedRealtime() + 5000L)
+            timeProvider.setRealtime(timeProvider.elapsedRealtime() + 5000L)
+            viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
             // Verify that NO data refresh was triggered
@@ -559,7 +562,8 @@ class MainViewModelTest {
 
             // Activity resume within threshold
             val now = lastRefresh + 5000L
-            viewModel.onActivityResume(now)
+            timeProvider.setRealtime(now)
+            viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
             // Should NOT trigger another refresh
@@ -595,7 +599,8 @@ class MainViewModelTest {
 
             // Activity resume within threshold (20s)
             val now = lastRefresh + 5000L
-            viewModel.onActivityResume(now)
+            timeProvider.setRealtime(now)
+            viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
             // Should NOT trigger another refresh

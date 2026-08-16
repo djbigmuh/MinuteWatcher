@@ -139,6 +139,10 @@ class SimWidgetVisibilityRepositoryImpl
             for (prefix in prefixes) {
                 if (keyName.startsWith(prefix)) {
                     val identity = keyName.removePrefix(prefix)
+                    // Защита от ключей, состоящих только из префикса (пустой identity).
+                    // Такие ключи не должны существовать в нормальных условиях,
+                    // но защита обеспечивает устойчивость к повреждению данных.
+                    if (identity.isEmpty()) return null
 
                     // Валидация: identity должен начинаться с одного из допустимых префиксов.
                     // Это защищает от ситуаций, когда identity (например, "icon_foo") ошибочно

@@ -29,6 +29,16 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
+        // Мапа negativeLogged подавляет повторное логирование отрицательных
+        // значений для одного и того же identity в слоте. При смене SIM
+        // в слоте (identity изменился) старая запись удаляется, чтобы
+        // логирование для нового identity не было подавлено.
+        synchronized(negativeLogged) {
+            if ((negativeLogged[slot] != null) && (negativeLogged[slot] != usage.identity)) {
+                negativeLogged.remove(slot)
+            }
+        }
+
         logNegativeValuesIfNeeded(slot, usage)
 
         val safeMinutesUsed = usage.minutesUsed.coerceAtLeast(0)
@@ -36,6 +46,10 @@ object SimCardMapper {
         val safeTrafficUsedMb = usage.trafficUsedMb.coerceAtLeast(0f)
         val safeTrafficLimitMb = usage.trafficLimitMb.coerceAtLeast(0)
 
+        // manualAdjustment и trafficAdjustmentGb передаются в calculate()
+        // без предварительного clamp. Отрицательные значения допустимы
+        // (корректировка в меньшую сторону). MinutesModel.calculate и
+        // TrafficModel.calculate гарантируют effectiveLimit >= 0 через maxOf(0, ...).
         val minutesModel =
             MinutesModel.calculate(
                 used = safeMinutesUsed,

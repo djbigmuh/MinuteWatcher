@@ -54,47 +54,38 @@ class MainBannerController
         private var observationRetryCount = 0L
 
         /**
-         * Время последнего успешного обновления или сброса счётчика повторных попыток.
+         * Время последнего логирования ошибки в [trackingBannerState].
          *
-         * **Строгое соблюдение API:** используется `timeProvider.elapsedRealtime()`
-         * (монотонное время), а не `timeProvider.now()` (wall-clock).
-         * Монотонное время не зависит от изменений системных часов (NTP, ручная смена),
-         * что гарантирует корректность интервала сброса счётчика.
-         * На AOSP `SystemClock.elapsedRealtime()` монотонно по контракту.
-         * Если кастомная прошивка не обеспечивает монотонность — это проблема кастомной прошивки.
+         * **lastLoggedTime инициализируется при создании контроллера (0L).**
+         * Периодическое логирование выполняется, если с момента последнего
+         * логирования прошло больше [PERIODIC_LOG_INTERVAL_MS].
+         * На AOSP `elapsedRealtime()` монотонен. На кастомных прошивках,
+         * где это не так, — проблема кастомной прошивки.
          */
-        private var lastResetTime = 0L
+        private var lastLoggedTime = 0L
 
         /**
-         * Мьютекс сериализует обновление пары (retryCount, lastResetTime).
-         *
-         * **Строгое соблюдение API:** на AOSP StateFlow эмитит значения
-         * последовательно. Мьютекс защищает только инфраструктуру подписки,
-         * не данные. Если кастомная прошивка эмитит значения вне порядка —
-         * это проблема кастомной прошивки.
+         * Мьютекс сериализует обновление счётчика [observationRetryCount].
          */
         private val resetMutex = Mutex()
 
-        // Мьютекс защищает check-then-act над парой (observationRetryCount, lastResetTime).
-        // Без него при смене диспетчера на многопоточный возможен race:
-        // два потока одновременно прочитают lastResetTime, оба сбросят счётчик
-        // и оба запишут now, что приведёт к двойному сбросу.
-        private suspend fun resetRetryCounterIfNeeded(
-            now: Long,
-            force: Boolean = false,
-        ) {
+        private suspend fun handleSuccess() {
             resetMutex.withLock {
-                if (force || (now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                    observationRetryCount = 0L
-                    lastResetTime = now
+                if (observationRetryCount > 0) {
+                    AppLogger.d(
+                        "trackingBannerState: successfully recovered after $observationRetryCount failed attempts",
+                    )
                 }
+                observationRetryCount = 0L
+                lastLoggedTime = 0L
             }
         }
 
-        init {
-            lastResetTime = timeProvider.elapsedRealtime()
-        }
-
+        // trackingStatus инициализирован emptyMap(). До первого эмита
+        // из observeTrackingStatus() (что происходит в течение микросекунд
+        // при SharingStarted.Eagerly) баннеры ошибок будут скрыты.
+        // Это допустимое поведение: окно составляет микросекунды.
+        // На AOSP StateFlow эмитит начальное значение синхронно.
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
             trackingStatusRepository
                 .observeTrackingStatus()
@@ -117,18 +108,12 @@ class MainBannerController
          * Состояние баннеров отслеживания.
          *
          * **Стратегия retry:** бесконечные повторные попытки с экспоненциальной
-         * задержкой (cap 30с). Это гарантирует, что UI продолжит отображать
-         * баннеры даже после временных сбоев.
+         * задержкой (cap 30 с). Это осознанная стратегия: UI должен продолжать
+         * отображать баннеры даже после временных сбоев.
          *
          * **Строгое соблюдение API:** на AOSP combine из StateFlow не бросает
          * исключений. Сбой возможен только при деградации DataStore на кастомной
-         * прошивке — это проблема кастомной прошивки.
-         *
-         * **Критерий надёжности:** бесконечный retry допустим, так как:
-         * 1. Задержка ограничена (cap 30с) — нет нагрузки на CPU.
-         * 2. Логирование подавляется после MAX_LOGGED_RETRIES — нет спама.
-         * 3. Сброс счётчика по таймеру (RESET_RETRY_COUNTER_INTERVAL_MS)
-         *   позволяет восстановиться после устранения проблемы.
+         * прошивке. Логирование подавляется после MAX_LOGGED_RETRIES для предотвращения спама.
          */
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
@@ -148,14 +133,11 @@ class MainBannerController
                     settings = extra.third,
                 )
             }.onEach {
-                resetRetryCounterIfNeeded(timeProvider.elapsedRealtime(), force = true)
+                handleSuccess()
             }.retryWhen { cause, _ ->
                 if (cause is CancellationException && cause !is TimeoutCancellationException) {
                     throw cause
                 }
-
-                val now = timeProvider.elapsedRealtime()
-                resetRetryCounterIfNeeded(now)
 
                 val currentRetry =
                     resetMutex.withLock {
@@ -163,14 +145,29 @@ class MainBannerController
                         observationRetryCount
                     }
 
-                // Логирование только первых MAX_LOGGED_RETRIES попыток для предотвращения
-                // бесконечного спама в лог при перманентной ошибке кастомной прошивки.
-                if (currentRetry <= MAX_LOGGED_RETRIES) {
-                    AppLogger.e(
-                        "trackingBannerState: observation failed (attempt $currentRetry), " +
-                            "retrying with backoff",
-                        cause,
-                    )
+                val now = timeProvider.elapsedRealtime()
+                val shouldLog =
+                    if (currentRetry <= MAX_LOGGED_RETRIES) {
+                        true
+                    } else {
+                        if (now - lastLoggedTime > PERIODIC_LOG_INTERVAL_MS) {
+                            lastLoggedTime = now
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                if (shouldLog) {
+                    val message =
+                        if (currentRetry > MAX_LOGGED_RETRIES) {
+                            "trackingBannerState: periodic log - observation still failing " +
+                                "(attempt $currentRetry), retrying with backoff"
+                        } else {
+                            "trackingBannerState: observation failed (attempt $currentRetry), " +
+                                "retrying with backoff"
+                        }
+                    AppLogger.e(message, cause)
                 }
 
                 val delayMillis =
@@ -192,7 +189,7 @@ class MainBannerController
             internal const val MAX_RETRY_DELAY_MS = 30_000L
 
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
+            internal const val PERIODIC_LOG_INTERVAL_MS = 5 * 60 * 1000L
 
             /** Максимальное количество попыток, после которых логирование подавляется. */
             private const val MAX_LOGGED_RETRIES = 10L

@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.LocusId
 import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -358,9 +357,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        viewModel.onActivityResume(
-            nowElapsed = SystemClock.elapsedRealtime(),
-        )
+        viewModel.onActivityResume()
 
         checkPermissionChanges()
 

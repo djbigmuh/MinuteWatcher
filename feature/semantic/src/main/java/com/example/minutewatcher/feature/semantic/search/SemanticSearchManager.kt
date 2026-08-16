@@ -155,6 +155,10 @@ class SemanticSearchManager
 
         private suspend fun tryOpenSession(forceOverride: Boolean): Result<Unit> {
             var newSession: AppSearchSessionWrapper? = null
+            // При сбое setSchema новый session закрывается, и session остаётся null.
+            // Это гарантирует, что при следующем вызове ensureSession будет создана
+            // новая сессия. На AOSP setSchema завершается за миллисекунды.
+            // Сбой указывает на деградацию AppSearch на кастомной прошивке.
             return try {
                 newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
                 newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
@@ -294,6 +298,18 @@ class SemanticSearchManager
             currentHash: Int?,
         ): Boolean =
             withContext(ioDispatcher) {
+                // Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
+                // завершается за миллисекунды. session == null после ensureSession()
+                // возможен только при деградации хранилища на кастомной прошивке.
+                // lastSnapshotHash обновляется только при полном успехе индексации,
+                // что гарантирует повторную индексацию при следующем вызове.
+                val currentSession =
+                    session
+                        ?: run {
+                            AppLogger.e("AppSearch session is null in executeIndexing, skipping")
+                            return@withContext false
+                        }
+
                 // Строгое соблюдение API kotlinx.coroutines: withTimeoutOrNull при таймауте
                 // возвращает null, а НЕ бросает TimeoutCancellationException.
                 // Таймаут обрабатывается проверкой результата, а не catch-блоком.
@@ -303,7 +319,13 @@ class SemanticSearchManager
                     try {
                         withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
-                            performIndexUpdate(documents)
+                            performIndexUpdate(currentSession, documents)
+                            // При частичном сбое (put failed, remove succeeded) lastSnapshotHash
+                            // НЕ обновляется, так как performIndexUpdate бросает исключение.
+                            // Это гарантирует повторную индексацию при следующем
+                            // вызове indexSnapshot с тем же snapshot. На AOSP putDocuments
+                            // не бросает исключений при корректном состоянии хранилища.
+                            // Сбой указывает на деградацию AppSearch на кастомной прошивке.
                             lastSnapshotHash = currentHash
                             _status.value = TrackingStatus.Active
                             true
@@ -329,7 +351,10 @@ class SemanticSearchManager
                 result
             }
 
-        private suspend fun performIndexUpdate(documents: List<UsageDocument>) {
+        private suspend fun performIndexUpdate(
+            session: AppSearchSessionWrapper,
+            documents: List<UsageDocument>,
+        ) {
             val currentIds = documents.asSequence().map { it.id }.toSet()
 
             var putException: Exception? = null
@@ -337,7 +362,7 @@ class SemanticSearchManager
             // Сначала добавляем/обновляем актуальные документы
             if (documents.isNotEmpty()) {
                 try {
-                    session?.putDocuments(appSearchWrapper.createPutRequest(documents))
+                    session.putDocuments(appSearchWrapper.createPutRequest(documents))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -360,7 +385,7 @@ class SemanticSearchManager
             var removeException: Exception? = null
             if (staleIds.isNotEmpty()) {
                 try {
-                    session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                    session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

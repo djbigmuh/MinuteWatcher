@@ -158,7 +158,11 @@ class MainSimDataController
                     handleSimIdentityError(slot, operationName, e)
                     return@launch
                 } catch (e: CancellationException) {
-                    // Проброс для кооперативной отмены — строгое соблюдение API.
+                    // CancellationException пробрасывается для кооперативной отмены корутины.
+                    // Это строгое соблюдение API kotlinx.coroutines: CancellationException
+                    // должен всегда пробрасываться для корректной отмены scope.
+                    // Пользователь не получает обратную связь при отмене — это штатное
+                    // поведение (например, при уходе с экрана во время операции).
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
@@ -171,6 +175,11 @@ class MainSimDataController
                 try {
                     onRefresh()
                 } catch (e: CancellationException) {
+                    // CancellationException пробрасывается для кооперативной отмены корутины.
+                    // Это строгое соблюдение API kotlinx.coroutines: CancellationException
+                    // должен всегда пробрасываться для корректной отмены scope.
+                    // Пользователь не получает обратную связь при отмене — это штатное
+                    // поведение (например, при уходе с экрана во время операции).
                     throw e
                 } catch (e: Exception) {
                     // На AOSP refresh() не бросает исключений.
@@ -307,6 +316,9 @@ class MainSimDataController
             updateWidget: Boolean = true,
             force: Boolean = false,
         ) {
+            // notifyDataChanged вызывается на ioDispatcher. DataChangeNotifier
+            // реализован через UpdateCoordinator, который использует MutableSharedFlow
+            // (потокобезопасный). Одновременный вызов из разных диспетчеров безопасен.
             scope.launch(ioDispatcher) {
                 try {
                     dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)

@@ -28,7 +28,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -59,27 +58,12 @@ class CallTracker
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        /**
-         * Счётчики неудачных попыток записи длительности звонка.
-         * Ключ — subId, значение — число последовательных неудач.
-         *
-         * Записи создаются в [handleWriteFailure] и удаляются в [cleanupCounters]
-         * при успешном завершении звонка. Дополнительно очищаются в [onBoot]
-         * для предотвращения накопления устаревших записей.
-         *
-         * **Контракт AOSP:** на AOSP DataStore.edit не бросает исключений при корректном
-         * состоянии хранилища.
-         *
-         * **Отклонение кастомной прошивки:** Сбой записи возможен только при деградации DataStore
-         * на кастомных прошивках, не соответствующих документации Google.
-         * Это проблема кастомной прошивки, а не приложения.
-         *
-         * **Стратегия приложения:** используется механизм повторных попыток с лимитом [MAX_WRITE_ATTEMPTS],
-         * после которого сессия принудительно очищается для предотвращения блокировки.
-         */
-        private val writeAttempts = ConcurrentHashMap<Int, Int>()
+        // Все обращения к writeAttempts и attributionFailures происходят
+        // строго внутри callMutex.withLock, что гарантирует последовательный
+        // доступ. ConcurrentHashMap не требуется.
+        private val writeAttempts = HashMap<Int, Int>()
 
-        private val attributionFailures = ConcurrentHashMap<Int, Int>()
+        private val attributionFailures = HashMap<Int, Int>()
 
         /**
          * Мьютекс сериализует обработку событий звонков (старт, завершение, boot).
@@ -156,6 +140,13 @@ class CallTracker
                 writeAttempts.clear()
                 attributionFailures.clear()
                 AppLogger.d("Cleared ${activeSessions.size} stale call sessions on boot")
+
+                // refreshStatus() вызывается после очистки сессий для обеспечения
+                // консистентности между состоянием в памяти и данными в DataStore.
+                // На AOSP clearAllCallSessions() завершается синхронно.
+                // На кастомных прошивках с деградацией DataStore записи могут
+                // остаться — это проблема кастомной прошивки.
+                refreshStatus()
             }
         }
 
@@ -386,6 +377,20 @@ class CallTracker
             callMutex.withLock {
                 var errorSetInThisCall = false
                 try {
+                    if (!isCallTrackingEnabled()) {
+                        // Если трекинг звонков был отключён во время активного звонка,
+                        // завершение звонка обрабатывается в режиме "только очистка":
+                        // сессия удаляется, но длительность не записывается.
+                        // Это предотвращает запись данных за период, когда трекинг был выключен.
+                        AppLogger.d("Call tracking disabled, clearing session for subId $subId")
+                        if (subId == -1) {
+                            callSessionRepository.clearAllCallSessions()
+                        } else {
+                            clearSession(subId)
+                        }
+                        return@withLock
+                    }
+
                     executeCallEnded(subId)
                     if (_status.value is TrackingStatus.Error) {
                         // Фиксируем, что была установлена ошибка (например, провал атрибуции),
@@ -570,13 +575,33 @@ class CallTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, message)
 
             withContext(NonCancellable) {
-                try {
-                    clearSession(subId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("Failed to clear session for subId $subId after timeout", e)
+                // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений
+                // при корректном состоянии хранилища. Таймаут или сбой записи указывает
+                // на деградацию DataStore на кастомной прошивке.
+                // Стратегия: одна повторная попытка очистки сессии. Если и она не удалась,
+                // устанавливаем Error-статус. Потеря данных одного звонка предпочтительнее
+                // перманентной блокировки трекинга.
+                var lastEx: Exception? = null
+                for (attempt in 1..2) {
+                    try {
+                        clearSession(subId)
+                        return@withContext
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        lastEx = e
+                        AppLogger.w("Failed to clear session for subId $subId after timeout (attempt $attempt)", e)
+                        if (attempt < 2) delay(500.milliseconds)
+                    }
                 }
+
+                val cleanupMessage = "Session cleanup failed for subId $subId after timeout"
+                AppLogger.e("CallTracker: $cleanupMessage", lastEx)
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        cleanupMessage,
+                    )
             }
         }
 
@@ -785,9 +810,9 @@ class CallTracker
                 } catch (e: Exception) {
                     // На AOSP DataStore.edit не бросает исключений при корректном
                     // состоянии хранилища. Исключение здесь указывает на деградацию
-                    // DataStore на кастомной прошивке. Логируем, но не пробрасываем:
-                    // частичная очистка сессии предпочтительнее полной блокировки трекинга.
+                    // DataStore на кастомной прошивке.
                     AppLogger.e("CallTracker: failed to fully clear session for subId $subId", e)
+                    throw e
                 }
             }
         }

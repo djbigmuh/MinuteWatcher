@@ -90,6 +90,7 @@ class SimIdentitySeedRaceTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 
@@ -131,6 +132,7 @@ class SimIdentitySeedRaceTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 

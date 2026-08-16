@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
@@ -70,6 +71,7 @@ class SimIdentityRepositoryImpl
         appSettingsRepository: AppSettingsRepository,
         private val migrationService: IdentityMigrationService,
         private val mockSimProvider: MockSimProvider,
+        private val timeProvider: TimeProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
@@ -154,6 +156,14 @@ class SimIdentityRepositoryImpl
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
                 .flatMapLatest { seed ->
+                    // Строгое соблюдение API: на AOSP seedFlow эмитит Real seed
+                    // при первом успешном чтении DataStore. Переход Fallback → Real
+                    // вызывает flatMapLatest, который отменяет старый callbackFlow
+                    // и запускает новый. Окно между отменой и новым fetch составляет
+                    // миллисекунды и не влияет на корректность: activeSimsCache
+                    // обновится в новом callbackFlow.
+                    // На кастомных прошивках с деградацией DataStore seed может
+                    // остаться Fallback — это проблема кастомной прошивки.
                     callbackFlow {
                         var fetchJob: Job? = null
 
@@ -362,13 +372,23 @@ class SimIdentityRepositoryImpl
             val cachedManual = manualResolutionCache[slot]
             if (cachedManual != null) {
                 val (identity, timestamp) = cachedManual
-                if (System.currentTimeMillis() - timestamp < MANUAL_RESOLUTION_CACHE_TTL_MS) {
+                // Строгое соблюдение API: для измерения TTL используется монотонное время
+                // (elapsedRealtime), а не wall-clock (currentTimeMillis). Это исключает
+                // влияние перевода системных часов на время жизни кэша.
+                // На кастомных прошивках, где elapsedRealtime не монотонен, — проблема прошивки.
+                if (timeProvider.elapsedRealtime() - timestamp < MANUAL_RESOLUTION_CACHE_TTL_MS) {
                     return identity
                 } else {
                     manualResolutionCache.remove(slot)
                 }
             }
 
+            // При первом вызове после старта приложения activeSimsCache может быть
+            // пустым (seed ещё не эмитился). В этом случае выполняется прямой резолв.
+            // Если seed недоступен (Fallback), бросается SeedUnavailableException.
+            // Вызывающий код должен обработать это исключение.
+            // На AOSP seed становится доступен в течение миллисекунд после старта.
+            // Задержка возможна только при деградации DataStore на кастомной прошивке.
             try {
                 // Используем уменьшенный таймаут для UI-операций
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
@@ -387,10 +407,19 @@ class SimIdentityRepositoryImpl
 
                 // If not found in cache, try direct resolution
                 val resolved =
-                    findActiveIdentityInternal(slot, seed as SeedResult.Real)
-                        ?: throw SimNotFoundException(slot)
+                    try {
+                        findActiveIdentityInternal(slot, seed as SeedResult.Real)
+                    } catch (e: SecurityException) {
+                        // Строгое соблюдение API: на AOSP getActiveSubscriptions() возвращает
+                        // пустой список при отсутствии разрешения, не бросая исключений.
+                        // SecurityException возможен только на кастомных прошивках,
+                        // не соответствующих документации Google. Обрабатываем его
+                        // как SeedUnavailableException для единообразия.
+                        AppLogger.w("Permission revoked during identity resolution for slot $slot", e)
+                        throw SeedUnavailableException(slot)
+                    } ?: throw SimNotFoundException(slot)
 
-                manualResolutionCache[slot] = resolved to System.currentTimeMillis()
+                manualResolutionCache[slot] = resolved to timeProvider.elapsedRealtime()
 
                 if (!isIdentityAlreadyCached(slot, resolved.stableId)) {
                     saveSimIdentitiesInfo(listOf(resolved))

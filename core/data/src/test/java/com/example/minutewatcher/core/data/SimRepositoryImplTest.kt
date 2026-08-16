@@ -115,6 +115,7 @@ class SimRepositoryImplTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
             val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
@@ -149,6 +150,7 @@ class SimRepositoryImplTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
 
@@ -245,6 +247,7 @@ class SimRepositoryImplTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
 
@@ -271,6 +274,7 @@ class SimRepositoryImplTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
 
@@ -300,6 +304,7 @@ class SimRepositoryImplTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
 

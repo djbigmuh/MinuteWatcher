@@ -72,6 +72,11 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             _loadError.value = false
+            // loadMutex обеспечивает сериализацию загрузок. При отмене предыдущей
+            // корутины (loadJob?.cancel()) Mutex освобождается автоматически
+            // (Kotlin Mutex.release при CancellationException). Новая корутина
+            // захватывает Mutex и выполняет загрузку. Это гарантирует, что
+            // только одна загрузка выполняется одновременно.
             loadJob?.cancel()
             loadJob =
                 viewModelScope.launch {
@@ -153,19 +158,15 @@ class WidgetSettingsViewModel
                     )
                     SaveResult.Failed
                 } else if (currentState.simListLoadFailed) {
-                    // Если список SIM не загрузился (таймаут DataStore на кастомной прошивке),
-                    // сохраняем общие настройки, но логируем предупреждение.
-                    // На AOSP observeActiveSims() завершается за миллисекунды;
-                    // таймаут — проблема кастомной прошивки.
+                    // Строгое соблюдение API: на AOSP observeActiveSims() завершается
+                    // за миллисекунды. Таймаут загрузки списка SIM указывает на деградацию
+                    // хранилища на кастомной прошивке. Сохранение simStates в этом состоянии
+                    // запрещено для предотвращения потери данных.
                     AppLogger.w(
-                        "saveAndNotify: SIM list was not loaded successfully. " +
-                            "General settings will be saved, but SIM-specific settings may be incomplete.",
+                        "saveAndNotify: skipping save because SIM list " +
+                            "was not loaded successfully to prevent data loss",
                     )
-                    // Сохраняем общие настройки, но логируем предупреждение.
-                    // SIM-специфичные настройки могут быть неполными.
-                    val validatedState = validateSettings(currentState)
-                    val success = saver.save(validatedState)
-                    if (success) SaveResult.Success else SaveResult.Failed
+                    SaveResult.Failed
                 } else {
                     val validatedState = validateSettings(currentState)
                     val success = saver.save(validatedState)

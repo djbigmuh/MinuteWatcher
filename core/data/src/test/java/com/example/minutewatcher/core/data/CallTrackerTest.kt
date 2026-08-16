@@ -634,7 +634,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `loadCallSessionData handle timeout with clearSession failure keeps original cause`() =
+    fun `loadCallSessionData handle timeout with clearSession failure sets cleanup error`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -649,15 +649,15 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            // Assert: status should contain the ORIGINAL timeout message
+            // Assert: status should contain the CLEANUP failure message (overwriting timeout)
             val status = callTracker.status.value as TrackingStatus.Error
             assertTrue(
-                "Expected status to contain timeout info, but was: ${status.message}",
-                status.message?.contains("Session read timed out") == true,
+                "Expected status to contain cleanup failure info, but was: ${status.message}",
+                status.message?.contains("Session cleanup failed") == true,
             )
 
-            // Verify clearSession (setCallStartTime) WAS called
-            verify(callSessionRepository, times(1)).setCallStartTime(eq(1), eq(0L))
+            // Verify clearSession (setCallStartTime) WAS called twice (initial + 1 retry)
+            verify(callSessionRepository, times(2)).setCallStartTime(eq(1), eq(0L))
         }
 
     @Test
@@ -865,5 +865,56 @@ class CallTrackerTest {
 
             // Verify session WAS cleared
             verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+        }
+
+    @Test
+    fun `onCallEnded only clears session if tracking is disabled`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val subId = 1
+
+            // Tracking is disabled
+            whenever(
+                appSettingsRepository.getAppSettings(),
+            ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
+
+            // Mock session data exists
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 10000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(realtime - 10000L))
+
+            // Act
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+
+            // Assert:
+            // 1. Session IS cleared
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+            // 2. Minutes are NOT incremented
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+        }
+
+    @Test
+    fun `onCallEnded with unknown subId only clears all sessions if tracking is disabled`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+
+            // Tracking is disabled
+            whenever(
+                appSettingsRepository.getAppSettings(),
+            ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
+
+            // Act
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert:
+            // 1. ALL sessions are cleared
+            verify(callSessionRepository).clearAllCallSessions()
+            // 2. Minutes are NOT incremented
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
         }
 }

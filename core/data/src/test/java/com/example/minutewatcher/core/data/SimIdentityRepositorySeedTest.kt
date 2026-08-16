@@ -120,6 +120,7 @@ class SimIdentityRepositorySeedTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 
@@ -179,6 +180,7 @@ class SimIdentityRepositorySeedTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 
@@ -241,6 +243,7 @@ class SimIdentityRepositorySeedTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 

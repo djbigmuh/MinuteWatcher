@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -52,6 +53,7 @@ class SimIdentityRepositoryHangTest {
     private lateinit var permissionStateNotifier: PermissionStateNotifier
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var permissionManager: PermissionManager
+    private lateinit var timeProvider: TimeProvider
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var discoveryDeps: SimDiscoveryDependencies
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -67,6 +69,7 @@ class SimIdentityRepositoryHangTest {
         subscriptionManager = mock()
         permissionStateNotifier = mock()
         permissionManager = mock()
+        timeProvider = mock()
         migrationService = mock()
         appSettingsRepository =
             mock {
@@ -109,6 +112,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -153,6 +157,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -201,6 +206,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -232,6 +238,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -263,6 +270,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -309,6 +317,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -336,6 +345,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 
@@ -384,6 +394,7 @@ class SimIdentityRepositoryHangTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = testScope,
                 )
 

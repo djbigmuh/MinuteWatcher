@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -297,40 +298,52 @@ class MainViewModel
             private const val MAX_INIT_RETRIES = 3
         }
 
-        fun onActivityResume(nowElapsed: Long) {
-            resumeRefreshJob?.cancel()
-            resumeRefreshJob =
-                viewModelScope.launch {
-                    // G-484: A simple synchronous flag check is insufficient because it doesn't ensure
-                    // that asynchronous initialization (loading settings, auto-reset check) has actually finished.
-                    // We wait for the initialization state to guarantee a stable state before refreshing.
-                    val initialized =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            initializationState.first { it }
+        fun onActivityResume() {
+            viewModelScope.launch {
+                // cancelAndJoin() гарантирует, что предыдущая корутина полностью
+                // завершена (включая обработку в finally-блоках) до начала новой.
+                // Это предотвращает двойное обновление при быстром повторном
+                // вызове onActivityResume.
+                resumeRefreshJob?.cancelAndJoin()
+                resumeRefreshJob =
+                    launch {
+                        // G-484: A simple synchronous flag check is insufficient because it doesn't ensure
+                        // that asynchronous initialization (loading settings, auto-reset check) has actually finished.
+                        // We wait for the initialization state to guarantee a stable state before refreshing.
+                        val initialized =
+                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                initializationState.first { it }
+                            }
+
+                        /**
+                         * При первом запуске lastRefreshAt = 0, что триггерит обновление.
+                         * Однако если initializeApp ещё не завершился, параллельный вызов
+                         * refresh может привести к двойному обновлению. Поэтому проверяем
+                         * initializationState перед выполнением refresh.
+                         */
+                        if (initialized == null) {
+                            AppLogger.w("onActivityResume: initialization not complete, skipping refresh")
+                            return@launch
                         }
 
-                    /**
-                     * При первом запуске lastRefreshAt = 0, что триггерит обновление.
-                     * Однако если initializeApp ещё не завершился, параллельный вызов
-                     * refresh может привести к двойному обновлению. Поэтому проверяем
-                     * initializationState перед выполнением refresh.
-                     */
-                    if (initialized == null) {
-                        AppLogger.w("onActivityResume: initialization not complete, skipping refresh")
-                        return@launch
-                    }
+                        // Строгое соблюдение API: SystemClock.elapsedRealtime() монотонен
+                        // в пределах одной загрузки устройства. Фиксация времени выполняется
+                        // внутри корутины, а не в момент вызова onActivityResume,
+                        // чтобы исключить искажение интервала на время ожидания инициализации.
+                        val nowElapsed = timeProvider.elapsedRealtime()
+                        val last = lastRefreshAt
+                        val elapsed = nowElapsed - last
+                        // G-484: If lastRefreshAt == 0L, it means initial refresh failed or hasn't completed yet.
+                        // We force a retry in this case to ensure data is loaded as soon as possible.
+                        // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
+                        val isStale =
+                            (last == 0L) || (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
 
-                    val last = lastRefreshAt
-                    val elapsed = nowElapsed - last
-                    // G-484: If lastRefreshAt == 0L, it means initial refresh failed or hasn't completed yet.
-                    // We force a retry in this case to ensure data is loaded as soon as possible.
-                    // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
-                    val isStale = (last == 0L) || (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
-
-                    if (isStale) {
-                        refreshAndNotify(force = false)
+                        if (isStale) {
+                            refreshAndNotify(force = false)
+                        }
                     }
-                }
+            }
         }
     }
 

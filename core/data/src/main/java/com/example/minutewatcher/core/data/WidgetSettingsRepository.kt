@@ -119,7 +119,10 @@ class WidgetSettingsRepository
          *
          * @param state The state to save.
          */
-        override suspend fun save(state: WidgetSettingsState) {
+        override suspend fun save(
+            state: WidgetSettingsState,
+            skipSimSettings: Boolean,
+        ) {
             if (!state.settingsLoadFailed) {
                 appSettingsRepository.updateAppSettings { current ->
                     current.copy(
@@ -141,9 +144,10 @@ class WidgetSettingsRepository
                 AppLogger.w("save: general settings were not loaded. Saving only SIM-specific settings.")
             }
 
-            if (state.simListLoadFailed) {
+            if (state.simListLoadFailed || skipSimSettings) {
                 val label = if (state.settingsLoadFailed) "all saves" else "SIM-specific settings save"
-                AppLogger.w("save: SIM list was not loaded successfully. Skipping $label.")
+                val reason = if (skipSimSettings) "skipSimSettings=true" else "SIM list was not loaded successfully"
+                AppLogger.w("save: $reason. Skipping $label.")
             } else {
                 saveSimSettings(state)
             }

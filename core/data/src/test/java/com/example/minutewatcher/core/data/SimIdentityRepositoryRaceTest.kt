@@ -99,6 +99,7 @@ class SimIdentityRepositoryRaceTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 
@@ -183,6 +184,7 @@ class SimIdentityRepositoryRaceTest {
                         mock {
                             on { getMockSims(any()) } doReturn null
                         },
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 

@@ -92,6 +92,7 @@ class SimVisibilityTest {
                     appSettingsRepository,
                     migrationService,
                     mockSimProvider,
+                    mock(),
                     backgroundScope,
                 )
 
@@ -112,6 +113,7 @@ class SimVisibilityTest {
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 

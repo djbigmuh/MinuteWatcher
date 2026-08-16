@@ -28,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -52,7 +53,7 @@ class WidgetSettingsViewModelTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
             // Default: successful immediate save
-            whenever(saver.save(any())).thenReturn(true)
+            whenever(saver.save(any(), any())).thenReturn(true)
 
             viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
         }
@@ -90,13 +91,13 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify calls save and notifies`() =
         runTest {
-            whenever(saver.save(any())).thenReturn(true)
+            whenever(saver.save(any(), any())).thenReturn(true)
             testScheduler.advanceUntilIdle()
             val result = viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
             assertEquals(SaveResult.Success, result)
-            verify(saver).save(any())
+            verify(saver).save(any(), any())
         }
 
     @Test
@@ -107,7 +108,10 @@ class WidgetSettingsViewModelTest {
                 object : WidgetSettingsLoader {
                     override suspend fun load(): WidgetSettingsState = WidgetSettingsState()
 
-                    override suspend fun save(state: WidgetSettingsState) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) {
                         gate.await()
                     }
                 }
@@ -136,7 +140,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify returns Failed on exception`() =
         runTest {
-            whenever(saver.save(any())).thenThrow(RuntimeException("Save failed"))
+            whenever(saver.save(any(), any())).thenThrow(RuntimeException("Save failed"))
             testScheduler.advanceUntilIdle()
 
             val result = viewModel.saveAndNotify()
@@ -172,7 +176,10 @@ class WidgetSettingsViewModelTest {
                         }
                     }
 
-                    override suspend fun save(state: WidgetSettingsState) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) {
                         // Empty for mock
                     }
                 }
@@ -219,9 +226,21 @@ class WidgetSettingsViewModelTest {
     @Test(expected = CancellationException::class)
     fun `saveAndNotify rethrows CancellationException`() =
         runTest {
-            whenever(saver.save(any())).thenThrow(CancellationException("Test cancellation"))
+            whenever(saver.save(any(), any())).thenThrow(CancellationException("Test cancellation"))
             testScheduler.advanceUntilIdle()
 
             viewModel.saveAndNotify()
+        }
+
+    @Test
+    fun `saveAndNotify returns Failed when simListLoadFailed is true`() =
+        runTest {
+            testScheduler.advanceUntilIdle()
+            viewModel.updateSettings { it.copy(simListLoadFailed = true) }
+
+            val result = viewModel.saveAndNotify()
+
+            assertEquals(SaveResult.Failed, result)
+            verify(saver, never()).save(any(), any())
         }
 }

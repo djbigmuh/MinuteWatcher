@@ -98,14 +98,13 @@ class WidgetUpdaterImpl
             // за несколько секунд. Исчерпание попыток указывает на системную проблему.
             // На кастомной прошивке это может быть проблема прошивки.
             while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && keepGoing) {
-                val updateResult = performSingleUpdate(attempt)
                 // **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() завершается в пределах нескольких секунд.
                 //
                 // **Отклонение кастомной прошивки:** Зависание на кастомных прошивках. Это проблема кастомной прошивки.
                 //
                 // **Стратегия приложения:** Таймаут 30 секунд — защитный механизм; считается retryable-ошибкой.
+                val updateOutcome = performSingleUpdate(attempt)
 
-                val updateOutcome = handleUpdateResult(updateResult)
                 when (updateOutcome) {
                     is UpdateOutcome.Success -> {
                         result = true
@@ -145,33 +144,51 @@ class WidgetUpdaterImpl
          * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll() завершается
          * за несколько секунд. Таймаут 10с — защитный механизм.
          */
-        private suspend fun performSingleUpdate(attempt: Int): UpdateResult =
-            withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                updateMutex.withLock {
-                    try {
-                        val settings = appSettingsRepository.observeAppSettings().value
-                        if (settings.widgetLimitExceeded) {
-                            val count = ++exceededUpdateCounter
-                            if (count % PROBE_INTERVAL_UPDATES == 0L) {
-                                // Probe: временный сброс флага для проверки, не устранена ли причина
-                                // превышения лимита (например, пользователь уменьшил число SIM).
-                                // Безопасно: находимся внутри updateMutex.withLock.
-                                performProbeUpdate()
+        private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome =
+            updateMutex.withLock {
+                withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                    val updateResult =
+                        try {
+                            val settings = appSettingsRepository.observeAppSettings().value
+                            if (settings.widgetLimitExceeded) {
+                                val count = ++exceededUpdateCounter
+                                if (count % PROBE_INTERVAL_UPDATES == 0L) {
+                                    // Probe: временный сброс флага для проверки, не устранена ли причина
+                                    // превышения лимита (например, пользователь уменьшил число SIM).
+                                    // Безопасно: находимся внутри updateMutex.withLock.
+                                    performProbeUpdate()
+                                } else {
+                                    safeUpdateAll(context, isProbe = false)
+                                }
                             } else {
+                                // exceededUpdateCounter сбрасывается при выходе из режима
+                                // widgetLimitExceeded. При повторном входе в режим счётчик
+                                // начинается с 0. Это гарантирует, что пробный полный рендер
+                                // будет выполнен через PROBE_INTERVAL_UPDATES обновлений
+                                // после каждого входа в режим.
+                                exceededUpdateCounter = 0L // сброс при выходе из режима
                                 safeUpdateAll(context, isProbe = false)
                             }
-                        } else {
-                            exceededUpdateCounter = 0L // сброс при выходе из режима
-                            safeUpdateAll(context, isProbe = false)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
+                            UpdateResult.GenericFailure(isRetryable = true)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
-                        UpdateResult.GenericFailure(isRetryable = true)
-                    }
-                }
-            } ?: UpdateResult.GenericFailure(isRetryable = true) // Таймаут
+
+                    // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll()
+                    // завершается за несколько секунд. Таймаут 10 с — защитный запас.
+                    // Таймаут измеряет только время рендера, а не ожидание мьютекса.
+                    // На кастомных прошивках рендер может занять больше 10 с —
+                    // это проблема кастомной прошивки.
+                    // withTimeoutOrNull возвращает null при таймауте (TimeoutCancellationException
+                    // перехватывается). Реальный CancellationException (отмена scope) пробрасывается.
+                    // Это строгое соблюдение API kotlinx.coroutines.
+                    // Таймаут 10 с — защитный механизм. На AOSP updateAll() завершается
+                    // за несколько секунд. Таймаут указывает на деградацию на кастомной прошивке.
+                    handleUpdateResult(updateResult)
+                } ?: handleUpdateResult(UpdateResult.GenericFailure(isRetryable = true)) // Таймаут
+            }
 
         private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {

@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -48,9 +49,13 @@ fun WidgetSettingsScreen(
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    // Централизованное создание WidgetStrings исключает дублирование
-    // и гарантирует консистентность между виджетом и его экраном настроек.
-    val strings = remember(context) { WidgetStringsFactory.create(context) }
+    val configuration = LocalConfiguration.current
+    // Строки пересоздаются при смене конфигурации (локаль, ориентация).
+    // На AOSP смена локали через AppCompatDelegate.setApplicationLocales()
+    // вызывает пересоздание конфигурации. На кастомных прошивках,
+    // где это не происходит, строки обновятся при следующем пересоздании
+    // Activity — это проблема кастомной прошивки.
+    val strings = remember(configuration) { WidgetStringsFactory.create(context) }
 
     val uiState =
         remember(state, snapshot, strings, context) {
