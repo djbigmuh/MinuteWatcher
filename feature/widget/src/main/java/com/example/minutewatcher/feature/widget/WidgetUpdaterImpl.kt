@@ -153,6 +153,9 @@ class WidgetUpdaterImpl
                         if (settings.widgetLimitExceeded) {
                             val count = ++exceededUpdateCounter
                             if (count % PROBE_INTERVAL_UPDATES == 0L) {
+                                // Probe: временный сброс флага для проверки, не устранена ли причина
+                                // превышения лимита (например, пользователь уменьшил число SIM).
+                                // Безопасно: находимся внутри updateMutex.withLock.
                                 performProbeUpdate()
                             } else {
                                 safeUpdateAll(context, isProbe = false)
@@ -260,12 +263,21 @@ class WidgetUpdaterImpl
         /**
          * Пробный полный рендер для проверки, устранена ли причина превышения лимита.
          *
-         * Последовательность операций (все внутри updateMutex.withLock):
-         * - Сброс widgetLimitExceeded = false для полного рендера.
-         * - Вызов safeUpdateAll(isProbe = true).
-         * - При успехе: handleUpdateResult подтвердит успех (wasFull = true).
-         * - При LimitExceeded: handleLimitExceeded() вернёт флаг = true.
-         * - При GenericFailure: вручную возвращаем флаг = true.
+         * **Последовательность (внутри updateMutex.withLock):**
+         * 1. Сброс widgetLimitExceeded = false для полного рендера.
+         * 2. Вызов safeUpdateAll(isProbe = true).
+         * 3. При GenericFailure: возврат флага = true вручную.
+         * 4. При LimitExceeded: возврат LimitExceeded; вызывающий код
+         *   (handleUpdateResult → handleLimitExceeded) вернёт флаг = true.
+         * 5. При Success: handleUpdateResult подтвердит успех (wasFull = true).
+         *
+         * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll() не бросает
+         * TransactionTooLargeException при корректном lifecycle и объёме < 1 МБ.
+         * Если probe падает — это проблема кастомной прошивки или destroyed context.
+         *
+         * **Потокобезопасность:** метод вызывается только внутри updateMutex.withLock,
+         * что гарантирует отсутствие конкурентного доступа к widgetLimitExceeded
+         * между установкой false и обработкой результата.
          */
         private suspend fun performProbeUpdate(): UpdateResult {
             // Доступ только внутри updateMutex.withLock (вызывается из performSingleUpdate)

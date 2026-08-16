@@ -116,13 +116,19 @@ class MainBannerController
         /**
          * Состояние баннеров отслеживания.
          *
-         * **Контракт AOSP:** на AOSP combine из StateFlow не бросает исключений.
+         * **Стратегия retry:** бесконечные повторные попытки с экспоненциальной
+         * задержкой (cap 30с). Это гарантирует, что UI продолжит отображать
+         * баннеры даже после временных сбоев.
          *
-         * **Отклонение кастомной прошивки:** Сбой возможен только при деградации DataStore
-         * на кастомных прошивках. Это проблема кастомной прошивки.
+         * **Строгое соблюдение API:** на AOSP combine из StateFlow не бросает
+         * исключений. Сбой возможен только при деградации DataStore на кастомной
+         * прошивке — это проблема кастомной прошивки.
          *
-         * **Стратегия приложения:** Используется WhileSubscribed(5000); при сбое выполняется
-         * бесконечный ретрай с capped delay.
+         * **Критерий надёжности:** бесконечный retry допустим, так как:
+         * 1. Задержка ограничена (cap 30с) — нет нагрузки на CPU.
+         * 2. Логирование подавляется после MAX_LOGGED_RETRIES — нет спама.
+         * 3. Сброс счётчика по таймеру (RESET_RETRY_COUNTER_INTERVAL_MS)
+         *   позволяет восстановиться после устранения проблемы.
          */
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
@@ -143,16 +149,7 @@ class MainBannerController
                 )
             }.onEach {
                 resetRetryCounterIfNeeded(timeProvider.elapsedRealtime(), force = true)
-            }.retryWhen { cause, attempt ->
-                // TimeoutCancellationException — подкласс CancellationException,
-                // но является retryable-ошибкой (таймаут загрузки данных).
-                // Обычный CancellationException означает отмену scope — не retryable.
-                //
-                // Строгое соблюдение API kotlinx.coroutines: CancellationException
-                // пробрасывается для кооперативной отмены. TimeoutCancellationException
-                // является исключением — это таймаут операции, а не отмена scope.
-                // На AOSP StateFlow не бросает TimeoutCancellationException;
-                // данный сценарий возможен только при деградации кастомной прошивки.
+            }.retryWhen { cause, _ ->
                 if (cause is CancellationException && cause !is TimeoutCancellationException) {
                     throw cause
                 }
@@ -166,35 +163,20 @@ class MainBannerController
                         observationRetryCount
                     }
 
-                // `attempt` — номер попытки, предоставляемый оператором retryWhen.
-                // `currentRetry` — внутренний счётчик с экспоненциальной задержкой.
-                // Оба значения логируются для диагностики: `attempt` показывает
-                // сколько раз retryWhen перезапустил поток, `currentRetry` —
-                // сколько раз сработала внутренняя логика задержки.
-                AppLogger.e(
-                    "Failed to compute banner state (internal attempt $currentRetry, " +
-                        "operator retry #$attempt)",
-                    cause,
-                )
+                // Логирование только первых MAX_LOGGED_RETRIES попыток для предотвращения
+                // бесконечного спама в лог при перманентной ошибке кастомной прошивки.
+                if (currentRetry <= MAX_LOGGED_RETRIES) {
+                    AppLogger.e(
+                        "trackingBannerState: observation failed (attempt $currentRetry), " +
+                            "retrying with backoff",
+                        cause,
+                    )
+                }
 
                 val delayMillis =
                     (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
-
-                // Бесконечный retry с capped delay (MAX_RETRY_DELAY_MS).
-                // Остановка подписки приведёт к потере баннеров статуса для пользователя.
-                //
-                // Строгое соблюдение API: на AOSP combine из StateFlow не бросает
-                // исключений. Сбой возможен только при деградации DataStore
-                // на кастомных прошивках.
-                //
-                // Отклонение кастомной прошивки: если прошивка не обеспечивает
-                // корректную работу StateFlow — это проблема кастомной прошивки.
-                // Бесконечный retry с capped delay — защитный механизм,
-                // гарантирующий восстановление без вмешательства пользователя.
-                // UI сохраняет последнее успешное состояние во время повторов —
-                // нет мерцания.
                 true
             }.stateIn(
                 scope = scope,
@@ -211,5 +193,8 @@ class MainBannerController
 
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
+
+            /** Максимальное количество попыток, после которых логирование подавляется. */
+            private const val MAX_LOGGED_RETRIES = 10L
         }
     }

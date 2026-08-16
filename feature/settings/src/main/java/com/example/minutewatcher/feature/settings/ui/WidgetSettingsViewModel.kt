@@ -78,7 +78,7 @@ class WidgetSettingsViewModel
                     loadMutex.withLock {
                         try {
                             val loaded =
-                                withTimeoutOrNull(LOAD_TIMEOUT) {
+                                withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
                                     loader.load()
                                 }
                             ensureActive()

@@ -68,18 +68,18 @@ class UsageDocument {
     var status: String = ""
 
     /**
-     * Конструктор без аргументов требуется контрактом AppSearch для рефлективной
-     * десериализации. Метод [androidx.appsearch.app.GenericDocument.toDocumentClass]
-     * вызывает этот конструктор через reflection при чтении документов из индекса.
+     * Обязательный конструктор без аргументов для AppSearch.
      *
      * **Строгое соблюдение API:** [androidx.appsearch.annotation.Document] требует
-     * наличия публичного конструктора без аргументов. Удаление приведёт к
-     * AppSearchException (RESULT_INTERNAL_ERROR) в runtime.
+     * публичный конструктор без аргументов для рефлексивной десериализации.
+     * Вызов происходит через [androidx.appsearch.app.GenericDocument.toDocumentClass].
+     * Удаление приведёт к [androidx.appsearch.exceptions.AppSearchException]
+     * (RESULT_INTERNAL_ERROR) в runtime.
      *
      * **Отклонение кастомной прошивки:** если кастомная прошивка не обеспечивает
      * корректную рефлексию для AppSearch — это проблема кастомной прошивки.
      */
-    @Suppress("unused")
+    @Suppress("unused", "UNUSED_PARAMETER")
     @SuppressWarnings("unused")
     constructor()
 

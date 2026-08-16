@@ -81,9 +81,8 @@ class MainBannerControllerTest {
         runTest {
             var collectionCount = 0
 
-            // Flow передаётся в мок через thenReturn() и коллекционируется
-            // внутри MainBannerController при подписке на permissionRepository.
-            // Предупреждение IDE является ложным.
+            // Flow передаётся в mock и используется внутри контроллера через подписку.
+            // IDE не распознаёт использование через thenReturn() — подавляем предупреждение.
             @Suppress("UNUSED_VARIABLE")
             val dynamicFlow =
                 kotlinx.coroutines.flow.flow<Boolean> {
@@ -91,8 +90,6 @@ class MainBannerControllerTest {
                     if (collectionCount == 1) {
                         throw IOException("Temporary failure")
                     }
-                    // emit(true) вместо emitAll(flowOf(true)): устраняет предупреждение IDE
-                    // о неиспользуемом Flow и делает намерение явным.
                     emit(true)
                 }
             whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(dynamicFlow)

@@ -118,17 +118,18 @@ class SimIdentityRepositoryImpl
         /**
          * Поток seed-значения для генерации identity.
          *
-         * **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс.
-         * seedFlow эмитит Real(seed) при успешном чтении/генерации.
+         * **Штатный путь:** seed читается/генерируется один раз и сохраняется в DataStore.
+         * Эмитит [SeedResult.Real] с валидным значением.
          *
-         * **Отклонение кастомной прошивки:** если DataStore деградирует и
-         * seed недоступен в течение SEED_TOTAL_TIMEOUT_MS — эмитится Fallback.
-         * Это проблема кастомной прошивки.
+         * **Отклонение кастомной прошивки:** при недоступности DataStore
+         * (таймаут SEED_TOTAL_TIMEOUT_MS) эмитит [SeedResult.Fallback].
+         * Это проблема кастомной прошивки, не соответствующей документации Google.
          *
-         * **Стратегия приложения:** при Fallback вызов getSimIdentity() бросает
-         * SeedUnavailableException. UI должен показать ошибку и предложить
-         * повторить. Fallback на slot-based identity НАМЕРЕННО ИСКЛЮЧЁН:
-         * он приведёт к потере привязки данных к SIM при восстановлении хранилища.
+         * **Поведение при Fallback:** все вызовы getSimIdentity() бросят
+         * [SeedUnavailableException]. UI должен показать ошибку и предложить retry.
+         * SIM-карты не будут отображаться до восстановления DataStore.
+         * Это безопаснее, чем использование нестабильного slot-based fallback,
+         * который приведёт к потере привязки данных к SIM.
          */
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -373,19 +374,14 @@ class SimIdentityRepositoryImpl
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 if (seed is SeedResult.Fallback) {
-                    // SeedUnavailableException бросается, когда identity seed недоступен
-                    // в пределах SHORT_TIMEOUT_MS.
-                    //
+                    AppLogger.e("Identity seed unavailable for slot $slot. Possible DataStore degradation.", null)
+                    // SeedUnavailableException выбрасывается при недоступности seed.
                     // Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
-                    // Таймаут генерации seed возможен только при деградации DataStore
-                    // на кастомных прошивках, не соответствующих документации Google.
-                    // Это проблема кастомной прошивки.
-                    //
-                    // Стратегия приложения: выбрасываем исключение, чтобы вызывающий код
-                    // мог информировать пользователя. Fallback на slot-based identity
+                    // Таймаут возможен только при деградации хранилища на кастомной прошивке.
+                    // Стратегия: выбрасываем исключение, чтобы вызывающий код мог
+                    // информировать пользователя. Fallback на slot-based identity
                     // намеренно исключён: он приведёт к потере привязки данных к SIM
                     // при восстановлении хранилища.
-                    AppLogger.e("Identity seed unavailable for slot $slot. Possible DataStore degradation.", null)
                     throw SeedUnavailableException(slot)
                 }
 

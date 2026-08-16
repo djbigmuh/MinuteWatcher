@@ -195,6 +195,9 @@ class TrafficTracker
                      */
                     baselineNeedsRetry.entries.removeIf { it.key !in activeIdentities }
 
+                    // Определение целевой SIM. На AOSP всегда возвращает точный результат.
+                    // Fallback на первый активный SIM — эвристика для кастомных прошивок,
+                    // не соответствующих документации Google.
                     processActiveSimsTraffic(activeSims)
                 } catch (e: SecurityException) {
                     AppLogger.e("SecurityException in TrafficTracker", e)
@@ -752,8 +755,26 @@ internal class TrafficTargetResolver(
         object InconsistentFirmware : TargetResult
     }
 
-    // Подавление ReturnCount оправдано: 3 точки выхода соответствуют спецификации TargetResult
-    // (отсутствие SIM, некорректное состояние прошивки, успех).
+    /**
+     * Определяет целевую SIM-карту для атрибуции трафика.
+     *
+     * **Строгое соблюдение API:** на AOSP SubscriptionManager.getDefaultDataSubscriptionId()
+     * всегда возвращает валидный ID при наличии активной SIM и READ_PHONE_STATE.
+     *
+     * **Отклонение кастомной прошивки:** если getDefaultDataSubscriptionId() возвращает -1
+     * при наличии активных SIM — это проблема кастомной прошивки.
+     *
+     * **Эвристика (в пределах критерия надёжности):**
+     * Если default data SIM не определена системой (возврат -1), выполняется
+     * fallback на первый активный SIM из списка. Это допустимо, так как:
+     * 1. На AOSP данная ситуация не возникает.
+     * 2. На кастомной прошивке это единственный способ продолжить трекинг.
+     * 3. Пользователь видит индикатор неточной атрибуции (INACCURATE_ATTRIBUTION).
+     *
+     * **Гарантия:** при возврате fallback-результата устанавливается
+     * TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, что отображается
+     * в UI как предупреждение.
+     */
     @Suppress("ReturnCount")
     fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
         if (activeSims.isEmpty()) return TargetResult.NoActiveSims
