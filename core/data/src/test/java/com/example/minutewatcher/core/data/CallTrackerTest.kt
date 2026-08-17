@@ -864,7 +864,13 @@ class CallTrackerTest {
             assertTrue(status.message?.contains("Session cleared, call data lost") == true)
 
             // Verify session WAS cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+            verify(
+                callSessionRepository,
+                atLeastOnce(),
+            ).setCallStartTime(
+                eq(subId),
+                eq(0L),
+            )
         }
 
     @Test

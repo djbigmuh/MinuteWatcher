@@ -572,7 +572,11 @@ class CallTracker
         private suspend fun handleEndCallTimeout(subId: Int) {
             val message = "Session read timed out for subId $subId"
             AppLogger.e(message, null)
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, message)
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    message,
+                )
 
             withContext(NonCancellable) {
                 // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений
@@ -675,7 +679,11 @@ class CallTracker
         private fun handleStaleSession(subId: Int) {
             val message = "Call duration exceeded max limit for subId $subId"
             AppLogger.e(message, null)
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, message)
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                    message,
+                )
         }
 
         private suspend fun handleNegativeDuration(
@@ -1025,7 +1033,16 @@ class CallTracker
         }
 
         companion object {
-            private const val READ_RETRY_ATTEMPTS = 2
+            /**
+             * Число попыток чтения из DataStore (включая первую).
+             * 3 попытки с экспоненциальной задержкой 500→1000 мс
+             * обеспечивают устойчивость к временной занятости хранилища.
+             *
+             * Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+             * Таймаут здесь возможен только при деградации хранилища
+             * на кастомной прошивке, не соответствующей документации Google.
+             */
+            private const val READ_RETRY_ATTEMPTS = 3
             private const val READ_RETRY_DELAY_MS = 500L
             private const val MAX_WRITE_ATTEMPTS = 3
             private const val MAX_ATTRIBUTION_FAILURES = 3

@@ -151,6 +151,10 @@ class WidgetSettingsViewModel
          * Если кастомная прошивка не обеспечивает своевременный ответ DataStore —
          * это проблема кастомной прошивки.
          */
+        @Suppress("ReturnCount")
+        // Подавление ReturnCount оправдано: метод содержит несколько защитных проверок
+        // (ошибка загрузки, отсутствие состояния, сбой DataStore), ранний выход из которых
+        // обеспечивает линейную читаемость основного пути сохранения.
         suspend fun saveAndNotify(): SaveResult {
             if (!saveMutex.tryLock()) {
                 // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
@@ -158,11 +162,24 @@ class WidgetSettingsViewModel
             }
             return try {
                 _isSaving.value = true
+
+                // Если загрузка завершилась ошибкой, сохранение невозможно.
+                // Строгое соблюдение API: на AOSP WidgetSettingsLoader.load()
+                // завершается за миллисекунды. Таймаут здесь указывает на деградацию
+                // хранилища на кастомной прошивке.
+                if (_loadError.value) {
+                    AppLogger.w("saveAndNotify skipped: settings load failed previously")
+                    return SaveResult.Failed
+                }
+
                 val currentState = _settingsState.value
                 if (currentState == null) {
+                    // Проверяется ПОСЛЕ _loadError.value, чтобы отличить "ещё грузится"
+                    // от "провал загрузки".
                     AppLogger.w("saveAndNotify called before settings were loaded")
-                    SaveResult.Failed
-                } else if (currentState.settingsLoadFailed) {
+                    return SaveResult.Failed
+                }
+                if (currentState.settingsLoadFailed) {
                     AppLogger.w(
                         "saveAndNotify: skipping save because settings were not loaded successfully",
                     )

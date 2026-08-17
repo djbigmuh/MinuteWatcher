@@ -203,11 +203,20 @@ class MainViewModel
         }
 
         /**
-         * Обновляет данные и уведомляет виджет.
-         * force=true используется для операций, которые изменяют отображаемые
-         * на виджете данные (лимиты, настройки, сброс). Без force виджет
-         * обновится только при изменении хеша данных, что может не произойти
-         * при изменении только настроек отображения.
+         * Обновляет данные о SIM-картах и уведомляет подписчиков (включая виджет).
+         *
+         * **Семантика результатов [RefreshResult]:**
+         * - [RefreshResult.Success]: Данные успешно обновлены из всех источников.
+         *   [lastRefreshAt] обновляется.
+         * - [RefreshResult.Timeout]: Часть данных (например, трафик) не получена в срок.
+         *   Виджет показывает устаревшие данные с индикатором ошибки. [lastRefreshAt]
+         *   обновляется, чтобы не спамить запросами при быстром переключении Activity.
+         * - `null`: Обновление уже выполняется другой корутиной или произошло критическое
+         *   исключение. [lastRefreshAt] НЕ обновляется, что форсирует повторную
+         *   попытку при следующем [onActivityResume].
+         *
+         * @param force Если true, уведомление о смене данных отправляется безусловно,
+         * даже если хеш данных не изменился (необходимо для обновления настроек).
          */
         private suspend fun refreshAndNotify(force: Boolean = false) {
             val result = controllers.refresh.refreshSimCardsInternal()
@@ -215,6 +224,7 @@ class MainViewModel
                 is RefreshResult.Success -> {
                     lastRefreshAt = timeProvider.elapsedRealtime()
                 }
+
                 is RefreshResult.Timeout -> {
                     // Обновляем timestamp, чтобы предотвратить немедленный повторный
                     // refresh при следующем onActivityResume. На AOSP refresh()
@@ -223,10 +233,13 @@ class MainViewModel
                     // выполнена при следующем onActivityResume через RESUME_REFRESH_THRESHOLD_MS.
                     lastRefreshAt = timeProvider.elapsedRealtime()
                 }
+
                 null -> {
-                    // result == null означает, что обновление уже выполняется в другой корутине.
-                    // В этом случае мы не обновляем lastRefreshAt, полагаясь на то, что
-                    // "активное" обновление обновит его само.
+                    // Обновление уже выполняется в другой корутине или завершилось ошибкой.
+                    // lastRefreshAt НЕ обновляем: следующий onActivityResume повторит попытку.
+                    // Строгое соблюдение API: на AOSP refresh() завершается за миллисекунды.
+                    // null здесь означает конкуренцию или деградацию на кастомной прошивке.
+                    AppLogger.w("refreshAndNotify: refresh returned null, skipping timestamp update")
                 }
             }
             controllers.simData.notifyDataChanged(force = force)
@@ -328,7 +341,9 @@ class MainViewModel
                         // that asynchronous initialization (loading settings, auto-reset check) has actually finished.
                         // We wait for the initialization state to guarantee a stable state before refreshing.
                         val initialized =
-                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            withTimeoutOrNull(
+                                Constants.Flow.SHORT_TIMEOUT_MS.milliseconds,
+                            ) {
                                 initializationState.first { it }
                             }
 
@@ -367,8 +382,19 @@ class MainViewModel
     }
 
 /**
- * Вспомогательный класс для планирования автоматического сброса при старте приложения.
- * Вынесен из [MainViewModel] для инкапсуляции логики работы с интервалами и SavedStateHandle.
+ * Планировщик автоматического сброса лимитов.
+ *
+ * **Поведение при гибели процесса:**
+ * [isCheckStarted] — [AtomicBoolean], сбрасывается при гибели процесса.
+ * [savedStateHandle] персистится. После гибели процесса `checkOnStart()`
+ * выполнится повторно, что является **корректным** поведением:
+ * проверка авто-сброса должна повториться, если процесс был убит
+ * до завершения предыдущей проверки.
+ *
+ * **Строгое соблюдение API:** SavedStateHandle гарантированно
+ * восстанавливается Android Framework при воссоздании ViewModel.
+ * Атомарность [isCheckStarted] предотвращает конкуренцию при
+ * нескольких вызовах в рамках одного экземпляра ViewModel.
  */
 internal class AutoResetScheduler(
     private val savedStateHandle: SavedStateHandle,
@@ -466,7 +492,10 @@ internal class AutoResetScheduler(
             // только при деградации хранилища на кастомных прошивках,
             // не соответствующих документации Google.
             savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
-            isCheckStarted.set(false) // G-484: Reset flag to allow retry after failure
+            // Сбрасываем флаг, чтобы позволить повторную попытку
+            // при следующем вызове checkOnStart() (например, после
+            // воссоздания ViewModel). Это намеренное поведение.
+            isCheckStarted.set(false)
         }
     }
 

@@ -305,10 +305,11 @@ class SemanticSearchManager
                 // lastSnapshotHash обновляется только при полном успехе индексации,
                 // что гарантирует повторную индексацию при следующем вызове.
                 val currentSession =
-                    session ?: run {
-                        AppLogger.e("AppSearch session is null in executeIndexing, skipping")
-                        return@withContext false
-                    }
+                    session
+                        ?: run {
+                            AppLogger.e("AppSearch session is null in executeIndexing, skipping")
+                            return@withContext false
+                        }
 
                 // Строгое соблюдение API kotlinx.coroutines: withTimeoutOrNull при таймауте
                 // возвращает null, а НЕ бросает TimeoutCancellationException.
@@ -317,7 +318,9 @@ class SemanticSearchManager
                 // Таймаут возможен только при деградации хранилища на кастомной прошивке.
                 val result: Boolean? =
                     try {
-                        withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
+                        withTimeoutOrNull(
+                            Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds,
+                        ) {
                             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
                             performIndexUpdate(currentSession, documents)
                             // lastSnapshotHash обновляется ТОЛЬКО при полном успехе индексации.

@@ -28,8 +28,17 @@ class WidgetUpdaterImpl
 
         /**
          * Счётчик обновлений, выполненных в режиме widgetLimitExceeded.
-         * Каждое PROBE_INTERVAL_UPDATES-е обновление в этом режиме выполняет
-         * пробный полный рендер для проверки, не устранена ли причина превышения.
+         * Каждое [PROBE_INTERVAL_UPDATES]-е обновление выполняет пробный полный рендер.
+         *
+         * **Не персистится.** При рестарте приложения сбрасывается в 0.
+         * Это допустимо: при входе в режим exceeded первый probe произойдёт
+         * через [PROBE_INTERVAL_UPDATES] обновлений (~10 часов при ~1 обновлении/час).
+         *
+         * **Эвристика в пределах критерия надёжности:** интервал 10 обновлений
+         * выбран как баланс между частотой попыток восстановления полного рендера
+         * и нагрузкой на систему. На AOSP RemoteViews-лимит ~1 МБ;
+         * упрощённый layout всегда укладывается. Выход за лимит при упрощённом
+         * layout — проблема кастомной прошивки.
          *
          * Доступ только внутри updateMutex.withLock — атомарность не требуется.
          */
@@ -232,8 +241,8 @@ class WidgetUpdaterImpl
         private suspend fun handleLimitExceeded(): UpdateOutcome {
             val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
             if (current) {
-                // Флаг уже установлен — повторный рендер не нужен.
-                // Это защищает от осцилляции при конкурентных вызовах.
+                // Флаг уже установлен (например, probe восстановил его).
+                // Повторный рендер не нужен — предотвращаем осцилляцию.
                 return UpdateOutcome.Stop
             }
 
@@ -284,12 +293,19 @@ class WidgetUpdaterImpl
          * **Последовательность (внутри updateMutex.withLock):**
          * 1. Сброс widgetLimitExceeded = false для полного рендера.
          * 2. Вызов safeUpdateAll(isProbe = true).
-         * 3. При GenericFailure: возврат флага = true вручную.
-         * 4. При LimitExceeded: возврат LimitExceeded; вызывающий код
-         *   (handleUpdateResult → handleLimitExceeded) вернёт флаг = true.
+         * 3. При GenericFailure или LimitExceeded: возврат флага = true вручную
+         *    для предотвращения осцилляции и повторного рендера.
+         * 4. При CancellationException или иных исключениях: гарантированное восстановление
+         *    флага = true через try-catch блоки.
          * 5. При Success: handleUpdateResult подтвердит успех (wasFull = true).
          *
-         * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll() не бросает
+         * **Зачем try/catch:** если во время probe сработает таймаут (CancellationException)
+         * или произойдёт сбой, флаг должен вернуться в true. Иначе следующая попытка
+         * обновления снова начнётся с полного рендера, вызывая бесконечный цикл "полный -> таймаут -> полный".
+         *
+         * **Строгое соблюдение API:** на AOSP RemoteViews-лимит составляет ~1 МБ на Binder-транзакцию.
+         * Упрощённый layout всегда укладывается в этот лимит; выход за него при упрощённом layout —
+         * признак проблемы кастомной прошивки. GlanceAppWidget.updateAll() на AOSP не бросает
          * TransactionTooLargeException при корректном lifecycle и объёме < 1 МБ.
          * Если probe падает — это проблема кастомной прошивки или destroyed context.
          *
@@ -300,11 +316,25 @@ class WidgetUpdaterImpl
         private suspend fun performProbeUpdate(): UpdateResult {
             // Доступ только внутри updateMutex.withLock (вызывается из performSingleUpdate)
             setWidgetLimitExceeded(value = false)
-            val probeResult = safeUpdateAll(context, isProbe = true)
-            if (probeResult is UpdateResult.GenericFailure) {
+            try {
+                val probeResult = safeUpdateAll(context, isProbe = true)
+                if (probeResult is UpdateResult.GenericFailure) {
+                    setWidgetLimitExceeded(value = true)
+                }
+                // При LimitExceeded флаг тоже нужно вернуть — handleLimitExceeded
+                // не должен видеть false и делать повторный рендер.
+                if (probeResult is UpdateResult.LimitExceeded) {
+                    setWidgetLimitExceeded(value = true)
+                }
+                return probeResult
+            } catch (e: CancellationException) {
+                // При отмене восстанавливаем флаг и пробрасываем.
                 setWidgetLimitExceeded(value = true)
+                throw e
+            } catch (e: Exception) {
+                setWidgetLimitExceeded(value = true)
+                throw e
             }
-            return probeResult
         }
 
         private suspend fun setWidgetLimitExceeded(value: Boolean) {
@@ -323,6 +353,15 @@ class WidgetUpdaterImpl
 
         /**
          * Выполняет обновление виджетов с перехватом и классификацией ошибок.
+         *
+         * **Семантика параметров:**
+         * @param isProbe Если true, выполняется принудительная попытка ПОЛНОГО рендера,
+         *   даже если флаг widgetLimitExceeded установлен в true. Используется для
+         *   проверки возможности возврата в обычный режим.
+         *
+         * **Логика isFullAttempt:**
+         * Определяет, считается ли текущий рендер "полным" для целей сброса флага.
+         * Рендер считается полным, если (isProbe == true) ИЛИ (widgetLimitExceeded == false).
          *
          * **Контракт AOSP:** на AOSP GlanceAppWidget.updateAll() завершается в пределах нескольких секунд.
          * TransactionTooLargeException возможен только при превышении лимита Binder (~1 МБ).
@@ -502,6 +541,12 @@ class WidgetUpdaterImpl
 
             /**
              * Интервал пробных полных рендеров в режиме widgetLimitExceeded.
+             *
+             * **Выбор значения:** 10 обновлений.
+             * При стандартной частоте обновлений (~1/час) это даёт один probe раз в 10 часов.
+             * Этого достаточно для обнаружения того, что причина превышения лимита устранена
+             * (например, пользователь удалил лишние SIM или изменил настройки), не создавая
+             * избыточной нагрузки на систему Binder частыми TransactionTooLargeException.
              *
              * **Эвристика в пределах критерия надёжности:**
              * Счётчик [exceededUpdateCounter] не персистится. При рестарте

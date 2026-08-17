@@ -118,20 +118,25 @@ class SimIdentityRepositoryImpl
         private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
 
         /**
-         * Поток seed-значения для генерации identity.
+         * Поток seed-значения для генерации identity SIM-карт.
          *
-         * **Штатный путь:** seed читается/генерируется один раз и сохраняется в DataStore.
-         * Эмитит [SeedResult.Real] с валидным значением.
+         * **Поведение при первом запуске:**
+         * Блок `onStart` блокирует подписчика на время до [SEED_TOTAL_TIMEOUT_MS] мс
+         * (13 секунд). В течение этого времени [observeActiveSims] не эмитит значения.
+         * Это штатное поведение: seed необходим для генерации identity.
          *
-         * **Отклонение кастомной прошивки:** при недоступности DataStore
-         * (таймаут SEED_TOTAL_TIMEOUT_MS) эмитит [SeedResult.Fallback].
-         * Это проблема кастомной прошивки, не соответствующей документации Google.
+         * **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс,
+         * поэтому реальное время ожидания составляет миллисекунды.
+         * Таймаут 13 секунд — защитный барьер на случай деградации хранилища
+         * на кастомной прошивке, не соответствующей документации Google.
          *
-         * **Поведение при Fallback:** все вызовы getSimIdentity() бросят
-         * [SeedUnavailableException]. UI должен показать ошибку и предложить retry.
-         * SIM-карты не будут отображаться до восстановления DataStore.
-         * Это безопаснее, чем использование нестабильного slot-based fallback,
-         * который приведёт к потере привязки данных к SIM.
+         * **Стратегия при таймауте:** эмитится [SeedResult.Fallback].
+         * При восстановлении хранилища поток переключится на [SeedResult.Real]
+         * через [flatMapLatest], и downstream пересоздастся.
+         *
+         * **Эвристика в пределах критерия надёжности:** Fallback не используется
+         * для генерации identity (выбрасывается [SeedUnavailableException]).
+         * Это предотвращает потерю привязки данных к SIM при восстановлении хранилища.
          */
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -784,6 +789,11 @@ class SimIdentityRepositoryImpl
             /**
              * Общий таймаут инициализации seed, включая генерацию и сохранение.
              * Сумма [Constants.Flow.SEED_GENERATION_TIMEOUT_MS] и [Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS].
+             *
+             * **Строгое соблюдение API:** на AOSP генерация и чтение seed из DataStore
+             * занимает миллисекунды. 13 секунд — защитный запас на случай деградации
+             * хранилища на кастомной прошивке. Подписчики [seedFlow] будут заблокированы
+             * в блоке `onStart` на это время при первом обращении.
              */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val SEED_TOTAL_TIMEOUT_MS =

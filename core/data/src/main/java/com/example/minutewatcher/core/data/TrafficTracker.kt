@@ -178,6 +178,9 @@ class TrafficTracker
          * @throws java.io.IOException if DataStore write fails
          * @throws SecurityException if permission is revoked during operation
          */
+        @Suppress("ReturnCount")
+        // Подавление ReturnCount оправдано: метод содержит несколько защитных проверок (права, таймаут,
+        // отсутствие SIM), ранний выход из которых обеспечивает линейную читаемость логики обновления.
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
@@ -186,6 +189,16 @@ class TrafficTracker
                     val activeSims = getActiveSimsAndCleanup()
                     if (activeSims == null) {
                         handleIdentityReadTimeout()
+                        return
+                    }
+                    if (activeSims.isEmpty()) {
+                        // Все SIM извлечены. Обновляем статус, чтобы UI не показывал устаревший баннер.
+                        // Строгое соблюдение API: на AOSP SubscriptionManager незамедлительно
+                        // отражает извлечение SIM. Пустой список здесь — штатная ситуация.
+                        // Если кастомная прошивка не обновляет список подписок при извлечении SIM —
+                        // это проблема кастомной прошивки, не проекта.
+                        baselineNeedsRetry.clear()
+                        _status.value = TrackingStatus.Idle
                         return
                     }
 
@@ -244,13 +257,6 @@ class TrafficTracker
 
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
             val result = targetResolver.resolve(activeSims)
-
-            if (result is TrafficTargetResolver.TargetResult.NoActiveSims) {
-                AppLogger.d("TrafficTracker: no active SIM found, setting Idle")
-                baselineNeedsRetry.clear()
-                _status.value = TrackingStatus.Idle
-                return
-            }
 
             if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
                 AppLogger.w(
