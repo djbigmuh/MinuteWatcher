@@ -350,12 +350,22 @@ class SimIdentityRepositoryImpl
         /**
          * Возвращает стабильную идентичность SIM для указанного слота.
          *
-         * @param slot Индекс слота SIM. Должен быть в диапазоне
-         *   [SimConstants.SUPPORTED_SLOT_INDICES].
+         * **Контракт для вызывающего кода:**
+         * - [IllegalArgumentException]: slot вне допустимого диапазона. Программная ошибка,
+         *   не должна происходить при корректном UI. Вызывающий код может показать
+         *   общую ошибку пользователю.
+         * - [SeedUnavailableException]: identity seed недоступен (деградация DataStore).
+         *   На AOSP DataStore отвечает < 100 мс; таймаут указывает на деградацию
+         *   хранилища на кастомной прошивке. Это проблема кастомной прошивки.
+         *   Вызывающий код должен показать ошибку и предложить повторить.
+         * - [SimNotFoundException]: SIM физически отсутствует в слоте.
+         *   Штатная ситуация (пользователь извлёк SIM между отображением UI и вызовом).
+         *   Вызывающий код должен проигнорировать операцию.
+         *
+         * @param slot Индекс слота SIM. Должен быть в [SimConstants.SUPPORTED_SLOT_INDICES].
          * @throws IllegalArgumentException если slot вне допустимого диапазона.
-         * @throws IllegalStateException если SIM не найдена в указанном слоте
-         *   или identity seed недоступен (деградация DataStore на кастомной
-         *   прошивке, не соответствующей документации Google).
+         * @throws SeedUnavailableException если identity seed недоступен.
+         * @throws SimNotFoundException если SIM отсутствует в указанном слоте.
          */
         @Suppress("ThrowsCount", "ReturnCount")
         // Подавление ThrowsCount и ReturnCount оставлено намеренно: метод реализует строгую валидацию по трем

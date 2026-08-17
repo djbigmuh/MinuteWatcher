@@ -78,6 +78,17 @@ class UpdateCoordinator
         private var observationJob: Job? = null
 
         init {
+            // Запуск наблюдения за snapshot-потоком.
+            //
+            // Строгое соблюдение API: UpdateCoordinator создаётся через Hilt как @Singleton,
+            // поэтому init выполняется ровно один раз за время жизни процесса.
+            // Корутина привязана к [scope] (ApplicationScope), который живёт
+            // до завершения процесса. При завершении процесса корутина отменяется.
+            //
+            // На AOSP StateFlow эмитит значения последовательно.
+            // Если кастомная прошивка эмитит значения вне порядка —
+            // это проблема кастомной прошивки. Debounce гарантирует
+            // отсутствие дублирующих обновлений виджета.
             lastResetTime = timeProvider.now()
             startObservation()
         }

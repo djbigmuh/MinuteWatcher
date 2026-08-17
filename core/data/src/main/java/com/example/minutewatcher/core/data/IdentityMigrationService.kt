@@ -41,6 +41,25 @@ class IdentityMigrationService
             return appHasLegacy || simHasLegacy
         }
 
+        /**
+         * Определяет, является ли ключ legacy-форматом, требующим миграции.
+         *
+         * **Безопасность prefix-матчинга:**
+         * - Проверка `activeIdentities.any { name.endsWith("_$it") }` выполняется ПЕРВОЙ.
+         *   Если identity активна, ключ НЕ считается legacy, даже если суффикс
+         *   совпадает с legacy-паттерном. Это предотвращает миграцию активных данных.
+         * - Regex `_sub_\d+$` и `_icc_[a-f0-9]+$` используют `$`-якорь,
+         *   что гарантирует матчинг только в конце строки. Ключи вида
+         *   `minutes_used_sub_123` корректно определяются как legacy,
+         *   т.к. заканчиваются на `_sub_123`.
+         * - Ключи вида `widget_show_sim_icc_abc123` НЕ матчатся,
+         *   т.к. заканчиваются на `abc123`, а не на `_sub_N` или `_icc_<hex>`.
+         *
+         * **Эвристика в пределах критерия надёжности:** проверка `endsWith("_sim_$it")`
+         * для SUPPORTED_SLOT_INDICES определяет ключи fallback-формата.
+         * Если SIM с identity `sim_N` не в activeIdentities, её ключи orphaned
+         * и должны быть мигрированы/очищены. Это штатное поведение.
+         */
         private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name
             if (name.startsWith("conflict_")) return false

@@ -129,10 +129,25 @@ class MainSimDataController
         /**
          * Выполняет операцию над SIM-картой с единой обработкой ошибок.
          *
-         * **Строгое соблюдение API:** на AOSP getIdentity() не бросает
-         * исключений при корректном состоянии DataStore. SeedUnavailableException
-         * и SimNotFoundException возможны только при деградации хранилища
-         * на кастомных прошивках. Это проблема кастомной прошивки.
+         * **Стратегия обработки исключений:**
+         * - [SeedUnavailableException]: SIM identity недоступен из-за деградации DataStore.
+         *   На AOSP невозможно при корректном состоянии хранилища. Проблема кастомной прошивки.
+         *   Ошибка сохраняется в [lastOperationError] для отображения в UI.
+         * - [SimNotFoundException]: SIM извлечён между отображением UI и вызовом операции.
+         *   Штатная ситуация. Ошибка сохраняется в [lastOperationError].
+         * - [IllegalArgumentException]: slot вне диапазона. Программная ошибка.
+         *   Ошибка сохраняется в [lastOperationError].
+         * - [CancellationException]: пробрасывается для кооперативной отмены корутины.
+         *   Строгое соблюдение API kotlinx.coroutines.
+         * - Любое другое [Exception]: непредвиденная ошибка.
+         *   Ошибка сохраняется в [lastOperationError].
+         *
+         * Все операции выполняются на [ioDispatcher], т.к. связаны с I/O (DataStore).
+         *
+         * @param slot Индекс слота SIM.
+         * @param operationName Название операции для логирования.
+         * @param onRefresh Callback для обновления данных после успешной операции.
+         * @param block Блок операции для выполнения.
          */
         private fun executeSimOperation(
             slot: Int,

@@ -30,17 +30,20 @@ class WidgetUpdaterImpl
          * Счётчик обновлений, выполненных в режиме widgetLimitExceeded.
          * Каждое [PROBE_INTERVAL_UPDATES]-е обновление выполняет пробный полный рендер.
          *
-         * **Не персистится.** При рестарте приложения сбрасывается в 0.
+         * **НЕ персистится.** При перезапуске приложения сбрасывается в 0.
          * Это допустимо: при входе в режим exceeded первый probe произойдёт
          * через [PROBE_INTERVAL_UPDATES] обновлений (~10 часов при ~1 обновлении/час).
          *
+         * **Потокобезопасность:** доступ только внутри [updateMutex.withLock]
+         * (вызывается из [performSingleUpdate]). Атомарность гарантируется мьютексом,
+         * дополнительная синхронизация не требуется.
+         *
          * **Эвристика в пределах критерия надёжности:** интервал 10 обновлений
          * выбран как баланс между частотой попыток восстановления полного рендера
-         * и нагрузкой на систему. На AOSP RemoteViews-лимит ~1 МБ;
-         * упрощённый layout всегда укладывается. Выход за лимит при упрощённом
-         * layout — проблема кастомной прошивки.
-         *
-         * Доступ только внутри updateMutex.withLock — атомарность не требуется.
+         * и нагрузкой на систему Binder частыми TransactionTooLargeException.
+         * На AOSP RemoteViews-лимит ~1 МБ на Binder-транзакцию, и упрощённый
+         * layout всегда укладывается в этот лимит. Если probe падает —
+         * проблема кастомной прошивки с уменьшенным Binder-лимитом.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal var exceededUpdateCounter = 0L
@@ -326,6 +329,12 @@ class WidgetUpdaterImpl
                 if (probeResult is UpdateResult.LimitExceeded) {
                     setWidgetLimitExceeded(value = true)
                 }
+                // Защитная проверка: при isProbe=true isFullAttempt всегда true,
+                // поэтому Success всегда имеет wasFull=true. Если по какой-то причине
+                // wasFull=false (не должно происходить), флаг остаётся false —
+                // это означает, что полный рендер прошёл и можно оставаться в полном режиме.
+                // На AOSP GlanceAppWidget.updateAll() завершается за несколько секунд.
+                // Если probe не укладывается в таймаут — проблема кастомной прошивки.
                 return probeResult
             } catch (e: CancellationException) {
                 // При отмене восстанавливаем флаг и пробрасываем.

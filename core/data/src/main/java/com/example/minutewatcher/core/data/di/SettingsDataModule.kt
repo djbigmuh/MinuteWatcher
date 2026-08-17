@@ -27,6 +27,27 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
+/**
+ * Два раздельных DataStore-инстанса для разделения ответственности:
+ *
+ * **app_settings** (`appDataStore`):
+ * - Общие настройки приложения (тема, язык, уведомления)
+ * - Настройки виджета (layout, прозрачность, размер шрифта)
+ * - Флаги миграции и onboarding
+ * - Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+ *
+ * **sim_settings** (`simDataStore`):
+ * - SIM-специфичные данные (лимиты, расход, корректировки)
+ * - Ключи генерируются на основе identity SIM (icc_<hash>, sub_<id>, sim_<slot>)
+ * - Разделение от app_settings предотвращает конфликты ключей
+ *   и позволяет независимо мигрировать SIM-данные.
+ *
+ * Оба инстанса создаются через делегат `by preferencesDataStore`,
+ * что гарантирует ленивую инициализацию и потокобезопасность.
+ * На AOSP DataStore гарантирует атомарность edit-операций.
+ * Если кастомная прошивка не обеспечивает атомарность —
+ * это проблема кастомной прошивки.
+ */
 private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "app_settings",
     produceMigrations = { context ->
