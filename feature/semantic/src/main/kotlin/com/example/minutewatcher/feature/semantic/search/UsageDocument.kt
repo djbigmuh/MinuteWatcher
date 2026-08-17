@@ -7,12 +7,23 @@ import androidx.appsearch.annotation.Document.Namespace
 import androidx.appsearch.annotation.Document.Score
 import androidx.appsearch.annotation.Document.StringProperty
 import androidx.appsearch.app.AppSearchSchema
+import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.util.ColorProvider
 
 /**
- * DTO-документ для AppSearch-индексации.
+ * DTO для AppSearch-индексации данных использования.
+ *
+ * **Зависимость от annotation processor:** класс-конвертер
+ * `$$__AppSearch__UsageDocument` генерируется `appsearch-compiler` (KSP).
+ * Без работающего KSP конвертер не будет сгенерирован, и AppSearch
+ * бросит [AppSearchException] с RESULT_INTERNAL_ERROR при попытке
+ * индексации. Это проблема сборки, не runtime.
+ *
+ * **ProGuard/R8:** правила keep для `$$__AppSearch__*` находятся
+ * в `app/proguard-rules.pro`. Удаление этих правил приведёт к
+ * вырезанию конвертера из release-сборки.
  *
  * **Строгое соблюдение API:** структура полей и аннотации соответствуют
  * контракту [androidx.appsearch.annotation.Document].

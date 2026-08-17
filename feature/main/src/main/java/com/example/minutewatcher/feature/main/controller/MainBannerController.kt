@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -50,6 +51,19 @@ class MainBannerController
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
             isNotificationPermissionPermanentlyDenied.value = denied
         }
+
+        private val appSearchRetryCount = MutableStateFlow(0)
+        private val appSearchBannerDismissed = MutableStateFlow(false)
+
+        fun incrementAppSearchRetry() {
+            appSearchRetryCount.value++
+        }
+
+        fun dismissAppSearch() {
+            appSearchBannerDismissed.value = true
+        }
+
+        private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
         private var observationRetryCount = 0L
 
@@ -100,6 +114,23 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
+        init {
+            scope.launch {
+                trackingStatus.collect { status ->
+                    val appsearch = status["appsearch"]
+                    val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                    if (currentErrorType != lastAppSearchErrorType) {
+                        lastAppSearchErrorType = currentErrorType
+                        appSearchRetryCount.value = 0
+                        appSearchBannerDismissed.value = false
+                        if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                            AppLogger.w("AppSearch not supported on this device")
+                        }
+                    }
+                }
+            }
+        }
+
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
                 isPhonePermissionPermanentlyDenied,
@@ -129,8 +160,21 @@ class MainBannerController
                 permissionRepository.phoneStatePermissionGranted,
                 permissionRepository.usageStatsPermissionGranted,
                 permissionRepository.notificationPermissionGranted,
+                appSearchRetryCount,
+                appSearchBannerDismissed,
                 bannerExtraData,
-            ) { status, phone, usage, notif, extra ->
+            ) { args ->
+                @Suppress("UNCHECKED_CAST")
+                val status = args[ARG_STATUS] as Map<String, TrackingStatus>
+                val phone = args[ARG_PHONE] as Boolean
+                val usage = args[ARG_USAGE] as Boolean
+                val notif = args[ARG_NOTIF] as Boolean
+                val retry = args[ARG_RETRY] as Int
+                val dismissed = args[ARG_DISMISSED] as Boolean
+
+                @Suppress("UNCHECKED_CAST")
+                val extra = args[ARG_EXTRA] as Triple<Boolean, Boolean, AppSettings>
+
                 TrackingBannerMapper.mapToBannerState(
                     statusMap = status,
                     phoneGranted = phone,
@@ -139,6 +183,8 @@ class MainBannerController
                     phonePermanentlyDenied = extra.first,
                     notificationPermanentlyDenied = extra.second,
                     settings = extra.third,
+                    appSearchRetryCount = retry,
+                    appSearchBannerDismissed = dismissed,
                 )
             }.onEach {
                 handleSuccess()
@@ -203,5 +249,13 @@ class MainBannerController
 
             /** Максимальное количество попыток, после которых логирование подавляется. */
             private const val MAX_LOGGED_RETRIES = 10L
+
+            private const val ARG_STATUS = 0
+            private const val ARG_PHONE = 1
+            private const val ARG_USAGE = 2
+            private const val ARG_NOTIF = 3
+            private const val ARG_RETRY = 4
+            private const val ARG_DISMISSED = 5
+            private const val ARG_EXTRA = 6
         }
     }

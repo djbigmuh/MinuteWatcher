@@ -60,6 +60,7 @@ private fun ErrorBanners(
     AppSearchErrorBanner(
         state = state,
         onRetryAppSearch = callbacks.onRetryAppSearch,
+        onDismissAppSearch = callbacks.onDismissAppSearch,
     )
     ShortcutsErrorBanner(
         state = state,

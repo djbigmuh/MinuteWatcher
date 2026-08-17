@@ -174,7 +174,12 @@ class MainViewModel
 
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
 
-        fun retryAppSearch() = controllers.simData.retryAppSearch()
+        fun retryAppSearch() {
+            controllers.banner.incrementAppSearchRetry()
+            controllers.simData.retryAppSearch()
+        }
+
+        fun dismissAppSearch() = controllers.banner.dismissAppSearch()
 
         fun retryCalls() = controllers.simData.retryCalls()
 

@@ -87,6 +87,7 @@ private fun rememberTrackingBannerCallbacks(
             onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
             onOpenAppSettings = actions.onOpenAppSettings,
             onRetryAppSearch = viewModel::retryAppSearch,
+            onDismissAppSearch = viewModel::dismissAppSearch,
             onRetryCalls = viewModel::retryCalls,
             onRetryShortcuts = viewModel::retryShortcuts,
             onRetryTraffic = viewModel::retryTraffic,

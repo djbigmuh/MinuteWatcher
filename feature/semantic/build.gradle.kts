@@ -15,6 +15,7 @@ android {
 
     defaultConfig {
         minSdk = 26
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {
@@ -30,9 +31,8 @@ android {
 }
 
 ksp {
-    arg("androidx.appsearch.compiler.generateKotlin", "true")
+    arg("androidx.appsearch.compiler.generateKotlin", "false")
     arg("androidx.appsearch.compiler.incremental", "false")
-    arg("appsearch.compiler.incremental", "false")
 }
 
 dependencies {

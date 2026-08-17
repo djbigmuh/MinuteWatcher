@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -125,6 +129,7 @@ internal fun CallsErrorBanner(
 internal fun AppSearchErrorBanner(
     state: TrackingBannerState,
     onRetryAppSearch: () -> Unit,
+    onDismissAppSearch: () -> Unit,
 ) {
     if (state.showAppSearchErrorBanner) {
         TrackingBanner(
@@ -133,6 +138,7 @@ internal fun AppSearchErrorBanner(
             onAction = onRetryAppSearch,
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            onDismiss = onDismissAppSearch,
         )
     }
 }
@@ -231,6 +237,7 @@ internal fun TrackingBanner(
     onAction: () -> Unit,
     containerColor: Color,
     contentColor: Color,
+    onDismiss: (() -> Unit)? = null,
 ) {
     Surface(
         color = containerColor,
@@ -242,7 +249,7 @@ internal fun TrackingBanner(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -251,9 +258,20 @@ internal fun TrackingBanner(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f),
             )
-            if (actionText != null) {
-                TextButton(onClick = onAction) {
-                    Text(text = actionText, style = MaterialTheme.typography.labelLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (actionText != null) {
+                    TextButton(onClick = onAction) {
+                        Text(text = actionText, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                if (onDismiss != null) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(id = R.string.cancel_button),
+                            modifier = Modifier.padding(4.dp),
+                        )
+                    }
                 }
             }
         }

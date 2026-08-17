@@ -14,6 +14,8 @@ object TrackingBannerMapper {
         phonePermanentlyDenied: Boolean,
         notificationPermanentlyDenied: Boolean,
         settings: AppSettings,
+        appSearchRetryCount: Int = 0,
+        appSearchBannerDismissed: Boolean = false,
     ): TrackingBannerState {
         val traffic = statusMap["traffic"]
         val appsearch = statusMap["appsearch"]
@@ -33,6 +35,8 @@ object TrackingBannerMapper {
             )
         }
 
+        val appSearchErrorType = (appsearch as? TrackingStatus.Error)?.type
+
         return TrackingBannerState(
             phonePermissionState = phonePermissionState,
             showUsageAccessBanner = !usageGranted,
@@ -40,7 +44,14 @@ object TrackingBannerMapper {
             showTrafficFallbackBanner = isTrafficFallback(traffic),
             trafficFallbackSlot = getTrafficFallbackSlot(traffic),
             showCallsErrorBanner = isCallsError(calls),
-            showAppSearchErrorBanner = isAppSearchError(appsearch),
+            showAppSearchErrorBanner =
+                isAppSearchErrorToShow(
+                    appsearch,
+                    appSearchRetryCount,
+                    appSearchBannerDismissed,
+                ),
+            appSearchErrorType = appSearchErrorType,
+            appSearchBannerDismissed = appSearchBannerDismissed,
             showShortcutsErrorBanner = isShortcutsError(shortcuts),
             showWidgetErrorBanner = settings.widgetLimitExceeded,
             showInaccurateCallsBanner = settings.inaccurateCallAttributionsCount >= 3,
@@ -101,9 +112,29 @@ object TrackingBannerMapper {
         status is TrackingStatus.Error &&
             status.type != TrackingStatus.ErrorType.PERMISSION_MISSING
 
-    private fun isAppSearchError(status: TrackingStatus?): Boolean =
-        status is TrackingStatus.Error &&
-            status.type != TrackingStatus.ErrorType.NOT_SUPPORTED
+    private fun isAppSearchErrorToShow(
+        status: TrackingStatus?,
+        retryCount: Int,
+        dismissed: Boolean,
+    ): Boolean {
+        if (status !is TrackingStatus.Error || dismissed) return false
+
+        return when (status.type) {
+            TrackingStatus.ErrorType.NOT_SUPPORTED -> false
+            TrackingStatus.ErrorType.DATABASE_ERROR -> retryCount < MAX_APPSEARCH_RETRY_COUNT
+            else -> true
+        }
+    }
+
+    /**
+     * Максимальное количество автоматических попыток восстановления AppSearch,
+     * после которых баннер ошибки скрывается. Пользователь не может
+     * повлиять на ошибку схемы БД или отсутствие системного сервиса,
+     * поэтому перманентный баннер только раздражает.
+     *
+     * Счётчик сбрасывается при перезапуске приложения.
+     */
+    private const val MAX_APPSEARCH_RETRY_COUNT = 3
 
     private fun isShortcutsError(status: TrackingStatus?): Boolean =
         status is TrackingStatus.Error &&

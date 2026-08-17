@@ -8,6 +8,7 @@
     <init>(...);
 }
 -keep class **.$$__AppSearch__* { *; }
+-keepnames class **.$$__AppSearch__* { *; }
 
 # Hilt, ViewModel, and standard Android components (Activity, Service, etc.)
 # are automatically handled by AGP and library-bundled consumer rules.

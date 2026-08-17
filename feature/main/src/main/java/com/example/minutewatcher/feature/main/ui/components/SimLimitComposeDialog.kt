@@ -222,6 +222,7 @@ private fun DialogFields(state: SimLimitState) {
             isError = state.minutesError != null,
             supportingText = { state.minutesError?.let { Text(text = it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            suffix = { Text(text = stringResource(id = R.string.unit_minutes)) },
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
@@ -232,6 +233,7 @@ private fun DialogFields(state: SimLimitState) {
             isError = state.trafficError != null,
             supportingText = { state.trafficError?.let { Text(text = it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            suffix = { Text(text = stringResource(id = R.string.unit_gigabytes)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Row(

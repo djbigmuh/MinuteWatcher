@@ -8,6 +8,13 @@ import com.example.minutewatcher.core.model.SimLayoutSpec
  * Renders a [SimLayoutSpec] using the provided renderer lambdas.
  * This allows sharing the iteration logic between standard Compose and Glance.
  *
+ * **Widget Preview Contract:**
+ * The visual output of the preview MUST be identical to the real widget
+ * when given the same [SimLayoutSpec] and visibility settings.
+ * The preview is NOT a simplified version. If a user sees a suffix or limit
+ * in the preview, they MUST see it on the real widget too.
+ * Any discrepancy between preview and widget is a bug.
+ *
  * IMPORTANT: The order and signature of parameters MUST be consistent to avoid
  * NoSuchMethodError during runtime, especially when used across different modules.
  */

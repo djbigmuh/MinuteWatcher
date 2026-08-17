@@ -53,7 +53,7 @@
     <string name="tracking_banner_traffic_error">Error en los datos de tráfico.</string>
     <string name="tracking_banner_traffic_fallback">SIM de datos predeterminada no identificada. Atribuyendo tráfico a la ranura %1$d. Verifique la configuración de la SIM si esto es incorrecto.</string>
     <string name="tracking_banner_calls_error">Error al actualizar los datos de seguimiento de llamadas.</string>
-    <string name="tracking_banner_appsearch_error">Falló la indexación de AppSearch.</string>
+    <string name="tracking_banner_appsearch_error">Error de indexación de AppSearch. La búsqueda global puede estar desactualizada. Esto no afecta la funcionalidad del widget o del seguimiento.</string>
     <string name="tracking_banner_shortcuts_error">Error al actualizar los accesos directos dinámicos.</string>
     <string name="tracking_banner_notification_permission">Se recomienda el permiso de notificación para recibir alertas de uso.</string>
     <string name="tracking_banner_widget_error">El widget no se puede actualizar debido a limitaciones del sistema.</string>

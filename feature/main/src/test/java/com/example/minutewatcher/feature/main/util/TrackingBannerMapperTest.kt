@@ -167,4 +167,52 @@ class TrackingBannerMapperTest {
         assertFalse(state.showUsageAccessBanner) // Should be suppressed
         assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState) // Default
     }
+
+    @Test
+    fun `mapToBannerState handles AppSearch DATABASE_ERROR retry limit`() {
+        // Case: DATABASE_ERROR shown initially
+        val baseStatus = mapOf("appsearch" to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR))
+        var state = mapToBannerStateWithAppSearch(baseStatus, retryCount = 0)
+        assertTrue(state.showAppSearchErrorBanner)
+
+        // Case: DATABASE_ERROR hidden after 3 retries
+        state = mapToBannerStateWithAppSearch(baseStatus, retryCount = 3)
+        assertFalse(state.showAppSearchErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState suppresses AppSearch NOT_SUPPORTED error`() {
+        val status = mapOf("appsearch" to TrackingStatus.Error(TrackingStatus.ErrorType.NOT_SUPPORTED))
+        val state = mapToBannerStateWithAppSearch(status)
+        assertFalse(state.showAppSearchErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState handles AppSearch dismissal`() {
+        val status = mapOf("appsearch" to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN))
+
+        // Initially shown
+        var state = mapToBannerStateWithAppSearch(status, dismissed = false)
+        assertTrue(state.showAppSearchErrorBanner)
+
+        // Hidden after dismissal
+        state = mapToBannerStateWithAppSearch(status, dismissed = true)
+        assertFalse(state.showAppSearchErrorBanner)
+    }
+
+    private fun mapToBannerStateWithAppSearch(
+        statusMap: Map<String, TrackingStatus>,
+        retryCount: Int = 0,
+        dismissed: Boolean = false,
+    ) = TrackingBannerMapper.mapToBannerState(
+        statusMap = statusMap,
+        phoneGranted = true,
+        usageGranted = true,
+        notificationsGranted = true,
+        phonePermanentlyDenied = false,
+        notificationPermanentlyDenied = false,
+        settings = AppSettings(onboardingCompleted = true),
+        appSearchRetryCount = retryCount,
+        appSearchBannerDismissed = dismissed,
+    )
 }

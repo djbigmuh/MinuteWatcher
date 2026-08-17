@@ -52,6 +52,11 @@ We enforce strict static analysis. Your code must pass:
 - **Modularity:** Keep `:core:model` free of Android dependencies to ensure high-speed testing.
 - **DI:** Use Hilt for dependency injection and provide specific qualifiers (`@IoDispatcher`, etc.) instead of hardcoded dispatchers.
 
+---
+
+### AppSearch Note
+На устройствах без AppSearch (LineageOS, CalyxOS без GMS) семантический поиск автоматически отключается. Баннер ошибки не отображается для ошибок типа `NOT_SUPPORTED`.
+
 ## Non-Stable Dependencies
 As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:
 - **Baseline Profile (Beta)** and **Robolectric (Beta)** are explicitly permitted until stable versions with equivalent fixes are available.

@@ -8,9 +8,25 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUiState
+import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.util.ColorProvider
 
+/**
+ * Factory to create [SimUiState] from a snapshot and settings.
+ *
+ * **Visibility Contract:**
+ * - Suffix "min" is visible ⇔ [SimSettingsState.showMinutes] == true
+ * - Minutes limit visible ⇔ [SimSettingsState.showMinutesLimit] == true
+ *   AND [SimSettingsState.showMinutes] == true (checked in layout spec builder)
+ * - Suffix "GB" visible ⇔ [SimSettingsState.showTraffic] == true
+ * - Traffic limit visible ⇔ [SimSettingsState.showTrafficLimit] == true
+ *   AND [SimSettingsState.showTraffic] == true (checked in layout spec builder)
+ *
+ * [WidgetLayoutMode] affects ONLY font size and layout, but DOES NOT override
+ * user visibility settings. If a user enabled minutes, the suffix MUST be visible
+ * in any layout mode.
+ */
 object WidgetSimUiFactory {
     fun createSimUiState(
         strings: WidgetStrings,
@@ -78,22 +94,25 @@ object WidgetSimUiFactory {
         val hasData = limit > 0 || used > 0
         val status = ColorProvider.getUsageStatus(rem.toFloat(), limit.toFloat())
 
+        val showMinutes = (config?.showMinutes ?: true) && entity != null && hasData
+        val showLimit = (config?.showMinutesLimit ?: false) && limit > 0
+
         return PackageUiData(
-            show = (config?.showMinutes ?: true) && entity != null && hasData,
+            show = showMinutes,
             text =
                 if (entity != null &&
                     (limit > 0 || entity.sourceType == DataSourceType.MANUAL)
                 ) {
-                    rem.toString()
+                    formatWithSuffix(rem.toString(), strings.minutesAbbr)
                 } else {
                     "-"
                 },
             color = WidgetColorResolver.getStatusColor(status, luminance),
-            showLimit = (config?.showMinutesLimit ?: false) && limit > 0,
+            showLimit = showLimit,
             limitText = strings.fractionFormat.format(limit.toString()),
             hasData = hasData,
-            usedFull = "${strings.usedText}: $used${strings.minutesAbbr}",
-            limitFull = "${strings.limitText}: $limit${strings.minutesAbbr}",
+            usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
+            limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
     }
 
@@ -117,15 +136,47 @@ object WidgetSimUiFactory {
         val hasData = limitGb > 0f || usedGb > 0f
         val status = ColorProvider.getUsageStatus(remGb, limitGb)
 
+        val showTraffic = (config?.showTraffic ?: true) && entity != null && hasData
+        val showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f
+
         return PackageUiData(
-            show = (config?.showTraffic ?: true) && entity != null && hasData,
-            text = if (entity != null && limitGb > 0f) FormatUtils.formatTrafficGb(remGb) else "-",
+            show = showTraffic,
+            text =
+                if (entity != null && limitGb > 0f) {
+                    formatWithSuffix(FormatUtils.formatTrafficGb(remGb), strings.gbAbbr)
+                } else {
+                    "-"
+                },
             color = WidgetColorResolver.getStatusColor(status, luminance),
-            showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f,
+            showLimit = showLimit,
             limitText = strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb)),
             hasData = hasData,
-            usedFull = "${strings.usedText}: ${FormatUtils.formatTrafficGb(usedGb)}${strings.gbAbbr}",
-            limitFull = "${strings.limitText}: ${FormatUtils.formatTrafficGb(limitGb)}${strings.gbAbbr}",
+            usedFull =
+                "${strings.usedText}: ${
+                    formatWithSuffix(
+                        FormatUtils.formatTrafficGb(usedGb),
+                        strings.gbAbbr,
+                    )
+                }",
+            limitFull =
+                "${strings.limitText}: ${
+                    formatWithSuffix(
+                        FormatUtils.formatTrafficGb(limitGb),
+                        strings.gbAbbr,
+                    )
+                }",
         )
+    }
+
+    private fun formatWithSuffix(
+        value: String,
+        suffix: String,
+    ): String {
+        if (suffix.isEmpty()) return value
+        return if (suffix.startsWith(" ") || suffix.startsWith("\u00A0")) {
+            "$value$suffix"
+        } else {
+            "$value $suffix"
+        }
     }
 }

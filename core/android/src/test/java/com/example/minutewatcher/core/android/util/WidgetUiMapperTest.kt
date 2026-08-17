@@ -105,7 +105,7 @@ class WidgetUiMapperTest {
 
         val sim0 = uiState.simUiStates[0]
         assertEquals(0, sim0.slot)
-        assertEquals("100", sim0.minutesText)
+        assertEquals("100 min.", sim0.minutesText)
         assertTrue(sim0.showMinutesLimit)
         assertEquals(Color.WHITE, sim0.textColor)
 
@@ -185,7 +185,7 @@ class WidgetUiMapperTest {
                 state = settings,
                 operatorNames = mapOf(0 to "MTS"),
             )
-        assertEquals("150", uiState.simUiStates[0].minutesText)
+        assertEquals("150 min.", uiState.simUiStates[0].minutesText)
     }
 
     @Test

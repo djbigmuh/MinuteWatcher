@@ -122,6 +122,14 @@ private fun AdjustmentDialogContent(
                 KeyboardOptions(
                     keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal,
                 ),
+            suffix = {
+                Text(
+                    text =
+                        stringResource(
+                            id = if (isMinutes) R.string.unit_minutes else R.string.unit_gigabytes,
+                        ),
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
         )
     }

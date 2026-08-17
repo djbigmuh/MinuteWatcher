@@ -53,7 +53,7 @@
     <string name="tracking_banner_traffic_error">流量数据更新出错。</string>
     <string name="tracking_banner_traffic_fallback">未识别默认数据卡。流量已归属于槽位 %1$d。如果错误，请检查 SIM 卡设置。</string>
     <string name="tracking_banner_calls_error">更新通话追踪数据时出错。</string>
-    <string name="tracking_banner_appsearch_error">AppSearch 索引失败。</string>
+    <string name="tracking_banner_appsearch_error">AppSearch 索引失败。全局搜索可能已过期。这不会影响微件或跟踪功能。</string>
     <string name="tracking_banner_shortcuts_error">更新动态快捷方式失败。</string>
     <string name="tracking_banner_notification_permission">建议开启通知权限以接收使用提醒。</string>
     <string name="tracking_banner_widget_error">由于系统限制，无法更新小部件。</string>

@@ -185,6 +185,7 @@ class UsageAccessNavigationTest {
                         onShowUsageAccessDialog = { dialogOpened = true },
                         onOpenAppSettings = {},
                         onRetryAppSearch = {},
+                        onDismissAppSearch = {},
                         onRetryCalls = {},
                         onRetryShortcuts = {},
                         onRetryTraffic = {},

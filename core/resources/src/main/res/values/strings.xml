@@ -53,7 +53,7 @@
     <string name="tracking_banner_traffic_error">There was an error updating traffic data.</string>
     <string name="tracking_banner_traffic_fallback">Default Data SIM not identified. Attributing traffic to Slot %1$d. Check SIM settings if this is incorrect.</string>
     <string name="tracking_banner_calls_error">There was an error updating call tracking data.</string>
-    <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated.</string>
+    <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated. This does not affect widget or tracking functionality.</string>
     <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
     <string name="tracking_banner_notification_permission">Notification permission is recommended to receive usage alerts.</string>
     <string name="tracking_banner_widget_error">Widget cannot be updated due to system limitations.</string>
@@ -114,6 +114,8 @@
     <string name="used_text">Used</string>
     <string name="limit_text">Limit</string>
     <string name="minutes_abbr">min.</string>
+    <string name="unit_minutes" translatable="false">мин</string>
+    <string name="unit_gigabytes" translatable="false">ГБ</string>
     <string name="traffic_label">Traffic</string>
     <string name="traffic_remaining_text">Traffic remaining:</string>
     <string name="gb_abbr">GB</string>
