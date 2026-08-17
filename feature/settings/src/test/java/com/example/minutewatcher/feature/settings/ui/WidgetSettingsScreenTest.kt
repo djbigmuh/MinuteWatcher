@@ -59,6 +59,8 @@ class WidgetSettingsScreenTest {
             .doReturn(MutableStateFlow(false))
         whenever(viewModel.isSaving)
             .doReturn(MutableStateFlow(false))
+        whenever(viewModel.saveResult)
+            .doReturn(MutableStateFlow(null))
     }
 
     private fun createEmptySnapshot() =
@@ -79,7 +81,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {},
+                onSave = { SaveResult.Success },
             )
         }
 
@@ -98,7 +100,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {},
+                onSave = { SaveResult.Success },
             )
         }
 
@@ -114,7 +116,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {},
+                onSave = { SaveResult.Success },
             )
         }
 
@@ -131,7 +133,10 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = { saved = true },
+                onSave = {
+                    saved = true
+                    SaveResult.Success
+                },
             )
         }
 

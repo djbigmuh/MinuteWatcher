@@ -10,6 +10,17 @@ sealed interface SaveResult {
     data object Success : SaveResult
 
     /**
+     * Partial success: general settings saved, but SIM-specific settings were skipped.
+     * This occurs when the SIM list is unavailable (e.g., due to storage degradation
+     * or custom firmware issues) to prevent data loss.
+     *
+     * @param skippedSimSettings True if SIM-specific settings were skipped.
+     */
+    data class PartialSuccess(
+        val skippedSimSettings: Boolean,
+    ) : SaveResult
+
+    /**
      * A save operation is already in progress.
      */
     data object AlreadyInProgress : SaveResult

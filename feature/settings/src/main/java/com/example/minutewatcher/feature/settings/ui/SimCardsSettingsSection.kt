@@ -24,6 +24,21 @@ fun SimCardsSettingsSection(
     onUpdateSimSettings: (Int, (SimSettingsState) -> SimSettingsState) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.sim_cards_title))
+
+    if (!enabled) {
+        // Строгое соблюдение API: observeActiveSims() на AOSP завершается за миллисекунды.
+        // Таймаут здесь указывает на деградацию хранилища на кастомной прошивке.
+        // Блокировка редактирования предотвращает молчаливую потерю данных.
+        // Это проблема кастомной прошивки, не проекта.
+        Text(
+            text = stringResource(id = R.string.sim_list_unavailable_error),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(vertical = 8.dp),
+        )
+        return
+    }
+
     val activeSims = uiState?.simUiStates ?: emptyList()
     if (activeSims.isEmpty()) {
         Text(

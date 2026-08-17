@@ -10,14 +10,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.settings.ui.SaveResult
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsScreen
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 /**
  * Активность настроек виджета.
@@ -42,32 +40,32 @@ class WidgetSettingsActivity : AppCompatActivity() {
                     WidgetSettingsScreen(
                         viewModel = viewModel,
                         onSave = {
-                            lifecycleScope.launch {
-                                when (viewModel.saveAndNotify()) {
-                                    SaveResult.Success -> {
-                                        Toast
-                                            .makeText(
-                                                this@WidgetSettingsActivity,
-                                                getString(R.string.settings_saved_toast),
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                        finish()
-                                    }
+                            val result = viewModel.saveAndNotify()
+                            when (result) {
+                                SaveResult.Success, is SaveResult.PartialSuccess -> {
+                                    Toast
+                                        .makeText(
+                                            this@WidgetSettingsActivity,
+                                            getString(R.string.settings_saved_toast),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    finish()
+                                }
 
-                                    SaveResult.Failed -> {
-                                        Toast
-                                            .makeText(
-                                                this@WidgetSettingsActivity,
-                                                getString(R.string.error),
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    }
+                                SaveResult.Failed -> {
+                                    Toast
+                                        .makeText(
+                                            this@WidgetSettingsActivity,
+                                            getString(R.string.error),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                }
 
-                                    SaveResult.AlreadyInProgress -> {
-                                        // Ignore, avoid multiple toasts
-                                    }
+                                SaveResult.AlreadyInProgress -> {
+                                    // Ignore, avoid multiple toasts
                                 }
                             }
+                            result
                         },
                         onBack = { finish() },
                     )

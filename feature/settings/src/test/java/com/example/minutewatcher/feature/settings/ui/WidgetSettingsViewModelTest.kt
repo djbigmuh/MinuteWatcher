@@ -240,7 +240,7 @@ class WidgetSettingsViewModelTest {
 
             val result = viewModel.saveAndNotify()
 
-            assertEquals(SaveResult.Success, result)
+            assertEquals(SaveResult.PartialSuccess(skippedSimSettings = true), result)
             verify(saver).save(any(), eq(true))
         }
 }

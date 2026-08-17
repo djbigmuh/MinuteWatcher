@@ -93,27 +93,23 @@ class SimIdentityRepositoryImpl
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         /**
-         * Кэш результатов прямого резолва SIM-identity.
+         * Кэш результатов прямого резолва SIM identity.
+         * Используется ТОЛЬКО когда SIM не найдена в [activeSimsCache].
          *
-         * Используется только в случаях, когда [activeSimsCache] не содержит данных для
-         * запрашиваемого слота (например, сразу после запуска приложения или если разрешения
-         * были временно отозваны).
+         * Инвалидация:
+         * - При удалении слота из активного списка (в init-блоке).
+         * - При истечении TTL ([MANUAL_RESOLUTION_CACHE_TTL_MS]).
+         * - При нахождении SIM в [activeSimsCache] (запись удаляется).
          *
-         * **Строгое соблюдение API:** на AOSP [observeActiveSims] эмитит значение в течение
-         * миллисекунд после изменения разрешений или состояния SIM. Кэш служит защитным
-         * механизмом для предотвращения избыточных вызовов [findActiveIdentityInternal]
-         * в короткие промежутки времени.
+         * Безопасность при замене SIM: если SIM заменена (тот же слот, другая identity),
+         * старая запись в кэше НЕ используется, потому что SIM будет найдена
+         * в [activeSimsCache] и кэш не будет consulted. Кэш используется только
+         * для SIM, отсутствующих в активном списке, что исключает использование
+         * устаревшей identity для активной SIM.
          *
-         * **Отклонение кастомной прошивки:** если [activeSimsCache] не обновляется немедленно
-         * при изменении разрешений — это проблема кастомной прошивки.
-         *
-         * **Безопасность (TTL):** записи в кэше имеют ограниченный срок жизни
-         * ([MANUAL_RESOLUTION_CACHE_TTL_MS]), что предотвращает использование устаревших
-         * identity в случае, если состав SIM-карт изменился, пока приложение не имело
-         * доступа к [SubscriptionManager].
-         *
-         * **Потокобезопасность:** [ConcurrentHashMap] обеспечивает безопасный доступ из
-         * разных потоков.
+         * Потокобезопасность: [ConcurrentHashMap] обеспечивает потокобезопасность.
+         * TTL проверяется через [TimeProvider.elapsedRealtime()] (монотонное время).
+         * При рестарте устройства кэш очищается (in-memory).
          */
         private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
 
@@ -187,8 +183,6 @@ class SimIdentityRepositoryImpl
                                         try {
                                             send(getActiveSimsInternal(seed))
                                             shouldContinue = false
-                                        } catch (e: CancellationException) {
-                                            throw e
                                         } catch (e: IOException) {
                                             consecutiveErrors++
                                             if (consecutiveErrors >= MAX_FETCH_RETRIES) {
@@ -209,6 +203,8 @@ class SimIdentityRepositoryImpl
                                                 delay(retryDelay.milliseconds)
                                                 retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
                                             }
+                                        } catch (e: CancellationException) {
+                                            throw e
                                         } catch (e: Exception) {
                                             AppLogger.e("Failed to fetch active SIMs", e)
                                             send(emptyList())
@@ -320,6 +316,10 @@ class SimIdentityRepositoryImpl
         init {
             scope.launch {
                 activeSimsCache.collect { sims ->
+                    // Инвалидация manualResolutionCache при обновлении activeSimsCache.
+                    // Удаляются только записи для слотов, отсутствующих в новом активном списке.
+                    // Записи для активных слотов не удаляются, но и не используются (SIM найдётся в activeSimsCache).
+                    //
                     // **Контракт AOSP:** на AOSP SubscriptionManager callback доставляется при
                     // каждом изменении подписок.
                     //
@@ -350,27 +350,22 @@ class SimIdentityRepositoryImpl
         /**
          * Возвращает стабильную идентичность SIM для указанного слота.
          *
-         * **Контракт для вызывающего кода:**
-         * - [IllegalArgumentException]: slot вне допустимого диапазона. Программная ошибка,
-         *   не должна происходить при корректном UI. Вызывающий код может показать
-         *   общую ошибку пользователю.
-         * - [SeedUnavailableException]: identity seed недоступен (деградация DataStore).
-         *   На AOSP DataStore отвечает < 100 мс; таймаут указывает на деградацию
-         *   хранилища на кастомной прошивке. Это проблема кастомной прошивки.
-         *   Вызывающий код должен показать ошибку и предложить повторить.
-         * - [SimNotFoundException]: SIM физически отсутствует в слоте.
-         *   Штатная ситуация (пользователь извлёк SIM между отображением UI и вызовом).
-         *   Вызывающий код должен проигнорировать операцию.
+         * Точки возврата:
+         * 1. activeSimsCache — SIM найдена в кэше активных.
+         * 2. manualResolutionCache — SIM найдена в ручном кэше (TTL не истёк).
+         * 3. findActiveIdentityInternal — SIM найдена прямым запросом.
+         *
+         * Исключения:
+         * - [SeedUnavailableException] — identity seed недоступен (деградация хранилища).
+         * - [SimNotFoundException] — SIM физически отсутствует в слоте.
+         * - [IllegalArgumentException] — slot вне допустимого диапазона.
+         *
+         * Строгое соблюдение API: на AOSP getIdentity() не бросает исключений
+         * при корректном состоянии DataStore. Исключения здесь указывают на
+         * деградацию хранилища на кастомной прошивке или физическое отсутствие SIM.
          *
          * @param slot Индекс слота SIM. Должен быть в [SimConstants.SUPPORTED_SLOT_INDICES].
-         * @throws IllegalArgumentException если slot вне допустимого диапазона.
-         * @throws SeedUnavailableException если identity seed недоступен.
-         * @throws SimNotFoundException если SIM отсутствует в указанном слоте.
          */
-        @Suppress("ThrowsCount", "ReturnCount")
-        // Подавление ThrowsCount и ReturnCount оставлено намеренно: метод реализует строгую валидацию по трем
-        // независимым критериям (диапазон слотов, наличие seed, наличие подписки). Объединение исключений
-        // и точек выхода снизит точность диагностики сбоев на кастомных прошивках.
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             require(slot in SimConstants.SUPPORTED_SLOT_INDICES) {
                 "getSimIdentity called with out-of-range slot=$slot. " +
@@ -408,23 +403,35 @@ class SimIdentityRepositoryImpl
                 // Используем уменьшенный таймаут для UI-операций
                 val seed = getSeed(Constants.Flow.SHORT_TIMEOUT_MS)
 
-                if (seed is SeedResult.Fallback) {
-                    AppLogger.e("Identity seed unavailable for slot $slot. Possible DataStore degradation.", null)
-                    // SeedUnavailableException выбрасывается при недоступности seed.
-                    // Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
-                    // Таймаут возможен только при деградации хранилища на кастомной прошивке.
-                    // Стратегия: выбрасываем исключение, чтобы вызывающий код мог
-                    // информировать пользователя. Fallback на slot-based identity
-                    // намеренно исключён: он приведёт к потере привязки данных к SIM
-                    // при восстановлении хранилища.
-                    throw SeedUnavailableException(slot)
-                }
+                val realSeed =
+                    when (seed) {
+                        is SeedResult.Real -> seed
+                        is SeedResult.Fallback -> {
+                            AppLogger.e(
+                                "Identity seed unavailable for slot $slot. Possible DataStore degradation.",
+                                null,
+                            )
+                            // SeedUnavailableException выбрасывается при недоступности seed.
+                            // Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+                            // Таймаут возможен только при деградации хранилища на кастомной прошивке.
+                            // Стратегия: выбрасываем исключение, чтобы вызывающий код мог
+                            // информировать пользователя. Fallback на slot-based identity
+                            // намеренно исключён: он приведёт к потере привязки данных к SIM
+                            // при восстановлении хранилища.
+                            throw SeedUnavailableException(slot)
+                        }
+                    }
 
                 // If not found in cache, try direct resolution
                 val resolved =
                     try {
-                        findActiveIdentityInternal(slot, seed as SeedResult.Real)
-                    } catch (e: SecurityException) {
+                        // Строгое соблюдение API: when по sealed interface гарантирует
+                        // exhaustiveness на этапе компиляции. При добавлении нового варианта
+                        // SeedResult компилятор потребует обработать его явно.
+                        findActiveIdentityInternal(slot, realSeed)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
                         // Строгое соблюдение API: на AOSP getActiveSubscriptions() возвращает
                         // пустой список при отсутствии разрешения, не бросая исключений.
                         // SecurityException возможен только на кастомных прошивках,
@@ -597,16 +604,20 @@ class SimIdentityRepositoryImpl
 
         private suspend fun performMigrations(toMigrate: List<SimIdentity>) {
             toMigrate.forEach { identity ->
-                if (migratingIdentities.add(identity.stableId)) {
-                    try {
-                        migrationService.migrateLegacyData(identity)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to migrate legacy data for identity: ${identity.stableId}", e)
-                    } finally {
-                        migratingIdentities.remove(identity.stableId)
-                    }
+                migrateSingleIdentity(identity)
+            }
+        }
+
+        private suspend fun migrateSingleIdentity(identity: SimIdentity) {
+            if (migratingIdentities.add(identity.stableId)) {
+                try {
+                    migrationService.migrateLegacyData(identity)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to migrate legacy data for identity: ${identity.stableId}", e)
+                } finally {
+                    migratingIdentities.remove(identity.stableId)
                 }
             }
         }
@@ -633,18 +644,22 @@ class SimIdentityRepositoryImpl
         // различным терминальным состояниям (отсутствие seed, отсутствие SIM, успешное завершение).
         // Усложнение структуры ради одного возврата снизит читаемость критической секции обнаружения SIM.
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
-            if (seed is SeedResult.Fallback) {
-                // **Контракт AOSP:** на AOSP генерация seed завершается успешно.
-                //
-                // **Отклонение кастомной прошивки:** Таймаут генерации возможен только при деградации DataStore
-                // на кастомных прошивках. Это проблема кастомной прошивки.
-                //
-                // **Стратегия приложения:** логируется ошибка, возвращается пустой список.
-                AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
-                return emptyList()
-            }
+            val realSeed =
+                when (seed) {
+                    is SeedResult.Real -> seed
+                    is SeedResult.Fallback -> {
+                        // **Контракт AOSP:** на AOSP генерация seed завершается успешно.
+                        //
+                        // **Отклонение кастомной прошивки:** Таймаут генерации возможен только при деградации DataStore
+                        // на кастомных прошивках. Это проблема кастомной прошивки.
+                        //
+                        // **Стратегия приложения:** логируется ошибка, возвращается пустой список.
+                        AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
+                        return emptyList()
+                    }
+                }
 
-            val seedValue = (seed as SeedResult.Real).value
+            val seedValue = realSeed.value
             val infoList =
                 permissionManager
                     .getActiveSubscriptions()

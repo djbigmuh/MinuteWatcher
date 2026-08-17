@@ -131,12 +131,15 @@ class SemanticSearchManager
         /**
          * Гарантирует наличие активной сессии AppSearch.
          *
-         * **Стратегия (4 точки возврата):**
+         * Гарантирует установку [_status] в случае ошибки через [handleSchemaException]
+         * или [handleInitializationError].
+         *
+         * **Точки возврата:**
          * 1. Сессия существует, не закрыта, forceOverride не требуется → true (быстрый путь).
-         * 2. forceOverride=true → немедленная попытка открытия с forceOverride.
+         * 2. forceOverride=true → попытка открытия с пересозданием схемы.
          * 3. Первая попытка без force → успех → true.
-         * 4. Первая попытка без force → RESULT_INVALID_SCHEMA → повтор с forceOverride=true.
-         * 5. Первая попытка без force → иная ошибка → false.
+         * 4. RESULT_INVALID_SCHEMA → повтор с forceOverride=true.
+         * 5. Иная ошибка → false (статус установлен в Error).
          *
          * **Строгое соблюдение API:** на AOSP LocalStorage.createSearchSessionAsync
          * бросает один из стандартных типов исключений. Повтор с forceOverride=true
@@ -305,6 +308,13 @@ class SemanticSearchManager
                         lastSnapshotHash = null
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }
+                } else {
+                    // ensureSession() уже установил _status внутри handleSchemaException()
+                    // или handleInitializationError(). Дополнительная обработка не требуется.
+                    // Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
+                    // бросает один из стандартных типов исключений. Иные типы указывают
+                    // на проблему кастомной прошивки, не соответствующей документации Google.
+                    AppLogger.w("ensureSession() returned false, status already set by ensureSession()")
                 }
                 result
             }

@@ -44,6 +44,13 @@ class WidgetSettingsViewModel
         val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
         /**
+         * Однократное событие результата сохранения.
+         * UI должен прочитать значение и затем вызвать consumeSaveResult() для сброса.
+         */
+        private val _saveResult = MutableStateFlow<SaveResult?>(null)
+        val saveResult: StateFlow<SaveResult?> = _saveResult.asStateFlow()
+
+        /**
          * Мьютекс гарантирует, что результат отменённой загрузки не будет записан в
          * [_settingsState], даже если [Job.cancel] вызван между launch и withLock.
          */
@@ -96,6 +103,11 @@ class WidgetSettingsViewModel
                                 withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
                                     loader.load()
                                 }
+                            // ensureActive() вызывается сразу после suspend-вызова для гарантии
+                            // кооперативной отмены. Если корутина была отменена во время
+                            // withTimeoutOrNull, CancellationException будет проброшен до
+                            // проверки результата. Это строгое соблюдение API kotlinx.coroutines:
+                            // CancellationException должен пробрасываться для корректной отмены scope.
                             ensureActive()
                             if (loaded != null) {
                                 _settingsState.value = loaded
@@ -117,6 +129,10 @@ class WidgetSettingsViewModel
             _settingsState.update { current ->
                 current?.let(transform) ?: current
             }
+        }
+
+        fun consumeSaveResult() {
+            _saveResult.value = null
         }
 
         fun updateSimSettings(
@@ -159,62 +175,71 @@ class WidgetSettingsViewModel
         @Suppress("ReturnCount")
         suspend fun saveAndNotify(): SaveResult {
             if (!saveMutex.tryLock()) {
-                // Сохранение уже выполняется — повторный вызов отклоняется, чтобы избежать гонки.
-                return SaveResult.AlreadyInProgress
+                val result = SaveResult.AlreadyInProgress
+                _saveResult.value = result
+                return result
             }
             return try {
                 _isSaving.value = true
-
-                // Если загрузка завершилась ошибкой, сохранение невозможно.
-                // Строгое соблюдение API: на AOSP WidgetSettingsLoader.load()
-                // завершается за миллисекунды. Таймаут здесь указывает на деградацию
-                // хранилища на кастомной прошивке.
-                if (_loadError.value) {
-                    AppLogger.w("saveAndNotify skipped: settings load failed previously")
-                    return SaveResult.Failed
-                }
-
-                val currentState = _settingsState.value
-                if (currentState == null) {
-                    // Проверяется ПОСЛЕ _loadError.value, чтобы отличить "ещё грузится"
-                    // от "провал загрузки".
-                    AppLogger.w("saveAndNotify called before settings were loaded")
-                    return SaveResult.Failed
-                }
-                if (currentState.settingsLoadFailed) {
-                    AppLogger.w(
-                        "saveAndNotify: skipping save because settings were not loaded successfully",
-                    )
-                    SaveResult.Failed
-                } else if (currentState.simListLoadFailed) {
-                    // simListLoadFailed означает, что observeActiveSims() не вернул данные
-                    // (таймаут DataStore на кастомной прошивке, не соответствующей документации
-                    // Google). Общие настройки (layoutMode, transparency и т.д.) не зависят
-                    // от списка SIM и могут быть сохранены безопасно. SIM-специфичные настройки
-                    // пропускаются через skipSimSettings = true для предотвращения потери данных.
-                    // На AOSP observeActiveSims() завершается за миллисекунды; таймаут здесь
-                    // указывает на деградацию хранилища — проблему кастомной прошивки.
-                    AppLogger.w(
-                        "saveAndNotify: SIM list was not loaded successfully. " +
-                            "Saving only general settings via skipSimSettings = true.",
-                    )
-                    val validatedState = validateSettings(currentState)
-                    val success = saver.save(validatedState, skipSimSettings = true)
-                    if (success) SaveResult.Success else SaveResult.Failed
-                } else {
-                    val validatedState = validateSettings(currentState)
-                    val success = saver.save(validatedState)
-                    if (success) SaveResult.Success else SaveResult.Failed
-                }
+                val result = performSaveInternal()
+                _saveResult.value = result
+                result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)
-                SaveResult.Failed
+                val result = SaveResult.Failed
+                _saveResult.value = result
+                result
             } finally {
                 _isSaving.value = false
                 saveMutex.unlock()
             }
+        }
+
+        @Suppress("ReturnCount")
+        private suspend fun performSaveInternal(): SaveResult {
+            if (_loadError.value) {
+                AppLogger.w("saveAndNotify skipped: settings load failed previously")
+                return SaveResult.Failed
+            }
+
+            val currentState = _settingsState.value
+            if (currentState == null) {
+                AppLogger.w("saveAndNotify called before settings were loaded")
+                return SaveResult.Failed
+            }
+
+            if (currentState.settingsLoadFailed) {
+                AppLogger.w("saveAndNotify: skipping save because settings were not loaded successfully")
+                return SaveResult.Failed
+            }
+
+            return if (currentState.simListLoadFailed) {
+                savePartialSettings(currentState)
+            } else {
+                saveFullSettings(currentState)
+            }
+        }
+
+        private suspend fun savePartialSettings(state: WidgetSettingsState): SaveResult {
+            AppLogger.w(
+                "saveAndNotify: SIM list was not loaded successfully. " +
+                    "Saving only general settings via skipSimSettings = true.",
+            )
+            val validatedState = validateSettings(state)
+            val success = saver.save(validatedState, skipSimSettings = true)
+            return if (success) {
+                SaveResult.PartialSuccess(skippedSimSettings = true)
+            } else {
+                SaveResult.Failed
+            }
+        }
+
+        private suspend fun saveFullSettings(state: WidgetSettingsState): SaveResult {
+            val validatedState = validateSettings(state)
+            val success = saver.save(validatedState)
+            return if (success) SaveResult.Success else SaveResult.Failed
         }
 
         /**

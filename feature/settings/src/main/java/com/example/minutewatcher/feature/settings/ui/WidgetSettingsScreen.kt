@@ -17,9 +17,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +43,11 @@ import com.example.minutewatcher.core.resources.R
 @Composable
 fun WidgetSettingsScreen(
     viewModel: WidgetSettingsViewModel,
-    onSave: () -> Unit,
+    /**
+     * suspend-функция сохранения настроек. Вызывается в CoroutineScope, созданном внутри BottomPreviewBar.
+     * Возвращает [SaveResult] для обработки результата.
+     */
+    onSave: suspend () -> SaveResult,
     onBack: () -> Unit,
 ) {
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
@@ -141,10 +148,24 @@ private fun WidgetSettingsContent(
     uiState: WidgetUiState?,
     isSaving: Boolean,
     viewModel: WidgetSettingsViewModel,
-    onSave: () -> Unit,
+    onSave: suspend () -> SaveResult,
     onBack: () -> Unit,
 ) {
     var showColorPicker by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val saveResult by viewModel.saveResult.collectAsStateWithLifecycle()
+    val alreadyInProgressMessage = stringResource(id = R.string.settings_save_already_in_progress)
+
+    LaunchedEffect(saveResult) {
+        saveResult?.let { result ->
+            if (result is SaveResult.AlreadyInProgress) {
+                snackbarHostState.showSnackbar(
+                    message = alreadyInProgressMessage,
+                )
+            }
+            viewModel.consumeSaveResult()
+        }
+    }
 
     // Защита от сохранения дефолтных значений поверх реальных настроек.
     // Если DataStore не ответил (деградация кастомной прошивки),
@@ -178,6 +199,7 @@ private fun WidgetSettingsContent(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             BottomPreviewBar(
                 uiState = uiState,
@@ -235,7 +257,7 @@ private fun WidgetSettingsList(
         SimCardsSettingsSection(
             state = state,
             uiState = uiState,
-            enabled = true,
+            enabled = !state.simListLoadFailed,
             onUpdateSimSettings = viewModel::updateSimSettings,
         )
     }

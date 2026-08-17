@@ -16,6 +16,7 @@
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Настройки сохранены</string>
+    <string name="settings_save_already_in_progress">Сохранение уже выполняется</string>
     <string name="language_system">Системный</string>
     <string name="language_en">Английский</string>
     <string name="language_ru">Русский</string>
@@ -59,6 +60,7 @@
     <string name="tracking_banner_widget_error">Виджет не может быть обновлён из-за ограничений системы.</string>
     <string name="tracking_banner_inaccurate_calls">Обнаружено несколько активных вызовов. Минуты могут быть распределены неточно.</string>
     <string name="settings_load_error">Ошибка загрузки настроек</string>
+    <string name="sim_list_unavailable_error">Список SIM недоступен. Настройки SIM будут доступны после повторной загрузки.</string>
     <string name="refresh_error">Ошибка обновления данных</string>
     <string name="stale_data_warning">Данные могут быть неактуальны</string>
     <string name="notification_permission_permanent_denial">Запрос уведомлений заблокирован. Пожалуйста, включите их в настройках приложения для получения важных алертов о расходе.</string>
