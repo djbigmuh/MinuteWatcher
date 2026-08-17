@@ -5,3 +5,4 @@
     <init>(...);
 }
 -keep class **.$$__AppSearch__* { *; }
+-keepnames class **.$$__AppSearch__* { *; }
