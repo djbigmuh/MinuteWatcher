@@ -21,12 +21,18 @@ class WidgetSettingsSaver
          *
          * **Предусловие:** [state] уже провалидирован вызывающей стороной
          * ([WidgetSettingsViewModel.validateSettings]). Повторная валидация
-         * здесь не выполняется — единая точка валидации в ViewModel исключает
-         * расхождение диапазонов и дублирование логики coerceIn.
+         * здесь не выполняется — единая точка валидации в ViewModel
+         * исключает расхождение диапазонов и дублирование логики coerceIn.
          *
-         * **Строгое соблюдение API:** все диапазоны coerceIn соответствуют
-         * константам [Constants.Widget.*]. Если кастомная прошивка возвращает
-         * значения вне диапазонов — это проблема кастомной прошивки.
+         * **Строгое соблюдение API:** на AOSP WidgetSettingsLoader.load()
+         * завершается за миллисекунды. Таймаут указывает на деградацию
+         * хранилища на кастомной прошивке, не соответствующей документации
+         * Google. Это проблема кастомной прошивки, не проекта.
+         *
+         * @param state Провалидированное состояние настроек.
+         * @param skipSimSettings Если true, SIM-специфичные настройки не
+         *   сохраняются (используется при simListLoadFailed).
+         * @return true если сохранение завершилось успешно.
          */
         suspend fun save(
             state: WidgetSettingsState,
@@ -46,7 +52,10 @@ class WidgetSettingsSaver
                         simStates = state.simStates.filterKeys { it in SimConstants.SUPPORTED_SLOT_INDICES },
                     )
 
-                loader.save(validatedState, skipSimSettings = skipSimSettings)
+                loader.save(
+                    state = validatedState,
+                    skipSimSettings = skipSimSettings,
+                )
                 dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
                 true
             } catch (e: CancellationException) {

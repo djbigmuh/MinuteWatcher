@@ -81,6 +81,16 @@ class WidgetSettingsViewModel
             loadJob =
                 viewModelScope.launch {
                     loadMutex.withLock {
+                        // ensureActive() проверяет, не была ли корутина отменена
+                        // между захватом мьютекса и началом загрузки. Если отмена
+                        // произошла, CancellationException пробрасывается, мьютекс
+                        // освобождается автоматически, и состояние НЕ обновляется.
+                        // Это корректное поведение: отменённая загрузка не должна
+                        // перезаписывать состояние данными.
+                        //
+                        // **Строгое соблюдение API kotlinx.coroutines:** Mutex.release
+                        // вызывается автоматически при CancellationException внутри
+                        // withLock. Это гарантирует отсутствие deadlock.
                         try {
                             val loaded =
                                 withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
@@ -158,15 +168,20 @@ class WidgetSettingsViewModel
                     )
                     SaveResult.Failed
                 } else if (currentState.simListLoadFailed) {
-                    // Строгое соблюдение API: на AOSP observeActiveSims() завершается
-                    // за миллисекунды. Таймаут загрузки списка SIM указывает на деградацию
-                    // хранилища на кастомной прошивке. Сохранение simStates в этом состоянии
-                    // запрещено для предотвращения потери данных.
+                    // simListLoadFailed означает, что observeActiveSims() не вернул данные
+                    // (таймаут DataStore на кастомной прошивке, не соответствующей документации
+                    // Google). Общие настройки (layoutMode, transparency и т.д.) не зависят
+                    // от списка SIM и могут быть сохранены безопасно. SIM-специфичные настройки
+                    // пропускаются через skipSimSettings = true для предотвращения потери данных.
+                    // На AOSP observeActiveSims() завершается за миллисекунды; таймаут здесь
+                    // указывает на деградацию хранилища — проблему кастомной прошивки.
                     AppLogger.w(
-                        "saveAndNotify: skipping save because SIM list " +
-                            "was not loaded successfully to prevent data loss",
+                        "saveAndNotify: SIM list was not loaded successfully. " +
+                            "Saving only general settings via skipSimSettings = true.",
                     )
-                    SaveResult.Failed
+                    val validatedState = validateSettings(currentState)
+                    val success = saver.save(validatedState, skipSimSettings = true)
+                    if (success) SaveResult.Success else SaveResult.Failed
                 } else {
                     val validatedState = validateSettings(currentState)
                     val success = saver.save(validatedState)

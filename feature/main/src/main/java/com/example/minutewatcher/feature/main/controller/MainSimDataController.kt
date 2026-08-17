@@ -144,17 +144,22 @@ class MainSimDataController
                 try {
                     block()
                 } catch (e: SeedUnavailableException) {
-                    // SeedUnavailableException — подкласс IllegalStateException.
-                    // Должен быть пойман ДО общего catch(Exception).
-                    // На AOSP getIdentity() не бросает SeedUnavailableException.
-                    // Отклонение кастомной прошивки: если DataStore деградирует —
-                    // это проблема кастомной прошивки.
+                    // Порядок catch-блоков критичен: SeedUnavailableException и
+                    // SimNotFoundException — подклассы IllegalStateException, который
+                    // является подклассом Exception. Специфичные исключения должны
+                    // ловиться ДО общего catch(Exception).
+                    //
+                    // **Строгое соблюдение API:** на AOSP getIdentity() не бросает
+                    // SeedUnavailableException. DataStore отвечает < 100 мс.
+                    // SeedUnavailableException возможен только при деградации хранилища
+                    // на кастомной прошивке, не соответствующей документации Google.
+                    // Это проблема кастомной прошивки.
+                    //
+                    // SimNotFoundException означает, что SIM была извлечена между
+                    // отображением UI и вызовом операции. Это штатная ситуация.
                     handleSimIdentityError(slot, operationName, e)
                     return@launch
                 } catch (e: SimNotFoundException) {
-                    // SimNotFoundException — подкласс IllegalStateException.
-                    // SIM была удалена между отображением UI и вызовом операции.
-                    // Это штатная ситуация: пользователь мог извлечь SIM-карту.
                     handleSimIdentityError(slot, operationName, e)
                     return@launch
                 } catch (e: CancellationException) {

@@ -146,48 +146,49 @@ class WidgetUpdaterImpl
          */
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome =
             updateMutex.withLock {
-                withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                    val updateResult =
-                        try {
-                            val settings = appSettingsRepository.observeAppSettings().value
-                            if (settings.widgetLimitExceeded) {
-                                val count = ++exceededUpdateCounter
-                                if (count % PROBE_INTERVAL_UPDATES == 0L) {
-                                    // Probe: временный сброс флага для проверки, не устранена ли причина
-                                    // превышения лимита (например, пользователь уменьшил число SIM).
-                                    // Безопасно: находимся внутри updateMutex.withLock.
-                                    performProbeUpdate()
+                val updateOutcome =
+                    withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                        val updateResult =
+                            try {
+                                val settings = appSettingsRepository.observeAppSettings().value
+                                if (settings.widgetLimitExceeded) {
+                                    val count = ++exceededUpdateCounter
+                                    if (count % PROBE_INTERVAL_UPDATES == 0L) {
+                                        // probe: временный сброс флага для проверки, не устранена ли причина
+                                        // превышения лимита (например, пользователь уменьшил число SIM).
+                                        // Безопасно: находимся внутри updateMutex.withLock.
+                                        performProbeUpdate()
+                                    } else {
+                                        safeUpdateAll(context, isProbe = false)
+                                    }
                                 } else {
+                                    // exceededUpdateCounter сбрасывается при выходе из режима
+                                    // widgetLimitExceeded. При повторном входе в режим счётчик
+                                    // начинается с 0, и первый probe произойдёт через
+                                    // PROBE_INTERVAL_UPDATES обновлений. Это корректно:
+                                    // каждый вход в режим — новая ситуация, и probe-цикл
+                                    // должен начинаться заново.
+                                    exceededUpdateCounter = 0L
                                     safeUpdateAll(context, isProbe = false)
                                 }
-                            } else {
-                                // exceededUpdateCounter сбрасывается при выходе из режима
-                                // widgetLimitExceeded. При повторном входе в режим счётчик
-                                // начинается с 0. Это гарантирует, что пробный полный рендер
-                                // будет выполнен через PROBE_INTERVAL_UPDATES обновлений
-                                // после каждого входа в режим.
-                                exceededUpdateCounter = 0L // сброс при выходе из режима
-                                safeUpdateAll(context, isProbe = false)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
+                                UpdateResult.GenericFailure(isRetryable = true)
                             }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
-                            UpdateResult.GenericFailure(isRetryable = true)
-                        }
 
-                    // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll()
-                    // завершается за несколько секунд. Таймаут 10 с — защитный запас.
-                    // Таймаут измеряет только время рендера, а не ожидание мьютекса.
-                    // На кастомных прошивках рендер может занять больше 10 с —
-                    // это проблема кастомной прошивки.
-                    // withTimeoutOrNull возвращает null при таймауте (TimeoutCancellationException
-                    // перехватывается). Реальный CancellationException (отмена scope) пробрасывается.
-                    // Это строгое соблюдение API kotlinx.coroutines.
-                    // Таймаут 10 с — защитный механизм. На AOSP updateAll() завершается
-                    // за несколько секунд. Таймаут указывает на деградацию на кастомной прошивке.
-                    handleUpdateResult(updateResult)
-                } ?: handleUpdateResult(UpdateResult.GenericFailure(isRetryable = true)) // Таймаут
+                        // Строгое соблюдение API: на AOSP GlanceAppWidget.updateAll()
+                        // завершается за несколько секунд. Таймаут 10 с — защитный запас.
+                        // Таймаут измеряет только время рендера, а не ожидание мьютекса.
+                        // На кастомных прошивках рендер может занять больше 10 с —
+                        // это проблема кастомной прошивки.
+                        // withTimeoutOrNull возвращает null при таймауте (TimeoutCancellationException
+                        // перехватывается). Реальный CancellationException (отмена scope) пробрасывается.
+                        // Это строгое соблюдение API kotlinx.coroutines.
+                        handleUpdateResult(updateResult)
+                    }
+                updateOutcome ?: handleUpdateResult(UpdateResult.GenericFailure(isRetryable = true))
             }
 
         private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
@@ -360,16 +361,26 @@ class WidgetUpdaterImpl
          * Классифицирует ошибку обновления виджета.
          *
          * **Строгое соблюдение API:** на AOSP GlanceAppWidget.updateAll()
-         * не бросает исключений при корректном lifecycle. Все исключения здесь —
-         * либо превышение лимита Binder (TransactionTooLargeException),
+         * не бросает исключений при корректном lifecycle. Все исключения
+         * здесь — либо превышение лимита Binder (TransactionTooLargeException),
          * либо проблема кастомной прошивки / destroyed context.
          *
          * Классификация:
-         * - TransactionTooLargeException в cause → LimitExceeded (переход на упрощённый layout)
-         * - IllegalArgumentException без TransactionTooLargeException → GenericFailure
+         * - TransactionTooLargeException в cause → LimitExceeded
+         *   (переход на упрощённый layout)
+         * - IllegalArgumentException без TransactionTooLargeException
+         *   → GenericFailure
          * - IllegalStateException → GenericFailure (destroyed context)
          * - RuntimeException с TransactionTooLargeException → LimitExceeded
          * - Иные → GenericFailure
+         *
+         * **Классификация по тексту сообщения ИСКЛЮЧЕНА:** текст может
+         * меняться между версиями Android и OEM-сборками. Проверка по типу
+         * исключения в cause-цепочке — единственный стабильный критерий.
+         *
+         * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
+         * TransactionTooLargeException при корректном lifecycle виджета
+         * и объёме данных < 1 МБ — это проблема кастомной прошивки.
          */
         private fun classifyUpdateError(
             e: Exception,
@@ -484,30 +495,27 @@ class WidgetUpdaterImpl
              * завершается за несколько секунд. 10 секунд — защитный запас.
              *
              * **Отклонение кастомной прошивки:** если кастомная прошивка
-             * замедляет рендер виджета и updateAll() занимает больше 10 секунд —
+             * замедляет рендер виджета и updateAll() занимает больше 10 с —
              * это проблема кастомной прошивки.
-             *
-             * **Стратегия приложения:** таймаут считается retryable-ошибкой.
-             * Повторная попытка выполняется с экспоненциальной задержкой.
-             * После исчерпания MAX_UPDATE_ATTEMPTS попытки прекращаются.
              */
             private const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
 
             /**
              * Интервал пробных полных рендеров в режиме widgetLimitExceeded.
              *
-             * Каждое [PROBE_INTERVAL_UPDATES]-е обновление в режиме widgetLimitExceeded
-             * выполняет пробный полный рендер для проверки, не устранена ли причина
-             * превышения лимита (например, пользователь уменьшил количество отображаемых SIM).
+             * **Эвристика в пределах критерия надёжности:**
+             * Счётчик [exceededUpdateCounter] не персистится. При рестарте
+             * приложения он обнуляется, и первый probe произойдёт через
+             * PROBE_INTERVAL_UPDATES обновлений. При ~1 обновлении/час
+             * probe выполняется раз в ~10 часов. Это допустимо: на AOSP
+             * RemoteViews-лимит ~1 МБ на Binder-транзакцию, и упрощённый
+             * layout всегда укладывается в этот лимит. Если probe падает —
+             * проблема кастомной прошивки с уменьшенным Binder-лимитом.
              *
-             * Значение 10 выбрано как баланс: при ~1 обновлении/час пробный рендер
-             * выполняется раз в ~10 часов. На AOSP это не создаёт нагрузки; на кастомных
-             * прошивках с уменьшенным Binder-лимитом пробный рендер может падать —
-             * это проблема кастомной прошивки.
-             *
-             * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ на
-             * Binder-транзакцию. Упрощённый layout всегда укладывается в этот лимит.
-             * Если пробный рендер падает — это проблема кастомной прошивки.
+             * **Строгое соблюдение API:** на AOSP RemoteViews-лимит
+             * составляет ~1 МБ. Упрощённый layout (~100 байт) всегда
+             * укладывается. TransactionTooLargeException при упрощённом
+             * layout на AOSP невозможен.
              */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val PROBE_INTERVAL_UPDATES = 10

@@ -12,13 +12,6 @@ object Constants {
         const val LUMINANCE_THRESHOLD = 0.5f
         const val SWITCH_SCALE = 0.8f
         const val HIGHLIGHT_DELAY_MS = 3000L
-
-        /**
-         * Порог (мс) для принудительного обновления при onResume.
-         * Если прошло больше этого времени с последнего обновления — обновляем.
-         * Отрицательный elapsed (перезагрузка устройства) всегда триггерит обновление.
-         */
-        const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
     }
 
     object Widget {

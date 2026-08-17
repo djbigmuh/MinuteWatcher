@@ -205,7 +205,8 @@ class SemanticSearchManager
          * Все остальные типы → UNKNOWN.
          *
          * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
-         * иные типы при недоступности AppSearch — это проблема кастомной прошивки.
+         * иные типы при недоступности AppSearch — это проблема кастомной
+         * прошивки.
          */
         private fun handleInitializationError(e: Exception) {
             if (e is CancellationException) throw e
@@ -304,11 +305,10 @@ class SemanticSearchManager
                 // lastSnapshotHash обновляется только при полном успехе индексации,
                 // что гарантирует повторную индексацию при следующем вызове.
                 val currentSession =
-                    session
-                        ?: run {
-                            AppLogger.e("AppSearch session is null in executeIndexing, skipping")
-                            return@withContext false
-                        }
+                    session ?: run {
+                        AppLogger.e("AppSearch session is null in executeIndexing, skipping")
+                        return@withContext false
+                    }
 
                 // Строгое соблюдение API kotlinx.coroutines: withTimeoutOrNull при таймауте
                 // возвращает null, а НЕ бросает TimeoutCancellationException.
@@ -320,12 +320,16 @@ class SemanticSearchManager
                         withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
                             performIndexUpdate(currentSession, documents)
-                            // При частичном сбое (put failed, remove succeeded) lastSnapshotHash
-                            // НЕ обновляется, так как performIndexUpdate бросает исключение.
-                            // Это гарантирует повторную индексацию при следующем
-                            // вызове indexSnapshot с тем же snapshot. На AOSP putDocuments
-                            // не бросает исключений при корректном состоянии хранилища.
-                            // Сбой указывает на деградацию AppSearch на кастомной прошивке.
+                            // lastSnapshotHash обновляется ТОЛЬКО при полном успехе индексации.
+                            // При частичном сбое (put failed, remove succeeded) хеш НЕ
+                            // обновляется, что гарантирует повторную индексацию того же
+                            // снапшота при следующем вызове indexSnapshot. Это предотвращает
+                            // рассинхронизацию индекса с реальным состоянием пакетов.
+                            //
+                            // **Строгое соблюдение API:** на AOSP putDocuments не бросает
+                            // исключений при корректном состоянии хранилища. Сбой указывает
+                            // на деградацию AppSearch на кастомной прошивке, не соответствующей
+                            // документации Google. Это проблема кастомной прошивки.
                             lastSnapshotHash = currentHash
                             _status.value = TrackingStatus.Active
                             true

@@ -27,8 +27,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -233,14 +233,14 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `saveAndNotify returns Failed when simListLoadFailed is true`() =
+    fun `saveAndNotify returns Success with skipSimSettings when simListLoadFailed is true`() =
         runTest {
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(simListLoadFailed = true) }
 
             val result = viewModel.saveAndNotify()
 
-            assertEquals(SaveResult.Failed, result)
-            verify(saver, never()).save(any(), any())
+            assertEquals(SaveResult.Success, result)
+            verify(saver).save(any(), eq(true))
         }
 }

@@ -877,13 +877,27 @@ class CallTrackerTest {
             // Tracking is disabled
             whenever(
                 appSettingsRepository.getAppSettings(),
-            ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
+            ).thenReturn(
+                flowOf(
+                    AppSettings(
+                        callTrackingEnabled = false,
+                    ),
+                ),
+            )
 
             // Mock session data exists
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
-            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 10000L))
-            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(realtime - 10000L))
+            whenever(
+                callSessionRepository.getCallStartTime(subId),
+            ).thenReturn(
+                flowOf(now - 10000L),
+            )
+            whenever(
+                callSessionRepository.getBootTime(subId),
+            ).thenReturn(
+                flowOf(realtime - 10000L),
+            )
 
             // Act
             callTracker.onCallEnded(subId)
@@ -891,9 +905,21 @@ class CallTrackerTest {
 
             // Assert:
             // 1. Session IS cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+            verify(
+                callSessionRepository,
+                atLeastOnce(),
+            ).setCallStartTime(
+                eq(subId),
+                eq(0L),
+            )
             // 2. Minutes are NOT incremented
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(
+                simUsageRepository,
+                never(),
+            ).incrementMinutesUsed(
+                any(),
+                any(),
+            )
         }
 
     @Test
@@ -905,7 +931,13 @@ class CallTrackerTest {
             // Tracking is disabled
             whenever(
                 appSettingsRepository.getAppSettings(),
-            ).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))
+            ).thenReturn(
+                flowOf(
+                    AppSettings(
+                        callTrackingEnabled = false,
+                    ),
+                ),
+            )
 
             // Act
             callTracker.onCallEnded(-1)
@@ -915,6 +947,12 @@ class CallTrackerTest {
             // 1. ALL sessions are cleared
             verify(callSessionRepository).clearAllCallSessions()
             // 2. Minutes are NOT incremented
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(
+                simUsageRepository,
+                never(),
+            ).incrementMinutesUsed(
+                any(),
+                any(),
+            )
         }
 }

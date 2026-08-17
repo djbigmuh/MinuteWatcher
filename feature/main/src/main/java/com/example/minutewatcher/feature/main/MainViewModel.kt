@@ -295,6 +295,23 @@ class MainViewModel
 
         companion object {
             internal const val KEY_LAST_REFRESH_ELAPSED = "last_refresh_elapsed"
+
+            /**
+             * Порог (мс) для принудительного обновления при onResume.
+             * Если прошло больше этого времени с последнего обновления —
+             * обновляем. 20 секунд выбрано как баланс между актуальностью
+             * данных и нагрузкой на DataStore: при быстром переключении
+             * между приложениями (< 20 с) повторный refresh не нужен,
+             * т.к. данные не могли измениться за столь короткий интервал.
+             *
+             * **Строгое соблюдение API:** на AOSP DataStore отвечает
+             * < 100 мс. Отрицательный elapsed (перезагрузка устройства)
+             * всегда триггерит обновление. На кастомной прошивке, где
+             * elapsedRealtime не монотонен, возможно ложное срабатывание.
+             * Это проблема кастомной прошивки.
+             */
+            private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
+
             private const val MAX_INIT_RETRIES = 3
         }
 
@@ -337,7 +354,9 @@ class MainViewModel
                         // We force a retry in this case to ensure data is loaded as soon as possible.
                         // Отрицательный elapsed однозначно указывает на перезагрузку устройства.
                         val isStale =
-                            (last == 0L) || (elapsed < 0) || (elapsed > Constants.UI.RESUME_REFRESH_THRESHOLD_MS)
+                            (last == 0L) ||
+                                (elapsed < 0) ||
+                                (elapsed > RESUME_REFRESH_THRESHOLD_MS)
 
                         if (isStale) {
                             refreshAndNotify(force = false)
@@ -395,12 +414,14 @@ internal class AutoResetScheduler(
         val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
         val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
 
-        /**
-         * Использование монотонного времени (elapsedRealtime) для проверки интервала.
-         * Это гарантирует, что перевод системных часов пользователем не приведет
-         * к ложным срабатываниям или пропуску проверок. Интервал между проверками
-         * остается стабильным независимо от манипуляций с wall-clock.
-         */
+        // **Строгое соблюдение API:** используется монотонное время
+        // (elapsedRealtime), а не wall-clock (System.currentTimeMillis).
+        // Это гарантирует, что перевод системных часов пользователем
+        // не приведёт к ложным срабатываниям или пропуску проверок.
+        // На AOSP elapsedRealtime() монотонен в пределах одной загрузки.
+        // На кастомной прошивке, где elapsedRealtime не монотонен,
+        // возможно ложное срабатывание (isInitialOrReboot = true при
+        // elapsed < 0). Это проблема кастомной прошивки.
         val now = timeProvider.elapsedRealtime()
 
         val isInitialOrReboot: Boolean
