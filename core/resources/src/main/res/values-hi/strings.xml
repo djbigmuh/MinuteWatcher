@@ -16,6 +16,7 @@
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">सेटिंग्स सहेजी गईं</string>
+    <string name="settings_save_already_in_progress">सहेजना पहले से प्रगति में है</string>
     <string name="language_system">सिस्टम</string>
     <string name="language_en">अंग्रेज़ी</string>
     <string name="language_ru">रूसी</string>
@@ -59,6 +60,7 @@
     <string name="tracking_banner_widget_error">सिस्टम की सीमाओं के कारण विजेट अपडेट नहीं किया जा सकता है।</string>
     <string name="tracking_banner_inaccurate_calls">एकाधिक सक्रिय कॉल पाए गए। मिनट गलत तरीके से बताए जा सकते हैं।</string>
     <string name="settings_load_error">सेटिंग्स लोड करने में त्रुटि</string>
+    <string name="sim_list_unavailable_error">SIM सूची उपलब्ध नहीं है। पुनः लोड करने के बाद SIM सेटिंग्स उपलब्ध होंगी।</string>
     <string name="refresh_error">डेटा ताज़ा करने में त्रुटि</string>
     <string name="stale_data_warning">डेटा पुराना हो सकता है</string>
     <string name="notification_permission_permanent_denial">सूचनाएं अक्षम हैं। अलर्ट प्राप्त करने के लिए कृपया उन्हें ऐप सेटिंग में सक्षम करें।</string>

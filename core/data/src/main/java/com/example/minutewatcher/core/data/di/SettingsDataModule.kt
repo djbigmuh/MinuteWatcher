@@ -66,22 +66,33 @@ private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class SettingsDataModule {
+// Hilt discovers these bindings via annotation processing (KSP).
+// IDE marks them as unused because usage is not visible in source code.
+@Suppress("unused")
+interface SettingsDataModule {
+    /** Binds the concrete [AppSettingsRepositoryImpl] to the [AppSettingsRepository] interface.
+     *  Used by Hilt to inject settings repository across the application. */
     @Binds
     @Singleton
-    abstract fun bindAppSettingsRepository(impl: AppSettingsRepositoryImpl): AppSettingsRepository
+    fun bindAppSettingsRepository(impl: AppSettingsRepositoryImpl): AppSettingsRepository
 
+    /** Binds the concrete [PermissionStateNotifierImpl] to the [PermissionStateNotifier] interface.
+     *  Used by Hilt to manage and notify about application permission states. */
     @Binds
     @Singleton
-    abstract fun bindPermissionStateNotifier(impl: PermissionStateNotifierImpl): PermissionStateNotifier
+    fun bindPermissionStateNotifier(impl: PermissionStateNotifierImpl): PermissionStateNotifier
 
+    /** Binds the concrete [PermissionRepositoryImpl] to the [PermissionRepository] interface.
+     *  Used by Hilt to handle permission-related data and logic. */
     @Binds
     @Singleton
-    abstract fun bindPermissionRepository(impl: PermissionRepositoryImpl): PermissionRepository
+    fun bindPermissionRepository(impl: PermissionRepositoryImpl): PermissionRepository
 
+    /** Binds the concrete [BenchmarkUseCaseImpl] to the [BenchmarkUseCase] interface.
+     *  Used by Hilt to provide benchmarking functionality. */
     @Binds
     @Singleton
-    abstract fun bindBenchmarkUseCase(impl: BenchmarkUseCaseImpl): BenchmarkUseCase
+    fun bindBenchmarkUseCase(impl: BenchmarkUseCaseImpl): BenchmarkUseCase
 
     companion object {
         @Provides

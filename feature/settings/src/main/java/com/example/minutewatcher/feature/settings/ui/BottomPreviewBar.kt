@@ -69,6 +69,8 @@ fun BottomPreviewBar(
             onClick = {
                 scope.launch {
                     onSave()
+                    // Результат обрабатывается через LaunchedEffect(saveResult)
+                    // для Success/Failed. AlreadyInProgress возвращается напрямую.
                 }
             },
             enabled = !isSaving,

@@ -97,19 +97,23 @@ class SimIdentityRepositoryImpl
          * Используется ТОЛЬКО когда SIM не найдена в [activeSimsCache].
          *
          * Инвалидация:
-         * - При удалении слота из активного списка (в init-блоке).
+         * - При удалении слота из активного списка (в init-блоке при эмиссии activeSimsCache).
          * - При истечении TTL ([MANUAL_RESOLUTION_CACHE_TTL_MS]).
          * - При нахождении SIM в [activeSimsCache] (запись удаляется).
          *
-         * Безопасность при замене SIM: если SIM заменена (тот же слот, другая identity),
-         * старая запись в кэше НЕ используется, потому что SIM будет найдена
-         * в [activeSimsCache] и кэш не будет consulted. Кэш используется только
-         * для SIM, отсутствующих в активном списке, что исключает использование
-         * устаревшей identity для активной SIM.
+         * Кэш НЕ инвалидируется при изменении разрешений напрямую.
+         * Инвалидация происходит только через эмиссию activeSimsCache,
+         * которая зависит от permissionStateNotifier.changes.
+         * На AOSP SubscriptionManager.OnSubscriptionsChangedListener доставляет
+         * callback при каждом изменении подписок. Если кастомная прошивка
+         * не доставляет callback при изменении разрешений — это проблема
+         * кастомной прошивки.
          *
          * Потокобезопасность: [ConcurrentHashMap] обеспечивает потокобезопасность.
-         * TTL проверяется через [TimeProvider.elapsedRealtime()] (монотонное время).
-         * При рестарте устройства кэш очищается (in-memory).
+         * TTL проверяется через [TimeProvider.elapsedRealtime()] (монотонное время),
+         * что исключает влияние перевода системных часов пользователем.
+         * На кастомной прошивке, где elapsedRealtime не монотонен, возможна
+         * некорректная периодичность — это проблема кастомной прошивки.
          */
         private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
 

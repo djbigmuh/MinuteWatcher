@@ -40,6 +40,7 @@ tasks.withType<Test>().configureEach {
 
 dependencies {
     implementation(libs.androidxAppcompat)
+    implementation(libs.kotlinxCoroutinesCore)
     implementation(libs.googleMaterial)
     implementation(libs.androidxMaterial3)
     implementation(project(":core:domain"))

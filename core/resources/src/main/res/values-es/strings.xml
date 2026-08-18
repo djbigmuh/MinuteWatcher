@@ -16,6 +16,7 @@
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Ajustes guardados</string>
+    <string name="settings_save_already_in_progress">Guardado ya en curso</string>
     <string name="language_system">Sistema</string>
     <string name="language_en">Inglés</string>
     <string name="language_ru">Ruso</string>
@@ -59,6 +60,7 @@
     <string name="tracking_banner_widget_error">El widget no se puede actualizar debido a limitaciones del sistema.</string>
     <string name="tracking_banner_inaccurate_calls">Se detectaron varias llamadas activas. Es posible que los minutos se atribuyan de forma inexacta.</string>
     <string name="settings_load_error">Error al cargar la configuración</string>
+    <string name="sim_list_unavailable_error">Lista de SIM no disponible. La configuración de SIM estará disponible después de recargar.</string>
     <string name="refresh_error">Error de actualización de datos</string>
     <string name="stale_data_warning">Los datos pueden estar desactualizados</string>
     <string name="notification_permission_permanent_denial">Las notificaciones están desactivadas. Por favor, actívelas en los Ajustes de la aplicación para recibir alertas.</string>

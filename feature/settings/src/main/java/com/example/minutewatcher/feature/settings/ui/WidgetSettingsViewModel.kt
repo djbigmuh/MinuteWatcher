@@ -158,16 +158,21 @@ class WidgetSettingsViewModel
         /**
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          *
-         * **Точки возврата (5 штук, каждая для отдельного кейса):**
-         * 1. `SaveResult.AlreadyInProgress` — сохранение уже выполняется (защита от гонки).
-         * 2. `SaveResult.Failed` — загрузка настроек завершилась ошибкой ранее.
-         *    На AOSP WidgetSettingsLoader.load() завершается за миллисекунды;
-         *    таймаут указывает на деградацию хранилища на кастомной прошивке.
-         * 3. `SaveResult.Failed` — состояние ещё не загружено (null).
-         * 4. `SaveResult.Failed/Success` — simListLoadFailed: сохраняются только
-         *    общие настройки (skipSimSettings=true). SIM-специфичные настройки
-         *    пропускаются для предотвращения потери данных.
-         * 5. `SaveResult.Failed/Success` — нормальное сохранение всех настроек.
+         * Строгое соблюдение API: если settingsLoadFailed = true, сохранение
+         * блокируется. Это предотвращает перезапись реальных настроек
+         * дефолтными значениями из fallback-состояния.
+         * На AOSP WidgetSettingsLoader.load() завершается за миллисекунды.
+         * Таймаут указывает на деградацию хранилища на кастомной прошивке.
+         * Повторная попытка через retryLoad() — единственная стратегия восстановления.
+         *
+         * Точки возврата:
+         * 1. SaveResult.AlreadyInProgress — сохранение уже выполняется (защита от гонки).
+         * 2. SaveResult.Failed — загрузка настроек завершилась ошибкой ранее.
+         * 3. SaveResult.Failed — состояние ещё не загружено (null).
+         * 4. SaveResult.PartialSuccess(skippedSimSettings=true) — simListLoadFailed:
+         *    сохраняются только общие настройки (skipSimSettings=true).
+         *    SIM-специфичные настройки пропускаются для предотвращения потери данных.
+         * 5. SaveResult.Success — нормальное сохранение всех настроек.
          *
          * @Suppress("ReturnCount") оправдан: каждая точка возврата соответствует
          * отдельному защитному кейсу. Объединение снизило бы читаемость.
@@ -175,9 +180,9 @@ class WidgetSettingsViewModel
         @Suppress("ReturnCount")
         suspend fun saveAndNotify(): SaveResult {
             if (!saveMutex.tryLock()) {
-                val result = SaveResult.AlreadyInProgress
-                _saveResult.value = result
-                return result
+                // Не записываем в _saveResult, чтобы не перезаписать предыдущий результат.
+                // UI получит AlreadyInProgress напрямую из возвращаемого значения.
+                return SaveResult.AlreadyInProgress
             }
             return try {
                 _isSaving.value = true

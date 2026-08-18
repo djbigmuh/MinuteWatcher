@@ -131,25 +131,21 @@ class SemanticSearchManager
         /**
          * Гарантирует наличие активной сессии AppSearch.
          *
-         * Гарантирует установку [_status] в случае ошибки через [handleSchemaException]
-         * или [handleInitializationError].
-         *
-         * **Точки возврата:**
+         * Точки возврата:
          * 1. Сессия существует, не закрыта, forceOverride не требуется → true (быстрый путь).
          * 2. forceOverride=true → попытка открытия с пересозданием схемы.
          * 3. Первая попытка без force → успех → true.
          * 4. RESULT_INVALID_SCHEMA → повтор с forceOverride=true.
          * 5. Иная ошибка → false (статус установлен в Error).
          *
-         * **Строгое соблюдение API:** на AOSP LocalStorage.createSearchSessionAsync
+         * Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
          * бросает один из стандартных типов исключений. Повтор с forceOverride=true
          * выполняется ТОЛЬКО при RESULT_INVALID_SCHEMA. Для остальных типов повтор
-         * бессмыслен — это проблема кастомной прошивки.
+         * бессмыслен — это проблема кастомной прошивки или системного сервиса.
          *
-         * **Эвристика в пределах критерия надёжности:** RESULT_INVALID_SCHEMA
-         * означает расхождение схемы (например, после обновления приложения).
-         * Повтор с forceOverride пересоздаёт индекс. Это штатная ситуация.
-         * Все остальные ошибки — проблема кастомной прошивки или системного сервиса.
+         * Отклонение кастомной прошивки: если кастомная прошивка бросает
+         * нестандартные исключения при открытии сессии AppSearch — это проблема
+         * кастомной прошивки, не проекта.
          *
          * @return true если сессия успешно открыта и готова к работе.
          */
@@ -212,10 +208,6 @@ class SemanticSearchManager
         /**
          * Классифицирует ошибку инициализации AppSearch.
          *
-         * **Строгое соблюдение API:** на AOSP LocalStorage.createSearchSessionAsync
-         * бросает один из трёх стандартных типов. Проверка по тексту сообщения
-         * ИСКЛЮЧЕНА: текст может меняться между версиями Android и OEM-сборками.
-         *
          * Три стандартных типа → NOT_SUPPORTED:
          * - [IllegalStateException] — сервис AppSearch недоступен (GMS-free сборки)
          * - [DeadObjectException] — системный сервис AppSearch аварийно завершился
@@ -223,9 +215,12 @@ class SemanticSearchManager
          *
          * Все остальные типы → UNKNOWN.
          *
-         * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
-         * иные типы при недоступности AppSearch — это проблема кастомной
-         * прошивки.
+         * Классификация по тексту сообщения ИСКЛЮЧЕНА: текст может меняться
+         * между версиями Android и OEM-сборками. Проверка по типу исключения
+         * в cause-цепочке — единственный стабильный критерий.
+         *
+         * Отклонение кастомной прошивки: если кастомная прошивка бросает
+         * иные типы при недоступности AppSearch — это проблема кастомной прошивки.
          */
         private fun handleInitializationError(e: Exception) {
             if (e is CancellationException) throw e
@@ -261,6 +256,13 @@ class SemanticSearchManager
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
+            // При hasActiveSims == false currentHash = null.
+            // Если lastSnapshotHash != null (были активные SIM), executeIndexing
+            // выполнится для удаления всех документов. Это корректно, но может
+            // привести к повторному вызову при каждом чередовании пустой/непустой
+            // snapshot. На AOSP это происходит редко (SIM не появляется/исчезает
+            // часто). На кастомных прошивках с нестабильным SubscriptionManager
+            // это может вызвать лишние вызовы — это проблема кастомной прошивки.
             val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
             val currentHash =
                 if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
@@ -320,6 +322,21 @@ class SemanticSearchManager
             }
         }
 
+        /**
+         * Выполняет индексацию snapshot в AppSearch.
+         *
+         * Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
+         * завершается за миллисекунды. Индексация одного snapshot (~6 документов
+         * для 3 SIM × 2 типа) завершается за < 100 мс.
+         * Таймаут [Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS] (10 сек) — защитный запас.
+         * Таймаут измеряет только время рендера, а не ожидание мьютекса.
+         * На кастомных прошивках индексация может занять больше 10 сек —
+         * это проблема кастомной прошивки.
+         *
+         * withTimeoutOrNull возвращает null при таймауте (TimeoutCancellationException
+         * перехватывается). Реальный CancellationException (отмена scope) пробрасывается.
+         * Это строгое соблюдение API kotlinx.coroutines.
+         */
         private suspend fun executeIndexing(
             snapshot: GlobalSnapshot,
             currentHash: Int?,
@@ -384,6 +401,24 @@ class SemanticSearchManager
                 result
             }
 
+        /**
+         * Выполняет обновление индекса: добавление актуальных документов
+         * и удаление устаревших.
+         *
+         * Порядок операций: сначала put (добавление/обновление актуальных документов),
+         * затем remove (удаление устаревших). Это намеренный порядок:
+         * если put падает, remove всё равно выполняется для очистки stale-документов.
+         * Оба исключения собираются и пробрасываются вместе через throwIfErrors.
+         *
+         * Строгое соблюдение API: на AOSP putDocuments не бросает исключений
+         * при корректном состоянии хранилища. Сбой указывает на деградацию
+         * AppSearch на кастомной прошивке, не соответствующей документации Google.
+         * Это проблема кастомной прошивки.
+         *
+         * Эвристика в пределах критерия надёжности: при частичном сбое
+         * (put failed, remove succeeded) хэш снапшота сбрасывается,
+         * что гарантирует полную переиндексацию при следующем вызове.
+         */
         private suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,
             documents: List<UsageDocument>,
@@ -392,18 +427,6 @@ class SemanticSearchManager
 
             var putException: Exception? = null
 
-            // Порядок операций: сначала put (добавление/обновление актуальных документов),
-            // затем remove (удаление устаревших). Это намеренный порядок:
-            // если put падает, remove всё равно выполняется для очистки stale-документов.
-            // Оба исключения собираются и пробрасываются вместе через throwIfErrors.
-            //
-            // Строгое соблюдение API: на AOSP putDocuments не бросает исключений
-            // при корректном состоянии хранилища. Сбой указывает на деградацию
-            // AppSearch на кастомной прошивке. Это проблема кастомной прошивки.
-            //
-            // Эвристика в пределах критерия надёжности: при частичном сбое
-            // (put failed, remove succeeded) хеш снапшота сбрасывается,
-            // что гарантирует полную переиндексацию при следующем вызове.
             if (documents.isNotEmpty()) {
                 try {
                     session.putDocuments(appSearchWrapper.createPutRequest(documents))

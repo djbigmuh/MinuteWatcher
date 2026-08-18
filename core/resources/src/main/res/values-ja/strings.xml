@@ -16,6 +16,7 @@
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">設定を保存しました</string>
+    <string name="settings_save_already_in_progress">保存は既に進行中です</string>
     <string name="language_system">システム</string>
     <string name="language_en">英語</string>
     <string name="language_ru">ロシア語</string>
@@ -59,6 +60,7 @@
     <string name="tracking_banner_widget_error">システムの制限により、ウィジェットを更新できません。</string>
     <string name="tracking_banner_inaccurate_calls">複数のアクティブな通話が検出されました。分数が不正確に割り当てられる可能性があります。</string>
     <string name="settings_load_error">設定読み込みエラー</string>
+    <string name="sim_list_unavailable_error">SIMリストが利用できません。再読み込み後にSIM設定が利用可能になります。</string>
     <string name="refresh_error">データ更新エラー</string>
     <string name="stale_data_warning">データが古い可能性があります</string>
     <string name="notification_permission_permanent_denial">通知が無効です。アラートを受け取るには、アプリ設定で有効にしてください。</string>
