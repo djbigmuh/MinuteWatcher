@@ -627,7 +627,7 @@ class TrafficTrackerTest {
 
             assertTrue(tracker.status.value is TrackingStatus.Error)
             assertEquals(
-                "Identity read timeout in TrafficTracker",
+                "SIM list read timeout",
                 (tracker.status.value as TrackingStatus.Error).message,
             )
 
@@ -749,7 +749,7 @@ class TrafficTrackerTest {
             // Assert
             val status = tracker.status.value
             assertTrue(status is TrackingStatus.Error)
-            assertEquals("Identity read timeout in TrafficTracker", (status as TrackingStatus.Error).message)
+            assertEquals("SIM list read timeout", (status as TrackingStatus.Error).message)
             assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
         }
 

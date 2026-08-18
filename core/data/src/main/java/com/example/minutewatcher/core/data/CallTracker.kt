@@ -324,25 +324,22 @@ class CallTracker
                     )
                 withContext(NonCancellable) {
                     try {
+                        // При таймауте чтения сессии выполняем очистку сессии для безопасности.
+                        // Если очистка тоже падает, сохраняем исходную ошибку таймаута.
+                        // На AOSP clearSession не падает при корректном состоянии DataStore.
+                        // Двойной сбой (read + clear) возможен только при деградации DataStore
+                        // на кастомной прошивке. Это проблема прошивки.
                         clearSession(subId)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        AppLogger.w("Failed to clear session for subId $subId after start timeout", e)
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.DATABASE_ERROR,
-                                "Session cleanup failed for subId $subId",
-                            )
-                        // **Контракт AOSP:** на AOSP DataStore.edit не бросает исключений при
-                        // корректном состоянии хранилища.
-                        //
-                        // **Отклонение кастомной прошивки:** Двойной сбой (read + clear) возможен только при
-                        // деградации DataStore на кастомных прошивках, не соответствующих документации Google.
-                        // Это проблема кастомной прошивки.
-                        //
-                        // **Стратегия приложения:** устанавливаем Error-статус, чтобы UI уведомил пользователя.
-                        // Повторная попытка возможна при следующем вызове onCallStarted.
+                        AppLogger.w(
+                            "Failed to clear session for subId $subId after start timeout. " +
+                                "Original error: $errorMessage",
+                            e,
+                        )
+                        // Статус уже установлен выше. Не перезаписываем его ошибкой очистки,
+                        // чтобы пользователь видел реальную причину (таймаут чтения).
                     }
                 }
                 return false
@@ -1092,20 +1089,23 @@ internal class CallEndResolver(
      * READ_PHONE_STATE. subId == -1 возможен только на кастомных прошивках,
      * не передающих subscription ID в intent. Это проблема кастомной прошивки.
      *
-     * **Эвристика в пределах критерия надёжности:**
-     * - Если все активные сессии в IDLE → закрыть все (однозначно).
-     * - Если ровно одна сессия в IDLE → закрыть её (однозначно).
-     * - Если неоднозначно → НЕ закрывать ничего, установить Error.
-     *   Эвристики «закрыть самую старую» или «закрыть default voice»
-     *   НАМЕРЕННО ИСКЛЮЧЕНЫ: они могут привести к потере данных
-     *   при одновременных звонках на dual-SIM.
+     * **Эвристика в пределах критерия надёжности:** при subId == -1 применяется эвристика
+     * определения завершившегося звонка (все в IDLE → закрыть все; ровно один в IDLE → закрыть его;
+     * неоднозначность → не закрывать ничего и установить Error).
      *
-     * **Отклонение кастомной прошивки:** если прошивка не передаёт subId
-     * в PHONE_STATE_CHANGED intent — это проблема кастомной прошивки.
+     * При отзыве разрешения сессии не очищаются (мы не можем достоверно определить,
+     * какой звонок завершился), но статус переводится в Error для информирования пользователя.
      */
     suspend fun resolveUnknownSubIdEnd() {
         if (!permissionManager.hasPhoneStatePermission()) {
             AppLogger.w("CallEndResolver: permission revoked during resolveUnknownSubIdEnd")
+            setError(
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    "Permission revoked during call end resolution",
+                ),
+            )
+            dataChangeNotifier.notifyDataChanged()
             return
         }
         val activeSubIds =

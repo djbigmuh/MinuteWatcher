@@ -1,7 +1,6 @@
 package com.example.minutewatcher
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -10,9 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
-import com.example.minutewatcher.feature.settings.ui.SaveResult
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsScreen
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,34 +36,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
                 ) {
                     WidgetSettingsScreen(
                         viewModel = viewModel,
-                        onSave = {
-                            val result = viewModel.saveAndNotify()
-                            when (result) {
-                                SaveResult.Success, is SaveResult.PartialSuccess -> {
-                                    Toast
-                                        .makeText(
-                                            this@WidgetSettingsActivity,
-                                            getString(R.string.settings_saved_toast),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                    finish()
-                                }
-
-                                SaveResult.Failed -> {
-                                    Toast
-                                        .makeText(
-                                            this@WidgetSettingsActivity,
-                                            getString(R.string.error),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                }
-
-                                SaveResult.AlreadyInProgress -> {
-                                    // Ignore, avoid multiple toasts
-                                }
-                            }
-                            result
-                        },
+                        onSave = { viewModel.saveAndNotify() },
                         onBack = { finish() },
                     )
                 }

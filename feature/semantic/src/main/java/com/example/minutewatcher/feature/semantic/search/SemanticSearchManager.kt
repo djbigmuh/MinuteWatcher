@@ -63,6 +63,9 @@ class SemanticSearchManager
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        private var consecutiveIndexFailures = 0
+        private var lastIndexFailureTime = 0L
+
         /**
          * Восстанавливает работу менеджера после ошибки.
          * Строгое соблюдение API: функция гарантирует, что после возврата
@@ -116,12 +119,34 @@ class SemanticSearchManager
                             .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                             .collect { snapshot ->
                                 ensureActive()
+                                if (consecutiveIndexFailures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
+                                    // Пропускаем индексацию, но не прерываем коллекционирование.
+                                    // Сброс счётчика произойдёт при перезапуске приложения.
+                                    return@collect
+                                }
+                                /**
+                                 * **Строгое соблюдение API:** на AOSP `indexSnapshot` завершается успешно
+                                 * при корректном состоянии AppSearch. Повторяющиеся сбои указывают на
+                                 * проблему кастомной прошивки.
+                                 *
+                                 * **Эвристика в пределах критерия надёжности:** после [MAX_CONSECUTIVE_INDEX_FAILURES]
+                                 * последовательных сбоев индексация подавляется до перезапуска.
+                                 * Это предотвращает бесконечный цикл ошибок. Сброс при перезапуске —
+                                 * допустимая эвристика, т.к. перезапуск может устранить причину сбоя.
+                                 */
                                 try {
-                                    indexSnapshot(snapshot)
+                                    val success = indexSnapshot(snapshot)
+                                    if (success) {
+                                        consecutiveIndexFailures = 0
+                                        lastIndexFailureTime = 0L
+                                    } else {
+                                        handleIndexFailure()
+                                    }
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (e: Exception) {
                                     AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
+                                    handleIndexFailure()
                                 }
                             }
                     }
@@ -131,22 +156,25 @@ class SemanticSearchManager
         /**
          * Гарантирует наличие активной сессии AppSearch.
          *
-         * Точки возврата:
-         * 1. Сессия существует, не закрыта, forceOverride не требуется → true (быстрый путь).
-         * 2. forceOverride=true → попытка открытия с пересозданием схемы.
-         * 3. Первая попытка без force → успех → true.
-         * 4. RESULT_INVALID_SCHEMA → повтор с forceOverride=true.
-         * 5. Иная ошибка → false (статус установлен в Error).
+         * **Стратегия retry:**
+         * - [AppSearchResult.RESULT_INVALID_SCHEMA] → повтор с forceOverride=true.
+         *   Это единственный код ошибки, при котором повтор имеет смысл:
+         *   схема могла измениться (добавлены поля в UsageDocument),
+         *   и forceOverride пересоздаёт индекс.
+         * - Все остальные коды → false (без повтора).
+         *   Другие ошибки (RESULT_INTERNAL_ERROR, RESULT_NOT_FOUND и т.д.)
+         *   указывают на системную проблему, которую повтор не устранит.
          *
-         * Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
-         * бросает один из стандартных типов исключений. Повтор с forceOverride=true
-         * выполняется ТОЛЬКО при RESULT_INVALID_SCHEMA. Для остальных типов повтор
-         * бессмыслен — это проблема кастомной прошивки или системного сервиса.
+         * **Строгое соблюдение API:** на AOSP LocalStorage.createSearchSessionAsync
+         * бросает один из стандартных типов исключений. Повтор с forceOverride
+         * выполняется ТОЛЬКО при RESULT_INVALID_SCHEMA. Для остальных типов
+         * повтор бессмыслен — это проблема кастомной прошивки или системного сервиса.
          *
-         * Отклонение кастомной прошивки: если кастомная прошивка бросает
+         * **Отклонение кастомной прошивки:** если кастомная прошивка бросает
          * нестандартные исключения при открытии сессии AppSearch — это проблема
          * кастомной прошивки, не проекта.
          *
+         * @param forceOverride Если true, принудительно пересоздаёт схему.
          * @return true если сессия успешно открыта и готова к работе.
          */
         private suspend fun ensureSession(forceOverride: Boolean = false): Boolean {
@@ -186,10 +214,16 @@ class SemanticSearchManager
             } catch (e: AppSearchException) {
                 newSession?.close()
                 handleSchemaException(e, forceOverride)
+                // Для всех ошибок, кроме RESULT_INVALID_SCHEMA (обрабатывается в ensureSession),
+                // повтор не выполняется. Статус уже установлен в handleSchemaException
+                // или handleInitializationError.
                 Result.failure(e)
             } catch (e: Exception) {
                 newSession?.close()
                 handleInitializationError(e)
+                // Для всех ошибок, кроме RESULT_INVALID_SCHEMA (обрабатывается в ensureSession),
+                // повтор не выполняется. Статус уже установлен в handleSchemaException
+                // или handleInitializationError.
                 Result.failure(e)
             }
         }
@@ -240,6 +274,24 @@ class SemanticSearchManager
             } else {
                 AppLogger.e("Fatal AppSearch initialization error", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            }
+        }
+
+        private fun handleIndexFailure() {
+            consecutiveIndexFailures++
+            lastIndexFailureTime = System.currentTimeMillis()
+            if (consecutiveIndexFailures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
+                AppLogger.e(
+                    "SemanticSearchManager: $consecutiveIndexFailures consecutive indexing failures. " +
+                        "Further attempts suppressed until next app restart. " +
+                        "On AOSP this indicates a system-level issue. " +
+                        "On custom firmware this may be a firmware-specific problem.",
+                )
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Indexing suppressed after $consecutiveIndexFailures failures",
+                    )
             }
         }
 
@@ -501,5 +553,6 @@ class SemanticSearchManager
         companion object {
             private const val DATABASE_NAME = "usage"
             const val NAMESPACE = "usage"
+            private const val MAX_CONSECUTIVE_INDEX_FAILURES = 5
         }
     }

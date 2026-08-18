@@ -121,22 +121,23 @@ class SimIdentityRepositoryImpl
          * Поток seed-значения для генерации identity SIM-карт.
          *
          * **Поведение при первом запуске:**
-         * Блок `onStart` блокирует подписчика на время до [SEED_TOTAL_TIMEOUT_MS] мс
+         * Блок onStart блокирует подписчика на время до [SEED_TOTAL_TIMEOUT_MS] мс
          * (13 секунд). В течение этого времени [observeActiveSims] не эмитит значения.
-         * Это штатное поведение: seed необходим для генерации identity.
+         * Это корректное поведение: seed необходим для генерации identity.
          *
-         * **Строгое соблюдение API:** на AOSP DataStore отвечает < 100 мс,
-         * поэтому реальное время ожидания составляет миллисекунды.
-         * Таймаут 13 секунд — защитный барьер на случай деградации хранилища
-         * на кастомной прошивке, не соответствующей документации Google.
+         * **Строгое соблюдение API:** на AOSP генерация и чтение seed из DataStore
+         * занимает миллисекунды. 13 секунд — защитный запас на случай деградации
+         * хранилища на кастомной прошивке (проблема прошивки).
          *
-         * **Стратегия при таймауте:** эмитится [SeedResult.Fallback].
-         * При восстановлении хранилища поток переключится на [SeedResult.Real]
-         * через [flatMapLatest], и downstream пересоздастся.
+         * **Переход Fallback → Real:** при восстановлении хранилища поток
+         * переключается на Real через [flatMapLatest], и downstream пересоздаётся.
+         * Это обеспечивает автоматическое восстановление без перезапуска приложения.
          *
-         * **Эвристика в пределах критерия надёжности:** Fallback не используется
-         * для генерации identity (выбрасывается [SeedUnavailableException]).
-         * Это предотвращает потерю привязки данных к SIM при восстановлении хранилища.
+         * **Выбор Eagerly вместо WhileSubscribed:** Eagerly гарантирует, что
+         * seedFlow активен с момента создания репозитория, независимо от наличия
+         * подписчиков. Это необходимо, т.к. seed нужен до первого вызова
+         * observeActiveSims. WhileSubscribed остановил бы поток при отсутствии
+         * подписчиков, и первый вызов observeActiveSims получил бы Fallback.
          */
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -321,17 +322,15 @@ class SimIdentityRepositoryImpl
             scope.launch {
                 activeSimsCache.collect { sims ->
                     // Инвалидация manualResolutionCache при обновлении activeSimsCache.
-                    // Удаляются только записи для слотов, отсутствующих в новом активном списке.
-                    // Записи для активных слотов не удаляются, но и не используются (SIM найдётся в activeSimsCache).
+                    // Удаляются записи для слотов, отсутствующих в новом активном списке.
+                    // Записи для активных слотов не удаляются, но и не используются
+                    // (SIM найдётся в activeSimsCache).
                     //
-                    // **Контракт AOSP:** на AOSP SubscriptionManager callback доставляется при
-                    // каждом изменении подписок.
+                    // Строгое соблюдение API: на AOSP SubscriptionManager callback
+                    // доставляет при каждом изменении подписок.
                     //
-                    // **Отклонение кастомной прошивки:** Если кастомная прошивка не доставляет callback —
-                    // это проблема кастомной прошивки.
-                    //
-                    // **Стратегия приложения:** Очищаем manualResolutionCache для слотов,
-                    // которых нет в активном списке.
+                    // Отклонение кастомной прошивки: если callback не доставляется
+                    // при изменении разрешений — это проблема прошивки.
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     manualResolutionCache.keys.removeAll { it !in activeSlots }
                 }
@@ -354,19 +353,23 @@ class SimIdentityRepositoryImpl
         /**
          * Возвращает стабильную идентичность SIM для указанного слота.
          *
+         * **Строгое соблюдение API:** на AOSP `getIdentity()` не бросает исключений при
+         * корректном состоянии DataStore и наличии SIM. `SeedUnavailableException` возможен
+         * только при деградации хранилища на кастомной прошивке (проблема прошивки).
+         *
+         * **Эвристика в пределах критерия надёжности:** при `subId == -1` (кастомная прошивка
+         * не передала subscription ID) применяется fallback на `getDefaultVoiceSubscriptionId()`.
+         *
          * Точки возврата:
          * 1. activeSimsCache — SIM найдена в кэше активных.
          * 2. manualResolutionCache — SIM найдена в ручном кэше (TTL не истёк).
          * 3. findActiveIdentityInternal — SIM найдена прямым запросом.
          *
          * Исключения:
-         * - [SeedUnavailableException] — identity seed недоступен (деградация хранилища).
-         * - [SimNotFoundException] — SIM физически отсутствует в слоте.
-         * - [IllegalArgumentException] — slot вне допустимого диапазона.
-         *
-         * Строгое соблюдение API: на AOSP getIdentity() не бросает исключений
-         * при корректном состоянии DataStore. Исключения здесь указывают на
-         * деградацию хранилища на кастомной прошивке или физическое отсутствие SIM.
+         * - [SeedUnavailableException]: identity seed недоступен (деградация хранилища или SecurityException).
+         * - [SimNotFoundException]: SIM физически отсутствует в слоте.
+         * - [IllegalArgumentException]: slot вне допустимого диапазона.
+         * - [CancellationException]: пробрасывается для корректной отмены корутины.
          *
          * @param slot Индекс слота SIM. Должен быть в [SimConstants.SUPPORTED_SLOT_INDICES].
          */
@@ -433,15 +436,13 @@ class SimIdentityRepositoryImpl
                         // exhaustiveness на этапе компиляции. При добавлении нового варианта
                         // SeedResult компилятор потребует обработать его явно.
                         findActiveIdentityInternal(slot, realSeed)
+                    } catch (e: SecurityException) {
+                        AppLogger.w("Permission revoked during identity resolution for slot $slot", e)
+                        throw SeedUnavailableException(slot)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        // Строгое соблюдение API: на AOSP getActiveSubscriptions() возвращает
-                        // пустой список при отсутствии разрешения, не бросая исключений.
-                        // SecurityException возможен только на кастомных прошивках,
-                        // не соответствующих документации Google. Обрабатываем его
-                        // как SeedUnavailableException для единообразия.
-                        AppLogger.w("Permission revoked during identity resolution for slot $slot", e)
+                        AppLogger.e("Identity resolution failed for slot $slot: ${e.javaClass.simpleName}", e)
                         throw SeedUnavailableException(slot)
                     } ?: throw SimNotFoundException(slot)
 

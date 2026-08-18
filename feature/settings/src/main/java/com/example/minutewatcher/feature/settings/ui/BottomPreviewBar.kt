@@ -28,9 +28,8 @@ fun BottomPreviewBar(
     isSaving: Boolean,
     /**
      * suspend-функция сохранения настроек. Вызывается в CoroutineScope, созданном внутри BottomPreviewBar.
-     * Возвращает [SaveResult] для обработки результата.
      */
-    onSave: suspend () -> SaveResult,
+    onSave: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 

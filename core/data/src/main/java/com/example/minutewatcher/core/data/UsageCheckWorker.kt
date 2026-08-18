@@ -38,6 +38,16 @@ class UsageCheckWorker
         private val deps: UsageWorkerDependencies,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : CoroutineWorker(context, params) {
+        /**
+         * Выполняет периодическую проверку использования.
+         *
+         * **Строгое соблюдение API:** на AOSP refresh() завершается за миллисекунды.
+         * Таймаут 30 сек — защитный запас.
+         *
+         * **Отклонение кастомной прошивки:** таймаут указывает на деградацию
+         * DataStore на кастомной прошивке. Это проблема прошивки.
+         * Стратегия: Result.retry() — система повторит Worker позже.
+         */
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
                 try {
@@ -66,12 +76,23 @@ class UsageCheckWorker
             return checkUsageAndNotify()
         }
 
+        @Suppress("ReturnCount")
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
 
             if (!tryPerformAutoReset()) return Result.retry()
 
-            return when (val refreshResult = deps.usageStateRepository.refresh()) {
+            val refreshResult =
+                withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
+                    deps.usageStateRepository.refresh()
+                }
+
+            if (refreshResult == null) {
+                AppLogger.e("UsageCheckWorker: refresh timed out after ${WORKER_REFRESH_TIMEOUT_MS}ms")
+                return Result.retry()
+            }
+
+            return when (refreshResult) {
                 is RefreshResult.Timeout -> handleRefreshTimeout(refreshResult)
                 else -> {
                     processSuccessfulRefresh(refreshResult.snapshot)
@@ -391,5 +412,7 @@ class UsageCheckWorker
              * в пределах нескольких секунд.
              */
             private const val WORKER_TIMEOUT_MS = 120_000L // 2 минуты
+
+            private const val WORKER_REFRESH_TIMEOUT_MS = 30_000L
         }
     }

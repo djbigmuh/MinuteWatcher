@@ -16,11 +16,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Tracks mobile traffic usage for the device.
@@ -162,44 +165,44 @@ class TrafficTracker
         /**
          * Обновляет данные о трафике для текущей default data SIM.
          *
-         * **Строгое соблюдение API:** на AOSP NetworkStatsManager.querySummaryForDevice
-         * возвращает монотонно возрастающее значение для одной SIM.
-         * DataStore.edit сериализует записи на уровне хранилища.
+         * **Строгое соблюдение API:** на AOSP `observeActiveSims()` и `getSimUsage()`
+         * завершаются за миллисекунды. Таймаут `LONG_TIMEOUT_MS` (10 сек) — защитный запас.
          *
-         * **Отклонение кастомной прошивки:** если NetworkStatsManager возвращает
-         * немонотонные значения без смены SIM — это проблема кастомной прошивки.
-         * Если observeActiveSims() не эмитит значение в течение таймаута —
-         * это проблема кастомной прошивки (деградация DataStore).
+         * **Отклонение кастомной прошивки:** таймаут указывает на деградацию DataStore
+         * на кастомной прошивке. Это проблема прошивки.
          *
-         * **Стратегия приложения:** при таймауте observeActiveSims() обновление
-         * пропускается, статус переводится в Error. Повторная попытка при
-         * следующем вызове updateTrafficUsage().
+         * **Стратегия:** при таймауте статус переводится в Error, метод возвращает управление.
+         * Повторная попытка при следующем вызове Worker.
          *
          * @throws java.io.IOException if DataStore write fails
          * @throws SecurityException if permission is revoked during operation
          */
         @Suppress("ReturnCount")
-        // Подавление ReturnCount оправдано: метод содержит несколько защитных проверок (права, таймаут,
-        // отсутствие SIM), ранний выход из которых обеспечивает линейную читаемость логики обновления.
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
                     if (!checkPermissions()) return
 
-                    val activeSims = getActiveSimsAndCleanup()
+                    var activeSims =
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            simIdentityRepository.observeActiveSims().first()
+                        }
+
                     if (activeSims == null) {
-                        // getActiveSimsAndCleanup() возвращает null при таймауте observeActiveSims().
-                        //
-                        // Строгое соблюдение API: на AOSP observeActiveSims() эмитит значение
-                        // в течение миллисекунд. Таймаут здесь указывает на деградацию DataStore
-                        // на кастомной прошивке, не соответствующей документации Google.
-                        // Это проблема кастомной прошивки.
-                        //
-                        // Эвристика в пределах критерия надёжности: при таймауте обновление
-                        // трафика пропускается, статус устанавливается в Error. Повторная попытка
-                        // будет выполнена при следующем вызове updateTrafficUsage().
-                        // Данные не теряются — просто не обновляются до восстановления хранилища.
-                        handleIdentityReadTimeout()
+                        AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
+                        activeSims =
+                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                simIdentityRepository.observeActiveSims().first()
+                            }
+                    }
+
+                    if (activeSims == null) {
+                        AppLogger.e("TrafficTracker: observeActiveSims timed out after retry")
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "SIM list read timeout",
+                            )
                         return
                     }
                     if (activeSims.isEmpty()) {
@@ -242,30 +245,6 @@ class TrafficTracker
             }
         }
 
-        /**
-         * Обработка таймаута чтения идентичностей при обновлении трафика.
-         * Identity read timeout — это переходное состояние; статус будет восстановлен
-         * при следующем успешном обновлении.
-         */
-        private fun handleIdentityReadTimeout() {
-            AppLogger.w(
-                "TrafficTracker: observeActiveSims timed out, skipping update. " +
-                    "baselineNeedsRetry cleanup deferred due to activeSims timeout",
-            )
-            // **Контракт AOSP:** на AOSP observeActiveSims() не возвращает null (таймаут) при
-            // корректном состоянии DataStore.
-            //
-            // **Отклонение кастомной прошивки:** Таймаут указывает на деградацию хранилища на
-            // кастомных прошивках, не соответствующих документации Google. Это проблема кастомной прошивки.
-            //
-            // **Стратегия приложения:** обновление пропускается, статус переводится в Error.
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Identity read timeout in TrafficTracker",
-                )
-        }
-
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
             val result = targetResolver.resolve(activeSims)
 
@@ -300,36 +279,6 @@ class TrafficTracker
                     performTrafficUpdate(target, targetIdentity)
                 }
             }
-        }
-
-        private suspend fun getActiveSimsAndCleanup(): List<ActiveSimInfo>? {
-            var activeSims =
-                simIdentityRepository
-                    .observeActiveSims()
-                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-
-            if (activeSims == null) {
-                AppLogger.w(
-                    "TrafficTracker: observeActiveSims timed out (${Constants.Flow.LONG_TIMEOUT_MS}ms). " +
-                        "Retrying once...",
-                )
-                activeSims =
-                    simIdentityRepository
-                        .observeActiveSims()
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-            }
-
-            if (activeSims == null) {
-                AppLogger.e("TrafficTracker: observeActiveSims failed after retry due to timeout.")
-                // Возврат null при таймауте: на AOSP observeActiveSims() завершается
-                // в пределах SHORT_TIMEOUT_MS. Таймаут указывает на деградацию DataStore
-                // на кастомной прошивке. Записи baselineNeedsRetry не очищаются здесь,
-                // т.к. без актуального списка SIM невозможно определить, какие записи
-                // устарели. Очистка выполняется грубой проверкой размера в updateTrafficUsage.
-                return null
-            }
-
-            return activeSims
         }
 
         private fun handleSkipDelta(
@@ -401,18 +350,22 @@ class TrafficTracker
             // Это проблема кастомной прошивки.
             //
             // **Стратегия приложения:** Повторная проверка актуальности целевой SIM перед записью.
-            val currentActiveIdentities = simIdentityRepository.getActiveIdentities().firstWithTimeout()
+            val currentActiveIdentities =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    simIdentityRepository.getActiveIdentities().first()
+                }
             if (currentActiveIdentities != null && (targetIdentity !in currentActiveIdentities)) {
                 AppLogger.w("TrafficTracker: target SIM $targetIdentity removed during update, skipping")
                 return
             }
 
             val usage =
-                simUsageRepository
-                    .getSimUsage(targetIdentity)
-                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    simUsageRepository.getSimUsage(targetIdentity).first()
+                }
 
             if (usage == null) {
+                AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
@@ -441,14 +394,15 @@ class TrafficTracker
         ) {
             val lastTotalBytes =
                 if (statsResult is StatsResult.Success) {
-                    simUsageResetRepository
-                        .getLastTotalBytes(targetIdentity)
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        simUsageResetRepository.getLastTotalBytes(targetIdentity).first()
+                    }
                 } else {
                     -1L
                 }
 
             if (lastTotalBytes == null) {
+                AppLogger.e("TrafficTracker: getLastTotalBytes timed out for $targetIdentity")
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
@@ -675,7 +629,10 @@ class TrafficTracker
         private suspend fun ensureInMemoryLastDataSubId() {
             if (inMemoryLastDataSubId != -1) return
 
-            inMemoryLastDataSubId = callSessionRepository.getLastDataSubId().firstWithTimeout() ?: -1
+            inMemoryLastDataSubId =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    callSessionRepository.getLastDataSubId().first()
+                } ?: -1
         }
 
         /**

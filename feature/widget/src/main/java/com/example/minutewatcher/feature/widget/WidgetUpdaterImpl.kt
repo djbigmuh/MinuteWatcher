@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
@@ -42,10 +43,10 @@ class WidgetUpdaterImpl
          * Счётчик обновлений, выполненных в режиме widgetLimitExceeded.
          * Каждое [PROBE_INTERVAL_UPDATES]-е обновление выполняет пробный полный рендер.
          *
-         * НЕ персистится. При рестарте приложения обнуляется.
+         * **Счётчик НЕ персистится.** При перезапуске приложения он обнуляется.
          * Это допустимо: при входе в режим exceeded первый probe произойдёт
-         * через [PROBE_INTERVAL_UPDATES] обновлений (~10 часов при ~1 обновлении/час).
-         * При частых рестартах (< 10 обновлений между рестартами) probe не произойдёт,
+         * через PROBE_INTERVAL_UPDATES обновлений (~10 часов при ~1 обновлении/час).
+         * При частых перезапусках (< 10 обновлений между ними) probe не произойдёт,
          * и устройство останется в упрощённом режиме до следующего probe.
          * Это допустимая эвристика в пределах критерия надёжности:
          * упрощённый layout всегда укладывается в лимит Binder (~1 МБ на AOSP).
@@ -255,8 +256,25 @@ class WidgetUpdaterImpl
          * Стратегия: при падении упрощённого рендера флаг НЕ сбрасывается,
          * повтор не выполняется. Это предотвращает осцилляцию флага.
          */
+        @Suppress("ReturnCount")
         private suspend fun handleLimitExceeded(): UpdateOutcome {
-            val current = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
+            // Читаем флаг напрямую из репозитория, а не из StateFlow,
+            // чтобы избежать stale-значения. На AOSP getAppSettings()
+            // завершается за миллисекунды. Таймаут указывает на деградацию
+            // DataStore на кастомной прошивке. В этом случае безопасно
+            // предполагаем, что лимит превышен, и переходим в упрощённый режим.
+            val currentSettings =
+                appSettingsRepository.getAppSettings().firstWithTimeout(
+                    Constants.Flow.SHORT_TIMEOUT_MS,
+                )
+
+            if (currentSettings == null) {
+                AppLogger.w("handleLimitExceeded: settings read timed out, assuming limit exceeded")
+                setWidgetLimitExceeded(value = true)
+                return UpdateOutcome.Stop
+            }
+
+            val current = currentSettings.widgetLimitExceeded
             if (current) {
                 // Флаг уже установлен (например, probe восстановил его).
                 // Повторный рендер не нужен — предотвращаем осцилляцию.
@@ -291,33 +309,31 @@ class WidgetUpdaterImpl
         /**
          * Пробный полный рендер для проверки, устранена ли причина превышения лимита.
          *
-         * Последовательность (внутри updateMutex.withLock):
-         * 1. Сброс widgetLimitExceeded = false для полного рендера.
-         * 2. Вызов safeUpdateAll(isProbe = true).
-         * 3. При GenericFailure или LimitExceeded: возврат флага = true вручную
-         *    для предотвращения осцилляции и повторного рендера.
-         * 4. При CancellationException или иных исключениях: гарантированное
-         *    восстановление флага = true через try-catch блоки.
-         * 5. При Success: handleUpdateResult подтвердит успех (wasFull = true).
+         * **Строгое соблюдение API:** на AOSP `GlanceAppWidget.updateAll()` — suspend-функция,
+         * завершающаяся до возврата управления. Системные обновления виджета не происходят
+         * параллельно с обновлением приложения.
+         *
+         * **Эвристика в пределах критерия надёжности:** probe выполняется каждые
+         * `PROBE_INTERVAL_UPDATES` обновлений (~10 часов при ~1 обновлении/час).
+         * Этого достаточно для обнаружения устранения причины превышения лимита без
+         * избыточной нагрузки на Binder.
+         *
+         * На кастомной прошивке с уменьшенным Binder-лимитом probe может стабильно падать —
+         * это проблема прошивки.
          *
          * Зачем try/catch: если во время probe сработает таймаут (CancellationException)
          * или произойдёт сбой, флаг должен вернуться в true. Иначе следующая попытка
          * обновления снова начнётся с полного рендера, вызывая бесконечный цикл
          * «полный → таймаут → полный».
-         *
-         * Строгое соблюдение API: на AOSP RemoteViews-лимит ~1 МБ на Binder-транзакцию.
-         * Упрощённый layout always укладывается в этот лимит; выход за него при
-         * упрощённом layout — признак проблемы кастомной прошивки.
-         * GlanceAppWidget.updateAll() на AOSP не бросает TransactionTooLargeException
-         * при корректном lifecycle и объёме < 1 МБ. Если probe падает — это проблема
-         * кастомной прошивки или destroyed context.
-         *
-         * Потокобезопасность: метод вызывается только внутри updateMutex.withLock,
-         * что гарантирует отсутствие конкурентного доступа к widgetLimitExceeded
-         * между установкой false и обработкой результата.
          */
         private suspend fun performProbeUpdate(): UpdateResult {
-            // Доступ только внутри updateMutex.withLock (вызывается из performSingleUpdate)
+            // ВНИМАНИЕ: Между setWidgetLimitExceeded(false) и результатом safeUpdateAll
+            // существует окно, в течение которого системное обновление виджета
+            // (в обход updateMutex) может увидеть флаг false и попытаться
+            // выполнить полный рендер. На AOSP это невозможно, т.к. система
+            // не вызывает updateAppWidget во время активного обновления приложения.
+            // На кастомных прошивках это возможно — это проблема прошивки.
+            // Защита: provideGlance обёрнут в try-catch с fallback-рендером.
             setWidgetLimitExceeded(value = false)
             try {
                 val probeResult = safeUpdateAll(context, isProbe = true)
@@ -529,23 +545,28 @@ class WidgetUpdaterImpl
             /**
              * Интервал пробных полных рендеров в режиме widgetLimitExceeded.
              *
-             * Выбор значения: 10 обновлений.
-             * При стандартной частоте обновлений (~1/час) это даёт один probe раз в ~10 часов.
-             * Этого достаточно для обнаружения того, что причина превышения лимита устранена
-             * (например, пользователь удалил лишние SIM или изменил настройки), не создавая
+             * Выбор значения: 10 обновлений. При стандартной частоте обновлений
+             * (~1/час) это даёт один probe раз в ~10 часов. Этого достаточно
+             * для обнаружения устранения причины превышения лимита (например,
+             * пользователь удалил лишние SIM или изменил настройки), не создавая
              * избыточной нагрузки на систему Binder частыми TransactionTooLargeException.
              *
-             * Эвристика в пределах критерия надёжности:
-             * Счётчик [exceededUpdateCounter] НЕ персистится. При рестарте приложения
-             * он обнуляется, и первый probe произойдёт через PROBE_INTERVAL_UPDATES
-             * обновлений. При ~1 обновлении/час probe выполняется раз в ~10 часов.
-             * Это допустимо: на AOSP RemoteViews-лимит ~1 МБ на Binder-транзакцию,
-             * и упрощённый layout всегда укладывается в этот лимит. Если probe падает —
-             * проблема кастомной прошивки с уменьшенным Binder-лимитом.
+             * **Счётчик [exceededUpdateCounter] НЕ персистится.** При перезапуске
+             * приложения он обнуляется, и первый probe произойдёт через
+             * PROBE_INTERVAL_UPDATES обновлений. Это допустимая эвристика:
+             * при ~1 обновлении/час probe выполнится раз в ~10 часов.
+             * При частых перезапусках (< 10 обновлений между ними) probe
+             * не произойдёт, и устройство останется в упрощённом режиме.
+             * Это допустимо: упрощённый layout всегда укладывается в лимит
+             * Binder (~1 МБ на AOSP).
              *
-             * Строгое соблюдение API: на AOSP RemoteViews-лимит составляет ~1 МБ.
-             * Упрощённый layout (~100 байт) always укладывается.
-             * TransactionTooLargeException при упрощённом layout на AOSP невозможен.
+             * **Строгое соблюдение API:** на AOSP RemoteViews-лимит ~1 МБ
+             * на Binder-транзакцию. Упрощённый layout (~100 байт) всегда
+             * укладывается. TransactionTooLargeException при упрощённом layout
+             * на AOSP невозможен.
+             *
+             * **Отклонение кастомной прошивки:** если probe стабильно падает,
+             * это проблема кастомной прошивки с уменьшенным Binder-лимитом.
              */
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val PROBE_INTERVAL_UPDATES = 10

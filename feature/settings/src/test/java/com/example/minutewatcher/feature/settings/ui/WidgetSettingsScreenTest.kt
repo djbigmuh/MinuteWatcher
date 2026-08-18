@@ -81,7 +81,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = { SaveResult.Success },
+                onSave = {},
             )
         }
 
@@ -100,7 +100,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = { SaveResult.Success },
+                onSave = {},
             )
         }
 
@@ -116,7 +116,7 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = { SaveResult.Success },
+                onSave = {},
             )
         }
 
@@ -135,7 +135,6 @@ class WidgetSettingsScreenTest {
                 onBack = {},
                 onSave = {
                     saved = true
-                    SaveResult.Success
                 },
             )
         }

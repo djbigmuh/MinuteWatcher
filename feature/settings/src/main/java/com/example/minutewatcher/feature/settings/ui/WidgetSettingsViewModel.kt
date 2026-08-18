@@ -158,44 +158,36 @@ class WidgetSettingsViewModel
         /**
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          *
-         * Строгое соблюдение API: если settingsLoadFailed = true, сохранение
+         * Результат операции доставляется исключительно через [saveResult].
+         *
+         * **Строгое соблюдение API:** если settingsLoadFailed = true, сохранение
          * блокируется. Это предотвращает перезапись реальных настроек
          * дефолтными значениями из fallback-состояния.
-         * На AOSP WidgetSettingsLoader.load() завершается за миллисекунды.
-         * Таймаут указывает на деградацию хранилища на кастомной прошивке.
-         * Повторная попытка через retryLoad() — единственная стратегия восстановления.
          *
-         * Точки возврата:
-         * 1. SaveResult.AlreadyInProgress — сохранение уже выполняется (защита от гонки).
-         * 2. SaveResult.Failed — загрузка настроек завершилась ошибкой ранее.
-         * 3. SaveResult.Failed — состояние ещё не загружено (null).
-         * 4. SaveResult.PartialSuccess(skippedSimSettings=true) — simListLoadFailed:
-         *    сохраняются только общие настройки (skipSimSettings=true).
-         *    SIM-специфичные настройки пропускаются для предотвращения потери данных.
-         * 5. SaveResult.Success — нормальное сохранение всех настроек.
+         * **Отклонение кастомной прошивки:** [SaveResult.PartialSuccess] возникает при
+         * simListLoadFailed == true (деградация хранилища на кастомной прошивке).
+         * Это проблема прошивки. SIM-настройки пропускаются для предотвращения потери данных.
          *
-         * @Suppress("ReturnCount") оправдан: каждая точка возврата соответствует
-         * отдельному защитному кейсу. Объединение снизило бы читаемость.
+         * Точки завершения:
+         * 1. [SaveResult.AlreadyInProgress] — сохранение уже выполняется.
+         * 2. [SaveResult.Failed] — загрузка настроек завершилась ошибкой ранее или состояние null.
+         * 3. [SaveResult.PartialSuccess] — сохраняются только общие настройки.
+         * 4. [SaveResult.Success] — нормальное сохранение всех настроек.
          */
-        @Suppress("ReturnCount")
-        suspend fun saveAndNotify(): SaveResult {
+        suspend fun saveAndNotify() {
             if (!saveMutex.tryLock()) {
-                // Не записываем в _saveResult, чтобы не перезаписать предыдущий результат.
-                // UI получит AlreadyInProgress напрямую из возвращаемого значения.
-                return SaveResult.AlreadyInProgress
+                _saveResult.value = SaveResult.AlreadyInProgress
+                return
             }
-            return try {
+            try {
                 _isSaving.value = true
                 val result = performSaveInternal()
                 _saveResult.value = result
-                result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)
-                val result = SaveResult.Failed
-                _saveResult.value = result
-                result
+                _saveResult.value = SaveResult.Failed
             } finally {
                 _isSaving.value = false
                 saveMutex.unlock()

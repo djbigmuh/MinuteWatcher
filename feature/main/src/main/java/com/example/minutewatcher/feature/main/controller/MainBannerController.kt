@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
@@ -65,6 +66,8 @@ class MainBannerController
 
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
+        // Доступ только внутри retryWhen (один поток коллекционирования).
+        // Не требует AtomicLong.
         private var observationRetryCount = 0L
 
         /**
@@ -87,6 +90,9 @@ class MainBannerController
          * Мьютекс сериализует обновление счётчика [observationRetryCount].
          */
         private val resetMutex = Mutex()
+
+        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+        val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private suspend fun handleSuccess() {
             resetMutex.withLock {
@@ -143,16 +149,23 @@ class MainBannerController
         /**
          * Состояние баннеров отслеживания.
          *
-         * **Стратегия retry:** бесконечные повторные попытки с экспоненциальной
-         * задержкой (cap 30 с). Это **намеренное** поведение: UI должен
-         * продолжать попытки восстановления баннеров даже после временных сбоев.
+         * Стратегия повторных попыток наблюдения за баннерами.
          *
          * **Строгое соблюдение API:** на AOSP combine из StateFlow не бросает
          * исключений. Сбой наблюдения возможен только при деградации хранилища
-         * на кастомной прошивке, не соответствующей документации Google.
+         * на кастомной прошивке (проблема прошивки).
          *
-         * **Эвристика в пределах критерия надёжности:** cap 30 с предотвращает
-         * избыточную нагрузку. Максимальная частота попыток — 1 раз в 30 секунд.
+         * **Эвристика в пределах критерия надёжности:** бесконечные повторные
+         * попытки с экспоненциальной задержкой (cap 30 сек). Максимальная
+         * частота — 1 раз в 30 секунд. Отсутствие верхнего предела попыток
+         * является осознанным решением: UI должен продолжать попытки
+         * восстановления баннеров даже после временных сбоев.
+         *
+         * **Отклонение кастомной прошивки:** если наблюдение стабильно падает,
+         * это проблема кастомной прошивки. Стратегия: бесконечные попытки
+         * с cap 30 сек. Пользователь видит ошибку через статус.
+         *
+         * При успешной эмиссии статус восстанавливается в Active.
          */
         val trackingBannerState: StateFlow<TrackingBannerState> =
             combine(
@@ -188,11 +201,22 @@ class MainBannerController
                 )
             }.onEach {
                 handleSuccess()
+                if (_status.value != TrackingStatus.Active) {
+                    _status.value = TrackingStatus.Active
+                }
             }.retryWhen { cause, _ ->
                 // CancellationException (кроме TimeoutCancellationException) пробрасывается
                 // для корректной отмены корутины. Это строгое соблюдение API kotlinx.coroutines.
                 if (cause is CancellationException && cause !is TimeoutCancellationException) {
                     throw cause
+                }
+
+                if (_status.value !is TrackingStatus.Error) {
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Banner observation failed: ${cause.message}",
+                        )
                 }
 
                 val currentRetry =

@@ -26,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,16 +39,14 @@ import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
-import kotlinx.coroutines.launch
 
 @Composable
 fun WidgetSettingsScreen(
     viewModel: WidgetSettingsViewModel,
     /**
      * suspend-функция сохранения настроек. Вызывается в CoroutineScope, созданном внутри BottomPreviewBar.
-     * Возвращает [SaveResult] для обработки результата.
      */
-    onSave: suspend () -> SaveResult,
+    onSave: suspend () -> Unit,
     onBack: () -> Unit,
 ) {
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
@@ -150,19 +147,36 @@ private fun WidgetSettingsContent(
     uiState: WidgetUiState?,
     isSaving: Boolean,
     viewModel: WidgetSettingsViewModel,
-    onSave: suspend () -> SaveResult,
+    onSave: suspend () -> Unit,
     onBack: () -> Unit,
 ) {
     var showColorPicker by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val saveResult by viewModel.saveResult.collectAsStateWithLifecycle()
+
+    val successMessage = stringResource(id = R.string.settings_saved_toast)
+    val partialSuccessMessage = stringResource(id = R.string.settings_save_partial_success)
+    val failedMessage = stringResource(id = R.string.settings_save_failed)
     val alreadyInProgressMessage = stringResource(id = R.string.settings_save_already_in_progress)
 
     LaunchedEffect(saveResult) {
-        saveResult?.let {
-            // Success, PartialSuccess и Failed обрабатываются здесь.
-            // AlreadyInProgress обрабатывается напрямую в BottomPreviewBar.
+        saveResult?.let { result ->
+            val message =
+                when (result) {
+                    SaveResult.Success -> successMessage
+                    is SaveResult.PartialSuccess -> partialSuccessMessage
+                    SaveResult.Failed -> failedMessage
+                    SaveResult.AlreadyInProgress -> alreadyInProgressMessage
+                }
+
+            snackbarHostState.showSnackbar(message)
+
+            if (result is SaveResult.Success || result is SaveResult.PartialSuccess) {
+                // В данной реализации мы остаемся на экране, чтобы пользователь мог
+                // увидеть Snackbar с подтверждением (особенно для PartialSuccess).
+                // Если бизнес-логика требует закрытия экрана, здесь можно вызвать onBack().
+            }
+
             viewModel.consumeSaveResult()
         }
     }
@@ -187,15 +201,7 @@ private fun WidgetSettingsContent(
             BottomPreviewBar(
                 uiState = uiState,
                 isSaving = isSaving,
-                onSave = {
-                    val result = onSave()
-                    if (result is SaveResult.AlreadyInProgress) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(alreadyInProgressMessage)
-                        }
-                    }
-                    result
-                },
+                onSave = onSave,
             )
         },
     ) { paddingValues ->

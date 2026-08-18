@@ -129,25 +129,13 @@ class MainSimDataController
         /**
          * Выполняет операцию над SIM-картой с единой обработкой ошибок.
          *
-         * Стратегия обработки исключений:
-         * - [SeedUnavailableException]: SIM identity недоступен из-за деградации DataStore.
-         *   На AOSP невозможно при корректном состоянии хранилища. Проблема кастомной прошивки.
-         *   Ошибка сохраняется в [lastOperationError] для отображения в UI.
-         * - [SimNotFoundException]: SIM извлечён между отображением UI и вызовом операции.
-         *   Штатная ситуация. Ошибка сохраняется в [lastOperationError].
-         * - [IllegalArgumentException]: slot вне диапазона. Программная ошибка.
-         *   Ошибка сохраняется в [lastOperationError].
-         * - [CancellationException]: пробрасывается для кооперативной отмены корутины.
-         *   Строгое соблюдение API kotlinx.coroutines.
-         * - Любое другое [Exception]: непредвиденная ошибка.
-         *   Ошибка сохраняется в [lastOperationError].
-         *
-         * Потокобезопасность: операции выполняются на [ioDispatcher]. Конкурентные
-         * вызовы для одного слота возможны, но каждая операция атомарна на уровне
-         * DataStore (DataStore.edit сериализует записи на уровне хранилища).
-         * На AOSP DataStore.edit сериализует записи. Отклонение кастомной прошивки:
-         * если DataStore на кастомной прошивке не обеспечивает атомарность —
-         * это проблема кастомной прошивки.
+         * Возможные исключения в [block]:
+         * - [SeedUnavailableException]: Означает деградацию хранилища на кастомной прошивке.
+         *   Это проблема прошивки, а не проекта. Ошибка сохраняется в [lastOperationError].
+         * - [SimNotFoundException]: Штатная ситуация. SIM извлечена между отображением UI
+         *   и вызовом операции. Ошибка сохраняется в [lastOperationError].
+         * - [CancellationException]: Пробрасывается для корректной отмены корутины.
+         * - [Exception]: Любая другая непредвиденная ошибка. Ошибка сохраняется в [lastOperationError].
          *
          * @param slot Индекс слота SIM.
          * @param operationName Название операции для логирования.
@@ -164,30 +152,25 @@ class MainSimDataController
                 try {
                     block()
                 } catch (e: SeedUnavailableException) {
-                    // Порядок catch-блоков критичен: SeedUnavailableException и
-                    // SimNotFoundException — подклассы IllegalStateException, который
-                    // является подклассом Exception. Специфичные исключения должны
-                    // ловиться ДО общего catch(Exception).
-                    //
-                    // **Строгое соблюдение API:** на AOSP getIdentity() не бросает
-                    // SeedUnavailableException. DataStore отвечает < 100 мс.
-                    // SeedUnavailableException возможен только при деградации хранилища
-                    // на кастомной прошивке, не соответствующей документации Google.
-                    // Это проблема кастомной прошивки.
-                    //
-                    // SimNotFoundException означает, что SIM была извлечена между
-                    // отображением UI и вызовом операции. Это штатная ситуация.
-                    handleSimIdentityError(slot, operationName, e)
+                    AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
+                    _lastOperationError.value =
+                        OperationError(
+                            "Storage unavailable for slot ${e.slot}. Retry later.",
+                            e.slot,
+                        )
                     return@launch
                 } catch (e: SimNotFoundException) {
-                    handleSimIdentityError(slot, operationName, e)
+                    AppLogger.w("SimNotFoundException during $operationName for slot $slot", e)
+                    _lastOperationError.value =
+                        OperationError(
+                            "SIM was removed from slot ${e.slot}",
+                            e.slot,
+                        )
                     return@launch
                 } catch (e: CancellationException) {
                     // CancellationException пробрасывается для кооперативной отмены корутины.
                     // Это строгое соблюдение API kotlinx.coroutines: CancellationException
                     // должен всегда пробрасываться для корректной отмены scope.
-                    // Пользователь не получает обратную связь при отмене — это штатное
-                    // поведение (например, при уходе с экрана во время операции).
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
@@ -200,11 +183,6 @@ class MainSimDataController
                 try {
                     onRefresh()
                 } catch (e: CancellationException) {
-                    // CancellationException пробрасывается для кооперативной отмены корутины.
-                    // Это строгое соблюдение API kotlinx.coroutines: CancellationException
-                    // должен всегда пробрасываться для корректной отмены scope.
-                    // Пользователь не получает обратную связь при отмене — это штатное
-                    // поведение (например, при уходе с экрана во время операции).
                     throw e
                 } catch (e: Exception) {
                     // На AOSP refresh() не бросает исключений.
@@ -351,40 +329,6 @@ class MainSimDataController
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
-                }
-            }
-        }
-
-        /**
-         * Обрабатывает ошибки резолва идентичности SIM.
-         *
-         * **Строгое соблюдение API:** На AOSP getIdentity() не бросает исключений
-         * при корректном состоянии DataStore и наличии SIM. SeedUnavailableException
-         * и SimNotFoundException возможны только при деградации хранилища
-         * или физическом извлечении SIM между UI-действием и записью.
-         *
-         * **Отклонение кастомной прошивки:** Если кастомная прошивка не обеспечивает
-         * своевременный ответ DataStore — это проблема кастомной прошивки.
-         */
-        private fun handleSimIdentityError(
-            slot: Int,
-            operation: String,
-            e: IllegalStateException,
-        ) {
-            when (e) {
-                is SeedUnavailableException -> {
-                    AppLogger.e("SIM identity resolution failed for slot $slot: seed unavailable", e)
-                    _lastOperationError.value = OperationError("Storage error for slot $slot", slot)
-                }
-
-                is SimNotFoundException -> {
-                    AppLogger.w("SIM was removed from slot $slot, skipping $operation", e)
-                    _lastOperationError.value = OperationError("SIM was removed from slot $slot", slot)
-                }
-
-                else -> {
-                    AppLogger.e("MainSimDataController: $operation failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
                 }
             }
         }

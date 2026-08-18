@@ -93,10 +93,10 @@ class WidgetSettingsViewModelTest {
         runTest {
             whenever(saver.save(any(), any())).thenReturn(true)
             testScheduler.advanceUntilIdle()
-            val result = viewModel.saveAndNotify()
+            viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Success, result)
+            assertEquals(SaveResult.Success, viewModel.saveResult.value)
             verify(saver).save(any(), any())
         }
 
@@ -119,34 +119,31 @@ class WidgetSettingsViewModelTest {
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             testScheduler.advanceUntilIdle()
 
-            var firstResult: SaveResult? = null
-            val secondResult: SaveResult?
-
-            launch { firstResult = vm.saveAndNotify() }
+            launch { vm.saveAndNotify() }
             testScheduler.runCurrent()
             assertTrue(vm.isSaving.value)
 
-            secondResult = vm.saveAndNotify()
-            // В новом варианте второй вызов возвращает отказ сразу, так как сохранение уже в процессе
-            assertEquals(SaveResult.AlreadyInProgress, secondResult)
+            vm.saveAndNotify()
+            // В новом варианте второй вызов записывает AlreadyInProgress в StateFlow
+            assertEquals(SaveResult.AlreadyInProgress, vm.saveResult.value)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Success, firstResult)
+            assertEquals(SaveResult.Success, vm.saveResult.value)
             assertFalse(vm.isSaving.value)
         }
 
     @Test
-    fun `saveAndNotify returns Failed on exception`() =
+    fun `saveAndNotify sets Failed on exception`() =
         runTest {
             whenever(saver.save(any(), any())).thenThrow(RuntimeException("Save failed"))
             testScheduler.advanceUntilIdle()
 
-            val result = viewModel.saveAndNotify()
+            viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed, result)
+            assertEquals(SaveResult.Failed, viewModel.saveResult.value)
         }
 
     @Test
@@ -233,14 +230,15 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `saveAndNotify returns Success with skipSimSettings when simListLoadFailed is true`() =
+    fun `saveAndNotify sets PartialSuccess when simListLoadFailed is true`() =
         runTest {
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(simListLoadFailed = true) }
 
-            val result = viewModel.saveAndNotify()
+            viewModel.saveAndNotify()
+            testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.PartialSuccess(skippedSimSettings = true), result)
+            assertEquals(SaveResult.PartialSuccess(skippedSimSettings = true), viewModel.saveResult.value)
             verify(saver).save(any(), eq(true))
         }
 }
