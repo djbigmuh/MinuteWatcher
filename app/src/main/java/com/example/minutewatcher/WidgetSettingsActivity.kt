@@ -14,19 +14,11 @@ import com.example.minutewatcher.feature.settings.ui.WidgetSettingsScreen
 import com.example.minutewatcher.feature.settings.ui.WidgetSettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * Активность настроек виджета.
- *
- * ВАЖНО: Класс ОБЯЗАТЕЛЬНО должен быть помечен аннотацией [@AndroidEntryPoint],
- * чтобы Hilt мог внедрить [WidgetSettingsViewModel]. Отсутствие этой аннотации
- * приведет к крашу при вызове hiltViewModel() из-за ошибки конфигурации DI.
- */
 @AndroidEntryPoint
 class WidgetSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContent {
             val viewModel: WidgetSettingsViewModel = hiltViewModel()
             MinuteWatcherTheme {

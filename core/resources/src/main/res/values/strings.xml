@@ -16,8 +16,8 @@
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Settings saved</string>
-    <string name="settings_save_partial_success" tools:ignore="MissingTranslation">General settings saved. SIM settings skipped (SIM list unavailable)</string>
-    <string name="settings_save_failed" tools:ignore="MissingTranslation">Save failed</string>
+    <string name="settings_save_partial_success">General settings saved. SIM settings skipped (SIM list unavailable)</string>
+    <string name="settings_save_failed">Save failed</string>
     <string name="settings_save_already_in_progress">Saving already in progress</string>
     <string name="language_system">System</string>
     <string name="language_en">English</string>

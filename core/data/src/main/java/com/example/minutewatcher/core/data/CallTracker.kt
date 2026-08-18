@@ -151,7 +151,21 @@ class CallTracker
         }
 
         /**
-         * Called when ACTION_PHONE_STATE_CHANGED receives OFFHOOK.
+         * Вызывается при получении ACTION_PHONE_STATE_CHANGED с EXTRA_STATE_OFFHOOK.
+         *
+         * Стратегия обработки исключений:
+         * - [SecurityException]: обрабатывается отдельно, устанавливает
+         *   TrackingStatus.ErrorType.PERMISSION_MISSING.
+         * - [CancellationException]: пробрасывается для кооперативной отмены.
+         * - Все остальные исключения: логируются, устанавливается
+         *   TrackingStatus.ErrorType.UNKNOWN.
+         *
+         * Строгое соблюдение API: на AOSP handleCallStartInternal не бросает
+         * исключений при корректном состоянии DataStore. Сбой указывает на
+         * деградацию хранилища на кастомной прошивке. Это проблема кастомной прошивки.
+         *
+         * В блоке finally вызывается refreshStatus() для актуализации статуса.
+         * NonCancellable гарантирует выполнение даже при отмене корутины.
          */
         suspend fun onCallStarted(subId: Int) {
             callMutex.withLock {

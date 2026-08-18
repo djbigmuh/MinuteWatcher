@@ -87,6 +87,16 @@ class SimWidgetVisibilityRepositoryImpl
          */
         override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
             val activeSet = activeIdentities.toSet()
+            // Защита fallback-ключей: ключи вида "sim_<число>" никогда не удаляются
+            // автоматически. Это последний уровень защиты при отсутствии стабильных
+            // идентификаторов (например, после сброса настроек сети или на старых API).
+            //
+            // Строгое соблюдение API: regex ^sim_\d+$ гарантирует, что только
+            // ключи с числовым суффиксом защищаются. Ключи вида "sim_abc"
+            // (не числовой суффикс) НЕ защищаются и могут быть удалены как orphaned.
+            // На AOSP все fallback-ключи имеют формат "sim_<число>".
+            // Отклонение кастомной прошивки: если прошивка генерирует
+            // нечисловые суффиксы — это проблема кастомной прошивки.
             val fallbackRegex = Regex("^sim_\\d+$")
 
             dataStore.edit { prefs ->
@@ -153,6 +163,12 @@ class SimWidgetVisibilityRepositoryImpl
                     val isValid =
                         identity.startsWith("icc_") ||
                             identity.startsWith("sub_") ||
+                            // Проверка на fallback-ключи: identity начинается с "sim_".
+                            // На AOSP все fallback-ключи имеют формат "sim_<число>".
+                            // Если identity не начинается с допустимого префикса (icc_, sub_, sim_),
+                            // он считается невалидным и возвращается null.
+                            // Отклонение кастомной прошивки: если прошивка генерирует
+                            // нестандартные форматы identity — это проблема кастомной прошивки.
                             identity.startsWith("sim_")
 
                     return if (isValid) identity else null

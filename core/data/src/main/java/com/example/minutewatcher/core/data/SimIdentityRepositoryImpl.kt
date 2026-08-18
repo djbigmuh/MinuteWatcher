@@ -93,7 +93,7 @@ class SimIdentityRepositoryImpl
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         /**
-         * Кэш результатов прямого резолва SIM identity.
+         * Кеш результатов прямого резолва SIM identity.
          * Используется ТОЛЬКО когда SIM не найдена в [activeSimsCache].
          *
          * Инвалидация:
@@ -101,15 +101,16 @@ class SimIdentityRepositoryImpl
          * - При истечении TTL ([MANUAL_RESOLUTION_CACHE_TTL_MS]).
          * - При нахождении SIM в [activeSimsCache] (запись удаляется).
          *
-         * Кэш НЕ инвалидируется при изменении разрешений напрямую.
-         * Инвалидация происходит только через эмиссию activeSimsCache,
-         * которая зависит от permissionStateNotifier.changes.
-         * На AOSP SubscriptionManager.OnSubscriptionsChangedListener доставляет
-         * callback при каждом изменении подписок. Если кастомная прошивка
-         * не доставляет callback при изменении разрешений — это проблема
-         * кастомной прошивки.
+         * Строгое соблюдение API: на AOSP observeActiveSims() эмитит значения
+         * последовательно. WhileSubscribed гарантирует остановку потока при
+         * отсутствии подписчиков. Если наблюдатель остановлен, stale-записи
+         * сохраняются до следующего запуска. Это допустимо: TTL ограничивает
+         * время жизни записи.
          *
-         * Потокобезопасность: [ConcurrentHashMap] обеспечивает потокобезопасность.
+         * Отклонение кастомной прошивки: если observeActiveSims() не эмитит
+         * при изменении SIM — это проблема кастомной прошивки.
+         *
+         * Потокобезопасность: ConcurrentHashMap обеспечивает потокобезопасность.
          * TTL проверяется через [TimeProvider.elapsedRealtime()] (монотонное время),
          * что исключает влияние перевода системных часов пользователем.
          * На кастомной прошивке, где elapsedRealtime не монотонен, возможна

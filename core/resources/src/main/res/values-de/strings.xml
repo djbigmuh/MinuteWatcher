@@ -16,6 +16,8 @@
 
     <!-- Settings: General -->
     <string name="settings_saved_toast">Einstellungen gespeichert</string>
+    <string name="settings_save_partial_success">Allgemeine Einstellungen gespeichert. SIM-Einstellungen übersprungen (SIM-Liste nicht verfügbar)</string>
+    <string name="settings_save_failed">Speichern fehlgeschlagen</string>
     <string name="settings_save_already_in_progress">Speichern wird bereits durchgeführt</string>
     <string name="language_system">System</string>
     <string name="language_en">Englisch</string>

@@ -195,13 +195,13 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     /**
      * Получает актуальный snapshot для рендера виджета.
      *
-     * **Контракт AOSP:** на AOSP UsageStateRepository.refresh() возвращает Success.
+     * Контракт AOSP: на AOSP UsageStateRepository.refresh() возвращает Success.
      * Монотонное время (elapsedRealtime) гарантирует корректность интервалов.
      *
-     * **Отклонение кастомной прошивки:** Timeout возможен только при деградации хранилища.
+     * Отклонение кастомной прошивки: Timeout возможен только при деградации хранилища.
      * Это проблема кастомной прошивки.
      *
-     * **Стратегия приложения:** Виджет показывает последние данные и индикатор устаревания.
+     * Стратегия приложения: виджет показывает последние данные и индикатор устаревания.
      */
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,

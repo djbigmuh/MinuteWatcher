@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
@@ -66,9 +67,10 @@ class MainBannerController
 
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
-        // Доступ только внутри retryWhen (один поток коллекционирования).
-        // Не требует AtomicLong.
-        private var observationRetryCount = 0L
+        // Потокобезопасный счётчик повторных попыток наблюдения.
+        // Доступ из retryWhen (один поток) и handleSuccess (onEach).
+        // AtomicLong гарантирует корректность при конкурентном доступе.
+        private val observationRetryCount = AtomicLong(0L)
 
         /**
          * Время последнего логирования ошибки наблюдения (elapsedRealtime).
@@ -96,12 +98,13 @@ class MainBannerController
 
         private suspend fun handleSuccess() {
             resetMutex.withLock {
-                if (observationRetryCount > 0) {
+                if (observationRetryCount.get() > 0) {
                     AppLogger.d(
-                        "trackingBannerState: successfully recovered after $observationRetryCount failed attempts",
+                        "trackingBannerState: successfully recovered after " +
+                            "${observationRetryCount.get()} failed attempts",
                     )
                 }
-                observationRetryCount = 0L
+                observationRetryCount.set(0L)
                 lastLoggedTime = 0L
             }
         }
@@ -149,19 +152,18 @@ class MainBannerController
         /**
          * Состояние баннеров отслеживания.
          *
-         * Стратегия повторных попыток наблюдения за баннерами.
+         * Стратегия повторных попыток наблюдения:
+         * - Бесконечные повторные попытки с экспоненциальной задержкой (cap 30 сек).
+         * - Максимальная частота — 1 раз в 30 секунд.
+         * - Отсутствие верхнего предела попыток является осознанным решением:
+         *   UI должен продолжать попытки восстановления баннеров даже после
+         *   временных сбоев.
          *
-         * **Строгое соблюдение API:** на AOSP combine из StateFlow не бросает
+         * Строгое соблюдение API: на AOSP combine из StateFlow не бросает
          * исключений. Сбой наблюдения возможен только при деградации хранилища
          * на кастомной прошивке (проблема прошивки).
          *
-         * **Эвристика в пределах критерия надёжности:** бесконечные повторные
-         * попытки с экспоненциальной задержкой (cap 30 сек). Максимальная
-         * частота — 1 раз в 30 секунд. Отсутствие верхнего предела попыток
-         * является осознанным решением: UI должен продолжать попытки
-         * восстановления баннеров даже после временных сбоев.
-         *
-         * **Отклонение кастомной прошивки:** если наблюдение стабильно падает,
+         * Отклонение кастомной прошивки: если наблюдение стабильно падает,
          * это проблема кастомной прошивки. Стратегия: бесконечные попытки
          * с cap 30 сек. Пользователь видит ошибку через статус.
          *
@@ -221,8 +223,7 @@ class MainBannerController
 
                 val currentRetry =
                     resetMutex.withLock {
-                        observationRetryCount++
-                        observationRetryCount
+                        observationRetryCount.incrementAndGet()
                     }
 
                 val now = timeProvider.elapsedRealtime()

@@ -30,6 +30,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -63,8 +65,12 @@ class SemanticSearchManager
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        private var consecutiveIndexFailures = 0
-        private var lastIndexFailureTime = 0L
+        /**
+         * Потокобезопасные счетчики для отслеживания ошибок индексации.
+         * Доступ из recover() и корутины коллекционирования snapshotFlow.
+         */
+        private val consecutiveIndexFailures = AtomicInteger(0)
+        private val lastIndexFailureTime = AtomicLong(0L)
 
         /**
          * Восстанавливает работу менеджера после ошибки.
@@ -119,7 +125,7 @@ class SemanticSearchManager
                             .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                             .collect { snapshot ->
                                 ensureActive()
-                                if (consecutiveIndexFailures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
+                                if (consecutiveIndexFailures.get() >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                                     // Пропускаем индексацию, но не прерываем коллекционирование.
                                     // Сброс счётчика произойдёт при перезапуске приложения.
                                     return@collect
@@ -137,8 +143,8 @@ class SemanticSearchManager
                                 try {
                                     val success = indexSnapshot(snapshot)
                                     if (success) {
-                                        consecutiveIndexFailures = 0
-                                        lastIndexFailureTime = 0L
+                                        consecutiveIndexFailures.set(0)
+                                        lastIndexFailureTime.set(0L)
                                     } else {
                                         handleIndexFailure()
                                     }
@@ -278,11 +284,11 @@ class SemanticSearchManager
         }
 
         private fun handleIndexFailure() {
-            consecutiveIndexFailures++
-            lastIndexFailureTime = System.currentTimeMillis()
-            if (consecutiveIndexFailures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
+            val failures = consecutiveIndexFailures.incrementAndGet()
+            lastIndexFailureTime.set(System.currentTimeMillis())
+            if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
-                    "SemanticSearchManager: $consecutiveIndexFailures consecutive indexing failures. " +
+                    "SemanticSearchManager: $failures consecutive indexing failures. " +
                         "Further attempts suppressed until next app restart. " +
                         "On AOSP this indicates a system-level issue. " +
                         "On custom firmware this may be a firmware-specific problem.",
@@ -290,7 +296,7 @@ class SemanticSearchManager
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Indexing suppressed after $consecutiveIndexFailures failures",
+                        "Indexing suppressed after $failures failures",
                     )
             }
         }
@@ -457,19 +463,20 @@ class SemanticSearchManager
          * Выполняет обновление индекса: добавление актуальных документов
          * и удаление устаревших.
          *
-         * Порядок операций: сначала put (добавление/обновление актуальных документов),
-         * затем remove (удаление устаревших). Это намеренный порядок:
-         * если put падает, remove всё равно выполняется для очистки stale-документов.
-         * Оба исключения собираются и пробрасываются вместе через throwIfErrors.
+         * Порядок операций: сначала put (добавление/обновление актуальных
+         * документов), затем remove (удаление устаревших).
          *
          * Строгое соблюдение API: на AOSP putDocuments не бросает исключений
          * при корректном состоянии хранилища. Сбой указывает на деградацию
-         * AppSearch на кастомной прошивке, не соответствующей документации Google.
-         * Это проблема кастомной прошивки.
+         * AppSearch на кастомной прошивке. Это проблема кастомной прошивки.
          *
-         * Эвристика в пределах критерия надёжности: при частичном сбое
-         * (put failed, remove succeeded) хэш снапшота сбрасывается,
-         * что гарантирует полную переиндексацию при следующем вызове.
+         * Стратегия при частичном сбое: если put падает, но remove succeeds,
+         * хеш НЕ обновляется. Это гарантирует полную переиндексацию при
+         * следующем вызове. Окно, в котором stale-документы удалены, а новые
+         * не добавлены, допустимо: следующий вызов indexSnapshot восстановит
+         * консистентность.
+         *
+         * Оба исключения собираются и пробрасываются вместе через throwIfErrors.
          */
         private suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,
