@@ -19,66 +19,75 @@ class UsageMonitorReceiver : BroadcastReceiver() {
     ) {
         val action = intent.action
 
-        if ((action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) ||
-            (action == "android.telephony.action.PHONE_STATE_CHANGED")
+        if (action != TelephonyManager.ACTION_PHONE_STATE_CHANGED &&
+            action != "android.telephony.action.PHONE_STATE_CHANGED"
         ) {
-            // goAsync() is REQUIRED: WorkManager.enqueue() is asynchronous and may outlive
-            // the BroadcastReceiver's process lifetime. Without goAsync(), the system kills
-            // the process before enqueuing completes, silently dropping the task.
-            // This is strict Android lifecycle compliance, not an optimization.
-            val pendingResult = goAsync()
-            val appContext = context.applicationContext
-
-            try {
-                val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-
-                if (state == null) {
-                    AppLogger.w("UsageMonitorReceiver: EXTRA_STATE is null, skipping")
-                    return
-                }
-
-                // Try to extract subId using various possible keys for better compatibility
-                val subId =
-                    intent.getIntExtra("subscription", -1).let {
-                        if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
-                    }
-
-                if (subId == -1) {
-                    AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
-                }
-
-                val data =
-                    Data
-                        .Builder()
-                        .putString("state", state)
-                        .putInt("subId", subId)
-                        .build()
-
-                val workRequest =
-                    OneTimeWorkRequestBuilder<CallEventWorker>()
-                        .setInputData(data)
-                        .build()
-
-                val uniqueWorkName =
-                    if (subId != -1) {
-                        "CALL_EVENT_$subId"
-                    } else {
-                        "CALL_EVENT_UNKNOWN"
-                    }
-
-                WorkManager.getInstance(appContext).enqueueUniqueWork(
-                    uniqueWorkName,
-                    ExistingWorkPolicy.APPEND,
-                    workRequest,
-                )
-                AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
-            } finally {
-                pendingResult?.finish()
-            }
+            return
         }
+
+        // goAsync() is REQUIRED: WorkManager.enqueue() is asynchronous and may outlive
+        // the BroadcastReceiver's process lifetime. Without goAsync(), the system kills
+        // the process before enqueuing completes, silently dropping the task.
+        // This is strict Android lifecycle compliance, not an optimization.
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+
+        try {
+            processPhoneStateChange(appContext, intent)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
+        } finally {
+            pendingResult?.finish()
+        }
+    }
+
+    private fun processPhoneStateChange(
+        appContext: Context,
+        intent: Intent,
+    ) {
+        val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+
+        if (state == null) {
+            AppLogger.w("UsageMonitorReceiver: EXTRA_STATE is null, skipping")
+            return
+        }
+
+        // Try to extract subId using various possible keys for better compatibility
+        val subId =
+            intent.getIntExtra("subscription", -1).let {
+                if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
+            }
+
+        if (subId == -1) {
+            AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
+        }
+
+        val data =
+            Data
+                .Builder()
+                .putString("state", state)
+                .putInt("subId", subId)
+                .build()
+
+        val workRequest =
+            OneTimeWorkRequestBuilder<CallEventWorker>()
+                .setInputData(data)
+                .build()
+
+        val uniqueWorkName =
+            if (subId != -1) {
+                "CALL_EVENT_$subId"
+            } else {
+                "CALL_EVENT_UNKNOWN"
+            }
+
+        WorkManager.getInstance(appContext).enqueueUniqueWork(
+            uniqueWorkName,
+            ExistingWorkPolicy.APPEND,
+            workRequest,
+        )
+        AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
     }
 }

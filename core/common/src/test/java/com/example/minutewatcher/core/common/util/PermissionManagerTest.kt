@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.telephony.SubscriptionManager
 import androidx.core.content.ContextCompat
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.Logger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -28,19 +26,25 @@ class PermissionManagerTest {
             override fun d(
                 tag: String,
                 message: String,
-            ) {}
+            ) {
+                // No-op for testing
+            }
 
             override fun w(
                 tag: String,
                 message: String,
                 throwable: Throwable?,
-            ) {}
+            ) {
+                // No-op for testing
+            }
 
             override fun e(
                 tag: String,
                 message: String,
                 throwable: Throwable?,
-            ) {}
+            ) {
+                // No-op for testing
+            }
         }
 
     @Before

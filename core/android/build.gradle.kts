@@ -34,10 +34,6 @@ android {
     }
 }
 
-tasks.withType<Test>().configureEach {
-    systemProperty("robolectric.sdk", 35)
-}
-
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))

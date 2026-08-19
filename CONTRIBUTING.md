@@ -2,6 +2,11 @@
 
 Thank you for your interest in contributing to MinuteWatcher! To maintain high code quality and app stability, we follow a strict testing and architectural policy.
 
+## Development Environment Requirements
+- **JDK 21** (Temurin 21.0.12+) is the mandatory version for all developers.
+- Higher versions (like **JDK 25**) must not be present in the system `PATH` as they cause compatibility issues with Detekt 1.x.
+- Always use `org.gradle.java.home` in your `gradle.properties` to ensure consistency.
+
 ## Testing Policy
 
 Every contribution must be accompanied by appropriate tests. We follow the **Testing Pyramid** approach:

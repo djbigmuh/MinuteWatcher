@@ -62,9 +62,11 @@ The project uses a few non-stable (Beta/Alpha) versions of critical libraries to
 - **Robolectric (Beta)**: Used to ensure compatibility with the latest Jetpack Compose features in unit tests.
 
 
-## Contributing
+## Development Requirements
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our testing policy, architectural guidelines, and code quality standards.
+- **JDK**: JDK 21 (Temurin 21.0.12+ recommended).
+- **Environment**: JDK 25 and other versions should not be in the system `PATH` to avoid leakage into child processes (Detekt/KSP).
+- **Gradle**: Explicitly configured via `org.gradle.java.home` in `gradle.properties` for stability.
 
 ## License
 

@@ -317,80 +317,85 @@ open class SemanticSearchManager
         }
 
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
-            // При hasActiveSims == false currentHash = null.
-            // Если lastSnapshotHash != null (были активные SIM), executeIndexing
-            // выполнится для удаления всех документов. Это корректно, но может
-            // привести к повторному вызову при каждом чередовании пустой/непустой
-            // snapshot. На AOSP это происходит редко (SIM не появляется/исчезает
-            // часто). На кастомных прошивках с нестабильным SubscriptionManager
-            // это может вызвать лишние вызовы — это проблема кастомной прошивки.
             val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
             val currentHash =
                 if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
             return sessionMutex.withLock {
-                // AppSearch indexing is expensive. We use a deterministic hash check:
-                // if (documentHash == persistedHash) && (schemaVersion == currentVersion) -> skip.
-                // No probabilistic re-indexing, no "just in case" refreshes.
-                // If AppSearch behaves outside its documented contract (some OEM ROMs),
-                // we log and continue — we do not attempt to outsmart the platform.
                 if (hasActiveSims && (currentHash == lastSnapshotHash) && (snapshot.version == lastSnapshotVersion)) {
                     return@withLock true
                 }
                 if (!hasActiveSims && (lastSnapshotHash == null)) return@withLock true
 
-                var result = false
                 if (ensureSession()) {
-                    try {
-                        result = executeIndexing(snapshot, currentHash)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: AppSearchException) {
-                        if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
-                            AppLogger.w("AppSearch schema mismatch, retrying with force override")
-                            session?.close()
-                            session = null
-                            if (ensureSession(forceOverride = true)) {
-                                try {
-                                    result = executeIndexing(snapshot, currentHash)
-                                } catch (retryException: CancellationException) {
-                                    throw retryException
-                                } catch (retryException: Exception) {
-                                    AppLogger.e("AppSearch indexing failed again after retry", retryException)
-                                    lastSnapshotHash = null
-                                    lastSnapshotVersion = null
-                                    _status.value =
-                                        TrackingStatus.Error(
-                                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                                            retryException.message,
-                                        )
-                                }
-                            }
-                        } else {
-                            AppLogger.e("AppSearch indexing failed", e)
-                            lastSnapshotHash = null
-                            lastSnapshotVersion = null
-                            _status.value =
-                                TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                                    e.message,
-                                )
-                        }
-                    } catch (e: Exception) {
-                        AppLogger.e("AppSearch non-AppSearch error during indexing", e)
-                        lastSnapshotHash = null
-                        lastSnapshotVersion = null
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    }
+                    performIndexingWithRetry(snapshot, currentHash)
                 } else {
-                    // ensureSession() уже установил _status внутри handleSchemaException()
-                    // или handleInitializationError(). Дополнительная обработка не требуется.
-                    // Строгое соблюдение API: на AOSP LocalStorage.createSearchSessionAsync
-                    // бросает один из стандартных типов исключений. Иные типы указывают
-                    // на проблему кастомной прошивки, не соответствующей документации Google.
-                    AppLogger.w("ensureSession() returned false, status already set by ensureSession()")
+                    false
                 }
-                result
             }
+        }
+
+        private suspend fun performIndexingWithRetry(
+            snapshot: GlobalSnapshot,
+            currentHash: Int?,
+        ): Boolean {
+            return try {
+                executeIndexing(snapshot, currentHash)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: AppSearchException) {
+                handleIndexingAppSearchException(e, snapshot, currentHash)
+            } catch (e: Exception) {
+                handleIndexingGeneralException(e)
+                false
+            }
+        }
+
+        private suspend fun handleIndexingAppSearchException(
+            e: AppSearchException,
+            snapshot: GlobalSnapshot,
+            currentHash: Int?,
+        ): Boolean {
+            if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                AppLogger.w("AppSearch schema mismatch, retrying with force override")
+                session?.close()
+                session = null
+                if (ensureSession(forceOverride = true)) {
+                    return try {
+                        executeIndexing(snapshot, currentHash)
+                    } catch (retryException: CancellationException) {
+                        throw retryException
+                    } catch (retryException: Exception) {
+                        AppLogger.e("AppSearch indexing failed again after retry", retryException)
+                        resetLastSnapshotState()
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                retryException.message,
+                            )
+                        false
+                    }
+                }
+            } else {
+                AppLogger.e("AppSearch indexing failed", e)
+                resetLastSnapshotState()
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        e.message,
+                    )
+            }
+            return false
+        }
+
+        private fun handleIndexingGeneralException(e: Exception) {
+            AppLogger.e("AppSearch non-AppSearch error during indexing", e)
+            resetLastSnapshotState()
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+        }
+
+        private fun resetLastSnapshotState() {
+            lastSnapshotHash = null
+            lastSnapshotVersion = null
         }
 
         /**

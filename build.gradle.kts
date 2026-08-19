@@ -16,6 +16,9 @@ plugins {
 }
 
 subprojects {
+    // NOTE: Remaining deprecation warnings in this block (ReportingExtension.file)
+    // originate from the Detekt 1.23.8 plugin itself and cannot be fixed without
+    // upgrading to Detekt 2.x (currently in alpha).
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
     configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
@@ -39,12 +42,24 @@ subprojects {
         }
     }
 
-    // Workaround for Gradle 10 deprecation in detekt 1.x
+    // NOTE: Detekt 1.23.8 + Gradle 9.7 + Kotlin 2.4 requires explicit jvmToolchain
+    // and reportsDir override. If this breaks after a detekt upgrade, revisit
+    // whether the workaround is still needed.
+    // Detekt 1.x uses an internal Kotlin compiler that fails to parse Java version strings >= 25.
+    // We force the task to use JDK 21 and override the reports directory to avoid Gradle 10 warnings.
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         val reporting = project.extensions.getByType<ReportingExtension>()
         reportsDir.set(
             reporting.baseDirectory.dir("detekt").map { it.asFile },
         )
+
+        project.extensions.findByType<JavaToolchainService>()?.let { javaToolchains ->
+            jdkHome.set(
+                javaToolchains.launcherFor {
+                    languageVersion.set(JavaLanguageVersion.of(21))
+                }.map { it.metadata.installationPath }
+            )
+        }
     }
 }
 
@@ -57,8 +72,6 @@ subprojects {
         }
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
-        // Default SDK for Robolectric
-        jvmArgs("-Drobolectric.sdk=35")
         // Robolectric + JDK 17/21 compatibility
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",

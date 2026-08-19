@@ -26,6 +26,8 @@ android {
         // testFixtures is @Incubating in Gradle 9.x but is essential for cross-module
         // test data sharing. Suppression is intentional and follows best practices
         // for multi-module Android projects.
+        // NOTE: AGP 9.3.1 triggers "Project object as a dependency notation" warning
+        // internally when testFixtures are enabled. This is a known AGP issue.
         enable = true
     }
 

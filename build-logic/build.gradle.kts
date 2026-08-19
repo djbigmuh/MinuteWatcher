@@ -4,7 +4,7 @@ plugins {
 
 group = "com.example.minutewatcher.buildlogic"
 
-val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
+val libs = versionCatalogs.named("libs")
 
 dependencies {
     compileOnly(libs.findLibrary("android-gradlePlugin").get())
