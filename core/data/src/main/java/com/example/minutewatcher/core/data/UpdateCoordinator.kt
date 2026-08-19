@@ -27,9 +27,9 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicLong
@@ -100,18 +100,20 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
             observationJob =
-                scope.launch(handler) {
-                    flow { emitAll(usageStateRepository.observeSnapshot()) }
-                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                        .onEach { snapshot ->
-                            processSnapshot(snapshot)
-                        }.retryWhen { cause, _ ->
-                            handleObservationFailure(cause)
-                        }.catch { cause ->
-                            AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
-                        }.collect {}
-                }
+                flow { emitAll(usageStateRepository.observeSnapshot()) }
+                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    .onEach { snapshot ->
+                        processSnapshot(snapshot)
+                    }.retryWhen { cause, _ ->
+                        handleObservationFailure(cause)
+                    }.catch { cause ->
+                        AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
+                    }
+                    // This Flow is collected internally (fire-and-forget side effect).
+                    // We use .launchIn(scope) explicitly to document intent.
+                    // Do NOT remove the collector — Flow is cold and does nothing without it.
+                    .launchIn(CoroutineScope(scope.coroutineContext + handler))
         }
 
         fun restartObservation() {

@@ -123,6 +123,11 @@
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">日</string>
 
+    <!--
+      Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
+      Chinese requires: other (everything else).
+      Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
     <plurals name="minutes_plurals">
         <item quantity="other">%1$d 分钟</item>
     </plurals>

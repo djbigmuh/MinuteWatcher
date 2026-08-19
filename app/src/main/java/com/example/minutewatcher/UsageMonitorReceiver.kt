@@ -19,29 +19,34 @@ class UsageMonitorReceiver : BroadcastReceiver() {
     ) {
         val action = intent.action
 
-        if (action == TelephonyManager.ACTION_PHONE_STATE_CHANGED ||
-            action == "android.telephony.action.PHONE_STATE_CHANGED"
+        if ((action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) ||
+            (action == "android.telephony.action.PHONE_STATE_CHANGED")
         ) {
+            // goAsync() is REQUIRED: WorkManager.enqueue() is asynchronous and may outlive
+            // the BroadcastReceiver's process lifetime. Without goAsync(), the system kills
+            // the process before enqueuing completes, silently dropping the task.
+            // This is strict Android lifecycle compliance, not an optimization.
+            val pendingResult = goAsync()
             val appContext = context.applicationContext
 
-            val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+            try {
+                val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
 
-            if (state == null) {
-                AppLogger.w("UsageMonitorReceiver: EXTRA_STATE is null, skipping")
-                return
-            }
-
-            // Try to extract subId using various possible keys for better compatibility
-            val subId =
-                intent.getIntExtra("subscription", -1).let {
-                    if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
+                if (state == null) {
+                    AppLogger.w("UsageMonitorReceiver: EXTRA_STATE is null, skipping")
+                    return
                 }
 
-            if (subId == -1) {
-                AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
-            }
+                // Try to extract subId using various possible keys for better compatibility
+                val subId =
+                    intent.getIntExtra("subscription", -1).let {
+                        if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
+                    }
 
-            try {
+                if (subId == -1) {
+                    AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
+                }
+
                 val data =
                     Data
                         .Builder()
@@ -71,6 +76,8 @@ class UsageMonitorReceiver : BroadcastReceiver() {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
+            } finally {
+                pendingResult.finish()
             }
         }
     }

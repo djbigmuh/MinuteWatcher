@@ -45,7 +45,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Singleton
 @Suppress("TooManyFunctions")
-class SemanticSearchManager
+open class SemanticSearchManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
@@ -59,6 +59,7 @@ class SemanticSearchManager
         private val sessionMutex = Mutex()
         private var session: AppSearchSessionWrapper? = null
         private var lastSnapshotHash: Int? = null
+        private var lastSnapshotVersion: com.example.minutewatcher.core.model.SchemaVersion? = null
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
@@ -192,11 +193,11 @@ class SemanticSearchManager
 
             if (forceOverride) return tryOpenSession(forceOverride = true).isSuccess
 
-            val firstTry = tryOpenSession(false)
+            val firstTry = tryOpenSession(forceOverride = false)
             if (firstTry.isSuccess) return true
 
             val error = firstTry.exceptionOrNull()
-            if (error is AppSearchException && error.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+            if ((error is AppSearchException) && (error.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA)) {
                 return tryOpenSession(true).isSuccess
             }
             return false
@@ -263,7 +264,9 @@ class SemanticSearchManager
          * иные типы при недоступности AppSearch — это проблема кастомной прошивки.
          */
         private fun handleInitializationError(e: Exception) {
-            if (e is CancellationException) throw e
+            if (e is CancellationException) {
+                throw e
+            }
 
             val isNotSupported =
                 hasCause(e, IllegalStateException::class.java) ||
@@ -325,7 +328,14 @@ class SemanticSearchManager
             val currentHash =
                 if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
             return sessionMutex.withLock {
-                if (hasActiveSims && (currentHash == lastSnapshotHash)) return@withLock true
+                // AppSearch indexing is expensive. We use a deterministic hash check:
+                // if (documentHash == persistedHash) && (schemaVersion == currentVersion) -> skip.
+                // No probabilistic re-indexing, no "just in case" refreshes.
+                // If AppSearch behaves outside its documented contract (some OEM ROMs),
+                // we log and continue — we do not attempt to outsmart the platform.
+                if (hasActiveSims && (currentHash == lastSnapshotHash) && (snapshot.version == lastSnapshotVersion)) {
+                    return@withLock true
+                }
                 if (!hasActiveSims && (lastSnapshotHash == null)) return@withLock true
 
                 var result = false
@@ -347,6 +357,7 @@ class SemanticSearchManager
                                 } catch (retryException: Exception) {
                                     AppLogger.e("AppSearch indexing failed again after retry", retryException)
                                     lastSnapshotHash = null
+                                    lastSnapshotVersion = null
                                     _status.value =
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -357,6 +368,7 @@ class SemanticSearchManager
                         } else {
                             AppLogger.e("AppSearch indexing failed", e)
                             lastSnapshotHash = null
+                            lastSnapshotVersion = null
                             _status.value =
                                 TrackingStatus.Error(
                                     TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -366,6 +378,7 @@ class SemanticSearchManager
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch non-AppSearch error during indexing", e)
                         lastSnapshotHash = null
+                        lastSnapshotVersion = null
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }
                 } else {
@@ -424,7 +437,7 @@ class SemanticSearchManager
                         ) {
                             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
                             performIndexUpdate(currentSession, documents)
-                            // lastSnapshotHash обновляется ТОЛЬКО при полном успехе индексации.
+                            // lastSnapshotHash and lastSnapshotVersion updated ТОЛЬКО при полном успехе индексации.
                             // При частичном сбое (put failed, remove succeeded) хеш НЕ
                             // обновляется, что гарантирует повторную индексацию того же
                             // снапшота при следующем вызове indexSnapshot. Это предотвращает
@@ -435,6 +448,7 @@ class SemanticSearchManager
                             // на деградацию AppSearch на кастомной прошивке, не соответствующей
                             // документации Google. Это проблема кастомной прошивки.
                             lastSnapshotHash = currentHash
+                            lastSnapshotVersion = snapshot.version
                             _status.value = TrackingStatus.Active
                             true
                         }
@@ -446,6 +460,7 @@ class SemanticSearchManager
                     } catch (e: Exception) {
                         AppLogger.e("AppSearch indexing error", e)
                         lastSnapshotHash = null
+                        lastSnapshotVersion = null
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                         false
                     }
@@ -453,6 +468,7 @@ class SemanticSearchManager
                 if (result == null) {
                     AppLogger.e("AppSearch indexing timed out after ${Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS}ms")
                     lastSnapshotHash = null
+                    lastSnapshotVersion = null
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Indexing timeout")
                     return@withContext false
                 }
@@ -488,7 +504,7 @@ class SemanticSearchManager
 
             if (documents.isNotEmpty()) {
                 try {
-                    session.putDocuments(appSearchWrapper.createPutRequest(documents))
+                    session.putDocuments(createPutRequest(documents))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -497,7 +513,11 @@ class SemanticSearchManager
                 }
             }
 
-            // Затем удаляем устаревшие
+            // Затем удаляем устаревшие.
+            // Strict compliance: if a package is no longer present in the snapshot (e.g. uninstalled
+            // or invalid PackageInfo/NameNotFoundException during snapshot creation), its document
+            // is explicitly removed from AppSearch. We do not use heuristics to "keep" or "guess"
+            // stale data.
             val staleIds = mutableSetOf<String>()
             SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
                 val possibleIds =
@@ -511,7 +531,7 @@ class SemanticSearchManager
             var removeException: Exception? = null
             if (staleIds.isNotEmpty()) {
                 try {
-                    session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                    session.removeByDocumentId(createRemoveRequest(staleIds))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -522,6 +542,16 @@ class SemanticSearchManager
 
             throwIfErrors(putException, removeException)
         }
+
+        /**
+         * Extracted as `internal open` methods to allow overriding in tests without
+         * triggering AppSearch's document converter, which can be problematic
+         * in Robolectric environments.
+         */
+        internal open fun createPutRequest(documents: List<UsageDocument>) =
+            appSearchWrapper.createPutRequest(documents)
+
+        internal open fun createRemoveRequest(ids: Set<String>) = appSearchWrapper.createRemoveRequest(ids)
 
         /**
          * Проверяет наличие ошибок при обновлении индекса.

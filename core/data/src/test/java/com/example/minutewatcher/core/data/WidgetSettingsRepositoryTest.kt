@@ -71,8 +71,10 @@ class WidgetSettingsRepositoryTest {
 
             assertEquals(3, result.simStates.size)
 
-            verify(settingsRepository).getAppSettings().let { }
-            verify(simWidgetVisibilityRepository).getSimSettingsBatch(any()).let { }
+            @Suppress("UnusedFlow")
+            verify(settingsRepository).getAppSettings()
+            @Suppress("UnusedFlow")
+            verify(simWidgetVisibilityRepository).getSimSettingsBatch(any())
         }
 
     @Test
@@ -178,7 +180,8 @@ class WidgetSettingsRepositoryTest {
 
             // getSimSettingsBatch не должен вызываться при таймауте observeActiveSims,
             // так как список SIM не был получен и загружать настройки не для чего.
-            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any()).let { }
+            @Suppress("UnusedFlow")
+            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
         }
 
     private fun createAppSettings() =

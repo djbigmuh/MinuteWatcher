@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
-object SimSettingsKeys {
+internal object SimSettingsKeys {
     fun monthlyLimitKey(identity: String) = intPreferencesKey("monthly_limit_$identity")
 
     fun trafficLimitKey(identity: String) = intPreferencesKey("traffic_limit_$identity")

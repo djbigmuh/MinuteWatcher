@@ -13,6 +13,9 @@ fun MacrobenchmarkScope.grantBenchmarkPermissions() {
     device.executeShellCommand("appops set $pkg GET_USAGE_STATS allow")
 
     // Grant Notifications for API 33+
+    // API 33+ required for POST_NOTIFICATIONS runtime permission.
+    // See: https://developer.android.com/training/notify-user/runtime-permissions
+    // minSdk is 26, so this branch is reachable and required.
     if (Build.VERSION.SDK_INT >= API_LEVEL_NOTIFICATIONS) {
         device.executeShellCommand("pm grant $pkg android.permission.POST_NOTIFICATIONS")
     }

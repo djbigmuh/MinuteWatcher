@@ -31,6 +31,10 @@ class SimUsageRepositoryImpl
         SimUsageRepository,
         SimUsageAdjustmentRepository,
         SimUsageResetRepository {
+        // Preferences.Key is a DataStore implementation detail.
+        // It MUST NOT leak into the domain layer (SettingsRepository interface).
+        // Domain operates on business models only; mapping is an Impl responsibility.
+
         private val resetMutex = Mutex()
 
         override fun getSimUsage(identity: String): Flow<SimUsage> {

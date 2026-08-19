@@ -29,6 +29,10 @@ class AppSettingsRepositoryImpl
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : AppSettingsRepository {
+        // Preferences.Key is a DataStore implementation detail.
+        // It MUST NOT leak into the domain layer (SettingsRepository interface).
+        // Domain operates on business models only; mapping is an Impl responsibility.
+
         private val appSettingsState =
             dataStore.data
                 .map { prefs -> prefs.toAppSettings() }

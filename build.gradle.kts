@@ -19,6 +19,9 @@ subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
     configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        // Lint baseline captures ONLY pre-existing issues.
+        // New code MUST NOT be added to the baseline — fix issues at the source.
+        // When refactoring a file, remove its entries from the baseline first.
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
         baseline = file("$projectDir/detekt-baseline.xml")
         buildUponDefaultConfig = true

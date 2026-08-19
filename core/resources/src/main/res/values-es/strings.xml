@@ -123,14 +123,19 @@
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">día del mes</string>
 
-    <!-- Spanish uses only 'one' and 'other' quantities. 'many' is not required for this locale. -->
-    <plurals name="minutes_plurals" tools:ignore="ImpliedQuantity,MissingQuantity">
+    <!--
+      Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
+      Spanish requires: one (1), many (used for millions), other (everything else).
+      Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
+    <plurals name="minutes_plurals">
         <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
         <item quantity="other">%1$d minutos</item>
     </plurals>
-    <!-- Spanish uses only 'one' and 'other' quantities. -->
-    <plurals name="days_plurals" tools:ignore="ImpliedQuantity,MissingQuantity">
+    <plurals name="days_plurals">
         <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
         <item quantity="other">%1$d días</item>
     </plurals>
 

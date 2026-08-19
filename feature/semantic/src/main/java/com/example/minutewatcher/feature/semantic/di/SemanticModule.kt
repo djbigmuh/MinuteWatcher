@@ -14,7 +14,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 // Hilt discovers this module via reflection at compile time; IDE marks it as unused.
 @Suppress("unused")
-interface SemanticModule {
+internal interface SemanticModule {
     @Binds
     @Singleton
     @IntoSet

@@ -1,10 +1,11 @@
 package com.example.minutewatcher.feature.main
 
-import java.io.Serializable
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
 /**
  * Данные диалога установки лимитов.
- * Serializable для сохранения в SavedStateHandle.
+ * Parcelable для сохранения в SavedStateHandle.
  *
  * @property slot Индекс слота SIM.
  * @property name Имя оператора.
@@ -12,51 +13,51 @@ import java.io.Serializable
  * @property traffic Текущий лимит трафика (МБ).
  * @property rolloverEnabled Включён ли перенос остатков.
  */
+@Parcelize
+// Using Parcelable instead of Serializable for Android IPC/Bundle transport.
+// Serializable is fragile: schema changes break deserialization silently,
+// and it's ~10x slower. Parcelable is the strict Android Best Practice.
 data class LimitDialogData(
     val slot: Int,
     val name: String,
     val minutes: Int,
     val traffic: Int,
     val rolloverEnabled: Boolean = false,
-) : Serializable {
-    companion object {
-        private const val serialVersionUID = 1L
-    }
-}
+) : Parcelable
 
 /**
  * Данные диалога выбора дня автосброса.
- * Serializable для сохранения в SavedStateHandle.
+ * Parcelable для сохранения в SavedStateHandle.
  *
  * @property slot Индекс слота SIM.
  * @property day Текущий день автосброса.
  */
+@Parcelize
+// Using Parcelable instead of Serializable for Android IPC/Bundle transport.
+// Serializable is fragile: schema changes break deserialization silently,
+// and it's ~10x slower. Parcelable is the strict Android Best Practice.
 data class DayDialogData(
     val slot: Int,
     val day: Int,
-) : Serializable {
-    companion object {
-        private const val serialVersionUID = 1L
-    }
-}
+) : Parcelable
 
 /**
  * Данные диалога корректировки остатка.
- * Serializable для сохранения в SavedStateHandle.
+ * Parcelable для сохранения в SavedStateHandle.
  *
  * @property slot Индекс слота SIM.
  * @property currentValue Текущее значение остатка.
  * @property isMinutes true если корректировка минут, false если трафика.
  */
+@Parcelize
+// Using Parcelable instead of Serializable for Android IPC/Bundle transport.
+// Serializable is fragile: schema changes break deserialization silently,
+// and it's ~10x slower. Parcelable is the strict Android Best Practice.
 data class AdjustDialogData(
     val slot: Int,
     val currentValue: Float,
     val isMinutes: Boolean,
-) : Serializable {
-    companion object {
-        private const val serialVersionUID = 1L
-    }
-}
+) : Parcelable
 
 /**
  * Опция языка для LanguageMenu.

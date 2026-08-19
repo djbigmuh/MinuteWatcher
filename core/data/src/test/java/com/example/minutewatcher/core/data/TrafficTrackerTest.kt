@@ -601,12 +601,14 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
             tracker.updateTrafficUsage()
-            verify(simIdentityRepository, never()).observeActiveSims().let { }
+            @Suppress("UnusedFlow")
+            verify(simIdentityRepository, never()).observeActiveSims()
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
             val emptySimsFlow = flowOf(emptyList<ActiveSimInfo>())
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySimsFlow)
             tracker.updateTrafficUsage()
-            verify(simIdentityRepository, times(1)).observeActiveSims().let { }
+            @Suppress("UnusedFlow")
+            verify(simIdentityRepository, times(1)).observeActiveSims()
         }
 
     @Test
@@ -730,11 +732,13 @@ class TrafficTrackerTest {
 
             // First call: should read from DataStore
             tracker.updateTrafficUsage()
-            verify(callSessionRepository, times(1)).getLastDataSubId().let { }
+            @Suppress("UnusedFlow")
+            verify(callSessionRepository, times(1)).getLastDataSubId()
 
             // Second call: should NOT read from DataStore again
             tracker.updateTrafficUsage()
-            verify(callSessionRepository, times(1)).getLastDataSubId().let { }
+            @Suppress("UnusedFlow")
+            verify(callSessionRepository, times(1)).getLastDataSubId()
         }
 
     @Test
@@ -789,7 +793,8 @@ class TrafficTrackerTest {
             // updateTrafficUsage should now see it's initialized and NOT read from DataStore
             tracker.updateTrafficUsage()
 
-            verify(callSessionRepository, never()).getLastDataSubId().let { }
+            @Suppress("UnusedFlow")
+            verify(callSessionRepository, never()).getLastDataSubId()
         }
 
     @Test
@@ -895,7 +900,8 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // Verify it was called twice
-            verify(simIdentityRepository, times(2)).observeActiveSims().let { }
+            @Suppress("UnusedFlow")
+            verify(simIdentityRepository, times(2)).observeActiveSims()
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 }

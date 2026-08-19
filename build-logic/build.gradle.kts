@@ -4,12 +4,13 @@ plugins {
 
 group = "com.example.minutewatcher.buildlogic"
 
-// Use provider for version catalog access
+@Suppress("UnstableApiUsage")
+// VersionCatalogsExtension is @Incubating in Gradle 9.x but is the only supported
+// way to share a version catalog with build-logic. This is a known Gradle limitation,
+// not a heuristic choice. Suppression is intentional and documented.
 val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 dependencies {
-    val agpVersion = libs.findVersion("agp").get().requiredVersion
-    val kotlinVersion = libs.findVersion("kotlin").get().requiredVersion
-    compileOnly("com.android.tools.build:gradle:$agpVersion")
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    compileOnly(libs.findLibrary("android-gradlePlugin").get())
+    compileOnly(libs.findLibrary("kotlin-gradlePlugin").get())
 }

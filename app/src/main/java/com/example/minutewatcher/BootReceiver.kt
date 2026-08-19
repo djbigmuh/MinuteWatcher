@@ -20,6 +20,11 @@ class BootReceiver : BroadcastReceiver() {
     ) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
+        // goAsync() is REQUIRED: WorkManager.enqueue() is asynchronous and may outlive
+        // the BroadcastReceiver's process lifetime. Without goAsync(), the system kills
+        // the process before enqueuing completes, silently dropping the task.
+        // This is strict Android lifecycle compliance, not an optimization.
+        val pendingResult = goAsync()
         val appContext = context.applicationContext
 
         try {
@@ -40,6 +45,8 @@ class BootReceiver : BroadcastReceiver() {
             throw e
         } catch (e: Exception) {
             AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
+        } finally {
+            pendingResult.finish()
         }
     }
 

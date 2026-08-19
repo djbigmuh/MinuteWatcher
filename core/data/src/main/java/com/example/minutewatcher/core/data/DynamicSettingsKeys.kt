@@ -3,7 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
-object DynamicSettingsKeys {
+internal object DynamicSettingsKeys {
     const val CALL_START_TIME_PREFIX = "call_start_time_"
     const val BOOT_TIME_PREFIX = "boot_time_"
     const val UPTIME_PREFIX = "uptime_"

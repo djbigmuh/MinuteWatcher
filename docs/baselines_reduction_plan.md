@@ -13,8 +13,9 @@ The ultimate goal is to have zero issues in baselines, ensuring that all new cod
 - **Merge Blockers**: Pull requests that increase the number of issues in a baseline file should not be merged.
 
 ### 2. Gradual Cleanup
-- When modifying existing code, developers are encouraged to fix any baseline issues in the affected files.
-- Dedicated "cleanup" tasks will be scheduled periodically to address high-priority or easily fixable issues.
+- **Legacy Only**: Baselines must ONLY capture pre-existing issues. Adding issues from new files to any baseline is strictly prohibited.
+- **Refactoring Requirement**: When refactoring a file, developers MUST first remove all its current entries from the baseline, then fix the resulting issues at the source.
+- **Continuous Fixing**: When modifying existing code, developers are encouraged to fix any baseline issues in the affected files.
 
 ### 3. Baseline Refinement
 - Baselines will be regenerated periodically (e.g., once a month) to remove issues that have been fixed but are still present in the baseline XML.

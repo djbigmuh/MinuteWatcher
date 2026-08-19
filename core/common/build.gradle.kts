@@ -22,6 +22,9 @@ android {
     }
 
     testFixtures {
+        // testFixtures is @Incubating in Gradle 9.x but is essential for cross-module
+        // test data sharing. Suppression is intentional and follows best practices
+        // for multi-module Android projects.
         @Suppress("UnstableApiUsage")
         enable = true
     }

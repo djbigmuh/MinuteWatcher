@@ -232,7 +232,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun handleNotificationResult(granted: Boolean) {
-            if (!granted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // API 33+ required for POST_NOTIFICATIONS runtime permission.
+            // See: https://developer.android.com/training/notify-user/runtime-permissions
+            // minSdk is 26, so this branch is reachable and required.
+            if (!granted && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)) {
                 val permanentlyDenied =
                     !ActivityCompat.shouldShowRequestPermissionRationale(
                         this@MainActivity,
@@ -283,6 +286,9 @@ class MainActivity : AppCompatActivity() {
                     if (autoRequest && !settings.notificationPermissionRequested) {
                         requestNotificationPermission()
                     } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        // API 33+ required for POST_NOTIFICATIONS runtime permission.
+                        // See: https://developer.android.com/training/notify-user/runtime-permissions
+                        // minSdk is 26, so this branch is reachable and required.
                         val permanentlyDenied =
                             !ActivityCompat.shouldShowRequestPermissionRationale(
                                 this@MainActivity,
@@ -295,6 +301,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         fun requestNotificationPermission() {
+            // API 33+ required for POST_NOTIFICATIONS runtime permission.
+            // See: https://developer.android.com/training/notify-user/runtime-permissions
+            // minSdk is 26, so this branch is reachable and required.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 viewModel.setNotificationPermissionRequested()
                 notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)

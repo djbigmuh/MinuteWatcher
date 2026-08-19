@@ -128,6 +128,11 @@
     <string name="label_value_format" translatable="false">%1$s: %2$s</string>
     <string name="value_unit_format" translatable="false">%1$s %2$s</string>
 
+    <!--
+      Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
+      English requires: one (1), other (everything else).
+      Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>

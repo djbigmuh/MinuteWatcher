@@ -17,6 +17,10 @@ class CallSessionRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : CallSessionRepository {
+        // Preferences.Key is a DataStore implementation detail.
+        // It MUST NOT leak into the domain layer (SettingsRepository interface).
+        // Domain operates on business models only; mapping is an Impl responsibility.
+
         private fun <T> get(
             key: Preferences.Key<T>,
             defaultValue: T,

@@ -18,6 +18,10 @@ class MigrationFlagsRepositoryImpl
         @AppDataStore dataStore: DataStore<Preferences>,
     ) : BaseDataStoreRepository(dataStore),
         MigrationFlagsRepository {
+        // Preferences.Key is a DataStore implementation detail.
+        // It MUST NOT leak into the domain layer (SettingsRepository interface).
+        // Domain operates on business models only; mapping is an Impl responsibility.
+
         override fun isMigrationV1Completed(): Flow<Boolean> = getData(SettingsKeys.MIGRATION_V1_COMPLETED, false)
 
         override suspend fun setMigrationV1Completed(completed: Boolean) {

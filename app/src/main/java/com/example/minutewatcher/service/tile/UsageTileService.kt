@@ -1,6 +1,5 @@
 package com.example.minutewatcher.service.tile
 
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -80,21 +79,23 @@ class UsageTileService : TileService() {
         job = null
     }
 
-    // WrongConstant is suppressed because Intent.FLAG_ACTIVITY_NEW_TASK is the correct flag for starting an activity from a Service,
-    // though lint sometimes misidentifies it in this context.
-    @SuppressLint("WrongConstant")
     override fun onClick() {
         super.onClick()
         val intent =
             Intent().setClassName(packageName, navigationProvider.mainActivityClassName).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+        // Strict TileService/PendingIntent API: only documented constants are valid.
+        // Passing undocumented values causes SystemUI crashes on some OEM ROMs.
+        // See: https://developer.android.com/reference/android/service/quicksettings/Tile#setState(int)
+        // See: https://developer.android.com/reference/android/app/PendingIntent#flags
+        // Do NOT use @SuppressLint("WrongConstant") — fix the constant instead.
         val wrapper =
             PendingIntentActivityWrapper(
                 this,
                 0,
                 intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                PendingIntent.FLAG_UPDATE_CURRENT,
                 false,
             )
         TileServiceCompat.startActivityAndCollapse(this, wrapper)
@@ -107,8 +108,11 @@ class UsageTileService : TileService() {
         // Filter active SIMs and pick the one with most critical status or just slot 0
         val activeSims = snapshot.simSnapshots.filter { it.isActive }
         if (activeSims.isEmpty()) {
-            tile.state = Tile.STATE_INACTIVE
+            tile.applyState(TileState.UNAVAILABLE)
             tile.label = getString(R.string.no_sim_found)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                tile.subtitle = getString(R.string.no_sim_found)
+            }
             tile.updateTile()
             return
         }
@@ -139,10 +143,10 @@ class UsageTileService : TileService() {
                 tile.stateDescription = remainingText
             }
             tile.contentDescription = "$operatorName: $remainingText"
-            tile.state = Tile.STATE_ACTIVE
+            tile.applyState(TileState.ACTIVE)
         } else {
             tile.label = operatorName
-            tile.state = Tile.STATE_INACTIVE
+            tile.applyState(TileState.UNAVAILABLE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.subtitle = getString(R.string.no_data)
             }
@@ -150,6 +154,26 @@ class UsageTileService : TileService() {
         }
 
         tile.updateTile()
+    }
+
+    private enum class TileState {
+        ACTIVE,
+        INACTIVE,
+        UNAVAILABLE,
+    }
+
+    private fun Tile.applyState(state: TileState) {
+        // Strict TileService/PendingIntent API: only documented constants are valid.
+        // Passing undocumented values causes SystemUI crashes on some OEM ROMs.
+        // See: https://developer.android.com/reference/android/service/quicksettings/Tile#setState(int)
+        // See: https://developer.android.com/reference/android/app/PendingIntent#flags
+        // Do NOT use @SuppressLint("WrongConstant") — fix the constant instead.
+        this.state =
+            when (state) {
+                TileState.ACTIVE -> Tile.STATE_ACTIVE
+                TileState.INACTIVE -> Tile.STATE_INACTIVE
+                TileState.UNAVAILABLE -> Tile.STATE_UNAVAILABLE
+            }
     }
 
     override fun onDestroy() {

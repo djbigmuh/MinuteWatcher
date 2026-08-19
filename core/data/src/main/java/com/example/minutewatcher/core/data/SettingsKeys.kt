@@ -4,7 +4,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
-object SettingsKeys {
+internal object SettingsKeys {
     val APP_THEME = intPreferencesKey("app_theme")
     val APP_LANGUAGE = stringPreferencesKey("app_language")
     val WIDGET_LAYOUT_MODE = intPreferencesKey("widget_layout_mode")

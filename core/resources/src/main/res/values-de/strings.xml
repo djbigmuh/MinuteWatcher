@@ -123,6 +123,11 @@
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">Tag des Monats</string>
 
+    <!--
+      Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
+      German requires: one (1), other (everything else).
+      Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d Minute</item>
         <item quantity="other">%1$d Minuten</item>

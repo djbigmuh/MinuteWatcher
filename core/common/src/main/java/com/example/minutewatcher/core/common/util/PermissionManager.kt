@@ -96,6 +96,9 @@ class PermissionManager
         }
 
         fun hasNotificationPermission(): Boolean =
+            // API 33+ required for POST_NOTIFICATIONS runtime permission.
+            // See: https://developer.android.com/training/notify-user/runtime-permissions
+            // minSdk is 26, so this branch is reachable and required.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 ContextCompat.checkSelfPermission(
                     context,
@@ -118,21 +121,34 @@ class PermissionManager
                         )
                     }
                     else -> {
-                        // On API < 34, we use unsafeCheckOpNoThrow (29-33) or checkOpNoThrow (< 29).
-                        // Both are marked as deprecated in the latest SDK (34+), so suppression is required.
+                        // On API 30+, checkOpNoThrow is the preferred safe version.
+                        // On API 29, unsafeCheckOpNoThrow is used as checkOpNoThrow was deprecated.
+                        // See: https://developer.android.com/reference/android/app/AppOpsManager#checkOpNoThrow(java.lang.String,%20int,%20java.lang.String)
                         @Suppress("DEPRECATION")
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            appOps.unsafeCheckOpNoThrow(
-                                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                                Process.myUid(),
-                                context.packageName,
-                            )
-                        } else {
-                            appOps.checkOpNoThrow(
-                                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                                Process.myUid(),
-                                context.packageName,
-                            )
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
+                                appOps.checkOpNoThrow(
+                                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                                    Process.myUid(),
+                                    context.packageName,
+                                )
+                            }
+
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                                appOps.unsafeCheckOpNoThrow(
+                                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                                    Process.myUid(),
+                                    context.packageName,
+                                )
+                            }
+
+                            else -> {
+                                appOps.checkOpNoThrow(
+                                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                                    Process.myUid(),
+                                    context.packageName,
+                                )
+                            }
                         }
                     }
                 }

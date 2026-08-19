@@ -45,7 +45,7 @@ interface AppSearchSessionWrapper : AutoCloseable {
 }
 
 @Singleton
-class AppSearchWrapperImpl
+internal class AppSearchWrapperImpl
     @Inject
     constructor() : AppSearchWrapper {
         override suspend fun createSearchSession(
@@ -79,7 +79,7 @@ class AppSearchWrapperImpl
                 .build()
     }
 
-private class AppSearchSessionWrapperImpl(
+internal class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,
 ) : AppSearchSessionWrapper {
     private val closed = AtomicBoolean(false)

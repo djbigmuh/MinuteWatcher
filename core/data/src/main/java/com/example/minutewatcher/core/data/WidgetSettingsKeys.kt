@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 
-object WidgetSettingsKeys {
+internal object WidgetSettingsKeys {
     /**
      * Префиксы ключей настроек виджета, отсортированные по убыванию длины.
      *

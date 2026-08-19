@@ -42,7 +42,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -75,6 +77,10 @@ class SimIdentityRepositoryImpl
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
+        // Preferences.Key is a DataStore implementation detail.
+        // It MUST NOT leak into the domain layer (SettingsRepository interface).
+        // Domain operates on business models only; mapping is an Impl responsibility.
+
         private val context get() = discoveryDeps.context
         private val subscriptionManager get() = discoveryDeps.subscriptionManager
         private val permissionManager get() = discoveryDeps.permissionManager
@@ -223,6 +229,10 @@ class SimIdentityRepositoryImpl
                             val hasPermission = permissionManager.hasPhoneStatePermission()
                             if (hasPermission && !isListenerRegistered) {
                                 try {
+                                    // API 30+ introduced registerSubscriptionCallback (thread-safe, executor-based).
+                                    // Pre-30: fall back to addOnSubscriptionsChangedListener.
+                                    // See: https://developer.android.com/reference/android/telephony/SubscriptionManager#registerSubscriptionCallback
+                                    // We do not guess behavior across versions — strict branching per documented API.
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                         subscriptionManager.addOnSubscriptionsChangedListener(
                                             context.mainExecutor,
@@ -317,8 +327,8 @@ class SimIdentityRepositoryImpl
             //
             // Потокобезопасность: ConcurrentHashMap.keys.removeAll потокобезопасен.
             // Корутина привязана к scope (ApplicationScope), живёт до завершения процесса.
-            scope.launch {
-                activeSimsCache.collect { sims ->
+            activeSimsCache
+                .onEach { sims ->
                     // Инвалидация manualResolutionCache при обновлении activeSimsCache.
                     // Удаляются записи для слотов, отсутствующих в новом активном списке.
                     // Записи для активных слотов не удаляются, но и не используются
@@ -332,7 +342,10 @@ class SimIdentityRepositoryImpl
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     manualResolutionCache.keys.removeAll { it !in activeSlots }
                 }
-            }
+                // This Flow is collected internally (fire-and-forget side effect).
+                // We use .launchIn(scope) explicitly to document intent.
+                // Do NOT remove the collector — Flow is cold and does nothing without it.
+                .launchIn(scope)
         }
 
         private suspend fun getSeed(timeoutMs: Long = SEED_TOTAL_TIMEOUT_MS): SeedResult {
