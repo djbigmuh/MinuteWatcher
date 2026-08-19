@@ -77,7 +77,7 @@ class UsageMonitorReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
             } finally {
-                pendingResult.finish()
+                pendingResult?.finish()
             }
         }
     }

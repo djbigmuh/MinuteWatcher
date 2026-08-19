@@ -27,7 +27,7 @@ class PermissionManager
 
         init {
             if (subscriptionManager == null) {
-                AppLogger.e("SubscriptionManager is null. Telephony features will be unavailable.")
+                AppLogger.e("PermissionManager: SubscriptionManager is null. Telephony features will be unavailable.")
             }
         }
 
@@ -36,11 +36,15 @@ class PermissionManager
          */
         fun isTelephonySupported(): Boolean = subscriptionManager != null
 
-        fun hasPhoneStatePermission(): Boolean =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_PHONE_STATE,
-            ) == PackageManager.PERMISSION_GRANTED
+        fun hasPhoneStatePermission(): Boolean {
+            val granted =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.READ_PHONE_STATE,
+                ) == PackageManager.PERMISSION_GRANTED
+            AppLogger.d("Checking READ_PHONE_STATE permission: ${if (granted) "Granted" else "Denied"}")
+            return granted
+        }
 
         // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
         // This method provides a safe way to get active subscriptions without crashing if permission is revoked.
@@ -54,7 +58,7 @@ class PermissionManager
                 return try {
                     subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
                 } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException in getActiveSubscriptions", e)
+                    AppLogger.e("PermissionManager: SecurityException in getActiveSubscriptions", e)
                     emptyList()
                 }
             }
@@ -71,7 +75,7 @@ class PermissionManager
                 return try {
                     SubscriptionManager.getDefaultVoiceSubscriptionId()
                 } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException in getDefaultVoiceSubscriptionId", e)
+                    AppLogger.e("PermissionManager: SecurityException in getDefaultVoiceSubscriptionId", e)
                     -1
                 }
             }
@@ -88,25 +92,26 @@ class PermissionManager
                 return try {
                     SubscriptionManager.getDefaultDataSubscriptionId()
                 } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException in getDefaultDataSubscriptionId", e)
+                    AppLogger.e("PermissionManager: SecurityException in getDefaultDataSubscriptionId", e)
                     -1
                 }
             }
             return -1
         }
 
-        fun hasNotificationPermission(): Boolean =
-            // API 33+ required for POST_NOTIFICATIONS runtime permission.
-            // See: https://developer.android.com/training/notify-user/runtime-permissions
-            // minSdk is 26, so this branch is reachable and required.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS,
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                true
-            }
+        fun hasNotificationPermission(): Boolean {
+            val granted =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS,
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true
+                }
+            AppLogger.d("Checking POST_NOTIFICATIONS permission: ${if (granted) "Granted" else "Denied"}")
+            return granted
+        }
 
         fun hasUsageStatsPermission(): Boolean {
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
@@ -120,6 +125,7 @@ class PermissionManager
                             context.packageName,
                         )
                     }
+
                     else -> {
                         // On API 30+, checkOpNoThrow is the preferred safe version.
                         // On API 29, unsafeCheckOpNoThrow is used as checkOpNoThrow was deprecated.
@@ -152,6 +158,8 @@ class PermissionManager
                         }
                     }
                 }
-            return mode == AppOpsManager.MODE_ALLOWED
+            val granted = mode == AppOpsManager.MODE_ALLOWED
+            AppLogger.d("Checking GET_USAGE_STATS permission: ${if (granted) "Granted" else "Denied"}")
+            return granted
         }
     }

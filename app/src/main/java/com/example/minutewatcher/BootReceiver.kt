@@ -46,7 +46,7 @@ class BootReceiver : BroadcastReceiver() {
         } catch (e: Exception) {
             AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
         } finally {
-            pendingResult.finish()
+            pendingResult?.finish()
         }
     }
 

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.telephony.SubscriptionManager
 import androidx.core.content.ContextCompat
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.Logger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -21,8 +23,30 @@ class PermissionManagerTest {
     private val subscriptionManager: SubscriptionManager = mock()
     private lateinit var permissionManager: PermissionManager
 
+    private val mockLogger =
+        object : Logger {
+            override fun d(
+                tag: String,
+                message: String,
+            ) {}
+
+            override fun w(
+                tag: String,
+                message: String,
+                throwable: Throwable?,
+            ) {}
+
+            override fun e(
+                tag: String,
+                message: String,
+                throwable: Throwable?,
+            ) {}
+        }
+
     @Before
     fun setup() {
+        whenever(context.filesDir).thenReturn(mock())
+        AppLogger.init(context, mockLogger)
         whenever(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)).thenReturn(subscriptionManager)
         permissionManager = PermissionManager(context)
     }

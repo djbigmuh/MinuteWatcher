@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -171,31 +170,40 @@ class UsageStateRepositoryImpl
         /**
          * Принудительно обновляет данные и возвращает результат.
          *
-         * Реализация без coroutineScope/async: withTimeoutOrNull напрямую отменяет
-         * ожидание snapshotFlow.first{} по таймауту, не создавая дочерних корутин,
-         * которые могли бы заблокировать выход. Это исключает дедлок при первом
-         * запуске, когда разрешения ещё не выданы и снапшот не обновляется.
+         * NOTE: Concurrency safety. We avoid holding locks during I/O operations to prevent deadlocks.
+         * We use tryLock to prevent reentrant calls from hanging and to coalesce multiple refresh requests.
+         * The wait for snapshot update happens outside the lock.
          *
          * Строгое соблюдение API: на AOSP observeSnapshot() не выбрасывает исключений.
          * Таймаут возможен только при деградации DataStore на кастомных прошивках,
          * не соответствующих документации Google.
          */
-        override suspend fun refresh(): RefreshResult =
-            refreshMutex.withLock {
-                val currentTimestamp = snapshotFlow.value.timestamp
-                deps.dataRefreshNotifier.notifyRefresh(isManual = true)
-                val newSnapshot =
-                    withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                        snapshotFlow.first { it.timestamp > currentTimestamp }
-                    }
-                if (newSnapshot != null) {
-                    RefreshResult.Success(newSnapshot)
-                } else {
-                    AppLogger.w(
-                        "UsageStateRepository: refresh timed out after " +
-                            "${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot",
-                    )
-                    RefreshResult.Timeout(snapshotFlow.value)
+        override suspend fun refresh(): RefreshResult {
+            val currentTimestamp = snapshotFlow.value.timestamp
+
+            if (refreshMutex.tryLock()) {
+                try {
+                    deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+                } finally {
+                    refreshMutex.unlock()
                 }
+            } else {
+                AppLogger.d("UsageStateRepository: refresh trigger already active, joining existing request.")
             }
+
+            val newSnapshot =
+                withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
+                    snapshotFlow.first { it.timestamp > currentTimestamp }
+                }
+
+            return if (newSnapshot != null) {
+                RefreshResult.Success(newSnapshot)
+            } else {
+                AppLogger.w(
+                    "UsageStateRepository: refresh timed out after " +
+                        "${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot",
+                )
+                RefreshResult.Timeout(snapshotFlow.value)
+            }
+        }
     }
