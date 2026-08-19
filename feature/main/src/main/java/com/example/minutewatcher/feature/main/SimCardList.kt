@@ -18,6 +18,14 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.feature.main.ui.components.ResetConfirmationDialog
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
 
+/**
+ * Рендерит список SIM-карт.
+ * Каждая SIM-карта рендерится через SimCardListRow.
+ *
+ * @param simCards Список SIM-карт.
+ * @param listState Состояние списка для прокрутки.
+ * @param viewModel ViewModel для управления состоянием.
+ */
 @Composable
 fun SimCardList(
     simCards: List<SimCardUiModel>,
@@ -53,6 +61,15 @@ fun SimCardList(
     }
 }
 
+/**
+ * Рендерит одну SIM-карту в списке.
+ * Содержит иконку, имя оператора, состояние минут и трафика,
+ * кнопки установки лимитов и сброса.
+ *
+ * @param model Модель SIM-карты.
+ * @param viewModel ViewModel для управления состоянием.
+ * @param onReset Колбэк для сброса SIM-карты.
+ */
 @Composable
 private fun SimCardListRow(
     model: SimCardUiModel,

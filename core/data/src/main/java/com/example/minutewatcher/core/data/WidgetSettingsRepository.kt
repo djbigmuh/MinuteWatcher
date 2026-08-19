@@ -3,8 +3,11 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
+import com.example.minutewatcher.core.domain.WidgetSaveResult
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
@@ -117,30 +120,34 @@ class WidgetSettingsRepository
          * Это позволяет пользователю сохранить изменения для конкретных SIM даже при сбое загрузки общих настроек.
          * На AOSP загрузка настроек не падает при исправном DataStore; сбой возможен только на кастомных прошивках.
          *
+         * **Частичный успех (Partial Success):**
+         * Если при сохранении SIM-специфичных настроек происходит [SeedUnavailableException]
+         * или [SimNotFoundException], этот слот пропускается, и сохранение продолжается
+         * для остальных. Метод возвращает [WidgetSaveResult.PartialSuccess],
+         * если общие настройки сохранены, но хотя бы один слот SIM не удалось сохранить.
+         * Это поведение позволяет избежать блокировки сохранения всех настроек из-за деградации DataStore
+         * (seed unavailable) на некоторых кастомных прошивках.
+         *
          * @param state The state to save.
+         * @param skipSimSettings Если true, SIM-специфичные настройки НЕ сохраняются.
+         *   Используется при simListLoadFailed = true, когда список SIM недоступен.
+         *   Общие настройки (layout, transparency, fontSize) сохраняются всегда.
+         *
+         *   Строгое соблюдение API: на AOSP список SIM доступен всегда.
+         *   simListLoadFailed = true возможен только при деградации DataStore
+         *   на кастомной прошивке. Это проблема кастомной прошивки.
+         * @return [WidgetSaveResult] indicating full or partial success.
+         * @throws Exception if general settings fail to save.
          */
         override suspend fun save(
             state: WidgetSettingsState,
             skipSimSettings: Boolean,
-        ) {
+        ): WidgetSaveResult {
+            var generalSaved = false
             if (!state.settingsLoadFailed) {
-                appSettingsRepository.updateAppSettings { current ->
-                    current.copy(
-                        widgetLayoutMode = state.layoutMode,
-                        widgetSimArrangement = state.simArrangement,
-                        widgetTransparency = state.transparency,
-                        widgetFontSize = state.fontSize,
-                        widgetBackgroundColor = state.backgroundColor,
-                        notifyLowMinutes = state.notifyLowMinutes,
-                        notifyLowTraffic = state.notifyLowTraffic,
-                    )
-                }
+                saveGeneralSettings(state)
+                generalSaved = true
             } else {
-                // G-484: Общие настройки не были загружены. Сохраняем только то,
-                // что было явно изменено пользователем (simStates), но пропускаем
-                // общие настройки (layoutMode, transparency и т.д.), чтобы не
-                // перезаписать потенциально корректные значения в DataStore
-                // значениями по умолчанию из fallback.
                 AppLogger.w("save: general settings were not loaded. Saving only SIM-specific settings.")
             }
 
@@ -148,22 +155,60 @@ class WidgetSettingsRepository
                 val label = if (state.settingsLoadFailed) "all saves" else "SIM-specific settings save"
                 val reason = if (skipSimSettings) "skipSimSettings=true" else "SIM list was not loaded successfully"
                 AppLogger.w("save: $reason. Skipping $label.")
+                return if (state.simListLoadFailed && generalSaved) {
+                    WidgetSaveResult.PartialSuccess
+                } else {
+                    WidgetSaveResult.Success
+                }
             } else {
-                saveSimSettings(state)
+                val simSuccess = saveSimSettings(state)
+                return if (simSuccess) {
+                    WidgetSaveResult.Success
+                } else {
+                    WidgetSaveResult.PartialSuccess
+                }
             }
         }
 
-        private suspend fun saveSimSettings(state: WidgetSettingsState) {
+        override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+            appSettingsRepository.updateAppSettings { current ->
+                current.copy(
+                    widgetLayoutMode = state.layoutMode,
+                    widgetSimArrangement = state.simArrangement,
+                    widgetTransparency = state.transparency,
+                    widgetFontSize = state.fontSize,
+                    widgetBackgroundColor = state.backgroundColor,
+                    notifyLowMinutes = state.notifyLowMinutes,
+                    notifyLowTraffic = state.notifyLowTraffic,
+                )
+            }
+        }
+
+        override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean {
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
+            var allSucceeded = true
             for ((slot, simSettings) in state.simStates) {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simSettingsMap[identity] = simSettings
-                val fallbackKey = "sim_$slot"
-                if (identity != fallbackKey) {
-                    simSettingsMap[fallbackKey] = simSettings
+                try {
+                    val identity = simIdentityRepository.getIdentity(slot)
+                    simSettingsMap[identity] = simSettings
+                    val fallbackKey = "sim_$slot"
+                    if (identity != fallbackKey) {
+                        simSettingsMap[fallbackKey] = simSettings
+                    }
+                } catch (e: SeedUnavailableException) {
+                    AppLogger.w("saveSimSettings: seed unavailable for slot $slot. Skipping this SIM.", e)
+                    allSucceeded = false
+                } catch (e: SimNotFoundException) {
+                    AppLogger.w("saveSimSettings: SIM not found in slot $slot. Skipping this SIM.", e)
+                    allSucceeded = false
                 }
             }
-            simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
+            if (simSettingsMap.isNotEmpty()) {
+                simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
+            } else if (state.simStates.isNotEmpty()) {
+                allSucceeded = false
+            }
+            return allSucceeded
         }
 
         private fun getFallbackWidgetSettings(

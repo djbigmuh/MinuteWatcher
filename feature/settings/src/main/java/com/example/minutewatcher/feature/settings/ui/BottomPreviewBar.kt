@@ -40,12 +40,19 @@ fun BottomPreviewBar(
                 .navigationBarsPadding()
                 .padding(16.dp),
     ) {
+        // Text используется для заголовков и меток настроек.
+        // style = MaterialTheme.typography.titleSmall для заголовков секций.
+        // style = MaterialTheme.typography.bodyMedium для меток.
         Text(
             text = stringResource(id = R.string.preview),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )
 
+        // Box обеспечивает центрирование превью виджета.
+        // contentAlignment = Alignment.Center центрирует содержимое.
+        // Высота 120.dp обеспечивает фиксированную высоту превью.
+        // background(MaterialTheme.colorScheme.surface) обеспечивает фон превью.
         Box(
             modifier =
                 Modifier
@@ -64,8 +71,16 @@ fun BottomPreviewBar(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Button "Сохранить" вызывает onSave в rememberCoroutineScope().
+        // enabled = !isSaving предотвращает повторные нажатия во время сохранения.
+        // modifier = Modifier.fillMaxWidth() обеспечивает полную ширину кнопки.
         Button(
             onClick = {
+                // onSave вызывается в rememberCoroutineScope(), привязанном к lifecycle
+                // композабла. Если пользователь уходит с экрана во время сохранения,
+                // корутина отменяется. Сохранение может не завершиться.
+                // saveMutex освобождается в finally-блоке, что гарантирует отсутствие deadlock.
+                // Это допустимое поведение: пользователь может вернуться и сохранить повторно.
                 scope.launch {
                     onSave()
                     // Результат обрабатывается через LaunchedEffect(saveResult)

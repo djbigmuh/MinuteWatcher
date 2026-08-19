@@ -11,6 +11,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Контроллер настроек главного экрана.
+ * Управляет настройками приложения (тема, язык, онбординг).
+ *
+ * @property appSettingsRepository Репозиторий настроек приложения.
+ * @property settingsUseCase Use case настроек.
+ * @property scope Scope для корутин.
+ */
 class MainSettingsController
     @Inject
     constructor(

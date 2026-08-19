@@ -23,6 +23,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
@@ -33,29 +34,71 @@ class WidgetSettingsViewModel
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : ViewModel() {
+        // _settingsState — состояние настроек виджета.
+        // Начальное значение null (настройки ещё не загружены).
+        // После успешной загрузки устанавливается в загруженные настройки.
+        // При ошибке загрузки остаётся null, а _loadError устанавливается в true.
+        //
+        // Потокобезопасность: MutableStateFlow потокобезопасен.
+        // Чтение .value и запись .value безопасны из любой корутины.
         private val _settingsState = MutableStateFlow<WidgetSettingsState?>(null)
         val settingsState: StateFlow<WidgetSettingsState?> = _settingsState.asStateFlow()
 
+        // _loadError — флаг ошибки загрузки настроек.
+        // Начальное значение false.
+        // При ошибке загрузки устанавливается в true.
+        // При начале новой загрузки (retryLoad) сбрасывается в false.
+        //
+        // Потокобезопасность: MutableStateFlow потокобезопасен.
         private val _loadError = MutableStateFlow(false)
         val loadError: StateFlow<Boolean> = _loadError.asStateFlow()
 
+        // saveMutex — мьютекс для предотвращения конкурентных сохранений.
+        // Используется в saveAndNotify() через tryLock().
+        // Если мьютекс уже залочен (сохранение выполняется),
+        // saveAndNotify() немедленно возвращает AlreadyInProgress.
+        //
+        // Строгое соблюдение API: Mutex в Kotlin НЕ является reentrant.
+        // tryLock() возвращает false, если мьютекс уже залочен другой корутиной.
+        // finally-блок гарантирует освобождение мьютекса.
         private val saveMutex = Mutex()
+
+        // _isSaving — флаг выполнения сохранения.
+        // Начальное значение false.
+        // При сохранении устанавливается в true.
+        // В finally-блоке saveAndNotify() сбрасывается в false.
+        //
+        // Потокобезопасность: MutableStateFlow потокобезопасен.
+        // finally-блок гарантирует сброс даже при CancellationException.
         private val _isSaving = MutableStateFlow(false)
         val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
-        /**
-         * Однократное событие результата сохранения.
-         * UI должен прочитать значение и затем вызвать consumeSaveResult() для сброса.
-         */
+        // _saveResult — результат последнего сохранения.
+        // Начальное значение null (сохранение ещё не выполнялось).
+        // После сохранения устанавливается в Success/Failed/PartialSuccess/AlreadyInProgress.
+        // После обработки UI (consumeSaveResult) сбрасывается в null.
+        //
+        // Потокобезопасность: MutableStateFlow потокобезопасен.
+        // LaunchedEffect keyed on saveResult гарантирует однократную обработку.
         private val _saveResult = MutableStateFlow<SaveResult?>(null)
         val saveResult: StateFlow<SaveResult?> = _saveResult.asStateFlow()
 
-        /**
-         * Мьютекс гарантирует, что результат отменённой загрузки не будет записан в
-         * [_settingsState], даже если [Job.cancel] вызван между launch и withLock.
-         */
+        // loadMutex — мьютекс для сериализации загрузок.
+        // При вызове loadSettings() предыдущая корутина отменяется,
+        // а новая ожидает освобождения loadMutex.
+        //
+        // Строгое соблюдение API: Mutex в Kotlin НЕ является reentrant.
+        // withLock() освобождает мьютекс автоматически при CancellationException.
+        // Это гарантирует отсутствие deadlock.
         private val loadMutex = Mutex()
 
+        // loadJob — Job текущей загрузки.
+        // При вызове loadSettings() предыдущий Job отменяется через cancel().
+        // Новый Job создаётся в viewModelScope.launch.
+        //
+        // Отмена кооперативная: старый Job обрабатывает отмену на ближайшей
+        // точке приостановки или при ensureActive(). После этого loadMutex
+        // освобождается и новый Job может его залочить.
         private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
@@ -71,18 +114,26 @@ class WidgetSettingsViewModel
         /**
          * Загружает настройки виджета, используя паттерн отмены предыдущей загрузки.
          *
-         * [Job.cancel] инициирует кооперативную отмену предыдущей корутины.
-         * [loadMutex] гарантирует, что только одна (последняя актуальная) корутина
-         * получит доступ к обновлению [_settingsState] после завершения работы [loader].
+         * loadJob?.cancel() отменяет предыдущую корутину. Новая корутина
+         * ожидает освобождения loadMutex (старая корутина освободит его
+         * при обработке отмены на ближайшей точке приостановки или при
+         * ensureActive()).
+         *
+         * ensureActive() вызывается после withTimeoutOrNull для гарантии,
+         * что корутина не была отменена во время загрузки. Если отмена
+         * произошла, CancellationException пробрасывается и withLock
+         * освобождает мьютекс автоматически.
          *
          * Строгое соблюдение API kotlinx.coroutines: Mutex.release вызывается
-         * автоматически при CancellationException внутри withLock. Это гарантирует
-         * отсутствие deadlock.
-         *
-         * Вызов [ensureActive] внутри блокировки мьютекса защищает от записи данных
-         * в состояние, если корутина была отменена во время загрузки.
+         * автоматически при CancellationException внутри withLock.
+         * Это гарантирует отсутствие deadlock.
          */
         private fun loadSettings() {
+            // _loadError сбрасывается в false при начале новой загрузки.
+            // Если предыдущая загрузка завершилась ошибкой, вызов retryLoad()
+            // сбрасывает ошибку. Если новая загрузка тоже завершится ошибкой,
+            // _loadError будет установлен в true снова.
+            // Это корректное поведение: пользователь видит актуальное состояние.
             _loadError.value = false
             // loadMutex обеспечивает сериализацию загрузок. При отмене предыдущей
             // корутины (loadJob?.cancel()) Mutex освобождается автоматически
@@ -90,6 +141,12 @@ class WidgetSettingsViewModel
             // захватывает Mutex и выполняет загрузку. Это гарантирует, что
             // только одна загрузка выполняется одновременно.
             loadJob?.cancel()
+            // viewModelScope привязан к lifecycle ViewModel.
+            // При уничтожении ViewModel (onCleared) все корутины в viewModelScope
+            // отменяются. Это предотвращает утечки и обращение к уничтоженному ViewModel.
+            //
+            // Строгое соблюдение API: viewModelScope гарантированно отменяется
+            // при onCleared(). Это стандартная best practice для ViewModel.
             loadJob =
                 viewModelScope.launch {
                     loadMutex.withLock {
@@ -136,6 +193,15 @@ class WidgetSettingsViewModel
             }
         }
 
+        /**
+         * Сбрасывает результат сохранения в null.
+         * Вызывается UI после обработки результата (показа Snackbar).
+         * Предотвращает повторный показ Snackbar при рекомпозиции.
+         *
+         * LaunchedEffect keyed on saveResult перезапускается при изменении
+         * saveResult. После consumeSaveResult() saveResult становится null,
+         * эффект перезапускается с null и ничего не делает.
+         */
         fun consumeSaveResult() {
             _saveResult.value = null
         }
@@ -163,21 +229,26 @@ class WidgetSettingsViewModel
         /**
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          *
-         * Результат операции доставляется исключительно через [saveResult].
+         * Поведение при отмене:
+         * Если операция отменена (CancellationException), _saveResult не устанавливается.
+         * Это корректное поведение: UI уже уничтожен и не может показать результат.
+         * saveMutex освобождается в finally-блоке, что гарантирует отсутствие deadlock.
          *
-         * Строгое соблюдение API: tryLock() возвращает false если мьютекс
-         * уже занят. Это предотвращает конкурентные сохранения при быстрых
-         * повторных нажатиях. UI должен обработать AlreadyInProgress.
+         * Поведение при AlreadyInProgress:
+         * Если сохранение уже выполняется, метод немедленно возвращает
+         * SaveResult.AlreadyInProgress. Это предотвращает конкурентные сохранения.
          *
-         * Возможные результаты:
-         * - [SaveResult.AlreadyInProgress] — сохранение уже выполняется.
-         * - [SaveResult.Failed] — загрузка настроек завершилась ошибкой ранее
-         *   или состояние null.
-         * - [SaveResult.PartialSuccess] — сохраняются только общие настройки
-         *   (simListLoadFailed == true). Это проблема кастомной прошивки.
-         * - [SaveResult.Success] — нормальное сохранение всех настроек.
+         * Строгое соблюдение API: Mutex в Kotlin НЕ является reentrant.
+         * tryLock() возвращает false, если мьютекс уже залочен другой корутиной.
          */
         suspend fun saveAndNotify() {
+            // tryLock() — неблокирующая операция. Если мьютекс уже залочен
+            // (сохранение выполняется), метод немедленно возвращает AlreadyInProgress.
+            // Это предотвращает конкурентные сохранения и deadlock.
+            //
+            // Строгое соблюдение API: Mutex в Kotlin НЕ является reentrant.
+            // Если та же корутина попытается залочить мьютекс повторно, это приведёт
+            // к deadlock. tryLock() предотвращает это, возвращая false.
             if (!saveMutex.tryLock()) {
                 _saveResult.value = SaveResult.AlreadyInProgress
                 return
@@ -197,6 +268,20 @@ class WidgetSettingsViewModel
             }
         }
 
+        /**
+         * Выполняет сохранение настроек.
+         *
+         * Проверки перед сохранением:
+         * 1. _loadError.value == true → Failed (настройки не были загружены).
+         * 2. _settingsState.value == null → Failed (настройки ещё не загружены).
+         * 3. settingsLoadFailed == true → Failed (загрузка завершилась ошибкой).
+         * 4. simListLoadFailed == true → PartialSuccess (общие настройки сохраняются,
+         *    SIM-настройки пропускаются).
+         * 5. Иначе → полная попытка сохранения.
+         *
+         * Чтение .value из MutableStateFlow потокобезопасно.
+         * Синхронизация не требуется.
+         */
         @Suppress("ReturnCount")
         private suspend fun performSaveInternal(): SaveResult {
             if (_loadError.value) {
@@ -228,25 +313,49 @@ class WidgetSettingsViewModel
                     "Saving only general settings via skipSimSettings = true.",
             )
             val validatedState = validateSettings(state)
-            val success = saver.save(validatedState, skipSimSettings = true)
-            return if (success) {
-                SaveResult.PartialSuccess(skippedSimSettings = true)
-            } else {
+            /**
+             * Строгое соблюдение API: на AOSP save() завершается за миллисекунды.
+             * Таймаут 10 с — защитный запас. Таймаут здесь указывает на
+             * деградацию DataStore на кастомной прошивке.
+             */
+            return withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                val result = saver.save(validatedState, skipSimSettings = true)
+                if (result is SaveResult.PartialSuccess || result is SaveResult.Success) {
+                    SaveResult.PartialFailure("SIM settings skipped")
+                } else {
+                    result
+                }
+            } ?: run {
+                AppLogger.e("saveAndNotify: timeout during partial save. Possible DataStore degradation.")
                 SaveResult.Failed
             }
         }
 
         private suspend fun saveFullSettings(state: WidgetSettingsState): SaveResult {
             val validatedState = validateSettings(state)
-            val success = saver.save(validatedState)
-            return if (success) SaveResult.Success else SaveResult.Failed
+            /**
+             * Строгое соблюдение API: на AOSP save() завершается за миллисекунды.
+             * Таймаут 10 с — защитный запас. Таймаут здесь указывает на
+             * деградацию DataStore на кастомной прошивке.
+             */
+            return withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                saver.save(validatedState)
+            } ?: run {
+                AppLogger.e("saveAndNotify: timeout during full save. Possible DataStore degradation.")
+                SaveResult.Failed
+            }
         }
 
         /**
          * Валидирует настройки перед сохранением.
-         * Строгое соблюдение API: значения coerceIn гарантируют,
-         * что виджет получит корректные параметры даже если UI
-         * передал некорректные данные (например, из-за бага в слайдере).
+         *
+         * Строгое соблюдение API: значения coerceIn гарантируют, что виджет
+         * получит корректные параметры даже если UI передал некорректные данные
+         * (например, из-за бага в слайдере).
+         *
+         * Эвристика в пределах критерия надёжности: coerceIn молча приводит
+         * значения к допустимому диапазону. Это допустимо, т.к. альтернатива
+         * (бросить исключение) приведёт к потере всех настроек пользователя.
          */
         private fun validateSettings(state: WidgetSettingsState): WidgetSettingsState =
             state.copy(
@@ -279,11 +388,12 @@ class WidgetSettingsViewModel
             /**
              * Таймаут загрузки настроек виджета.
              *
-             * **Строгое соблюдение API:** на AOSP WidgetSettingsLoader.load() завершается
+             * Строгое соблюдение API: на AOSP WidgetSettingsLoader.load() завершается
              * за миллисекунды. 10 секунд — защитный запас.
              *
-             * **Отклонение кастомной прошивки:** если DataStore деградирует и load()
+             * Отклонение кастомной прошивки: если DataStore деградирует и load()
              * занимает больше 10 секунд — это проблема кастомной прошивки.
+             * Таймаут здесь указывает на деградацию DataStore на кастомной прошивке.
              */
             private val LOAD_TIMEOUT: Duration = 10.seconds
         }

@@ -13,6 +13,18 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
+ * Hilt модуль для виджета.
+ * Предоставляет WidgetUpdater и WidgetRenderer.
+ *
+ * Единственная точка создания WidgetRenderer.
+ * Default-параметр в constructor WidgetUpdaterImpl удалён,
+ * чтобы исключить дублирование и риск расхождения реализаций.
+ *
+ * Строгое соблюдение API: режим рендера (упрощённый / полный)
+ * определяется внутри MinutesGlanceWidget.provideGlance.
+ * Внешние флаги не передаются, что исключает race condition.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 // Hilt discovers this module via reflection at compile time; IDE marks it as unused.

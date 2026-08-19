@@ -71,7 +71,26 @@ import kotlinx.coroutines.CancellationException
 import androidx.glance.color.ColorProvider as GlanceColorProvider
 import androidx.glance.unit.ColorProvider as IColorProvider
 
+/**
+ * Основной класс виджета MinuteWatcher.
+ * Рендерит состояние SIM-карт на домашнем экране.
+ *
+ * Строгое соблюдение API: все компоненты используют Glance API
+ * в соответствии с документацией. На AOSP Glance обеспечивает
+ * стабильный рендер; отклонения возможны только на кастомных прошивках.
+ *
+ * Обоснование TooManyFunctions: разделение на подфункции
+ * (SimItemIcon, SimItemText, SimItemSpacer, SimSeparator и т. д.)
+ * необходимо для читаемости и переиспользования в SimLayoutRenderV2.
+ * Дальнейшее разделение на файлы снизит когезию UI-компонентов виджета.
+ */
 class MinutesGlanceWidget : GlanceAppWidget() {
+    /**
+     * Hilt EntryPoint для виджета.
+     * Позволяет получать зависимости в виджете через EntryPointAccessors.
+     *
+     * @return UsageStateRepository, WidgetSettingsLoader, NavigationProvider, TimeProvider.
+     */
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
@@ -84,6 +103,22 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         fun timeProvider(): TimeProvider
     }
 
+    /**
+     * Рендерит виджет.
+     * Вызывается системой при обновлении виджета.
+     * При любом исключении показывает FallbackContent.
+     *
+     * Строгое соблюдение API: на AOSP provideGlance вызывается только
+     * через updateAll(). Окно гонки не реализуется на AOSP.
+     *
+     * Отклонение кастомной прошивки: если кастомная прошивка вызывает
+     * provideGlance асинхронно относительно updateAll() — это проблема
+     * кастомной прошивки. Защита: provideGlance обёрнут в try-catch
+     * с fallback-рендером.
+     *
+     * @param context Контекст.
+     * @param id Идентификатор виджета.
+     */
     override suspend fun provideGlance(
         context: Context,
         id: GlanceId,
@@ -117,6 +152,17 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         }
     }
 
+    /**
+     * Рендерит fallback-содержимое виджета.
+     * Показывается при любом исключении в provideGlance.
+     * Содержит сообщение "Ошибка обновления".
+     *
+     * Строгое соблюдение API: на AOSP provideGlance не бросает исключений
+     * при корректном lifecycle. Fallback возможен только при деградации
+     * на кастомной прошивке. Это проблема кастомной прошивки.
+     *
+     * @param context Контекст.
+     */
     @Composable
     private fun FallbackContent(context: Context) {
         Box(
@@ -145,6 +191,18 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         return entryPoint.navigationProvider()
     }
 
+    /**
+     * Получает состояние виджета.
+     * Загружает snapshot и настройки виджета.
+     * При ошибке загрузки настроек использует значения по умолчанию.
+     *
+     * Строгое соблюдение API: на AOSP загрузка snapshot и настроек
+     * завершается за миллисекунды. Ошибка указывает на деградацию
+     * DataStore на кастомной прошивке. Это проблема кастомной прошивки.
+     *
+     * @param context Контекст.
+     * @return Состояние виджета.
+     */
     private suspend fun getUiState(context: Context): WidgetUiState {
         val entryPoint =
             EntryPointAccessors.fromApplication(
@@ -193,15 +251,18 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     // для исключения дублирования с экраном настроек и гарантии консистентности.
 
     /**
-     * Получает актуальный snapshot для рендера виджета.
+     * Получает snapshot для виджета.
+     * Если snapshot не пустой и не устаревший, возвращает его.
+     * Иначе пытается обновить через usageRepository.refresh().
+     * При ошибке обновления возвращает Timeout с текущим snapshot.
      *
-     * Контракт AOSP: на AOSP UsageStateRepository.refresh() возвращает Success.
-     * Монотонное время (elapsedRealtime) гарантирует корректность интервалов.
+     * Строгое соблюдение API: на AOSP UsageStateRepository.refresh()
+     * возвращает Success. Таймаут указывает на деградацию DataStore
+     * на кастомной прошивке. Это проблема кастомной прошивки.
      *
-     * Отклонение кастомной прошивки: Timeout возможен только при деградации хранилища.
-     * Это проблема кастомной прошивки.
-     *
-     * Стратегия приложения: виджет показывает последние данные и индикатор устаревания.
+     * @param usageRepository Репозиторий состояния использования.
+     * @param timeProvider Провайдер времени.
+     * @return Результат обновления (Success или Timeout).
      */
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
@@ -229,6 +290,13 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     }
 }
 
+/**
+ * Рендерит содержимое виджета.
+ * Содержит фон, список SIM-карт и индикатор устаревших данных.
+ *
+ * @param uiState Состояние виджета.
+ * @param navigationProvider Провайдер навигации для клика по виджету.
+ */
 @Composable
 private fun WidgetContent(
     uiState: WidgetUiState,
@@ -251,6 +319,14 @@ private fun WidgetContent(
     }
 }
 
+/**
+ * Возвращает цвет для сообщения "Нет данных".
+ * При useSystemColors возвращает GlanceTheme.colors.onSurface.
+ * Иначе возвращает цвет, вычисленный через WidgetColorResolver.
+ *
+ * @param uiState Состояние виджета.
+ * @return Цвет для сообщения "Нет данных".
+ */
 @Composable
 private fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
     if (uiState.useSystemColors) {
@@ -264,6 +340,15 @@ private fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
     return GlanceColorProvider(day = composeColor, night = composeColor)
 }
 
+/**
+ * Создаёт модификатор для виджета.
+ * Содержит фон, appWidgetBackground и clickable для клика по виджету.
+ *
+ * @param context Контекст.
+ * @param navigationProvider Провайдер навигации для клика по виджету.
+ * @param bgColor Цвет фона.
+ * @return Модификатор для виджета.
+ */
 private fun getWidgetModifier(
     context: Context,
     navigationProvider: NavigationProvider?,
@@ -300,6 +385,14 @@ private fun getWidgetModifier(
     return modifier
 }
 
+/**
+ * Рендерит основное содержимое виджета.
+ * Показывает сообщение об ошибке, сообщение об отсутствии SIM
+ * или список SIM-карт в зависимости от состояния.
+ *
+ * @param uiState Состояние виджета.
+ * @param noDataColor Цвет для сообщения "Нет данных".
+ */
 @Composable
 private fun WidgetMainContent(
     uiState: WidgetUiState,
@@ -327,6 +420,15 @@ private fun WidgetMainContent(
     }
 }
 
+/**
+ * Рендерит список SIM-карт в виджете.
+ * Показывает индикатор устаревших данных при refreshFailed.
+ * Содержит список SIM-карт через MultiSimLayout.
+ *
+ * @param simUiStates Список состояний SIM-карт.
+ * @param uiState Состояние виджета.
+ * @param noDataColor Цвет для сообщения "Нет данных".
+ */
 @Composable
 private fun SimCardsLayout(
     simUiStates: List<SimUiState>,
@@ -350,6 +452,13 @@ private fun SimCardsLayout(
     }
 }
 
+/**
+ * Рендерит индикатор устаревших данных.
+ * Показывается при refreshFailed = true.
+ * Содержит иконку предупреждения и текст "Данные могут быть устаревшими".
+ *
+ * @param color Цвет индикатора.
+ */
 @Composable
 private fun StaleDataIndicator(color: IColorProvider) {
     val context = LocalContext.current
@@ -375,6 +484,13 @@ private fun StaleDataIndicator(color: IColorProvider) {
     }
 }
 
+/**
+ * Рендерит сообщение в виджете.
+ * Используется для сообщений об ошибке, отсутствии SIM и т. д.
+ *
+ * @param text Текст сообщения.
+ * @param color Цвет текста.
+ */
 @Composable
 private fun WidgetMessage(
     text: String,
@@ -390,6 +506,14 @@ private fun WidgetMessage(
     )
 }
 
+/**
+ * Рендерит несколько SIM-карт в виджете.
+ * Использует HorizontalSimLayout или VerticalSimLayout
+ * в зависимости от isHorizontal.
+ *
+ * @param sims Список состояний SIM-карт.
+ * @param uiState Состояние виджета.
+ */
 @Composable
 private fun MultiSimLayout(
     sims: List<SimUiState>,
@@ -402,6 +526,14 @@ private fun MultiSimLayout(
     }
 }
 
+/**
+ * Рендерит SIM-карты горизонтально (в ряд).
+ * Каждая SIM-карта занимает равную ширину (defaultWeight).
+ * Разделитель показывается между SIM-картами при showSeparator.
+ *
+ * @param sims Список состояний SIM-карт.
+ * @param uiState Состояние виджета.
+ */
 @Composable
 private fun HorizontalSimLayout(
     sims: List<SimUiState>,
@@ -428,6 +560,14 @@ private fun HorizontalSimLayout(
     }
 }
 
+/**
+ * Рендерит SIM-карты вертикально (в столбец).
+ * Каждая SIM-карта занимает равную высоту (defaultWeight).
+ * Разделитель показывается между SIM-картами при showSeparator.
+ *
+ * @param sims Список состояний SIM-карт.
+ * @param uiState Состояние виджета.
+ */
 @Composable
 private fun VerticalSimLayout(
     sims: List<SimUiState>,
@@ -454,6 +594,13 @@ private fun VerticalSimLayout(
     }
 }
 
+/**
+ * Рендерит разделитель между SIM-картами в виджете.
+ * Показывается при showSeparator = true и наличии нескольких SIM.
+ *
+ * @param uiState Состояние виджета.
+ * @param isHorizontal true если разделитель вертикальный (для горизонтального расположения).
+ */
 @Composable
 private fun SimSeparator(
     uiState: WidgetUiState,
@@ -484,6 +631,14 @@ private fun SimSeparator(
     Spacer(modifier = modifier.background(separatorColor))
 }
 
+/**
+ * Рендерит одну SIM-карту в виджете.
+ * Содержит иконку, имя оператора, состояние минут и трафика.
+ * Использует SimLayoutRenderV2 для рендера.
+ *
+ * @param sim Состояние SIM-карты.
+ * @param uiState Состояние виджета.
+ */
 @Composable
 private fun SimItem(
     sim: SimUiState,
@@ -510,6 +665,13 @@ private fun SimItem(
     }
 }
 
+/**
+ * Рендерит layout SIM-карты через SimLayoutRenderV2.
+ * Передаёт рендереры для иконки, текста и spacer.
+ *
+ * @param sim Состояние SIM-карты.
+ * @param uiState Состояние виджета.
+ */
 @Composable
 private fun SimItemLayout(
     sim: SimUiState,
@@ -534,6 +696,12 @@ private fun SimItemLayout(
     )
 }
 
+/**
+ * Рендерит иконку SIM-карт в виджете.
+ * Используется в SimLayoutRenderV2.
+ *
+ * @param component Компонент иконки (iconRes, sizeDp).
+ */
 @Composable
 private fun SimItemIcon(component: com.example.minutewatcher.core.model.SimLayoutComponent.Icon) {
     Image(
@@ -543,6 +711,15 @@ private fun SimItemIcon(component: com.example.minutewatcher.core.model.SimLayou
     )
 }
 
+/**
+ * Рендерит текст SIM-карты в виджете.
+ * Используется в SimLayoutRenderV2.
+ * Цвет текста определяется в зависимости от useSystemColors.
+ *
+ * @param component Компонент текста (text, color, fontSizeSp, isBold).
+ * @param sim Состояние SIM-карты.
+ * @param uiState Состояние виджета.
+ */
 @Composable
 private fun SimItemText(
     component: com.example.minutewatcher.core.model.SimLayoutComponent.Text,
@@ -572,6 +749,12 @@ private fun SimItemText(
     )
 }
 
+/**
+ * Рендерит spacer в виджете.
+ * Используется в SimLayoutRenderV2.
+ *
+ * @param component Компонент spacer (widthDp, heightDp).
+ */
 @Composable
 private fun SimItemSpacer(component: com.example.minutewatcher.core.model.SimLayoutComponent.Spacer) {
     if (component.widthDp > 0) {

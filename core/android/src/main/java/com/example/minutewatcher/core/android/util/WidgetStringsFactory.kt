@@ -6,8 +6,15 @@ import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Factory to create widget-related string models.
- * Centralizing this logic ensures consistency between the home screen widget and its settings UI.
+ * Фабрика строк виджета.
+ * Создаёт WidgetStrings из контекста.
+ * Пересоздаётся при изменении конфигурации (локаль).
+ *
+ * Строгое соблюдение API: на AOSP смена локали через
+ * AppCompatDelegate.setApplicationLocales() вызывает пересоздание
+ * конфигурации. На кастомных прошивках, где это не происходит,
+ * строки обновятся при следующем пересоздании Activity —
+ * это проблема кастомной прошивки.
  */
 object WidgetStringsFactory {
     fun create(context: Context): WidgetStrings =

@@ -6,6 +6,18 @@ private const val VAL_THREE_LINES = 2
 private const val VAL_SIX_LINES = 3
 private const val VAL_SIMPLE = 4
 
+/**
+ * Режимы компоновки виджета.
+ *
+ * Варианты:
+ * - SINGLE_LINE (0) — все в одну строку.
+ * - TWO_LINES (1) — две строки.
+ * - THREE_LINES (2) — три строки.
+ * - SIX_LINES (3) — шесть строк.
+ * - SIMPLE (4) — упрощённый режим (при превышении лимита).
+ *
+ * fromValue возвращает THREE_LINES для невалидных значений.
+ */
 enum class WidgetLayoutMode(
     val value: Int,
 ) {

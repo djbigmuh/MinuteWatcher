@@ -11,6 +11,14 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/**
+ * Контроллер обновления данных SIM.
+ * Выполняет обновление данных SIM через UsageStateRepository.
+ *
+ * @property usageUseCase Use case использования.
+ * @property usageStateRepository Репозиторий состояния использования.
+ * @property ioDispatcher Диспетчер для I/O операций.
+ */
 class MainSimRefreshController
     @Inject
     constructor(

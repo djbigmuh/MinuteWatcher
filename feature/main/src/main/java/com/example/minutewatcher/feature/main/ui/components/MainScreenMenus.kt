@@ -19,6 +19,12 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.LanguageOption
 
+// LanguageMenu — выпадающее меню для выбора языка.
+// Содержит варианты: Системный, Английский, Русский, и т. д.
+// onLanguageChange вызывается при выборе языка.
+//
+// DropdownMenu показывается при нажатии на иконку.
+// При выборе языка меню закрывается.
 @Composable
 fun LanguageMenu(
     currentLanguage: String?,
@@ -62,6 +68,12 @@ fun LanguageMenu(
     }
 }
 
+// ThemeMenu — выпадающее меню для выбора темы.
+// Содержит варианты: Системная, Светлая, Тёмная.
+// onThemeChange вызывается при выборе темы.
+//
+// DropdownMenu показывается при нажатии на иконку.
+// При выборе темы меню закрывается.
 @Composable
 fun ThemeMenu(
     currentTheme: AppTheme,

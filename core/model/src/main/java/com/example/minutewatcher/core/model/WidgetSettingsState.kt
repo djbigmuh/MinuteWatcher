@@ -1,5 +1,22 @@
 package com.example.minutewatcher.core.model
 
+/**
+ * Состояние настроек виджета.
+ * Содержит общие настройки (layout, transparency, fontSize)
+ * и SIM-специфичные настройки (simStates).
+ *
+ * @property layoutMode Режим компоновки виджета.
+ * @property simArrangement Расположение SIM (горизонтальное/вертикальное).
+ * @property transparency Прозрачность фона (0-100).
+ * @property fontSize Размер шрифта (0-4).
+ * @property backgroundColor Цвет фона.
+ * @property notifyLowMinutes Уведомление о низком остатке минут.
+ * @property notifyLowTraffic Уведомление о низком остатке трафика.
+ * @property simStates SIM-специфичные настройки (ключ: индекс слота).
+ * @property widgetLimitExceeded Флаг превышения лимита виджета.
+ * @property settingsLoadFailed Флаг ошибки загрузки настроек.
+ * @property simListLoadFailed Флаг ошибки загрузки списка SIM.
+ */
 data class WidgetSettingsState(
     val layoutMode: Int = 2,
     val simArrangement: Int = 0,
@@ -22,6 +39,17 @@ data class WidgetSettingsState(
     val simListLoadFailed: Boolean = false,
 )
 
+/**
+ * Настройки одной SIM-карты в виджете.
+ *
+ * @property showSim Показывать SIM-карту.
+ * @property showIcon Показывать иконку.
+ * @property showName Показывать имя.
+ * @property showMinutes Показывать минуты.
+ * @property showMinutesLimit Показывать лимит минут.
+ * @property showTraffic Показывать трафик.
+ * @property showTrafficLimit Показывать лимит трафика.
+ */
 data class SimSettingsState(
     val showSim: Boolean = true,
     val showIcon: Boolean = true,

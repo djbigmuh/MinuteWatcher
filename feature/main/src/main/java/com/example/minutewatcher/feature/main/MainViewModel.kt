@@ -28,6 +28,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * ViewModel главного экрана SIM-карт.
+ * Управляет состоянием экрана, диалогами, баннерами и данными SIM-карт.
+ *
+ * @param controllers Контейнер контроллеров (dialog, banner, refresh, settings, simData).
+ * @param appSettingsRepository Репозиторий настроек приложения.
+ * @param autoResetUseCase Use case автосброса.
+ * @param savedStateHandle SavedStateHandle для сохранения состояния.
+ * @param timeProvider Провайдер времени.
+ * @param ioDispatcher Диспетчер для I/O операций.
+ */
 @HiltViewModel
 class MainViewModel
     @Inject
@@ -390,16 +401,20 @@ class MainViewModel
  * Планировщик автоматического сброса лимитов.
  *
  * **Поведение при гибели процесса:**
- * [isCheckStarted] — [AtomicBoolean], сбрасывается при гибели процесса.
- * [savedStateHandle] персистится. После гибели процесса `checkOnStart()`
- * выполнится повторно, что является **корректным** поведением:
- * проверка авто-сброса должна повториться, если процесс был убит
- * до завершения предыдущей проверки.
+ * - [KEY_LAST_AUTO_RESET_CHECK] персистентен в SavedStateHandle.
+ * - При гибели процесса и восстановлении ViewModel checkOnStart() выполнится повторно.
+ * - Если с момента последней проверки прошло меньше интервала — сброс не выполняется.
+ * - Если прошло больше — сброс выполняется.
  *
- * **Строгое соблюдение API:** SavedStateHandle гарантированно
- * восстанавливается Android Framework при воссоздании ViewModel.
- * Атомарность [isCheckStarted] предотвращает конкуренцию при
- * нескольких вызовах в рамках одного экземпляра ViewModel.
+ * **Строгое соблюдение API:** SavedStateHandle гарантированно восстанавливается
+ * Android Framework при воссоздании ViewModel. Атомарность [isCheckStarted]
+ * предотвращает конкуренцию при нескольких вызовах в рамках одного экземпляра ViewModel.
+ *
+ * **Эвристика в пределах критерия надёжности:** при гибели процесса во время
+ * проверки сброса, повторная проверка при восстановлении может выполнить
+ * сброс дважды (если первый сброс завершился, но флаг не был сохранён).
+ * Это допустимо: повторный сброс идемпотентен (сброс уже сброшенных данных
+ * не изменяет данные).
  */
 internal class AutoResetScheduler(
     private val savedStateHandle: SavedStateHandle,

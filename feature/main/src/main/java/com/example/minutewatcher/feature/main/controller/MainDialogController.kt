@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
+/**
+ * Контроллер диалогов главного экрана.
+ * Управляет состоянием диалогов через SavedStateHandle.
+ *
+ * @property savedStateHandle SavedStateHandle для сохранения состояния диалогов.
+ */
 class MainDialogController
     @Inject
     constructor(

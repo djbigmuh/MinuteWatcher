@@ -34,14 +34,17 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Контроллер данных SIM-карт для главной страницы.
+ * Контроллер данных SIM главного экрана.
+ * Управляет данными SIM-карт, обновлением и корректировкой.
  *
- * Все операции запускаются на [ioDispatcher], т.к. связаны с I/O (DataStore).
- * Ошибки логируются и не пробрасываются в UI, чтобы единичный сбой
- * (например, таймаут DataStore на кастомной прошивке) не ронял весь экран.
- * Реализовано строгое соблюдение API: на AOSP getIdentity() не бросает
- * исключений при корректном состоянии DataStore; исключения возможны только
- * при деградации хранилища на кастомных прошивках.
+ * @property usageStateRepository Репозиторий состояния использования.
+ * @property trackingRecoveryController Контроллер восстановления отслеживания.
+ * @property simIdentityRepository Репозиторий identity SIM.
+ * @property simLimitsRepository Репозиторий лимитов SIM.
+ * @property usageUseCase Use case использования.
+ * @property dataChangeNotifier Уведомитель об изменениях данных.
+ * @property ioDispatcher Диспетчер для I/O операций.
+ * @property scope Scope для корутин.
  */
 class MainSimDataController
     @Inject

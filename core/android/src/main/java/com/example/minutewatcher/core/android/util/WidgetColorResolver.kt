@@ -5,6 +5,11 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
 
+/**
+ * Разрешает цвета виджета.
+ * Содержит методы для разрешения цвета текста, цвета статуса
+ * и цвета "Нет данных".
+ */
 object WidgetColorResolver {
     fun resolveTextColors(backgroundLuminance: Double): Pair<Int, Int> {
         val textColor = if (backgroundLuminance > Constants.UI.LUMINANCE_THRESHOLD) Color.BLACK else Color.WHITE

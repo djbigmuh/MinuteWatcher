@@ -29,6 +29,16 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
 
+/**
+ * Рендерит секцию трафика SIM-карт.
+ * Содержит использованный трафик, лимит трафика и остаток трафика.
+ * Остаток трафика редактируемый (EditableValueBox).
+ *
+ * @param model Модель SIM-карты.
+ * @param statusColor Цвет статуса (нормальный/низкий/критический).
+ * @param onAdjustTraffic Колбэк для корректировки трафика.
+ * @param onShowTrafficInfo Колбэк для показа информации о трафике.
+ */
 @Composable
 fun TrafficSection(
     model: SimCardUiModel,

@@ -35,26 +35,27 @@ class WidgetSettingsSaver
          * приводит значения к диапазону. Это допустимо, т.к. альтернатива
          * (бросить исключение) приведёт к потере всех настроек пользователя.
          *
+         * **Строгое соблюдение API:** на AOSP сохранение настроек завершается за миллисекунды.
+         * Сбой на этапе SIM-настроек указывает на деградацию DataStore или недоступность
+         * seed (проблема кастомной прошивки). Общие настройки не зависят от seed и
+         * сохраняются всегда.
+         *
          * @param state Состояние настроек (будет провалидировано перед сохранением).
          * @param skipSimSettings Если true, SIM-специфичные настройки не
          *   сохраняются (используется при simListLoadFailed).
-         * @return true если сохранение завершилось успешно.
+         * @return [SaveResult] результат операции.
          */
         suspend fun save(
             state: WidgetSettingsState,
             skipSimSettings: Boolean = false,
-        ): Boolean =
+        ): SaveResult =
             try {
                 if (state.settingsLoadFailed) {
                     AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
-                    return false
+                    return SaveResult.Failed
                 }
 
                 // Защитная валидация на границе записи.
-                // Даже если ViewModel уже валидировала, это предотвращает
-                // попадание невалидных значений при прямом вызове save().
-                // Строгое соблюдение API: виджет читает эти значения напрямую
-                // и не выполняет повторную валидацию.
                 val validatedState =
                     state.copy(
                         layoutMode =
@@ -88,19 +89,45 @@ class WidgetSettingsSaver
                             },
                     )
 
-                loader.save(
-                    state = validatedState,
-                    skipSimSettings = skipSimSettings,
-                )
+                saveGeneralSettings(validatedState)
+                val simsSucceeded = saveSimSettings(validatedState, skipSimSettings)
+
+                // После успешного сохранения уведомляем систему об изменениях.
+                // force = true гарантирует немедленное обновление виджета,
+                // даже если данные не изменились (например, пользователь изменил
+                // только настройки оформления).
+                //
+                // Строгое соблюдение API: на AOSP notifyDataChanged завершается
+                // за миллисекунды. Сбой указывает на деградацию DataStore
+                // на кастомной прошивке.
                 dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                true
+
+                if (simsSucceeded) {
+                    if (skipSimSettings) {
+                        SaveResult.PartialSuccess(skippedSimSettings = true)
+                    } else {
+                        SaveResult.Success
+                    }
+                } else {
+                    SaveResult.PartialFailure("Some SIM settings could not be saved")
+                }
             } catch (e: CancellationException) {
                 // Пробрасываем для кооперативной отмены корутины.
-                // Строгое соблюдение API kotlinx.coroutines: CancellationException
-                // должен пробрасываться для корректной отмены scope.
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)
-                false
+                SaveResult.Failed
             }
+
+        private suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+            loader.saveGeneralSettings(state)
+        }
+
+        private suspend fun saveSimSettings(
+            state: WidgetSettingsState,
+            skipSimSettings: Boolean,
+        ): Boolean {
+            if (skipSimSettings) return true
+            return loader.saveSimSettings(state)
+        }
     }

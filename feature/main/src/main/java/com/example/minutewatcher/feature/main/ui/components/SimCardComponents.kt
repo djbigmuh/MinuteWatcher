@@ -22,6 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.resources.R
 
+/**
+ * Рендерит метку корректировки (например, "+10 мин." или "-0.5 ГБ").
+ * Показывается при ненулевой корректировке.
+ *
+ * @param value Значение корректировки.
+ * @param unit Единица измерения ("мин." или "ГБ").
+ * @param isPositive true если корректировка положительная.
+ */
 @Composable
 internal fun AdjustmentLabel(
     value: String,
@@ -36,6 +44,16 @@ internal fun AdjustmentLabel(
     )
 }
 
+/**
+ * Рендерит редактируемое значение (остаток минут или трафика).
+ * При нажатии вызывает onClick для открытия диалога корректировки.
+ *
+ * @param value Отображаемое значение.
+ * @param color Цвет значения (статус).
+ * @param onClick Колбэк при нажатии.
+ * @param horizontalPadding Горизонтальный отступ.
+ * @param contentDescription Описание для доступности.
+ */
 @Composable
 internal fun EditableValueBox(
     value: String,

@@ -40,6 +40,20 @@ import com.example.minutewatcher.feature.main.ui.theme.usageColor
 @Composable
 private fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorScheme.usageColor(status)
 
+/**
+ * Рендерит карточку SIM-карт.
+ * Содержит иконку, имя оператора, состояние минут и трафика,
+ * кнопки установки лимитов и сброса.
+ *
+ * @param model Модель SIM-карты.
+ * @param onSetLimits Колбэк для установки лимитов.
+ * @param onResetCounters Колбэк для сброса счётчиков.
+ * @param onToggleAutoReset Колбэк для переключения автосброса.
+ * @param onEditAutoResetDay Колбэк для редактирования дня автосброса.
+ * @param onAdjustMinutes Колбэк для корректировки минут.
+ * @param onAdjustTraffic Колбэк для корректировки трафика.
+ * @param onShowTrafficInfo Колбэк для показа информации о трафике.
+ */
 @Composable
 fun SimCardItem(
     model: SimCardUiModel,
@@ -116,6 +130,13 @@ private fun SimCardContent(
     }
 }
 
+/**
+ * Рендерит заголовок карточки SIM-карты.
+ * Содержит иконку оператора, имя оператора и кнопку установки лимитов.
+ *
+ * @param model Модель SIM-карты.
+ * @param onSetLimits Колбэк для установки лимитов.
+ */
 @Composable
 private fun SimCardHeader(
     model: SimCardUiModel,
@@ -149,6 +170,14 @@ private fun SimCardHeader(
     }
 }
 
+/**
+ * Рендерит секцию автосброса SIM-карты.
+ * Содержит переключатель автосброса и редактируемый день автосброса.
+ *
+ * @param model Модель SIM-карты.
+ * @param onToggleAutoReset Колбэк для переключения автосброса.
+ * @param onEditAutoResetDay Колбэк для редактирования дня автосброса.
+ */
 @Composable
 private fun AutoResetSection(
     model: SimCardUiModel,

@@ -1,7 +1,9 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetSaveResult
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -11,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -53,7 +56,7 @@ class WidgetSettingsViewModelTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
             // Default: successful immediate save
-            whenever(saver.save(any(), any())).thenReturn(true)
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
 
             viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
         }
@@ -91,7 +94,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify calls save and notifies`() =
         runTest {
-            whenever(saver.save(any(), any())).thenReturn(true)
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
             testScheduler.advanceUntilIdle()
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
@@ -108,12 +111,16 @@ class WidgetSettingsViewModelTest {
                 object : WidgetSettingsLoader {
                     override suspend fun load(): WidgetSettingsState = WidgetSettingsState()
 
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        gate.await()
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+
                     override suspend fun save(
                         state: WidgetSettingsState,
                         skipSimSettings: Boolean,
-                    ) {
-                        gate.await()
-                    }
+                    ): WidgetSaveResult = WidgetSaveResult.Success
                 }
             val realSaver = WidgetSettingsSaver(blockingLoader, mock())
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
@@ -137,7 +144,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify sets Failed on exception`() =
         runTest {
-            whenever(saver.save(any(), any())).thenThrow(RuntimeException("Save failed"))
+            whenever(saver.save(any(), any())).thenAnswer { SaveResult.Failed }
             testScheduler.advanceUntilIdle()
 
             viewModel.saveAndNotify()
@@ -176,9 +183,13 @@ class WidgetSettingsViewModelTest {
                     override suspend fun save(
                         state: WidgetSettingsState,
                         skipSimSettings: Boolean,
-                    ) {
+                    ): WidgetSaveResult = WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
                         // Empty for mock
                     }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
                 }
 
             // 1. Create VM (triggers first load in init)
@@ -230,15 +241,51 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `saveAndNotify sets PartialSuccess when simListLoadFailed is true`() =
+    fun `saveAndNotify returns Failed on timeout`() =
         runTest {
+            val hangingLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = WidgetSettingsState()
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        delay(Constants.Flow.LONG_TIMEOUT_MS * 2)
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): WidgetSaveResult = WidgetSaveResult.Success
+                }
+            val realSaver = WidgetSettingsSaver(hangingLoader, mock())
+            val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
+            testScheduler.advanceUntilIdle()
+
+            val job =
+                launch {
+                    vm.saveAndNotify()
+                }
+
+            // Advance time just past the timeout
+            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
+            runCurrent()
+
+            assertEquals(SaveResult.Failed, vm.saveResult.value)
+            job.cancel()
+        }
+
+    @Test
+    fun `saveAndNotify sets PartialFailure when simListLoadFailed is true`() =
+        runTest {
+            whenever(saver.save(any(), eq(true))).thenReturn(SaveResult.PartialSuccess(skippedSimSettings = true))
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(simListLoadFailed = true) }
 
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.PartialSuccess(skippedSimSettings = true), viewModel.saveResult.value)
+            assertEquals(SaveResult.PartialFailure("SIM settings skipped"), viewModel.saveResult.value)
             verify(saver).save(any(), eq(true))
         }
 }

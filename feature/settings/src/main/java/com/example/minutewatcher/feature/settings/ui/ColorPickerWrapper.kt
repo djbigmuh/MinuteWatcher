@@ -7,6 +7,19 @@ import com.example.minutewatcher.core.resources.R
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 
+/**
+ * Обёртка для ColorPickerDialog, использующая DisposableEffect для управления
+ * жизненным циклом диалога.
+ *
+ * Поведение при изменении конфигурации (поворот экрана):
+ * DisposableEffect(Unit) выполняется один раз при входе в композицию.
+ * При изменении конфигурации композиция пересоздаётся, cleanup вызывает
+ * dialog.dismiss(), и диалог исчезает. Это допустимое поведение:
+ * пользователь может открыть диалог повторно.
+ *
+ * onColorSelected вызывается перед onDismiss, что гарантирует сохранение
+ * выбранного цвета перед закрытием диалога.
+ */
 @Composable
 fun ColorPickerWrapper(
     onColorSelected: (Int) -> Unit,

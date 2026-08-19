@@ -13,6 +13,26 @@ import com.example.minutewatcher.feature.main.ui.components.SimLimitComposeDialo
 import com.example.minutewatcher.feature.main.ui.components.SimpleMessageDialog
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 
+/**
+ * Рендерит диалоги для экрана SIM-карт.
+ * Является центральным компонентом управления модальными окнами экрана.
+ * Показывает диалоги в зависимости от состояния [MainViewModel], обеспечивая
+ * единую точку входа для рендеринга всех пользовательских взаимодействий
+ * через диалоги.
+ *
+ * Обрабатываемые диалоги:
+ * - [SimLimitComposeDialog]: Установка лимитов минут и трафика.
+ * - [DayPickerComposeDialog]: Выбор дня автоматического сброса статистики.
+ * - [AdjustmentComposeDialog]: Ручная корректировка текущего остатка.
+ * - [SimpleMessageDialog]: Информационные сообщения (например, об ограничениях трафика).
+ * - [UsageAccessDialog]: Запрос системного доступа к статистике использования.
+ * - [OnboardingDialog]: Ознакомительный экран для новых пользователей.
+ *
+ * @param viewModel ViewModel для управления состоянием диалогов и выполнения бизнес-логики подтверждения.
+ * @param showUsageAccessDialog Флаг показа диалога доступа к использованию (контролируется внешней логикой разрешений).
+ * @param showOnboardingDialog Флаг показа диалога онбординга.
+ * @param onOpenUsageAccessSettings Колбэк для открытия системных настроек доступа.
+ */
 @Composable
 fun DialogRenderer(
     viewModel: MainViewModel,
@@ -52,6 +72,13 @@ fun DialogRenderer(
     }
 }
 
+/**
+ * Рендерит диалог установки лимитов для SIM-карты.
+ * Показывается при showLimitDialog != null.
+ *
+ * @param data Данные диалога (slot, имя оператора, текущие лимиты).
+ * @param viewModel ViewModel для управления состоянием.
+ */
 @Composable
 private fun LimitDialog(
     data: LimitDialogData?,
@@ -79,6 +106,13 @@ private fun LimitDialog(
     }
 }
 
+/**
+ * Рендерит диалог выбора дня автоматического сброса.
+ * Показывается при showDayDialog != null.
+ *
+ * @param data Данные диалога (slot, текущий день).
+ * @param viewModel ViewModel для управления состоянием.
+ */
 @Composable
 private fun DayDialog(
     data: DayDialogData?,
@@ -98,6 +132,13 @@ private fun DayDialog(
     }
 }
 
+/**
+ * Рендерит диалог корректировки остатка минут или трафика.
+ * Показывается при showAdjustDialog != null.
+ *
+ * @param data Данные диалога (slot, текущее значение, тип: минуты/трафик).
+ * @param viewModel ViewModel для управления состоянием.
+ */
 @Composable
 private fun AdjustDialog(
     data: AdjustDialogData?,
