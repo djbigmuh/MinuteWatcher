@@ -1,5 +1,8 @@
 package com.example.minutewatcher.core.model
 
+import com.example.minutewatcher.core.model.util.ClampingUtils
+
+
 data class MinutesModel(
     val used: Int,
     val limit: Int,
@@ -14,9 +17,10 @@ data class MinutesModel(
             limit: Int,
             manualAdjustment: Int,
         ): MinutesModel {
-            val effectiveLimit = maxOf(0, limit + manualAdjustment)
+            val rawEffective = limit + manualAdjustment
+            val effectiveLimit = ClampingUtils.clamp(rawEffective, 0, Constants.MAX_MINUTES_LIMIT)
             val isLimitSet = limit > 0 || manualAdjustment != 0
-            val remaining = if (isLimitSet) maxOf(0, effectiveLimit - used) else 0
+            val remaining = if (isLimitSet) ClampingUtils.clamp(effectiveLimit - used, 0, Constants.MAX_MINUTES_LIMIT) else 0
             return MinutesModel(used, limit, manualAdjustment, remaining, effectiveLimit, isLimitSet)
         }
     }

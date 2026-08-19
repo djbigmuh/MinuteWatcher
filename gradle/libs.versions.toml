@@ -46,6 +46,7 @@ daggerHiltCompiler = { group = "com.google.dagger", name = "hilt-compiler", vers
 # Lifecycle
 androidxLifecycleViewmodelKtx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidxLifecycleRuntimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidxLifecycleProcess = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycle" }
 
 # DataStore
 androidxDatastorePreferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }

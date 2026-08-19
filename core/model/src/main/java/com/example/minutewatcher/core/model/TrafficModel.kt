@@ -1,5 +1,8 @@
 package com.example.minutewatcher.core.model
 
+import com.example.minutewatcher.core.model.util.ClampingUtils
+
+
 data class TrafficModel(
     val usedMb: Float,
     val limitMb: Int,
@@ -20,17 +23,20 @@ data class TrafficModel(
             val usedGbD = usedMb.toDouble() / mbPerGb
             val manualAdjGbD = manualAdjustmentGb.toDouble()
 
-            val effectiveLimitGbD = maxOf(0.0, limitGbD + manualAdjGbD)
+            val effectiveLimitGbD = (limitGbD + manualAdjGbD)
+            val clampedEffectiveLimitGb = ClampingUtils.clamp(effectiveLimitGbD.toFloat(), 0f, Constants.MAX_TRAFFIC_LIMIT_GB)
+
             val isLimitSet = limitMb > 0 || manualAdjustmentGb != 0f
-            val remainingGbD = if (isLimitSet) maxOf(0.0, effectiveLimitGbD - usedGbD) else -1.0
+            val remainingGbD = if (isLimitSet) maxOf(0.0, clampedEffectiveLimitGb.toDouble() - usedGbD) else -1.0
+            val clampedRemainingGb = if (isLimitSet) ClampingUtils.clamp(remainingGbD.toFloat(), 0f, Constants.MAX_TRAFFIC_LIMIT_GB) else -1.0f
 
             return TrafficModel(
                 usedMb = usedMb,
                 limitMb = limitMb,
                 manualAdjustmentGb = manualAdjustmentGb,
-                remainingGb = remainingGbD.toFloat(),
+                remainingGb = clampedRemainingGb,
                 limitGb = limitGbD.toFloat(),
-                effectiveLimitGb = effectiveLimitGbD.toFloat(),
+                effectiveLimitGb = clampedEffectiveLimitGb,
                 isLimitSet = isLimitSet,
             )
         }

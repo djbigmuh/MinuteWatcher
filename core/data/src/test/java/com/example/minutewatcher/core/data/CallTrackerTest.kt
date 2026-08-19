@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -40,8 +41,8 @@ import org.robolectric.annotation.Config
 // Подавление LargeClass оправдано для тестового класса: CallTrackerTest объединяет все сценарии
 // тестирования трекинга звонков, включая dual-SIM, сбои DataStore и системные тайминги.
 // Разделение теста усложнит поддержку общих моков и фикстур времени.
-@Suppress("LargeClass")
 class CallTrackerTest {
+    private val context: android.content.Context = org.robolectric.RuntimeEnvironment.getApplication()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -77,6 +78,7 @@ class CallTrackerTest {
 
     private fun createTracker() =
         CallTracker(
+            context,
             simIdentityRepository,
             simUsageRepository,
             appSettingsRepository,
@@ -295,7 +297,7 @@ class CallTrackerTest {
             // Arrange
             whenever(callSessionRepository.getCallStartTime(any()))
                 .thenReturn(
-                    kotlinx.coroutines.flow.flow {
+                    flow {
                         throw java.io.IOException("Disk full")
                     },
                 )
@@ -871,6 +873,39 @@ class CallTrackerTest {
                 eq(subId),
                 eq(0L),
             )
+        }
+
+    @Test
+    fun `onCallStarted handles exception and still runs finally status refresh`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            // We use a custom subclass to intercept refreshStatus call
+            var refreshStatusCalled = false
+            val tracker = object : CallTracker(
+                context,
+                simIdentityRepository,
+                simUsageRepository,
+                appSettingsRepository,
+                callSessionRepository,
+                dataChangeNotifier,
+                permissionManager,
+                telephonyManager,
+                timeProvider
+            ) {
+                override suspend fun refreshStatus(force: Boolean) {
+                    refreshStatusCalled = true
+                    super.refreshStatus(force)
+                }
+            }
+
+            // Mock handleCallStartInternal path to throw exception
+            whenever(callSessionRepository.getCallStartTime(1))
+                .thenReturn(flow { throw RuntimeException("Simulated crash") })
+
+            tracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            assertTrue("refreshStatus should be called in finally block", refreshStatusCalled)
         }
 
     @Test

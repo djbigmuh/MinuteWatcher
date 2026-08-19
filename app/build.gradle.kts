@@ -125,6 +125,7 @@ dependencies {
     // Lifecycle
     implementation(libs.androidxLifecycleViewmodelKtx)
     implementation(libs.androidxLifecycleRuntimeCompose)
+    implementation(libs.androidxLifecycleProcess)
 
     // DataStore
     implementation(libs.androidxDatastorePreferences)

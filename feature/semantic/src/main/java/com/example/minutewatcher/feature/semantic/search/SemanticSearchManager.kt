@@ -337,8 +337,8 @@ open class SemanticSearchManager
         private suspend fun performIndexingWithRetry(
             snapshot: GlobalSnapshot,
             currentHash: Int?,
-        ): Boolean {
-            return try {
+        ): Boolean =
+            try {
                 executeIndexing(snapshot, currentHash)
             } catch (e: CancellationException) {
                 throw e
@@ -348,7 +348,6 @@ open class SemanticSearchManager
                 handleIndexingGeneralException(e)
                 false
             }
-        }
 
         private suspend fun handleIndexingAppSearchException(
             e: AppSearchException,

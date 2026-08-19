@@ -10,8 +10,16 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.example.minutewatcher.core.data.CallEventWorker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -21,14 +29,22 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class)
+@Config(application = TestMinuteWatcherApp::class, sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
 class UsageMonitorReceiverTest {
     private lateinit var context: Context
     private lateinit var workManager: WorkManager
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
+        Dispatchers.setMain(testDispatcher)
+
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as androidx.lifecycle.LifecycleRegistry
+        lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_CREATE)
+        lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_START)
+        lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_RESUME)
         val config =
             Configuration
                 .Builder()
@@ -45,6 +61,11 @@ class UsageMonitorReceiverTest {
         workManager = WorkManager.getInstance(context)
     }
 
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun testOnReceiveEnqueuesCallEventWork() =
         runTest {
@@ -57,6 +78,7 @@ class UsageMonitorReceiverTest {
 
             receiver.onReceive(context, intent)
 
+            advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
             val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_1").get()
@@ -75,6 +97,7 @@ class UsageMonitorReceiverTest {
 
             receiver.onReceive(context, intent)
 
+            advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
             val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_UNKNOWN").get()
@@ -95,6 +118,7 @@ class UsageMonitorReceiverTest {
 
             receiver.onReceive(context, intent)
 
+            advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
             val workInfos = workManager.getWorkInfosForUniqueWork("CALL_EVENT_2").get()
@@ -111,6 +135,7 @@ class UsageMonitorReceiverTest {
 
             receiver.onReceive(context, intent)
 
+            advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
             // Check that no unique work was enqueued. Since we don't know the name if it failed,

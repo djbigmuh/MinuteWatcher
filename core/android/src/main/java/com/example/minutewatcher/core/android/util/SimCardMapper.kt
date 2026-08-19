@@ -2,10 +2,12 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
+import com.example.minutewatcher.core.model.util.ClampingUtils
 import java.util.Collections
 import java.util.LinkedHashMap
 
@@ -41,15 +43,17 @@ object SimCardMapper {
 
         logNegativeValuesIfNeeded(slot, usage)
 
-        val safeMinutesUsed = usage.minutesUsed.coerceAtLeast(0)
-        val safeMinutesLimit = usage.minutesLimit.coerceAtLeast(0)
-        val safeTrafficUsedMb = usage.trafficUsedMb.coerceAtLeast(0f)
-        val safeTrafficLimitMb = usage.trafficLimitMb.coerceAtLeast(0)
+        val safeMinutesUsed = ClampingUtils.clamp(usage.minutesUsed, 0, Constants.MAX_MINUTES_LIMIT)
+        val safeMinutesLimit = ClampingUtils.clamp(usage.minutesLimit, 0, Constants.MAX_MINUTES_LIMIT)
+
+        val maxTrafficMb = (Constants.MAX_TRAFFIC_LIMIT_GB * Constants.MB_PER_GB).toInt()
+        val safeTrafficUsedMb = ClampingUtils.clamp(usage.trafficUsedMb, 0f, maxTrafficMb.toFloat())
+        val safeTrafficLimitMb = ClampingUtils.clamp(usage.trafficLimitMb, 0, maxTrafficMb)
 
         // manualAdjustment и trafficAdjustmentGb передаются в calculate()
         // без предварительного clamp. Отрицательные значения допустимы
         // (корректировка в меньшую сторону). MinutesModel.calculate и
-        // TrafficModel.calculate гарантируют effectiveLimit >= 0 через maxOf(0, ...).
+        // TrafficModel.calculate гарантируют effectiveLimit >= 0 через ClampingUtils.clamp.
         val minutesModel =
             MinutesModel.calculate(
                 used = safeMinutesUsed,

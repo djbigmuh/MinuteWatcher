@@ -47,7 +47,8 @@ class PermissionManager
         }
 
         // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
-        // This method provides a safe way to get active subscriptions without crashing if permission is revoked.
+        // We use explicit check inside the method instead of @RequiresPermission to avoid propagating
+        // the requirement to all callers, allowing for graceful failure at the call site.
         @SuppressLint("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
             if (ContextCompat.checkSelfPermission(
@@ -65,6 +66,8 @@ class PermissionManager
             return emptyList()
         }
 
+        // MissingPermission is suppressed because a manual check is performed before calling the API.
+        // This prevents Lint from requiring @RequiresPermission on this method.
         @SuppressLint("MissingPermission")
         fun getDefaultVoiceSubscriptionId(): Int {
             if (ContextCompat.checkSelfPermission(
@@ -82,6 +85,8 @@ class PermissionManager
             return -1
         }
 
+        // MissingPermission is suppressed because a manual check is performed before calling the API.
+        // This prevents Lint from requiring @RequiresPermission on this method.
         @SuppressLint("MissingPermission")
         fun getDefaultDataSubscriptionId(): Int {
             if (ContextCompat.checkSelfPermission(

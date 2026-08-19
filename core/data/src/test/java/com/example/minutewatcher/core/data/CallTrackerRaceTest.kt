@@ -30,6 +30,7 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class CallTrackerRaceTest {
+    private val context: android.content.Context = org.robolectric.RuntimeEnvironment.getApplication()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -45,6 +46,7 @@ class CallTrackerRaceTest {
     fun setup() {
         tracker =
             CallTracker(
+                context,
                 simIdentityRepository,
                 simUsageRepository,
                 appSettingsRepository,

@@ -3,6 +3,8 @@ package com.example.minutewatcher
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.work.BackoffPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,6 +13,9 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.InitialSetupWorker
 import com.example.minutewatcher.core.data.WorkScheduler
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.guava.await
 import java.util.concurrent.TimeUnit
 
 class BootReceiver : BroadcastReceiver() {
@@ -27,26 +32,28 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         val appContext = context.applicationContext
 
-        try {
-            val workRequest =
-                OneTimeWorkRequestBuilder<InitialSetupWorker>()
-                    .setBackoffCriteria(
-                        BackoffPolicy.EXPONENTIAL,
-                        BACKOFF_DELAY_SECONDS,
-                        TimeUnit.SECONDS,
-                    ).build()
-            WorkManager.getInstance(appContext).enqueueUniqueWork(
-                WorkScheduler.INITIAL_SETUP_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                workRequest,
-            )
-            AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
-        } finally {
-            pendingResult?.finish()
+        ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                val workRequest =
+                    OneTimeWorkRequestBuilder<InitialSetupWorker>()
+                        .setBackoffCriteria(
+                            BackoffPolicy.EXPONENTIAL,
+                            BACKOFF_DELAY_SECONDS,
+                            TimeUnit.SECONDS,
+                        ).build()
+                WorkManager.getInstance(appContext).enqueueUniqueWork(
+                    WorkScheduler.INITIAL_SETUP_WORK_NAME,
+                    ExistingWorkPolicy.REPLACE,
+                    workRequest,
+                ).result.await() // Ensure enqueuing completes before finish()
+                AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
+            } finally {
+                pendingResult?.finish()
+            }
         }
     }
 

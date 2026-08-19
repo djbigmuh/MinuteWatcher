@@ -1,9 +1,11 @@
 package com.example.minutewatcher.core.data
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
+import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -15,6 +17,7 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -36,14 +39,21 @@ private class DataStoreTimeoutException(
     message: String,
 ) : Exception(message)
 
-// Подавление LargeClass оправдано: CallTracker является центральным узлом обработки событий звонков,
-// объединяющим логику старта, завершения, атрибуции и восстановления состояния после сбоев.
-// Дальнейшее дробление класса усложнит координацию критической секции трекинга.
+/**
+ * CallTracker is responsible for capturing call start/end events and attributing duration to SIM identities.
+ *
+ * **Consistency Contract:**
+ * The internal state and exposed [status] of CallTracker are guaranteed to be consistent after returning
+ * from any public method (onCallStarted, onCallEnded, onBoot, recover).
+ * Guaranteed synchronization is achieved using try-finally blocks to refresh status even if
+ * exceptions occur during critical section execution.
+ */
 @Suppress("LargeClass")
 @Singleton
-class CallTracker
+open class CallTracker
     @Inject
     constructor(
+        @ApplicationContext private val context: Context,
         private val simIdentityRepository: SimIdentityRepository,
         private val simUsageRepository: SimUsageRepository,
         private val appSettingsRepository: AppSettingsRepository,
@@ -87,6 +97,7 @@ class CallTracker
 
         private val callEndResolver =
             CallEndResolver(
+                context = context,
                 callSessionRepository = callSessionRepository,
                 permissionManager = permissionManager,
                 telephonyManager = telephonyManager,
@@ -119,9 +130,13 @@ class CallTracker
 
         override suspend fun recover() {
             callMutex.withLock {
-                _status.value = TrackingStatus.Idle
-                if (checkPermissions()) {
-                    refreshStatus(force = true)
+                try {
+                    _status.value = TrackingStatus.Idle
+                    checkPermissions()
+                } finally {
+                    withContext(NonCancellable) {
+                        refreshStatus(force = true)
+                    }
                 }
             }
         }
@@ -131,22 +146,26 @@ class CallTracker
          */
         suspend fun onBoot() {
             callMutex.withLock {
-                val activeSessions = callSessionRepository.getActiveCallSubIds()
-                callSessionRepository.clearAllCallSessions()
-                _status.value = TrackingStatus.Idle
-                // Очистка мап попыток: после перезагрузки все предыдущие сессии неактуальны.
-                // Строгое соблюдение API: на AOSP onBoot вызывается один раз при загрузке;
-                // мапы не должны содержать записей от предыдущего сеанса работы устройства.
-                writeAttempts.clear()
-                attributionFailures.clear()
-                AppLogger.d("Cleared ${activeSessions.size} stale call sessions on boot")
-
-                // refreshStatus() вызывается после очистки сессий для обеспечения
-                // консистентности между состоянием в памяти и данными в DataStore.
-                // На AOSP clearAllCallSessions() завершается синхронно.
-                // На кастомных прошивках с деградацией DataStore записи могут
-                // остаться — это проблема кастомной прошивки.
-                refreshStatus()
+                try {
+                    val activeSessions = callSessionRepository.getActiveCallSubIds()
+                    callSessionRepository.clearAllCallSessions()
+                    _status.value = TrackingStatus.Idle
+                    // Очистка мап попыток: после перезагрузки все предыдущие сессии неактуальны.
+                    // Строгое соблюдение API: на AOSP onBoot вызывается один раз при загрузке;
+                    // мапы не должны содержать записей от предыдущего сеанса работы устройства.
+                    writeAttempts.clear()
+                    attributionFailures.clear()
+                    AppLogger.d("Cleared ${activeSessions.size} stale call sessions on boot")
+                } finally {
+                    // refreshStatus() вызывается после очистки сессий для обеспечения
+                    // консистентности между состоянием в памяти и данными в DataStore.
+                    // На AOSP clearAllCallSessions() завершается синхронно.
+                    // На кастомных прошивках с деградацией DataStore записи могут
+                    // остаться — это проблема кастомной прошивки.
+                    withContext(NonCancellable) {
+                        refreshStatus()
+                    }
+                }
             }
         }
 
@@ -169,15 +188,12 @@ class CallTracker
          */
         suspend fun onCallStarted(subId: Int) {
             callMutex.withLock {
-                var justStarted = false
-                var errorSetInThisCall = false
                 try {
                     if (!isCallTrackingEnabled()) {
                         AppLogger.d("Call tracking is disabled in settings, ignoring onCallStarted")
                         return@withLock
                     }
                     if (!checkPermissions()) {
-                        errorSetInThisCall = true
                         return@withLock
                     }
 
@@ -186,34 +202,22 @@ class CallTracker
 
                     val isNewSessionStarted = handleCallStartInternal(effectiveSubId)
                     if (isNewSessionStarted) {
-                        justStarted = true
                         _status.value = TrackingStatus.Active
-                    } else if (_status.value is TrackingStatus.Error) {
-                        // **Строгое соблюдение API:** на AOSP DataStore.data эмитит значение
-                        // в пределах SHORT_TIMEOUT_MS. Таймаут срабатывает только при деградации
-                        // хранилища на кастомных прошивках. Это проблема кастомной прошивки.
-                        // Стратегия: Error-статус НЕ перезаписывается refreshStatus(),
-                        // чтобы UI мог показать ошибку пользователю.
-                        errorSetInThisCall = true
                     }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
-                    errorSetInThisCall = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    errorSetInThisCall = true
                 } finally {
                     // NonCancellable гарантирует, что refreshStatus выполнится даже при отмене
                     // корутины, чтобы статус был актуальным. Это строгое соблюдение API:
                     // на AOSP getActiveCallSubIds() не бросает исключений.
                     withContext(NonCancellable) {
                         try {
-                            if (!errorSetInThisCall && !justStarted) {
-                                refreshStatus()
-                            }
+                            refreshStatus()
                         } catch (e: CancellationException) {
                             // Подавление ThrowingExceptionFromFinally оставлено намеренно: в Kotlin Coroutines
                             // проброс CancellationException из finally блока является стандартным способом
@@ -395,7 +399,6 @@ class CallTracker
          */
         suspend fun onCallEnded(subId: Int) {
             callMutex.withLock {
-                var errorSetInThisCall = false
                 try {
                     if (!isCallTrackingEnabled()) {
                         // Если трекинг звонков был отключён во время активного звонка,
@@ -412,20 +415,13 @@ class CallTracker
                     }
 
                     executeCallEnded(subId)
-                    if (_status.value is TrackingStatus.Error) {
-                        // Фиксируем, что была установлена ошибка (например, провал атрибуции),
-                        // чтобы блок finally не сбросил её в Idle/Active через refreshStatus().
-                        errorSetInThisCall = true
-                    }
                 } catch (e: SecurityException) {
                     handleSecurityException(e)
-                    errorSetInThisCall = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error in onCallEnded", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    errorSetInThisCall = true
 
                     // G-484: Ensure session is cleared even on unexpected failure to prevent stale state.
                     // We choose to clear the session here instead of re-throwing for a Worker retry
@@ -446,9 +442,7 @@ class CallTracker
                     // на AOSP getActiveCallSubIds() не бросает исключений.
                     withContext(NonCancellable) {
                         try {
-                            if (!errorSetInThisCall) {
-                                refreshStatus()
-                            }
+                            refreshStatus()
                         } catch (e: CancellationException) {
                             // Проброс CancellationException для корректного завершения CoroutineScope.
                             @Suppress("ThrowingExceptionFromFinally")
@@ -795,7 +789,7 @@ class CallTracker
         }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        private suspend fun refreshStatus(force: Boolean = false) {
+        open suspend fun refreshStatus(force: Boolean = false) {
             val current = _status.value
             val isIgnoredError =
                 (current is TrackingStatus.Error) &&
@@ -1089,6 +1083,7 @@ class CallTracker
  * Вынесен из [CallTracker] для уменьшения количества методов в основном классе.
  */
 internal class CallEndResolver(
+    @Suppress("unused") private val context: Context,
     private val callSessionRepository: CallSessionRepository,
     private val permissionManager: PermissionManager,
     private val telephonyManager: TelephonyManager,
@@ -1157,19 +1152,22 @@ internal class CallEndResolver(
         }
     }
 
-    @SuppressLint("MissingPermission")
     private fun isDeviceIdle(activeSubIds: List<Int>): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             activeSubIds.all { id ->
-                if (!permissionManager.hasPhoneStatePermission()) return@all true
-                telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
-                    TelephonyManager.CALL_STATE_IDLE
+                // Permission verified at caller (resolveUnknownSubIdEnd check hasPhoneStatePermission)
+                @SuppressLint("MissingPermission")
+                val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
+                state == TelephonyManager.CALL_STATE_IDLE
             }
         } else {
             // Подавление DEPRECATION необходимо для поддержки устройств с API < 31, где прямой доступ
             // к состоянию конкретной подписки через callStateForSubscription отсутствует.
             @Suppress("DEPRECATION")
-            telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+            // Permission verified at caller
+            @SuppressLint("MissingPermission")
+            val state = telephonyManager.callState
+            state == TelephonyManager.CALL_STATE_IDLE
         }
 
     private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
@@ -1200,17 +1198,17 @@ internal class CallEndResolver(
 
     @SuppressLint("MissingPermission")
     private fun findTargetSubId(activeSubIds: List<Int>): Int? {
-        if (!permissionManager.hasPhoneStatePermission()) return null
-
+        // Permission verified at caller
         return when {
             activeSubIds.size == 1 -> activeSubIds.first()
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 activeSubIds
                     .asSequence()
                     .filter { id ->
-                        if (!permissionManager.hasPhoneStatePermission()) return@filter false
-                        telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
-                            TelephonyManager.CALL_STATE_IDLE
+                        // Permission verified at caller
+                        @SuppressLint("MissingPermission")
+                        val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
+                        state == TelephonyManager.CALL_STATE_IDLE
                     }.singleOrNull()
             }
             else -> null

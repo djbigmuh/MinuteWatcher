@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.telephony.TelephonyManager
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,6 +13,9 @@ import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.guava.await
 
 class UsageMonitorReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -32,18 +37,20 @@ class UsageMonitorReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         val appContext = context.applicationContext
 
-        try {
-            processPhoneStateChange(appContext, intent)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
-        } finally {
-            pendingResult?.finish()
+        ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                processPhoneStateChange(appContext, intent)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
+            } finally {
+                pendingResult?.finish()
+            }
         }
     }
 
-    private fun processPhoneStateChange(
+    private suspend fun processPhoneStateChange(
         appContext: Context,
         intent: Intent,
     ) {
@@ -87,7 +94,7 @@ class UsageMonitorReceiver : BroadcastReceiver() {
             uniqueWorkName,
             ExistingWorkPolicy.APPEND,
             workRequest,
-        )
+        ).result.await() // Ensure enqueuing completes before finish()
         AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
     }
 }
