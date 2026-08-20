@@ -46,6 +46,8 @@ class MinuteWatcherApp :
                 .setInitialDelay(INITIALIZATION_DELAY_SECONDS, TimeUnit.SECONDS)
                 .build()
 
+        // REPLACE policy ensures that semantic layer initialization is restarted
+        // with the latest app process lifetime if a previous attempt was pending.
         WorkManager.getInstance(this).enqueueUniqueWork(
             SEMANTIC_INIT_WORK_NAME,
             ExistingWorkPolicy.REPLACE,

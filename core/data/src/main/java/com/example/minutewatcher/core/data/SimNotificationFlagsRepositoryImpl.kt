@@ -18,9 +18,8 @@ class SimNotificationFlagsRepositoryImpl
         @SimDataStore dataStore: DataStore<Preferences>,
     ) : BaseDataStoreRepository(dataStore),
         SimNotificationFlagsRepository {
-        // Preferences.Key is a DataStore implementation detail.
-        // It MUST NOT leak into the domain layer (SettingsRepository interface).
-        // Domain operates on business models only; mapping is an Impl responsibility.
+        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
+        // Это соответствует принципу Dependency Inversion.
 
         override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {

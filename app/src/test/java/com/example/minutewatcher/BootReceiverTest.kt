@@ -2,6 +2,9 @@ package com.example.minutewatcher
 
 import android.content.Context
 import android.content.Intent
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
@@ -9,9 +12,6 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.testing.WorkManagerTestInitHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

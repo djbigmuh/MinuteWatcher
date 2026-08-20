@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.common.util
 
 import android.Manifest
+import android.app.AppOpsManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.telephony.SubscriptionManager
@@ -50,6 +51,7 @@ class PermissionManagerTest {
     @Before
     fun setup() {
         whenever(context.filesDir).thenReturn(mock())
+        whenever(context.packageName).thenReturn("com.example.minutewatcher")
         AppLogger.init(context, mockLogger)
         whenever(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)).thenReturn(subscriptionManager)
         permissionManager = PermissionManager(context)
@@ -113,5 +115,35 @@ class PermissionManagerTest {
 
             assertEquals(-1, permissionManager.getDefaultDataSubscriptionId())
         }
+    }
+
+    @Test
+    fun `hasUsageStatsPermission returns true when allowed`() {
+        val appOps: AppOpsManager = mock()
+        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
+        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
+            .thenReturn(AppOpsManager.MODE_ALLOWED)
+
+        assertTrue(permissionManager.hasUsageStatsPermission())
+    }
+
+    @Test
+    fun `hasUsageStatsPermission returns false when ignored`() {
+        val appOps: AppOpsManager = mock()
+        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
+        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
+            .thenReturn(AppOpsManager.MODE_IGNORED)
+
+        assertFalse(permissionManager.hasUsageStatsPermission())
+    }
+
+    @Test
+    fun `hasUsageStatsPermission returns false when exception occurs`() {
+        val appOps: AppOpsManager = mock()
+        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
+        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
+            .thenThrow(RuntimeException("Test error"))
+
+        assertFalse(permissionManager.hasUsageStatsPermission())
     }
 }

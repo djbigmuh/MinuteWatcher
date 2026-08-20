@@ -15,12 +15,15 @@ package com.example.minutewatcher.core.model.util
  *    when calculating remaining usage or progress bars.
  */
 object ClampingUtils {
-
     /**
      * Clamps the given [value] between [min] and [max].
      * @throws IllegalArgumentException if min > max.
      */
-    fun <T : Comparable<T>> clamp(value: T, min: T, max: T): T {
+    fun <T : Comparable<T>> clamp(
+        value: T,
+        min: T,
+        max: T,
+    ): T {
         require(min <= max) { "Clamping min ($min) cannot be greater than max ($max)" }
         return when {
             value < min -> min
@@ -32,7 +35,10 @@ object ClampingUtils {
     /**
      * Overload for nullable values. Returns [defaultValue] if [value] is null, then clamps.
      */
-    fun <T : Comparable<T>> clampNullable(value: T?, min: T, max: T, defaultValue: T): T {
-        return clamp(value ?: defaultValue, min, max)
-    }
+    fun <T : Comparable<T>> clampNullable(
+        value: T?,
+        min: T,
+        max: T,
+        defaultValue: T,
+    ): T = clamp(value ?: defaultValue, min, max)
 }

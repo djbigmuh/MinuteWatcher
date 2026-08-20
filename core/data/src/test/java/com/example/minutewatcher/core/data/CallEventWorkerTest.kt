@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -114,6 +115,6 @@ class CallEventWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            org.mockito.kotlin.verifyNoInteractions(callTracker)
+            verifyNoInteractions(callTracker)
         }
 }

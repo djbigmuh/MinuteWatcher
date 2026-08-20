@@ -29,9 +29,8 @@ class AppSettingsRepositoryImpl
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : AppSettingsRepository {
-        // Preferences.Key is a DataStore implementation detail.
-        // It MUST NOT leak into the domain layer (SettingsRepository interface).
-        // Domain operates on business models only; mapping is an Impl responsibility.
+        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
+        // Это соответствует принципу Dependency Inversion.
 
         private val appSettingsState =
             dataStore.data
@@ -117,6 +116,7 @@ class AppSettingsRepositoryImpl
             prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
+        @Suppress("CyclomaticComplexMethod", "detekt.CyclomaticComplexMethod")
         private fun Preferences.toAppSettings(): AppSettings =
             AppSettings(
                 theme = AppTheme.fromValue(this[SettingsKeys.APP_THEME] ?: -1),

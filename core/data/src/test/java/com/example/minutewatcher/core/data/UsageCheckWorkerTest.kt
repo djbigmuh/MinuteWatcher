@@ -27,6 +27,7 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -169,9 +170,8 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
 
@@ -242,9 +242,8 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 900f, trafficLimitMb = 1024)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 900f, trafficLimitMb = 1024)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
 
@@ -302,9 +301,8 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
 
@@ -362,9 +360,8 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 98, minutesLimit = 100)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 98, minutesLimit = 100)))
 
             worker.doWork()
 
@@ -372,6 +369,7 @@ class UsageCheckWorkerTest {
         }
 
     @Test
+    @Suppress("LongMethod", "detekt.LongMethod")
     fun `traffic critical notification uses critical level`() =
         runTest(testDispatcher) {
             val identity = "sim_0"
@@ -420,9 +418,8 @@ class UsageCheckWorkerTest {
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 950f, trafficLimitMb = 1000)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 950f, trafficLimitMb = 1000)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
 
@@ -449,12 +446,11 @@ class UsageCheckWorkerTest {
 
             // 2. Setup mocks to return empty/idle state (which is what happens without permission)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
-            whenever(
-                usageStateRepository.refresh(),
-            ).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
-                    .Success(createEmptySnapshot()),
-            )
+            whenever(usageStateRepository.refresh())
+                .thenReturn(
+                    com.example.minutewatcher.core.domain.RefreshResult
+                        .Success(createEmptySnapshot()),
+                )
 
             // 3. Act
             val result = worker.doWork()
@@ -511,11 +507,10 @@ class UsageCheckWorkerTest {
             )
 
             // Mock timeout: a flow that never emits
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(kotlinx.coroutines.flow.MutableSharedFlow())
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
 
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
 
@@ -573,9 +568,8 @@ class UsageCheckWorkerTest {
             )
 
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
-            whenever(
-                simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
 
             val result = worker.doWork()
 

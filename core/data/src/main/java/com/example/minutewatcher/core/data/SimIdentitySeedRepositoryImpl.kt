@@ -27,6 +27,9 @@ class SimIdentitySeedRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : SimIdentitySeedRepository {
+        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
+        // Это соответствует принципу Dependency Inversion.
+
         companion object {
             private val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
         }

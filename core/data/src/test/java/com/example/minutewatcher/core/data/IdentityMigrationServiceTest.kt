@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -19,8 +20,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -300,5 +305,34 @@ class IdentityMigrationServiceTest {
             simDataStore.edit { it[intPreferencesKey("minutes_used_$activeIdentity")] = 20 }
 
             assertFalse(service.hasLegacyData(activeIdentities = setOf(activeIdentity)))
+        }
+
+    @Test
+    fun `hasLegacyData returns false on IOException`() =
+        testScope.runTest {
+            val corruptedDataStore: DataStore<Preferences> = mock()
+            whenever(corruptedDataStore.data).thenReturn(flow { throw IOException("Disk read error") })
+
+            val service = IdentityMigrationService(corruptedDataStore, simDataStore)
+            assertFalse("Should fail-safe to false when DataStore is corrupted", service.hasLegacyData())
+        }
+
+    @Test
+    fun `migrateLegacyData does not crash on Exception`() =
+        testScope.runTest {
+            val corruptedDataStore: DataStore<Preferences> = mock()
+            whenever(corruptedDataStore.edit(any())).thenThrow(RuntimeException("Write failed"))
+
+            val service = IdentityMigrationService(corruptedDataStore, simDataStore)
+            val activeIdentity =
+                com.example.minutewatcher.core.model.SimIdentity(
+                    stableId = "new_id",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                )
+
+            // Should catch the internal exception and log it, not throw
+            service.migrateLegacyData(activeIdentity)
         }
 }

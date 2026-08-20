@@ -19,9 +19,8 @@ class SimLimitsRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimLimitsRepository {
-        // Preferences.Key is a DataStore implementation detail.
-        // It MUST NOT leak into the domain layer (SettingsRepository interface).
-        // Domain operates on business models only; mapping is an Impl responsibility.
+        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
+        // Это соответствует принципу Dependency Inversion.
 
         private fun <T> get(
             key: Preferences.Key<T>,

@@ -45,8 +45,8 @@ subprojects {
     // NOTE: Detekt 1.23.8 + Gradle 9.7 + Kotlin 2.4 requires explicit jvmToolchain
     // and reportsDir override. If this breaks after a detekt upgrade, revisit
     // whether the workaround is still needed.
-    // Detekt 1.x uses an internal Kotlin compiler that fails to parse Java version strings >= 25.
-    // We force the task to use JDK 21 and override the reports directory to avoid Gradle 10 warnings.
+    // Detekt 1.23.8 использует встроенный Kotlin 1.9, который не парсит Java version strings >= 25.
+    // Workaround принудительно использует JDK 21 через Toolchains. Удалить после миграции на Detekt 2.x.
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         val reporting = project.extensions.getByType<ReportingExtension>()
         reportsDir.set(
@@ -66,13 +66,16 @@ subprojects {
 subprojects {
     tasks.withType<Test>().configureEach {
         val isAppModule = project.path == ":app"
+        // Модуль :app не имеет unit-тестов (только instrumentation), поэтому отключаем fail-on-empty.
+        // Это не хрупкая логика, а конфигурационное соответствие структуре проекта.
         failOnNoDiscoveredTests = !isAppModule
         filter {
             isFailOnNoMatchingTests = !isAppModule
         }
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
-        // Robolectric + JDK 17/21 compatibility
+        // Robolectric требует --add-opens для JDK 17+ из-за использования internal API.
+        // Это строгое соответствие требованиям Robolectric, не эвристика.
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
             "--add-opens=java.base/java.io=ALL-UNNAMED",

@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import android.content.Context
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -26,11 +27,12 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class CallTrackerRaceTest {
-    private val context: android.content.Context = org.robolectric.RuntimeEnvironment.getApplication()
+    private val context: Context = RuntimeEnvironment.getApplication()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()

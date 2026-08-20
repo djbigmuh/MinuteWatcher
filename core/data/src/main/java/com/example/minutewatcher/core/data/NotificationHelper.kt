@@ -87,11 +87,15 @@ class NotificationHelper
                 AppLogger.w("Notification permission denied: ${e.message}")
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("Failed to send notification", e)
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private fun areNotificationsEnabledSafe(): Boolean =
             try {
                 NotificationManagerCompat.from(context).areNotificationsEnabled()

@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
-import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider

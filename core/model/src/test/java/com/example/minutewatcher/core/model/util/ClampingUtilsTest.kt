@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ClampingUtilsTest {
-
     private val hardLimitInt = 44640
     private val hardLimitFloat = 10240f
 

@@ -14,8 +14,8 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.guava.await
+import kotlinx.coroutines.launch
 
 class UsageMonitorReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -90,11 +90,14 @@ class UsageMonitorReceiver : BroadcastReceiver() {
                 "CALL_EVENT_UNKNOWN"
             }
 
-        WorkManager.getInstance(appContext).enqueueUniqueWork(
-            uniqueWorkName,
-            ExistingWorkPolicy.APPEND,
-            workRequest,
-        ).result.await() // Ensure enqueuing completes before finish()
+        WorkManager
+            .getInstance(appContext)
+            .enqueueUniqueWork(
+                uniqueWorkName,
+                ExistingWorkPolicy.APPEND,
+                workRequest,
+            ).result
+            .await() // Ensure enqueuing completes before finish()
         AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
     }
 }

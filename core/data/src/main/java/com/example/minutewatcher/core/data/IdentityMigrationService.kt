@@ -24,22 +24,28 @@ class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
-        suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean {
-            val appPrefs = appDataStore.data.first()
-            val currentSchema = appPrefs[SettingsKeys.DATA_SCHEMA_VERSION] ?: 0
-            if (currentSchema >= SettingsKeys.CURRENT_DATA_SCHEMA_VERSION) {
-                return false
+        suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean =
+            try {
+                val appPrefs = appDataStore.data.first()
+                val currentSchema = appPrefs[SettingsKeys.DATA_SCHEMA_VERSION] ?: 0
+                if (currentSchema >= SettingsKeys.CURRENT_DATA_SCHEMA_VERSION) {
+                    false
+                } else {
+                    val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
+                    val simHasLegacy =
+                        simDataStore.data
+                            .first()
+                            .asMap()
+                            .keys
+                            .any { it.isLegacyKey(activeIdentities) }
+                    appHasLegacy || simHasLegacy
+                }
+            } catch (e: Exception) {
+                // Migration logic is protected against corrupted DataStore state.
+                // Errors result in skipping migration to maintain app stability.
+                AppLogger.e("IdentityMigrationService: Failed to check for legacy data", e)
+                false
             }
-
-            val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
-            val simHasLegacy =
-                simDataStore.data
-                    .first()
-                    .asMap()
-                    .keys
-                    .any { it.isLegacyKey(activeIdentities) }
-            return appHasLegacy || simHasLegacy
-        }
 
         /**
          * Определяет, является ли ключ legacy-форматом, требующим миграции.
@@ -82,10 +88,22 @@ class IdentityMigrationService
         }
 
         suspend fun markSchemaCurrent() {
-            appDataStore.edit { it[SettingsKeys.DATA_SCHEMA_VERSION] = SettingsKeys.CURRENT_DATA_SCHEMA_VERSION }
+            try {
+                appDataStore.edit { it[SettingsKeys.DATA_SCHEMA_VERSION] = SettingsKeys.CURRENT_DATA_SCHEMA_VERSION }
+            } catch (e: Exception) {
+                AppLogger.e("IdentityMigrationService: Failed to mark schema current", e)
+            }
         }
 
         suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {
+            try {
+                performMigration(activeIdentity)
+            } catch (e: Exception) {
+                AppLogger.e("IdentityMigrationService: Fatal error during migration execution", e)
+            }
+        }
+
+        private suspend fun performMigration(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {
             val slot = activeIdentity.slotIndex ?: return
             val identity = activeIdentity.stableId
 

@@ -63,7 +63,10 @@ class InitialSetupWorker
             } catch (e: SecurityException) {
                 AppLogger.e("InitialSetupWorker: Permission error (unexpected)", e)
                 return Result.failure()
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("InitialSetupWorker failed due to unexpected error", e)
                 return Result.failure()
             }

@@ -257,10 +257,8 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // Verify it was called again with same delta
-            verify(
-                simUsageResetRepository,
-                times(2),
-            ).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
+            verify(simUsageResetRepository, times(2))
+                .incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
         }
 
     @Test
@@ -713,9 +711,8 @@ class TrafficTrackerTest {
 
             // Verify delta was calculated from 5000, not the initial 1000
             val expectedDeltaMb = (100000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(
-                simUsageResetRepository,
-            ).incrementTrafficAndSetBaseline(eq("sim_0"), eq(expectedDeltaMb), eq(105000L))
+            verify(simUsageResetRepository)
+                .incrementTrafficAndSetBaseline(eq("sim_0"), eq(expectedDeltaMb), eq(105000L))
             assertEquals(105000L, currentStoredValue.value)
         }
 

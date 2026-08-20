@@ -3,7 +3,6 @@ package com.example.minutewatcher
 import android.Manifest
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.LocusId
@@ -42,6 +41,7 @@ import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -212,8 +212,20 @@ class MainActivity : AppCompatActivity() {
 
         private fun handlePhoneResult(granted: Boolean) {
             if (granted) {
-                workScheduler.scheduleInitialSetup()
-                workScheduler.schedulePeriodicUsageCheck()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        workScheduler.scheduleInitialSetup()
+                        workScheduler.schedulePeriodicUsageCheck()
+                    } catch (
+                        @Suppress("TooGenericExceptionCaught")
+                        e: Exception,
+                    ) {
+                        AppLogger.e(
+                            "MainActivity: Failed to schedule background work after phone permission granted",
+                            e,
+                        )
+                    }
+                }
                 viewModel.setPhonePermissionPermanentlyDenied(false)
                 if (!permissionManager.hasUsageStatsPermission()) {
                     viewModel.setUsageAccessDialog(true)
@@ -251,8 +263,17 @@ class MainActivity : AppCompatActivity() {
                 val settings = viewModel.appSettings.first()
                 if (permissionManager.hasPhoneStatePermission()) {
                     viewModel.setPhonePermissionPermanentlyDenied(false)
-                    workScheduler.scheduleInitialSetup()
-                    workScheduler.schedulePeriodicUsageCheck()
+                    launch(Dispatchers.IO) {
+                        try {
+                            workScheduler.scheduleInitialSetup()
+                            workScheduler.schedulePeriodicUsageCheck()
+                        } catch (
+                            @Suppress("TooGenericExceptionCaught")
+                            e: Exception,
+                        ) {
+                            AppLogger.e("MainActivity: Failed to schedule background work during init", e)
+                        }
+                    }
 
                     if (!permissionManager.hasUsageStatsPermission()) {
                         viewModel.setUsageAccessDialog(true)
@@ -320,14 +341,20 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent(this))
             return
-        } catch (e: ActivityNotFoundException) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught")
+            e: Exception,
+        ) {
             AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
         }
         // Fallback: общий список приложений с доступом к данным об использовании.
         try {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             return
-        } catch (e: ActivityNotFoundException) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught")
+            e: Exception,
+        ) {
             AppLogger.e("Usage access settings not found, opening app details", e)
         }
         openAppSettings()

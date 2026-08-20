@@ -170,6 +170,9 @@ class UsageStateRepositoryImpl
         /**
          * Принудительно обновляет данные и возвращает результат.
          *
+         * Используется Mutex вместо synchronized, т.к. внутри критической секции могут быть suspend-вызовы.
+         * Это строгое соответствие Kotlin Coroutines API.
+         *
          * NOTE: Concurrency safety. We avoid holding locks during I/O operations to prevent deadlocks.
          * We use tryLock to prevent reentrant calls from hanging and to coalesce multiple refresh requests.
          * The wait for snapshot update happens outside the lock.

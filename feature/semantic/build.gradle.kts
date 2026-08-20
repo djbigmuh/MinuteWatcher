@@ -49,6 +49,7 @@ dependencies {
     ksp(libs.daggerHiltCompiler)
 
     implementation(libs.androidxCoreKtx)
+    implementation(libs.androidxDatastorePreferences)
     implementation(libs.androidxAppsearch)
     ksp(libs.androidxAppsearchCompiler)
     implementation(libs.androidxAppsearchLocalStorage)

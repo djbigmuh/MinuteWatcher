@@ -39,7 +39,10 @@ class CallEventWorker
             } catch (e: IOException) {
                 AppLogger.w("CallEventWorker: IO error, retrying. Attempt: $runAttemptCount. Message: ${e.message}")
                 return Result.retry()
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("CallEventWorker failed with unexpected error", e)
                 return Result.failure()
             }

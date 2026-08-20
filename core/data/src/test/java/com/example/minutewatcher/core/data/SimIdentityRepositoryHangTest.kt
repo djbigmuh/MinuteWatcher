@@ -362,6 +362,7 @@ class SimIdentityRepositoryHangTest {
                     try {
                         identityRepo.getSimIdentity(0)
                     } catch (_: Exception) {
+                        // Намеренно игнорируется, потому что это ожидаемый сбой в тесте на таймаут.
                         // Expected failure
                     }
                 }

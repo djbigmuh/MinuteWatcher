@@ -27,6 +27,9 @@ class WorkScheduler
                         BACKOFF_SECONDS,
                         TimeUnit.SECONDS,
                     ).build()
+            // REPLACE policy is used to ensure that the setup logic runs immediately
+            // with current permissions and system state, overriding any stale or
+            // pending initialization tasks from previous app launches.
             WorkManager.getInstance(context).enqueueUniqueWork(
                 INITIAL_SETUP_WORK_NAME,
                 ExistingWorkPolicy.REPLACE,

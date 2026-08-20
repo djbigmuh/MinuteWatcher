@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Tarjetas SIM</string>
     <string name="no_sim_found">Tarjetas SIM no encontradas</string>
@@ -128,12 +128,14 @@
       Spanish requires: one (1), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
     -->
-    <plurals name="minutes_plurals" tools:ignore="MissingQuantity">
+    <plurals name="minutes_plurals">
         <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
         <item quantity="other">%1$d minutos</item>
     </plurals>
-    <plurals name="days_plurals" tools:ignore="MissingQuantity">
+    <plurals name="days_plurals">
         <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
         <item quantity="other">%1$d días</item>
     </plurals>
 

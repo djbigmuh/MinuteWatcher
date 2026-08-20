@@ -1,5 +1,7 @@
 package com.example.minutewatcher.core.data
 
+import android.content.Context
+import android.telephony.SubscriptionInfo
 import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -33,16 +35,18 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
-@OptIn(ExperimentalCoroutinesApi::class)
 // Подавление LargeClass оправдано для тестового класса: CallTrackerTest объединяет все сценарии
 // тестирования трекинга звонков, включая dual-SIM, сбои DataStore и системные тайминги.
 // Разделение теста усложнит поддержку общих моков и фикстур времени.
+@Suppress("LargeClass")
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerTest {
-    private val context: android.content.Context = org.robolectric.RuntimeEnvironment.getApplication()
+    private val context: Context = RuntimeEnvironment.getApplication()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -94,7 +98,7 @@ class CallTrackerTest {
         whenever(simIdentityRepository.getIdentity(1)).thenReturn("id_1")
         whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
-        val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+        val mockSubInfo = mock<SubscriptionInfo>()
         whenever(mockSubInfo.subscriptionId).thenReturn(1)
         whenever(mockSubInfo.simSlotIndex).thenReturn(0)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
@@ -258,7 +262,7 @@ class CallTrackerTest {
 
             // Arrange: clearSession (setCallStartTime) throws exception
             whenever(callSessionRepository.setCallStartTime(eq(1), eq(0L)))
-                .thenThrow(RuntimeException("Clear failed"))
+                .thenThrow(IllegalStateException("Clear failed"))
 
             // Act
             callTracker.onCallStarted(subId = 1)
@@ -708,7 +712,7 @@ class CallTrackerTest {
 
             // Simulate write failure in simUsageRepository
             whenever(simUsageRepository.incrementMinutesUsed(eq(identity), any()))
-                .thenThrow(RuntimeException("Write failed"))
+                .thenThrow(IllegalStateException("Write failed"))
 
             timeProvider.advance(1000)
 
@@ -800,7 +804,7 @@ class CallTrackerTest {
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(null))
 
             // Trigger unexpected exception in endCall -> loadCallSessionData -> resolveIdentity
-            whenever(permissionManager.getActiveSubscriptions()).thenThrow(RuntimeException("Unexpected crash"))
+            whenever(permissionManager.getActiveSubscriptions()).thenThrow(IllegalStateException("Unexpected crash"))
 
             // Act
             callTracker.onCallEnded(subId)
@@ -835,7 +839,7 @@ class CallTrackerTest {
 
             // Simulate write failure in simUsageRepository
             whenever(simUsageRepository.incrementMinutesUsed(eq(identity), any()))
-                .thenThrow(RuntimeException("Write failed"))
+                .thenThrow(IllegalStateException("Write failed"))
 
             // Attempt 1
             callTracker.onCallEnded(subId)
@@ -866,10 +870,7 @@ class CallTrackerTest {
             assertTrue(status.message?.contains("Session cleared, call data lost") == true)
 
             // Verify session WAS cleared
-            verify(
-                callSessionRepository,
-                atLeastOnce(),
-            ).setCallStartTime(
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(
                 eq(subId),
                 eq(0L),
             )
@@ -881,26 +882,27 @@ class CallTrackerTest {
             setupCommonMocks()
             // We use a custom subclass to intercept refreshStatus call
             var refreshStatusCalled = false
-            val tracker = object : CallTracker(
-                context,
-                simIdentityRepository,
-                simUsageRepository,
-                appSettingsRepository,
-                callSessionRepository,
-                dataChangeNotifier,
-                permissionManager,
-                telephonyManager,
-                timeProvider
-            ) {
-                override suspend fun refreshStatus(force: Boolean) {
-                    refreshStatusCalled = true
-                    super.refreshStatus(force)
+            val tracker =
+                object : CallTracker(
+                    context,
+                    simIdentityRepository,
+                    simUsageRepository,
+                    appSettingsRepository,
+                    callSessionRepository,
+                    dataChangeNotifier,
+                    permissionManager,
+                    telephonyManager,
+                    timeProvider,
+                ) {
+                    override suspend fun refreshStatus(force: Boolean) {
+                        refreshStatusCalled = true
+                        super.refreshStatus(force)
+                    }
                 }
-            }
 
             // Mock handleCallStartInternal path to throw exception
             whenever(callSessionRepository.getCallStartTime(1))
-                .thenReturn(flow { throw RuntimeException("Simulated crash") })
+                .thenReturn(flow { throw IllegalStateException("Simulated crash") })
 
             tracker.onCallStarted(subId = 1)
             advanceUntilIdle()
@@ -916,29 +918,26 @@ class CallTrackerTest {
             val subId = 1
 
             // Tracking is disabled
-            whenever(
-                appSettingsRepository.getAppSettings(),
-            ).thenReturn(
-                flowOf(
-                    AppSettings(
-                        callTrackingEnabled = false,
+            whenever(appSettingsRepository.getAppSettings())
+                .thenReturn(
+                    flowOf(
+                        AppSettings(
+                            callTrackingEnabled = false,
+                        ),
                     ),
-                ),
-            )
+                )
 
             // Mock session data exists
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
-            whenever(
-                callSessionRepository.getCallStartTime(subId),
-            ).thenReturn(
-                flowOf(now - 10000L),
-            )
-            whenever(
-                callSessionRepository.getBootTime(subId),
-            ).thenReturn(
-                flowOf(realtime - 10000L),
-            )
+            whenever(callSessionRepository.getCallStartTime(subId))
+                .thenReturn(
+                    flowOf(now - 10000L),
+                )
+            whenever(callSessionRepository.getBootTime(subId))
+                .thenReturn(
+                    flowOf(realtime - 10000L),
+                )
 
             // Act
             callTracker.onCallEnded(subId)
@@ -946,18 +945,12 @@ class CallTrackerTest {
 
             // Assert:
             // 1. Session IS cleared
-            verify(
-                callSessionRepository,
-                atLeastOnce(),
-            ).setCallStartTime(
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(
                 eq(subId),
                 eq(0L),
             )
             // 2. Minutes are NOT incremented
-            verify(
-                simUsageRepository,
-                never(),
-            ).incrementMinutesUsed(
+            verify(simUsageRepository, never()).incrementMinutesUsed(
                 any(),
                 any(),
             )
@@ -970,15 +963,14 @@ class CallTrackerTest {
             val callTracker = createTracker()
 
             // Tracking is disabled
-            whenever(
-                appSettingsRepository.getAppSettings(),
-            ).thenReturn(
-                flowOf(
-                    AppSettings(
-                        callTrackingEnabled = false,
+            whenever(appSettingsRepository.getAppSettings())
+                .thenReturn(
+                    flowOf(
+                        AppSettings(
+                            callTrackingEnabled = false,
+                        ),
                     ),
-                ),
-            )
+                )
 
             // Act
             callTracker.onCallEnded(-1)
@@ -988,10 +980,7 @@ class CallTrackerTest {
             // 1. ALL sessions are cleared
             verify(callSessionRepository).clearAllCallSessions()
             // 2. Minutes are NOT incremented
-            verify(
-                simUsageRepository,
-                never(),
-            ).incrementMinutesUsed(
+            verify(simUsageRepository, never()).incrementMinutesUsed(
                 any(),
                 any(),
             )

@@ -39,6 +39,8 @@
             </intent-filter>
         </receiver>
 
+        <!-- Receiver используется только для бенчмарков через adb shell am broadcast.
+             Защищен разрешением DUMP и отключается в release-сборках. -->
         <receiver
             android:name=".benchmark.BenchmarkReceiver"
             android:enabled="${benchmarkReceiverEnabled}"

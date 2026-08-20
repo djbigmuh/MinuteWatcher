@@ -65,7 +65,9 @@ class UsageCheckWorker
                 } catch (e: SecurityException) {
                     AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
                     Result.failure()
-                } catch (e: Exception) {
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Exception,
+                ) {
                     AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
                     Result.failure()
                 }
@@ -107,7 +109,10 @@ class UsageCheckWorker
                 true
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("Auto-reset failed in UsageCheckWorker, retrying", e)
                 false
             }
@@ -153,7 +158,10 @@ class UsageCheckWorker
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("UsageCheckWorker: error processing SIM slot ${simSnapshot.slot}", e)
             }
         }

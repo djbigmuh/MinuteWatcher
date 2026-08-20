@@ -3,6 +3,7 @@ package com.example.minutewatcher
 import android.content.Context
 import android.content.Intent
 import android.telephony.TelephonyManager
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
@@ -10,7 +11,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
-import androidx.lifecycle.ProcessLifecycleOwner
 import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

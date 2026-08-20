@@ -19,9 +19,8 @@ class SimWidgetVisibilityRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimWidgetVisibilityRepository {
-        // Preferences.Key is a DataStore implementation detail.
-        // It MUST NOT leak into the domain layer (SettingsRepository interface).
-        // Domain operates on business models only; mapping is an Impl responsibility.
+        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
+        // Это соответствует принципу Dependency Inversion.
 
         override fun getSimSettings(identity: String): Flow<SimSettingsState> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {

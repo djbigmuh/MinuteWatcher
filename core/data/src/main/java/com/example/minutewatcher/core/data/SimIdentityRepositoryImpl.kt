@@ -77,9 +77,8 @@ class SimIdentityRepositoryImpl
         @ApplicationScope private val scope: CoroutineScope,
     ) : BaseDataStoreRepository(dataStore),
         SimIdentityRepository {
-        // Preferences.Key is a DataStore implementation detail.
-        // It MUST NOT leak into the domain layer (SettingsRepository interface).
-        // Domain operates on business models only; mapping is an Impl responsibility.
+        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
+        // Это соответствует принципу Dependency Inversion.
 
         private val context get() = discoveryDeps.context
         private val subscriptionManager get() = discoveryDeps.subscriptionManager
@@ -203,7 +202,9 @@ class SimIdentityRepositoryImpl
                                                     e,
                                                 )
                                                 delay(retryDelay.milliseconds)
-                                                retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
+                                                retryDelay =
+                                                    (retryDelay * RETRY_DELAY_MULTIPLIER)
+                                                        .coerceAtMost(maxDelay)
                                             }
                                         } catch (e: CancellationException) {
                                             throw e
@@ -229,11 +230,8 @@ class SimIdentityRepositoryImpl
                             val hasPermission = permissionManager.hasPhoneStatePermission()
                             if (hasPermission && !isListenerRegistered) {
                                 try {
-                                    // API 30+ introduced registerSubscriptionCallback (thread-safe, executor-based).
-                                    // Pre-30: fall back to addOnSubscriptionsChangedListener.
-                                    // See: https://developer.android.com/reference/android/telephony/SubscriptionManager#registerSubscriptionCallback
-                                    // We do not guess behavior across versions — strict branching per documented API.
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        // API 30+ uses executor-based callback, legacy for minSdk 26
                                         subscriptionManager.addOnSubscriptionsChangedListener(
                                             context.mainExecutor,
                                             listener,
@@ -489,7 +487,10 @@ class SimIdentityRepositoryImpl
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        AppLogger.e("Identity resolution failed for slot $slot: ${e.javaClass.simpleName}", e)
+                        AppLogger.e(
+                            "Identity resolution failed for slot $slot: ${e.javaClass.simpleName}",
+                            e,
+                        )
                         throw SeedUnavailableException(slot)
                     } ?: throw SimNotFoundException(slot)
 
@@ -566,7 +567,7 @@ class SimIdentityRepositoryImpl
                 var currentPrefs = fetchCurrentPrefs()
                 if (currentPrefs == null) {
                     AppLogger.w("saveSimIdentitiesInfo: DataStore read timed out, retrying with doubled timeout")
-                    currentPrefs = fetchCurrentPrefs(Constants.Flow.LONG_TIMEOUT_MS * 2)
+                    currentPrefs = fetchCurrentPrefs(Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER)
                 }
 
                 if (currentPrefs == null) {
@@ -890,5 +891,7 @@ class SimIdentityRepositoryImpl
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
             private const val MAX_DELAY_MULTIPLIER = 3
             private const val MAX_FETCH_RETRIES = 5
+            private const val RETRY_DELAY_MULTIPLIER = 2
+            private const val DOUBLE_TIMEOUT_MULTIPLIER = 2
         }
     }

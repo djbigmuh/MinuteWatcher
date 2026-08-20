@@ -48,6 +48,19 @@ object AppLogger {
         logger = customLogger
     }
 
+    /**
+     * Безопасный логгер для использования внутри RemoteViewsService / AppWidgetProvider.
+     * Не использует AndroidX Lifecycle, т.к. эти компоненты живут вне lifecycle.
+     * Это строгое соответствие контракту App Widget API.
+     */
+    inline fun <T> remoteViewsSafe(action: () -> T): T? =
+        try {
+            action()
+        } catch (e: Exception) {
+            e("RemoteViews operation failed", e)
+            null
+        }
+
     fun d(message: String) {
         logger.d(TAG, message)
         logToFile("D", message)
@@ -117,6 +130,7 @@ object AppLogger {
                     writer.write(entry)
                 }
             } catch (e: Exception) {
+                // Намеренно игнорируется, чтобы избежать рекурсивных ошибок при записи в файл.
                 // Fail silently for file logging to avoid recursive errors,
                 // but at least log to system Log in debug.
                 if (BuildConfig.DEBUG) {

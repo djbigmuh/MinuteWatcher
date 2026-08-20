@@ -6,6 +6,9 @@ import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -17,13 +20,16 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -34,15 +40,24 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerTest {
+    @get:Rule
+    val tmpFolder = TemporaryFolder()
+
     private val context: Context = mock()
     private var currentTime = 1000000L
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var fakeWrapper: FakeAppSearchWrapper
+    private lateinit var dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
 
     @Before
     fun setup() {
         fakeWrapper = FakeAppSearchWrapper()
+        dataStore =
+            PreferenceDataStoreFactory.create(
+                scope = CoroutineScope(testDispatcher),
+                produceFile = { tmpFolder.newFile("test_app_settings.preferences_pb") },
+            )
     }
 
     @Test
@@ -91,7 +106,8 @@ class SemanticSearchManagerTest {
                 "Expected Error but was $status",
                 status is TrackingStatus.Error,
             )
-            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+            // Now mapped to NOT_SUPPORTED to avoid UI banners for system-level internal errors
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
         }
 
     @Test
@@ -379,12 +395,90 @@ class SemanticSearchManagerTest {
             assertTrue("Message should contain 'Remove failed': $errorMessage", errorMessage.contains("Remove failed"))
         }
 
+    @Test
+    fun `initialization with INTERNAL_ERROR sets NOT_SUPPORTED status`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            fakeWrapper.failNextWithFatalError = true
+
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+
+            val status = manager.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(
+                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                (status as TrackingStatus.Error).type,
+            )
+        }
+
+    @Test
+    fun `initialization with IllegalStateException sets NOT_SUPPORTED status`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            fakeWrapper.failSessionCreationWith = IllegalStateException("Service not found")
+
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+
+            val status = manager.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(
+                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                (status as TrackingStatus.Error).type,
+            )
+        }
+
+    @Test
+    fun `initialization on first run saves current package types`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+
+            manager.initialize(flow)
+
+            val savedTypes = dataStore.data.first()[stringSetPreferencesKey("appsearch_package_types")]
+            val currentTypes = PackageType.entries.map { it.name }.toSet()
+            assertEquals(currentTypes, savedTypes)
+        }
+
+    @Test
+    fun `initialization with removed package type triggers cleanup`() =
+        runTest(testDispatcher) {
+            // 1. Pre-save a type that doesn't exist anymore
+            dataStore.edit { prefs ->
+                prefs[stringSetPreferencesKey("appsearch_package_types")] = setOf("OLD_TYPE", "MINUTES")
+            }
+
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+
+            // 2. Initialize
+            manager.initialize(flow)
+
+            // 3. Verify removeByDocumentId was called for OLD_TYPE
+            val session = fakeWrapper.lastSession!!
+            val removeRequests = session.removeRequests
+            assertTrue("Should have remove requests", removeRequests.isNotEmpty())
+
+            val removedIds = removeRequests.flatMap { it.ids }
+            assertTrue("Should remove OLD_TYPE docs", removedIds.any { it.contains("old_type") })
+
+            // 4. Verify dataStore updated
+            val savedTypes = dataStore.data.first()[stringSetPreferencesKey("appsearch_package_types")]
+            val currentTypes = PackageType.entries.map { it.name }.toSet()
+            assertEquals(currentTypes, savedTypes)
+        }
+
     private fun createManager(scope: CoroutineScope) =
         SemanticSearchManager(
             context = context,
             scope = scope,
             appSearchWrapper = fakeWrapper,
             ioDispatcher = testDispatcher,
+            dataStore = dataStore,
         )
 
     private fun createEntity(
@@ -447,11 +541,13 @@ class SemanticSearchManagerTest {
         var failNextWithGenericError = false
         var failAllPutDocuments = false
         var failAllRemoveByDocumentId = false
+        var failSessionCreationWith: Exception? = null
 
         override suspend fun createSearchSession(
             context: Context,
             databaseName: String,
         ): AppSearchSessionWrapper {
+            failSessionCreationWith?.let { throw it }
             createdSessions++
             val session = FakeAppSearchSessionWrapper(this)
             session.failPutDocuments = failAllPutDocuments

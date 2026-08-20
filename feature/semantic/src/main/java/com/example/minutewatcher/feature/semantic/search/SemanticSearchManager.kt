@@ -4,8 +4,13 @@ import android.content.Context
 import android.os.DeadObjectException
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.exceptions.AppSearchException
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -25,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -53,6 +59,7 @@ open class SemanticSearchManager
         private val appSearchWrapper: AppSearchWrapper,
         @com.example.minutewatcher.core.common.di.IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
+        @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
@@ -112,6 +119,8 @@ open class SemanticSearchManager
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
+                cleanupStalePackageTypes()
+
                 // Присваивание lastSnapshotFlow внутри initMutex.withLock гарантирует
                 // потокобезопасность при вызове initialize() из recover() (suspend-контекст).
                 // На AOSP initialize() вызывается однократно из Main-thread;
@@ -242,8 +251,23 @@ open class SemanticSearchManager
             if ((e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) && !forceOverride) {
                 return
             }
-            AppLogger.e("AppSearch schema setup failed (force=$forceOverride, code=${e.resultCode})", e)
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+
+            // AppSearch — опциональная зависимость от GMS. Его отсутствие не является багом.
+            // Эвристика: по коду ошибки определяем, показывать ли UI-индикатор (NOT_SUPPORTED не показывает баннер).
+            // В частности, RESULT_INTERNAL_ERROR на GMS-free прошивках часто означает отсутствие сервиса.
+            val isNotSupported = e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR
+
+            if (isNotSupported) {
+                AppLogger.w("AppSearch is not supported or encountered internal error (code=${e.resultCode}).", e)
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.NOT_SUPPORTED,
+                        "AppSearch service not available or failed",
+                    )
+            } else {
+                AppLogger.e("AppSearch schema setup failed (force=$forceOverride, code=${e.resultCode})", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            }
         }
 
         /**
@@ -268,10 +292,13 @@ open class SemanticSearchManager
                 throw e
             }
 
+            // AppSearch — опциональная зависимость от GMS. Его отсутствие не является багом.
+            // Эвристика: по коду ошибки определяем, показывать ли UI-индикатор.
             val isNotSupported =
                 hasCause(e, IllegalStateException::class.java) ||
                     hasCause(e, DeadObjectException::class.java) ||
-                    hasCause(e, SecurityException::class.java)
+                    hasCause(e, SecurityException::class.java) ||
+                    (e is AppSearchException && e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR)
 
             if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)
@@ -595,5 +622,71 @@ open class SemanticSearchManager
             private const val DATABASE_NAME = "usage"
             const val NAMESPACE = "usage"
             private const val MAX_CONSECUTIVE_INDEX_FAILURES = 5
+            private val KEY_PACKAGE_TYPES = stringSetPreferencesKey("appsearch_package_types")
+        }
+
+        /**
+         * Удаляет документы типов, которые больше не поддерживаются текущей версией приложения.
+         *
+         * Эвристика: пакетные типы считаются устаревшими, если их нет в текущей конфигурации приложения
+         * (перечислении [PackageType]). Это строгое соответствие контракту AppSearch schema versioning.
+         */
+        private suspend fun cleanupStalePackageTypes() {
+            val currentTypes = PackageType.entries.map { it.name }.toSet()
+            val savedTypes = dataStore.data.first()[KEY_PACKAGE_TYPES] ?: emptySet()
+
+            val staleTypes = savedTypes - currentTypes
+            if (staleTypes.isEmpty()) {
+                updateSavedTypes(currentTypes, savedTypes)
+                return
+            }
+
+            AppLogger.d("SemanticSearchManager: cleaning up stale package types: $staleTypes")
+            if (!ensureSession()) {
+                updateSavedTypes(currentTypes, savedTypes)
+                return
+            }
+
+            val staleIds = getStaleIds(currentTypes, savedTypes)
+            if (staleIds.isNotEmpty()) {
+                removeStaleDocuments(staleIds)
+            }
+
+            updateSavedTypes(currentTypes, savedTypes)
+        }
+
+        private suspend fun removeStaleDocuments(staleIds: Set<String>) {
+            try {
+                session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+            } catch (e: Exception) {
+                AppLogger.w("SemanticSearchManager: failed to remove stale documents", e)
+            }
+        }
+
+        private suspend fun updateSavedTypes(
+            currentTypes: Set<String>,
+            savedTypes: Set<String>,
+        ) {
+            if (savedTypes != currentTypes) {
+                dataStore.edit { prefs ->
+                    prefs[KEY_PACKAGE_TYPES] = currentTypes
+                }
+            }
+        }
+
+        private fun getStaleIds(
+            currentTypes: Set<String>,
+            savedTypes: Set<String>,
+        ): Set<String> {
+            val staleTypes = savedTypes - currentTypes
+            if (staleTypes.isEmpty()) return emptySet()
+
+            val staleIds = mutableSetOf<String>()
+            SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
+                staleTypes.forEach { typeName ->
+                    staleIds.add("sim_${slot}_${typeName.lowercase()}")
+                }
+            }
+            return staleIds
         }
     }

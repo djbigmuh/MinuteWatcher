@@ -14,8 +14,8 @@ import com.example.minutewatcher.core.data.InitialSetupWorker
 import com.example.minutewatcher.core.data.WorkScheduler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.guava.await
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class BootReceiver : BroadcastReceiver() {
@@ -41,11 +41,14 @@ class BootReceiver : BroadcastReceiver() {
                             BACKOFF_DELAY_SECONDS,
                             TimeUnit.SECONDS,
                         ).build()
-                WorkManager.getInstance(appContext).enqueueUniqueWork(
-                    WorkScheduler.INITIAL_SETUP_WORK_NAME,
-                    ExistingWorkPolicy.REPLACE,
-                    workRequest,
-                ).result.await() // Ensure enqueuing completes before finish()
+                WorkManager
+                    .getInstance(appContext)
+                    .enqueueUniqueWork(
+                        WorkScheduler.INITIAL_SETUP_WORK_NAME,
+                        ExistingWorkPolicy.REPLACE,
+                        workRequest,
+                    ).result
+                    .await() // Ensure enqueuing completes before finish()
                 AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
             } catch (e: CancellationException) {
                 throw e

@@ -29,6 +29,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Tracks mobile traffic usage for the device.
  * Attributes all mobile traffic to the CURRENT DEFAULT DATA SIM.
  */
+@Suppress("LargeClass")
 @Singleton
 class TrafficTracker
     @Inject

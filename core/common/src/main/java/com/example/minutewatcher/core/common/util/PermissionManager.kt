@@ -121,47 +121,17 @@ class PermissionManager
         fun hasUsageStatsPermission(): Boolean {
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
             val mode =
-                when {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                        // On API 34+, checkOpNoThrow is recommended again and is not deprecated.
-                        appOps.checkOpNoThrow(
-                            AppOpsManager.OPSTR_GET_USAGE_STATS,
-                            Process.myUid(),
-                            context.packageName,
-                        )
-                    }
-
-                    else -> {
-                        // On API 30+, checkOpNoThrow is the preferred safe version.
-                        // On API 29, unsafeCheckOpNoThrow is used as checkOpNoThrow was deprecated.
-                        // See: https://developer.android.com/reference/android/app/AppOpsManager#checkOpNoThrow(java.lang.String,%20int,%20java.lang.String)
-                        @Suppress("DEPRECATION")
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-                                appOps.checkOpNoThrow(
-                                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                                    Process.myUid(),
-                                    context.packageName,
-                                )
-                            }
-
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                                appOps.unsafeCheckOpNoThrow(
-                                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                                    Process.myUid(),
-                                    context.packageName,
-                                )
-                            }
-
-                            else -> {
-                                appOps.checkOpNoThrow(
-                                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                                    Process.myUid(),
-                                    context.packageName,
-                                )
-                            }
-                        }
-                    }
+                try {
+                    // API 37: checkOpNoThrow is preferred for local UID checks.
+                    // Fail-closed fallback: custom ROMs or unexpected failures default to denied.
+                    appOps.checkOpNoThrow(
+                        AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        Process.myUid(),
+                        context.packageName,
+                    )
+                } catch (e: Exception) {
+                    AppLogger.e("PermissionManager: Failed to check GET_USAGE_STATS op", e)
+                    AppOpsManager.MODE_IGNORED
                 }
             val granted = mode == AppOpsManager.MODE_ALLOWED
             AppLogger.d("Checking GET_USAGE_STATS permission: ${if (granted) "Granted" else "Denied"}")

@@ -87,7 +87,10 @@ class ShortcutManager
                                     _status.value = TrackingStatus.Active
                                 } catch (e: CancellationException) {
                                     throw e
-                                } catch (e: Exception) {
+                                } catch (
+                                    @Suppress("TooGenericExceptionCaught")
+                                    e: Exception,
+                                ) {
                                     AppLogger.e("Failed to update dynamic shortcuts", e)
                                     // Эвристика определения NOT_SUPPORTED: проверяем тип исключения и сообщение.
                                     // **Строгое соблюдение API:** На AOSP ShortcutManagerCompat бросает
@@ -132,7 +135,10 @@ class ShortcutManager
                 true
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("Failed to update dynamic shortcuts", e)
                 // Эвристика определения NOT_SUPPORTED: проверяем тип исключения и сообщение.
                 // **Строгое соблюдение API:** На AOSP ShortcutManagerCompat бросает
@@ -230,7 +236,10 @@ class ShortcutManager
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
             }
         }

@@ -15,6 +15,7 @@ The ultimate goal is to have zero issues in baselines, ensuring that all new cod
 ### 2. Gradual Cleanup
 - **Legacy Only**: Baselines must ONLY capture pre-existing issues. Adding issues from new files to any baseline is strictly prohibited.
 - **Refactoring Requirement**: When refactoring a file, developers MUST first remove all its current entries from the baseline, then fix the resulting issues at the source.
+  - **Правило**: При рефакторинге файла сначала удалить его entries из baseline, затем исправить issues.
 - **Continuous Fixing**: When modifying existing code, developers are encouraged to fix any baseline issues in the affected files.
 
 ### 3. Baseline Refinement
