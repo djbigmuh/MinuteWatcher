@@ -21,4 +21,6 @@ class MainViewModelControllers
         val refresh: MainSimRefreshController,
         val settings: MainSettingsController,
         val simData: MainSimDataController,
+        val init: MainInitializationController,
+        val resume: MainResumeController,
     )

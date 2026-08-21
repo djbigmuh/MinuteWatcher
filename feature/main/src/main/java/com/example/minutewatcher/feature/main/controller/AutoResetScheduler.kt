@@ -1,0 +1,117 @@
+package com.example.minutewatcher.feature.main.controller
+
+import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import kotlinx.coroutines.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * Планировщик автоматического сброса лимитов.
+ *
+ * **Поведение при гибели процесса:**
+ * - [KEY_LAST_AUTO_RESET_CHECK] персистентен в SavedStateHandle.
+ * - При гибели процесса и восстановлении ViewModel checkOnStart() выполнится повторно.
+ * - Если с момента последней проверки прошло меньше интервала — сброс не выполняется.
+ * - Если прошло больше — сброс выполняется.
+ *
+ * **Строгое соблюдение API:** SavedStateHandle гарантированно восстанавливается
+ * Android Framework при воссоздании ViewModel. Атомарность [isCheckStarted]
+ * предотвращает конкуренцию при нескольких вызовах в рамках одного экземпляра ViewModel.
+ *
+ * **Эвристика в пределах критерия надёжности:** при гибели процесса во время
+ * проверки сброса, повторная проверка при восстановлении может выполнить
+ * сброс дважды (если первый сброс завершился, но флаг не был сохранён).
+ * Это допустимо: повторный сброс идемпотентен (сброс уже сброшенных данных
+ * не изменяет данные).
+ */
+class AutoResetScheduler(
+    private val savedStateHandle: SavedStateHandle,
+    private val autoResetUseCase: AutoResetUseCase,
+    private val timeProvider: TimeProvider,
+) {
+    /**
+     * Флаг однократного запуска проверки авто-сброса.
+     *
+     * **Намеренно не сбрасывается при успехе:** проверка авто-сброса должна
+     * выполняться ровно один раз за время жизни ViewModel. Повторный вызов
+     * `checkOnStart()` после успешного завершения немедленно возвращает управление.
+     *
+     * Сбрасывается только при ошибке (включая CancellationException),
+     * чтобы позволить повторную попытку при следующем вызове.
+     */
+    private val isCheckStarted = AtomicBoolean(false)
+
+    fun setup() {
+        if (!savedStateHandle.contains(KEY_AUTO_RESET_FAIL_COUNT)) {
+            savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
+        }
+    }
+
+    /**
+     * Проверяет необходимость авто-сброса при старте.
+     *
+     * **Строгое соблюдение API:** используется монотонное время
+     * (elapsedRealtime), а не wall-clock (System.currentTimeMillis).
+     * Это гарантирует, что перевод системных часов пользователем
+     * не приведёт к ложным срабатываниям или пропуску проверок.
+     *
+     * **Отклонение кастомной прошивки:** если elapsedRealtime возвращает
+     * отрицательное значение или не монотонен — это проблема кастомной
+     * прошивки. В этом случае проверка выполняется немедленно (elapsed < 0).
+     *
+     * **Стратегия приложения:** при отрицательном elapsed проверка
+     * выполняется немедленно. Это безопаснее, чем пропуск проверки.
+     */
+    suspend fun checkOnStart() {
+        if (!isCheckStarted.compareAndSet(false, true)) return
+
+        val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
+        val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+
+        val now = timeProvider.elapsedRealtime()
+
+        val isInitialOrReboot: Boolean
+        val elapsed: Long
+
+        if (lastResetCheck == null) {
+            isInitialOrReboot = true
+            elapsed = 0
+        } else {
+            elapsed = now - lastResetCheck
+            isInitialOrReboot = elapsed < 0
+        }
+
+        val effectiveFailCount =
+            if (isInitialOrReboot || elapsed > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
+
+        try {
+            if (isInitialOrReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
+                if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
+                    autoResetUseCase.performAutoReset(shouldNotify = false)
+                    savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                    savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = 0
+                } else {
+                    AppLogger.e("Auto-reset skipped after $effectiveFailCount consecutive failures")
+                    savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+                }
+            }
+        } catch (e: CancellationException) {
+            isCheckStarted.set(false)
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Auto-reset failed during initialization", e)
+            savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
+            isCheckStarted.set(false)
+        }
+    }
+
+    companion object {
+        private const val KEY_LAST_AUTO_RESET_CHECK = "last_auto_reset_check"
+        private const val KEY_AUTO_RESET_FAIL_COUNT = "auto_reset_fail_count"
+        private const val AUTO_RESET_CHECK_INTERVAL_MS = 3_600_000L // 1 hour
+        private const val MAX_AUTO_RESET_RETRIES = 3
+        private const val FAIL_COUNT_RESET_INTERVAL_MS = 24 * 3_600_000L // 24 hours
+    }
+}

@@ -9,6 +9,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.RejectedExecutionHandler
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
@@ -20,21 +21,75 @@ object AppLogger {
     private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
-    private const val LOG_QUEUE_CAPACITY = 1024
-    private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG // Disabled in release for privacy and security
+    private const val LOG_QUEUE_CAPACITY = 2048
+    private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
 
     private var logDir: File? = null
     private var logger: Logger = AndroidLogger()
-    private val executor by lazy {
+
+    private val executor: ThreadPoolExecutor by lazy {
         ThreadPoolExecutor(
             1,
             1,
             0L,
             TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue(LOG_QUEUE_CAPACITY),
-            ThreadPoolExecutor.DiscardOldestPolicy(),
+            LinkedBlockingQueue<Runnable>(LOG_QUEUE_CAPACITY),
+            PriorityLogRejectionHandler(),
         )
     }
+
+    private class LogTask(
+        level: String,
+        private val action: Runnable,
+    ) : Runnable {
+        val isCritical: Boolean = (level == "E") || (level == "W")
+
+        override fun run() = action.run()
+    }
+
+    private class PriorityLogRejectionHandler : RejectedExecutionHandler {
+        private val droppedCount = java.util.concurrent.atomic.AtomicLong(0)
+
+        override fun rejectedExecution(
+            r: Runnable?,
+            executor: ThreadPoolExecutor?,
+        ) {
+            if ((r == null) || (executor == null) || executor.isShutdown) return
+
+            val queue = executor.queue
+            val isCritical = (r as? LogTask)?.isCritical == true
+
+            if (isCritical) {
+                // Critical log must be recorded. Try to drop a non-critical one from the queue.
+                val iterator = queue.iterator()
+                var removed = false
+                while (iterator.hasNext()) {
+                    val task = iterator.next()
+                    if (task is LogTask && !task.isCritical) {
+                        iterator.remove()
+                        removed = true
+                        break
+                    }
+                }
+
+                if (!removed) {
+                    // If no non-critical logs to drop, drop the oldest one anyway to avoid blocking.
+                    queue.poll()
+                }
+
+                droppedCount.incrementAndGet()
+                executor.execute(r)
+            } else {
+                // New log is not critical, just drop it.
+                droppedCount.incrementAndGet()
+            }
+
+            if (droppedCount.get() % 50L == 1L) {
+                Log.w(TAG, "Log queue full! Total dropped/displaced non-critical logs: ${droppedCount.get()}")
+            }
+        }
+    }
+
     private val dateFormat =
         DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
@@ -108,35 +163,37 @@ object AppLogger {
     ) {
         if (!IS_FILE_LOGGING_ENABLED) return
         val dir = logDir ?: return
-        executor.execute {
-            try {
-                val logFile = File(dir, LOG_FILE_NAME)
-                if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
-                    val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                    if (oldFile.exists() && !oldFile.delete()) {
-                        // Не удалось удалить старый файл — пропускаем ротацию в этот раз
-                        return@execute
+        executor.execute(
+            LogTask(level) {
+                try {
+                    val logFile = File(dir, LOG_FILE_NAME)
+                    if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                        val oldFile = File(dir, LOG_FILE_OLD_NAME)
+                        if (oldFile.exists() && !oldFile.delete()) {
+                            // Не удалось удалить старый файл — пропускаем ротацию в этот раз
+                            return@LogTask
+                        }
+                        if (!logFile.renameTo(oldFile)) {
+                            // Не удалось переименовать — продолжаем писать в текущий файл
+                            return@LogTask
+                        }
                     }
-                    if (!logFile.renameTo(oldFile)) {
-                        // Не удалось переименовать — продолжаем писать в текущий файл
-                        return@execute
+
+                    val timestamp = dateFormat.format(Instant.now())
+                    val entry = "$timestamp $level/$TAG: $message\n"
+
+                    FileWriter(logFile, true).use { writer ->
+                        writer.write(entry)
+                    }
+                } catch (e: Exception) {
+                    // Намеренно игнорируется, чтобы избежать рекурсивных ошибок при записи в файл.
+                    // Fail silently for file logging to avoid recursive errors,
+                    // but at least log to system Log in debug.
+                    if (BuildConfig.DEBUG) {
+                        Log.w(TAG, "File logging failed", e)
                     }
                 }
-
-                val timestamp = dateFormat.format(Instant.now())
-                val entry = "$timestamp $level/$TAG: $message\n"
-
-                FileWriter(logFile, true).use { writer ->
-                    writer.write(entry)
-                }
-            } catch (e: Exception) {
-                // Намеренно игнорируется, чтобы избежать рекурсивных ошибок при записи в файл.
-                // Fail silently for file logging to avoid recursive errors,
-                // but at least log to system Log in debug.
-                if (BuildConfig.DEBUG) {
-                    Log.w(TAG, "File logging failed", e)
-                }
-            }
-        }
+            },
+        )
     }
 }

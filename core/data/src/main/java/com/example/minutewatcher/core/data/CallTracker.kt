@@ -99,8 +99,6 @@ open class CallTracker
          */
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
-        // Optimization: prevent duplicate start events for the same subId
-        private val internalActiveSessions = ConcurrentHashMap.newKeySet<Int>()
 
         /**
          * Records call start time for a specific subscription ID.
@@ -147,7 +145,7 @@ open class CallTracker
                     } finally {
                         withContext(NonCancellable) {
                             try {
-                                if (operationCompleted || _status.value is TrackingStatus.Error) {
+                                if (operationCompleted || (_status.value is TrackingStatus.Error)) {
                                     refreshStatus()
                                 }
                             } catch (e: Exception) {
@@ -255,11 +253,6 @@ open class CallTracker
         }
 
         private suspend fun handleCallStarted(subId: Int) {
-            if (internalActiveSessions.contains(subId)) {
-                AppLogger.d("CallTracker: session already active (internal) for subId $subId, ignoring")
-                return
-            }
-
             val targetSubId = resolveTargetSubId(subId)
             if (targetSubId != -1) {
                 if (validateAndRecordStart(targetSubId)) {
@@ -301,7 +294,6 @@ open class CallTracker
 
             if (!isSessionStale(targetSubId)) {
                 AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
-                internalActiveSessions.add(targetSubId)
                 return false
             }
 
@@ -352,7 +344,6 @@ open class CallTracker
             callSessionRepository.setBootTime(targetSubId, bootTime)
             callSessionRepository.setUptime(targetSubId, uptime)
             callSessionRepository.setCallIdentity(targetSubId, identity)
-            internalActiveSessions.add(targetSubId)
             AppLogger.d("Call start recorded for subId $targetSubId at $now (identity=$identity)")
         }
 
@@ -383,7 +374,7 @@ open class CallTracker
             }
         }
 
-        private suspend fun checkPermissions(): Boolean =
+        private fun checkPermissions(): Boolean =
             try {
                 if (!permissionManager.hasPhoneStatePermission()) {
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
@@ -732,7 +723,6 @@ open class CallTracker
                 callSessionRepository.setUptime(subId, 0L)
                 writeAttempts.remove(subId)
                 attributionFailures.remove(subId)
-                internalActiveSessions.remove(subId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -756,7 +746,6 @@ open class CallTracker
                 callMutex.withLock {
                     try {
                         callSessionRepository.clearAllCallSessions()
-                        internalActiveSessions.clear()
                         writeAttempts.clear()
                         attributionFailures.clear()
                         AppLogger.d("CallTracker: cleared all sessions on boot")
@@ -773,7 +762,6 @@ open class CallTracker
             callMutex.withLock {
                 try {
                     callSessionRepository.clearAllCallSessions()
-                    internalActiveSessions.clear()
                     writeAttempts.clear()
                     attributionFailures.clear()
                     AppLogger.d("CallTracker: cleared all sessions during recovery")

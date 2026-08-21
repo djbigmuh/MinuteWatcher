@@ -18,8 +18,11 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.feature.main.controller.AutoResetScheduler
 import com.example.minutewatcher.feature.main.controller.MainBannerController
 import com.example.minutewatcher.feature.main.controller.MainDialogController
+import com.example.minutewatcher.feature.main.controller.MainInitializationController
+import com.example.minutewatcher.feature.main.controller.MainResumeController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
 import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
@@ -162,6 +165,18 @@ class MainViewModelTest {
                 scope = scope,
             )
 
+        val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
+        val initController =
+            MainInitializationController(
+                appSettingsRepository = appSettingsRepository,
+                refreshController = refreshController,
+                dialogController = dialogController,
+                autoResetScheduler = autoResetScheduler,
+                timeProvider = timeProvider,
+                ioDispatcher = testDispatcher,
+            )
+        val resumeController = MainResumeController(timeProvider)
+
         val controllers =
             MainViewModelControllers(
                 dialog = dialogController,
@@ -169,6 +184,8 @@ class MainViewModelTest {
                 refresh = refreshController,
                 settings = settingsController,
                 simData = simDataController,
+                init = initController,
+                resume = resumeController,
             )
 
         return MainViewModel(

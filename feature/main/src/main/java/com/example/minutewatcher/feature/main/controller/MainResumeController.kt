@@ -1,0 +1,65 @@
+package com.example.minutewatcher.feature.main.controller
+
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.model.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * MainResumeController handles activity resume logic and stale data checks.
+ *
+ * Safe to call from any coroutine context.
+ */
+class MainResumeController
+    @Inject
+    constructor(
+        private val timeProvider: TimeProvider,
+    ) {
+        private var resumeRefreshJob: Job? = null
+
+        fun onActivityResume(
+            scope: CoroutineScope,
+            initializationState: StateFlow<Boolean>,
+            lastRefreshAt: Long,
+            onRefreshNeeded: suspend () -> Unit,
+        ) {
+            scope.launch {
+                resumeRefreshJob?.cancelAndJoin()
+                resumeRefreshJob =
+                    launch {
+                        val initialized =
+                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                initializationState.first { it }
+                            }
+
+                        if (initialized == null) {
+                            AppLogger.w("onActivityResume: initialization not complete, skipping refresh")
+                            return@launch
+                        }
+
+                        val nowElapsed = timeProvider.elapsedRealtime()
+                        val elapsed = nowElapsed - lastRefreshAt
+                        val isStale =
+                            (lastRefreshAt == 0L) ||
+                                (elapsed < 0) ||
+                                (elapsed > RESUME_REFRESH_THRESHOLD_MS)
+
+                        if (isStale) {
+                            onRefreshNeeded()
+                        }
+                    }
+            }
+        }
+
+        companion object {
+            private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
+        }
+    }

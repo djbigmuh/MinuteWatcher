@@ -56,15 +56,36 @@ class TrafficTrackerTest {
         setupPermissionMocks()
         setupIdentityMocks()
         setupUsageMocks()
+
+        val baselineManager =
+            TrafficBaselineManager(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                timeProvider,
+                networkStatsProvider,
+            )
+        val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
+        val simChangeHandler =
+            TrafficSimChangeHandler(
+                callSessionRepository,
+                simIdentityRepository,
+                simUsageResetRepository,
+                baselineManager,
+            )
+        val targetResolver = TrafficTargetResolver(permissionManager)
+
         tracker =
             TrafficTracker(
                 simIdentityRepository,
                 simUsageRepository,
                 simUsageResetRepository,
-                callSessionRepository,
                 permissionManager,
-                timeProvider,
-                networkStatsProvider,
+                baselineManager,
+                deltaCalculator,
+                simChangeHandler,
+                targetResolver,
             )
     }
 

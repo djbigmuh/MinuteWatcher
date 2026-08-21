@@ -22,6 +22,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -107,13 +108,9 @@ class WidgetSettingsViewModel
         private val loadMutex = Mutex()
 
         // loadJob — Job текущей загрузки.
-        // При вызове loadSettings() предыдущий Job отменяется через cancel().
-        // Новый Job создаётся в viewModelScope.launch.
-        //
-        // Отмена кооперативная: старый Job обрабатывает отмену на ближайшей
-        // точке приостановки или при ensureActive(). После этого loadMutex
-        // освобождается и новый Job может его залочить.
-        private var loadJob: Job? = null
+        // Использует [AtomicReference] для атомарной отмены предыдущей загрузки
+        // и предотвращения race condition при конкурентных вызовах [loadSettings].
+        private val loadJob = AtomicReference<Job?>(null)
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
@@ -131,10 +128,10 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Загружает настройки виджета, используя паттерн отмены предыдущей загрузки.
+         * Загружает настройки виджета, используя паттерн атомарной отмены предыдущей загрузки.
          *
-         * loadJob?.cancel() отменяет предыдущую корутину. Новая корутина
-         * ожидает освобождения loadMutex (старая корутина освободит его
+         * loadJob.getAndSet(newJob)?.cancel() атомарно отменяет предыдущую корутину.
+         * Новая корутина ожидает освобождения loadMutex (старая корутина освободит его
          * при обработке отмены на ближайшей точке приостановки или при
          * ensureActive()).
          *
@@ -148,47 +145,15 @@ class WidgetSettingsViewModel
          * Это гарантирует отсутствие deadlock.
          */
         private fun loadSettings() {
-            // _loadError сбрасывается в false при начале новой загрузки.
-            // Если предыдущая загрузка завершилась ошибкой, вызов retryLoad()
-            // сбрасывает ошибку. Если новая загрузка тоже завершится ошибкой,
-            // _loadError будет установлен в true снова.
-            // Это корректное поведение: пользователь видит актуальное состояние.
             _loadError.value = false
-            // loadMutex обеспечивает сериализацию загрузок. При отмене предыдущей
-            // корутины (loadJob?.cancel()) Mutex освобождается автоматически
-            // (Kotlin Mutex.release при CancellationException). Новая корутина
-            // захватывает Mutex и выполняет загрузку. Это гарантирует, что
-            // только одна загрузка выполняется одновременно.
-            loadJob?.cancel()
-            // viewModelScope привязан к lifecycle ViewModel.
-            // При уничтожении ViewModel (onCleared) все корутины в viewModelScope
-            // отменяются. Это предотвращает утечки и обращение к уничтоженному ViewModel.
-            //
-            // Строгое соблюдение API: viewModelScope гарантированно отменяется
-            // при onCleared(). Это стандартная best practice для ViewModel.
-            loadJob =
+            val newJob =
                 viewModelScope.launch {
                     loadMutex.withLock {
-                        // ensureActive() проверяет, не была ли корутина отменена
-                        // между захватом мьютекса и началом загрузки. Если отмена
-                        // произошла, CancellationException пробрасывается, мьютекс
-                        // освобождается автоматически, и состояние НЕ обновляется.
-                        // Это корректное поведение: отменённая загрузка не должна
-                        // перезаписывать состояние данными.
-                        //
-                        // **Строгое соблюдение API kotlinx.coroutines:** Mutex.release
-                        // вызывается автоматически при CancellationException внутри
-                        // withLock. Это гарантирует отсутствие deadlock.
                         try {
                             val loaded =
                                 withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
                                     loader.load()
                                 }
-                            // ensureActive() вызывается сразу после suspend-вызова для гарантии
-                            // кооперативной отмены. Если корутина была отменена во время
-                            // withTimeoutOrNull, CancellationException будет проброшен до
-                            // проверки результата. Это строгое соблюдение API kotlinx.coroutines:
-                            // CancellationException должен пробрасываться для корректной отмены scope.
                             ensureActive()
                             if (loaded != null) {
                                 _settingsState.value = loaded
@@ -204,6 +169,8 @@ class WidgetSettingsViewModel
                         }
                     }
                 }
+
+            loadJob.getAndSet(newJob)?.cancel()
         }
 
         /**

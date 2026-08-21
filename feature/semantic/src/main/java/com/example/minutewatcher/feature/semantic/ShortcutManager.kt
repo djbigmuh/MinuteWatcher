@@ -86,56 +86,49 @@ class ShortcutManager
          * **Error Handling:** Propagates [CancellationException].
          */
         @OptIn(FlowPreview::class)
-        @Suppress("InstanceOfCheckForException")
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            // Строгое соблюдение API: job?.join() вызывается вне мьютекса, чтобы
-            // не удерживать мьютекс во время ожидания завершения предыдущей корутины.
-            // Это предотвращает задержку при повторном вызове initialize().
-            // На AOSP индексация снапшота завершается за миллисекунды. Если
-            // кастомная прошивка замедляет индексацию — это проблема кастомной прошивки.
             job?.cancel()
             job?.join()
 
             initMutex.withLock {
-                lastSnapshotFlow = snapshotFlow
-                job =
-                    scope.launch {
-                        _status.value = TrackingStatus.Active
-                        snapshotFlow
-                            .debounce { snapshot ->
-                                if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
-                            }.collect { snapshot ->
-                                try {
-                                    withContext(ioDispatcher) {
-                                        updateShortcuts(snapshot)
-                                    }
-                                    _status.value = TrackingStatus.Active
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (
-                                    @Suppress("TooGenericExceptionCaught")
-                                    e: Exception,
-                                ) {
-                                    AppLogger.e("Failed to update dynamic shortcuts", e)
-                                    // Эвристика определения NOT_SUPPORTED: проверяем тип исключения и сообщение.
-                                    // **Строгое соблюдение API:** На AOSP ShortcutManagerCompat бросает
-                                    // UnsupportedOperationException при отсутствии поддержки ярлыков.
-                                    // Проверка по сообщению "Shortcut" — последний рубеж для кастомных прошивок,
-                                    // которые бросают иные типы исключений. Если прошивка не соответствует
-                                    // документации Google — это проблема кастомной прошивки.
-                                    val type =
-                                        if (e is UnsupportedOperationException ||
-                                            e.message?.contains("Shortcut") == true
-                                        ) {
-                                            TrackingStatus.ErrorType.NOT_SUPPORTED
-                                        } else {
-                                            TrackingStatus.ErrorType.UNKNOWN
-                                        }
-                                    _status.value = TrackingStatus.Error(type, e.message)
-                                }
-                            }
-                    }
+                setupObservation(snapshotFlow)
             }
+        }
+
+        @OptIn(FlowPreview::class)
+        private fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            lastSnapshotFlow = snapshotFlow
+            job =
+                scope.launch {
+                    _status.value = TrackingStatus.Active
+                    snapshotFlow
+                        .debounce { snapshot ->
+                            if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                        }.collect { snapshot ->
+                            try {
+                                withContext(ioDispatcher) {
+                                    updateShortcuts(snapshot)
+                                }
+                                _status.value = TrackingStatus.Active
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (
+                                @Suppress("TooGenericExceptionCaught")
+                                e: Exception,
+                            ) {
+                                AppLogger.e("Failed to update dynamic shortcuts", e)
+                                val type =
+                                    if (e is UnsupportedOperationException ||
+                                        e.message?.contains("Shortcut") == true
+                                    ) {
+                                        TrackingStatus.ErrorType.NOT_SUPPORTED
+                                    } else {
+                                        TrackingStatus.ErrorType.UNKNOWN
+                                    }
+                                _status.value = TrackingStatus.Error(type, e.message)
+                            }
+                        }
+                }
         }
 
         /**
@@ -144,7 +137,11 @@ class ShortcutManager
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         override suspend fun recover() {
-            lastSnapshotFlow?.let { initialize(it) }
+            job?.cancel()
+            job?.join()
+            initMutex.withLock {
+                lastSnapshotFlow?.let { setupObservation(it) }
+            }
         }
 
         /**

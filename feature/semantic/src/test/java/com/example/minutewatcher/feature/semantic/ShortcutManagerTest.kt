@@ -10,8 +10,11 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -166,6 +169,27 @@ class ShortcutManagerTest {
             testDispatcher.scheduler.advanceTimeBy(31_000)
 
             assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
+        }
+
+    @Test
+    fun `concurrent initialize and recover does not crash and maintains consistency`() =
+        runTest(testDispatcher) {
+            val flow = MutableStateFlow(createSnapshot(emptyList()))
+
+            // Start multiple concurrent operations
+            val jobs =
+                List(10) { i ->
+                    launch {
+                        if (i % 2 == 0) {
+                            shortcutManager.initialize(flow)
+                        } else {
+                            shortcutManager.recover()
+                        }
+                    }
+                }
+            jobs.joinAll()
+
+            assertTrue(shortcutManager.status.value is TrackingStatus.Active)
         }
 
     @Suppress("SameParameterValue")

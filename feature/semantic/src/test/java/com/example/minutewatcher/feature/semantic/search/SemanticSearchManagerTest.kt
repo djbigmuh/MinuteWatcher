@@ -22,6 +22,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -572,16 +574,44 @@ class SemanticSearchManagerTest {
             manager.recover()
 
             // 3. Verify counters via reflection
-            val failureField = SemanticSearchManager::class.java.getDeclaredField("consecutiveIndexFailures")
-            failureField.isAccessible = true
-            val failures = (failureField.get(manager) as java.util.concurrent.atomic.AtomicInteger).get()
+            val errorHandlerField = SemanticSearchManager::class.java.getDeclaredField("errorHandler")
+            errorHandlerField.isAccessible = true
+            val errorHandler = errorHandlerField.get(manager) as AppSearchErrorHandler
 
-            val timeField = SemanticSearchManager::class.java.getDeclaredField("lastIndexFailureTime")
+            val failureField = AppSearchErrorHandler::class.java.getDeclaredField("consecutiveIndexFailures")
+            failureField.isAccessible = true
+            val failures = (failureField.get(errorHandler) as java.util.concurrent.atomic.AtomicInteger).get()
+
+            val timeField = AppSearchErrorHandler::class.java.getDeclaredField("lastIndexFailureTime")
             timeField.isAccessible = true
-            val lastTime = (timeField.get(manager) as java.util.concurrent.atomic.AtomicLong).get()
+            val lastTime = (timeField.get(errorHandler) as java.util.concurrent.atomic.AtomicLong).get()
 
             assertEquals(0, failures)
             assertEquals(0L, lastTime)
+        }
+
+    @Test
+    fun `concurrent initialize and recover does not crash and maintains consistency`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+
+            // Start multiple concurrent operations
+            val jobs =
+                List(10) { i ->
+                    launch {
+                        if (i % 2 == 0) {
+                            manager.initialize(flow)
+                        } else {
+                            manager.recover()
+                        }
+                    }
+                }
+            jobs.joinAll()
+
+            assertTrue(manager.status.value is TrackingStatus.Active)
+            // Even with many calls, we should have at least one session created
+            assertTrue(fakeWrapper.createdSessions >= 1)
         }
 
     private fun createManager(scope: CoroutineScope) =

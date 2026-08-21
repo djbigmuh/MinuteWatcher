@@ -15,7 +15,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
@@ -77,9 +76,11 @@ class AppSettingsRepositoryImpl
          */
         override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
             updateMutex.withLock {
-                val current = dataStore.data.first().toAppSettings()
-                val updated = transform(current)
-                dataStore.edit { prefs -> applyUpdatedSettings(prefs, updated) }
+                dataStore.edit { prefs ->
+                    val current = prefs.toAppSettings()
+                    val updated = transform(current)
+                    applyUpdatedSettings(prefs, updated)
+                }
             }
         }
 
