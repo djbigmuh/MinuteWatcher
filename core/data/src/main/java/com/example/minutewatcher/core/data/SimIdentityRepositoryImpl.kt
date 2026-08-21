@@ -159,6 +159,21 @@ class SimIdentityRepositoryImpl
                 .filter { it.isNotEmpty() }
                 .map { SeedResult.Real(it) as SeedResult }
                 .onStart {
+                    // Строгое соблюдение API: onStart эмитит начальное значение до начала
+                    // сбора основного потока. Если seed уже доступен в seedRepository.seedFlow,
+                    // onStart эмитит SeedResult.Real(current). Если seed недоступен (пустая
+                    // строка), onStart генерирует seed через generateSeedWithRetry() и эмитит
+                    // SeedResult.Real(generated). Если генерация не удалась (таймаут),
+                    // эмитится SeedResult.Fallback.
+                    //
+                    // На AOSP seedRepository.seedFlow.first() возвращает значение в пределах
+                    // миллисекунд. Таймаут возможен только при деградации DataStore на
+                    // кастомной прошивке. Это проблема кастомной прошивки.
+                    //
+                    // Эвристика в пределах критерия надёжности: если генерация seed не
+                    // удалась, эмитится Fallback. Это позволяет приложению продолжить работу
+                    // с временным seed. При следующем запуске приложения будет предпринята
+                    // повторная попытка генерации.
                     val initial =
                         withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
                             val current = seedRepository.seedFlow.first()

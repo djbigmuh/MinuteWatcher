@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
@@ -61,6 +63,7 @@ class ShortcutManager
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        private val initMutex = Mutex()
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
 
@@ -84,16 +87,19 @@ class ShortcutManager
          */
         @OptIn(FlowPreview::class)
         @Suppress("InstanceOfCheckForException")
-        fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            lastSnapshotFlow = snapshotFlow
-            scope.launch {
-                // Отменяем предыдущее наблюдение и дожидаемся его завершения.
-                // join() гарантирует, что старая корутина полностью остановилась
-                // до запуска новой, исключая перекрытие потоков наблюдения.
-                job?.cancel()
-                job?.join()
+        suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            // Строгое соблюдение API: job?.join() вызывается вне мьютекса, чтобы
+            // не удерживать мьютекс во время ожидания завершения предыдущей корутины.
+            // Это предотвращает задержку при повторном вызове initialize().
+            // На AOSP индексация снапшота завершается за миллисекунды. Если
+            // кастомная прошивка замедляет индексацию — это проблема кастомной прошивки.
+            job?.cancel()
+            job?.join()
+
+            initMutex.withLock {
+                lastSnapshotFlow = snapshotFlow
                 job =
-                    launch {
+                    scope.launch {
                         _status.value = TrackingStatus.Active
                         snapshotFlow
                             .debounce { snapshot ->

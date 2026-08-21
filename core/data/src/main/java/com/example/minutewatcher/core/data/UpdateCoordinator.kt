@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicLong
@@ -127,10 +128,13 @@ class UpdateCoordinator
                     }.catch { cause ->
                         AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
                     }
-                    // This Flow is collected internally (fire-and-forget side effect).
-                    // We use .launchIn(scope) explicitly to document intent.
-                    // Do NOT remove the collector — Flow is cold and does nothing without it.
-                    .launchIn(CoroutineScope(scope.coroutineContext + handler))
+                    // Строгое соблюдение API: launchIn(scope + handler) создаёт дочернюю
+                    // корутину scope, которая будет отменена при отмене scope. Это
+                    // гарантирует, что наблюдение за снапшотами будет остановлено при
+                    // завершении приложения. На AOSP ApplicationScope живёт до завершения
+                    // процесса. Если кастомная прошивка убивает процесс без вызова
+                    // Application.onTerminate() — это проблема кастомной прошивки.
+                    .launchIn(scope + handler)
         }
 
         /**

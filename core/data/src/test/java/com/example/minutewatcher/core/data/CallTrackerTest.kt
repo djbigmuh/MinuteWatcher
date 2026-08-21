@@ -674,6 +674,36 @@ class CallTrackerTest {
         }
 
     @Test
+    fun `duration calculation ignores wall clock jumps`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+            val uptime = timeProvider.uptimeMillis()
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // Wall clock jump: +1 hour
+            timeProvider.setTime(now + 3600000L)
+            // Realtime and uptime advance by 60s
+            timeProvider.advanceRealtimeOnly(60000L)
+            // Need a way to advance uptime too... FixedTimeProvider doesn't have setUptime.
+            // I'll assume uptime is advanced via some other means or just not care if validateUptime passes.
+            // Actually, if I want validateUptime to pass, currentUptime must be >= savedUptime.
+            // savedUptime is 500M. currentUptime is 500M. It passes.
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            // Duration should be 1 minute (60s), NOT 60 minutes (1h)
+            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsed(eq("id_0"), eq(1))
+        }
+
+    @Test
     fun `handleCallStartInternal timeout keeps Error status after onCallStarted even if active calls exist`() =
         runTest(testDispatcher) {
             setupCommonMocks()

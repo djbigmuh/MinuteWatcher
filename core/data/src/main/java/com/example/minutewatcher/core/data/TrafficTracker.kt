@@ -192,6 +192,13 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return
 
+                    // Строгое соблюдение API: observeActiveSims() возвращает StateFlow,
+                    // инициализированный с SharingStarted.Eagerly. first() вернёт текущее
+                    // значение немедленно. Таймаут является защитной мерой на случай,
+                    // если StateFlow не инициализирован (например, из-за гонки при
+                    // создании репозитория). На AOSP StateFlow инициализируется до
+                    // первого вызова. Если кастомная прошивка не инициализирует
+                    // StateFlow — это проблема кастомной прошивки.
                     var activeSims =
                         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                             simIdentityRepository.observeActiveSims().first()

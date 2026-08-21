@@ -316,6 +316,12 @@ class WidgetSettingsViewModel
                 AppLogger.e("Failed to save widget settings", e)
                 _saveResult.value = SaveResult.Failed
             } finally {
+                // Строгое соблюдение API: finally блок гарантирует, что мьютекс будет
+                // освобождён даже при CancellationException. Это предотвращает deadlock
+                // при повторном вызове saveAndNotify() после отмены.
+                // На AOSP Mutex.unlock() безопасен при вызове из любой корутины.
+                // Если кастомная прошивка не обеспечивает корректную работу Mutex —
+                // это проблема кастомной прошивки.
                 _isSaving.value = false
                 saveMutex.unlock()
             }

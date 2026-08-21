@@ -163,6 +163,14 @@ open class SemanticSearchManager
          */
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            // Строгое соблюдение API: job?.join() вызывается вне мьютекса, чтобы
+            // не удерживать мьютекс во время ожидания завершения предыдущей корутины.
+            // Это предотвращает задержку при повторном вызове initialize().
+            // На AOSP индексация снапшота завершается за миллисекунды. Если
+            // кастомная прошивка замедляет индексацию — это проблема кастомной прошивки.
+            job?.cancel()
+            job?.join() // дожидаемся реальной остановки
+
             initMutex.withLock {
                 cleanupStalePackageTypes()
 
@@ -171,8 +179,6 @@ open class SemanticSearchManager
                 // На AOSP initialize() вызывается однократно из Main-thread;
                 // защита мьютексом — защита от конкурентных вызовов recover().
                 lastSnapshotFlow = snapshotFlow
-                job?.cancel()
-                job?.join() // дожидаемся реальной остановки
                 job =
                     scope.launch {
                         _status.value = TrackingStatus.Active

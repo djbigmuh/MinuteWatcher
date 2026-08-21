@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.data.WorkScheduler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -31,7 +32,14 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         val appContext = context.applicationContext
 
-        CoroutineScope(Dispatchers.Main).launch {
+        // Строгое соблюдение API: BroadcastReceiver с goAsync() должен вызвать
+        // PendingResult.finish() до завершения. SupervisorJob гарантирует, что
+        // отмена одной корутины не повлияет на другие. finish() вызывается в
+        // finally, поэтому даже при отмене корутины он будет вызван.
+        // На AOSP BroadcastReceiver с goAsync() живёт до вызова finish().
+        // Если кастомная прошивка убивает процесс до вызова finish() —
+        // это проблема кастомной прошивки.
+        CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
             try {
                 val workRequest =
                     OneTimeWorkRequestBuilder<InitialSetupWorker>()

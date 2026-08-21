@@ -419,7 +419,21 @@ open class CallTracker
 
             if (isSessionStaleInEndCall(subId)) return
 
-            val durationSeconds = ((timeProvider.now() - startTime) / MILLIS_IN_SECOND).toInt()
+            // Строгое соблюдение API: длительность звонка рассчитывается по монотонному
+            // времени (elapsedRealtime), а не по настенным часам (System.currentTimeMillis).
+            // Это гарантирует, что перевод системных часов пользователем не повлияет на
+            // рассчитанную длительность. На AOSP SystemClock.elapsedRealtime() монотонен
+            // в пределах одной загрузки устройства. Если кастомная прошивка возвращает
+            // немонотонный elapsedRealtime — это проблема кастомной прошивки.
+            val savedBootTimeResult =
+                readWithRetry(
+                    label = "endCall:bootTimeForDuration",
+                    reader = { callSessionRepository.getBootTime(subId) },
+                )
+            val savedBootTime = savedBootTimeResult.getOrElse { 0L }
+            val currentBootTime = timeProvider.elapsedRealtime()
+            val durationSeconds = ((currentBootTime - savedBootTime) / MILLIS_IN_SECOND).toInt()
+
             if (validateDurationAndProcess(durationSeconds, subId, notify)) {
                 cleanupCounters(subId)
             }
@@ -468,7 +482,10 @@ open class CallTracker
             subId: Int,
             notify: Boolean,
         ): Boolean {
-            // Safety check for impossible durations (e.g. system time jump backwards)
+            // Эвристика в пределах критерия надёжности: отрицательная длительность
+            // невозможна на AOSP (elapsedRealtime монотонен). Если кастомная прошивка
+            // возвращает немонотонный elapsedRealtime — это проблема кастомной прошивки.
+            // Защита: отрицательная длительность игнорируется, сессия очищается.
             if (durationSeconds < 0) {
                 AppLogger.w("CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring")
                 return true

@@ -244,14 +244,23 @@ class MainViewModel
                         AppLogger.e("initializeApp: refresh failed after all retries ($reason)")
                     }
                 } catch (e: CancellationException) {
-                    // Сброс isInitializationStarted при ошибке позволяет повторить инициализацию
-                    // при следующем onResume. На AOSP инициализация не падает при корректном
-                    // состоянии DataStore; сбой возможен только при деградации хранилища
-                    // на кастомных прошивках. Повторная попытка — единственная стратегия
-                    // восстановления без вмешательства пользователя.
+                    // Сброс isInitializationStarted при CancellationException позволяет
+                    // повторить инициализацию при следующем вызове onActivityResume().
+                    // Это корректное поведение: если ViewModel был уничтожен во время
+                    // инициализации (например, из-за поворота экрана), инициализация
+                    // будет повторена при следующем создании ViewModel.
+                    // На AOSP viewModelScope отменяется при onCleared(). Если кастомная
+                    // прошивка не отменяет viewModelScope при onCleared() — это проблема
+                    // кастомной прошивки.
                     isInitializationStarted.set(false)
                     throw e
                 } catch (e: Exception) {
+                    // Сброс isInitializationStarted при ошибке позволяет повторить
+                    // инициализацию при следующем вызове onActivityResume().
+                    // На AOSP инициализация не падает при корректном состоянии DataStore.
+                    // Ошибка возможна только при деградации хранилища на кастомной прошивке.
+                    // Повторная попытка — единственная стратегия восстановления без
+                    // вмешательства пользователя.
                     AppLogger.e("Failed to initialize app in ViewModel", e)
                     isInitializationStarted.set(false)
                 } finally {
