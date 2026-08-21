@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Notifier for permission state changes.
+ *
+ * Safe to use from any thread.
  */
 interface PermissionStateNotifier {
     /**

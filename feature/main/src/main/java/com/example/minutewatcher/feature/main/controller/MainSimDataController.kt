@@ -34,17 +34,21 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Контроллер данных SIM главного экрана.
- * Управляет данными SIM-карт, обновлением и корректировкой.
+ * MainSimDataController manages SIM card data, including updates, resets, and adjustments.
  *
- * @property usageStateRepository Репозиторий состояния использования.
- * @property trackingRecoveryController Контроллер восстановления отслеживания.
- * @property simIdentityRepository Репозиторий identity SIM.
- * @property simLimitsRepository Репозиторий лимитов SIM.
- * @property usageUseCase Use case использования.
- * @property dataChangeNotifier Уведомитель об изменениях данных.
- * @property ioDispatcher Диспетчер для I/O операций.
- * @property scope Scope для корутин.
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [IOException] and [CancellationException].
+ * Handles specific exceptions like [SeedUnavailableException] and [SimNotFoundException].
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics for atomic updates and persistence.
+ *
+ * @property usageStateRepository Repository for usage state.
+ * @property trackingRecoveryController Controller for tracking recovery operations.
+ * @property simIdentityRepository Repository for SIM identity information.
+ * @property simLimitsRepository Repository for SIM limits.
+ * @property usageUseCase Use case for usage-related operations.
+ * @property dataChangeNotifier Notifies about data changes (e.g., for widgets).
+ * @property ioDispatcher Dispatcher for I/O bound operations.
+ * @property scope Application-wide coroutine scope for async operations.
  */
 class MainSimDataController
     @Inject
@@ -101,6 +105,11 @@ class MainSimDataController
         private val _lastOperationError = MutableStateFlow<OperationError?>(null)
         val lastOperationError: StateFlow<OperationError?> = _lastOperationError.asStateFlow()
 
+        /**
+         * Dismisses the last operation error.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun dismissOperationError() {
             _lastOperationError.value = null
         }
@@ -112,6 +121,12 @@ class MainSimDataController
 
         /**
          * Подсвечивает карточку SIM в указанном слоте на короткое время.
+         *
+         * Highlights the SIM card in the specified slot for a short duration.
+         *
+         * @param slot SIM slot index.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun highlightSlot(slot: Int) {
             // Повторный вызов для того же слота не перезапускает таймер.
@@ -201,6 +216,18 @@ class MainSimDataController
          * Если SIM была удалена между отображением UI и вызовом метода,
          * операция пропускается с логированием. Это штатная ситуация:
          * пользователь мог извлечь SIM-карту.
+         *
+         * Updates limits for the SIM in the specified slot.
+         *
+         * @param slot SIM slot index.
+         * @param minutesLimit New minutes limit.
+         * @param trafficLimitMb New traffic limit in MB.
+         * @param rolloverEnabled Whether rollover is enabled.
+         * @param onRefresh Callback to refresh data after successful update.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun updateLimits(
             slot: Int,
@@ -217,6 +244,15 @@ class MainSimDataController
 
         /**
          * Сбрасывает текущую статистику использования для SIM в указанном слоте.
+         *
+         * Resets usage statistics for the SIM in the specified slot.
+         *
+         * @param slot SIM slot index.
+         * @param onRefresh Callback to refresh data after successful reset.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun resetUsage(
             slot: Int,
@@ -231,6 +267,16 @@ class MainSimDataController
          * Включает или выключает автоматический сброс лимитов для SIM в указанном слоте.
          * Если SIM была удалена между отображением UI и вызовом метода,
          * операция пропускается с логированием.
+         *
+         * Toggles automatic limit reset for the SIM in the specified slot.
+         *
+         * @param slot SIM slot index.
+         * @param enabled True to enable auto-reset.
+         * @param onRefresh Callback to refresh data after successful toggle.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun toggleAutoReset(
             slot: Int,
@@ -248,6 +294,16 @@ class MainSimDataController
          * Обновляет день месяца для автоматического сброса лимитов для SIM в указанном слоте.
          * Если SIM была удалена между отображением UI и вызовом метода,
          * операция пропускается с логированием.
+         *
+         * Updates the day of the month for automatic limit reset.
+         *
+         * @param slot SIM slot index.
+         * @param day Day of the month (1-31).
+         * @param onRefresh Callback to refresh data after successful update.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun updateAutoResetDay(
             slot: Int,
@@ -263,6 +319,16 @@ class MainSimDataController
 
         /**
          * Корректирует оставшееся количество минут для SIM в указанном слоте.
+         *
+         * Adjusts remaining minutes for the SIM in the specified slot.
+         *
+         * @param slot SIM slot index.
+         * @param remainingMinutes New remaining minutes value.
+         * @param onRefresh Callback to refresh data after successful adjustment.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun adjustRemainingMinutes(
             slot: Int,
@@ -276,6 +342,16 @@ class MainSimDataController
 
         /**
          * Корректирует оставшееся количество трафика для SIM в указанном слоте.
+         *
+         * Adjusts remaining traffic for the SIM in the specified slot.
+         *
+         * @param slot SIM slot index.
+         * @param remainingGb New remaining traffic value in GB.
+         * @param onRefresh Callback to refresh data after successful adjustment.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun adjustRemainingTraffic(
             slot: Int,
@@ -289,6 +365,10 @@ class MainSimDataController
 
         /**
          * Повторяет поиск установленных приложений (для AppFunctions).
+         *
+         * Retries app search indexing recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryAppSearch() {
             scope.launch { trackingRecoveryController.retryAppSearch() }
@@ -296,6 +376,10 @@ class MainSimDataController
 
         /**
          * Повторяет попытку восстановления отслеживания звонков.
+         *
+         * Retries call tracking recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryCalls() {
             scope.launch { trackingRecoveryController.retryCalls() }
@@ -303,6 +387,10 @@ class MainSimDataController
 
         /**
          * Повторяет попытку создания ярлыков.
+         *
+         * Retries shortcut creation recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryShortcuts() {
             scope.launch { trackingRecoveryController.retryShortcuts() }
@@ -310,6 +398,12 @@ class MainSimDataController
 
         /**
          * Повторяет попытку восстановления отслеживания трафика.
+         *
+         * Retries traffic tracking recovery.
+         *
+         * @param onRefresh Callback to refresh data after successful recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryTraffic(onRefresh: suspend () -> Unit) {
             scope.launch { trackingRecoveryController.retryTraffic(onRefresh) }
@@ -317,6 +411,14 @@ class MainSimDataController
 
         /**
          * Уведомляет систему об изменении данных для обновления виджетов и UI.
+         *
+         * Notifies the system that SIM data has changed.
+         *
+         * @param updateWidget Whether to trigger a widget update.
+         * @param force Whether to force notification even if data hasn't changed.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
          */
         fun notifyDataChanged(
             updateWidget: Boolean = true,

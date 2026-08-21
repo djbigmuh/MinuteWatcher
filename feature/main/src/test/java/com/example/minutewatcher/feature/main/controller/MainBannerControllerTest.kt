@@ -82,8 +82,6 @@ class MainBannerControllerTest {
             var collectionCount = 0
 
             // Flow передаётся в mock и используется внутри контроллера через подписку.
-            // IDE не распознаёт использование через thenReturn() — подавляем предупреждение.
-            @Suppress("UNUSED_VARIABLE")
             val dynamicFlow =
                 kotlinx.coroutines.flow.flow<Boolean> {
                     collectionCount++

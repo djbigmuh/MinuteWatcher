@@ -36,6 +36,11 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+/**
+ * Edge case tests verify behavior under error conditions.
+ * These are critical for production stability on custom ROMs
+ * where system services may degrade or fail unexpectedly.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -348,6 +353,77 @@ class SemanticSearchManagerTest {
 
             // Verify status is Error because put failed
             assertTrue(manager.status.value is TrackingStatus.Error)
+        }
+
+    @Test
+    fun `recreates session on RESULT_INVALID_SCHEMA`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // 1. Initial indexing
+            manager.indexSnapshot(snapshot)
+            val session1 = fakeWrapper.lastSession!!
+
+            // 2. Setup next put to fail with INVALID_SCHEMA
+            session1.putDocumentsResultCode = AppSearchResult.RESULT_INVALID_SCHEMA
+
+            // 3. Trigger next indexing
+            val updatedSnapshot = createTestSnapshot(101)
+            manager.indexSnapshot(updatedSnapshot)
+
+            // 4. Verify session was recreated (total 2 created)
+            assertEquals(2, fakeWrapper.createdSessions)
+            assertTrue("Old session should be closed", session1.isClosed)
+            assertTrue("New session should be active", manager.status.value is TrackingStatus.Active)
+        }
+
+    @Test
+    fun `continues operation on RESULT_INTERNAL_ERROR`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+
+            // 1. Initialize
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+
+            // 2. Setup put to fail with INTERNAL_ERROR
+            fakeWrapper.lastSession!!.putDocumentsResultCode = AppSearchResult.RESULT_INTERNAL_ERROR
+
+            // 3. Emit next snapshot
+            flow.value = createTestSnapshot(101)
+            testScheduler.advanceUntilIdle()
+
+            // 4. Verify status is Error but session is still there (will try next time)
+            assertTrue(manager.status.value is TrackingStatus.Error)
+            assertEquals(1, fakeWrapper.createdSessions)
+
+            // 5. Setup success and emit again
+            fakeWrapper.lastSession!!.putDocumentsResultCode = AppSearchResult.RESULT_OK
+            flow.value = createTestSnapshot(102)
+            testScheduler.advanceUntilIdle()
+
+            // 6. Verify recovery to Active
+            assertTrue(manager.status.value is TrackingStatus.Active)
+        }
+
+    @Test
+    fun `logs error on RESULT_UNKNOWN_ERROR`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // 1. Setup session with UNKNOWN_ERROR
+            manager.indexSnapshot(snapshot)
+            fakeWrapper.lastSession!!.putDocumentsResultCode = AppSearchResult.RESULT_UNKNOWN_ERROR
+
+            // 2. Trigger indexing
+            manager.indexSnapshot(createTestSnapshot(101))
+
+            // 3. Verify status is Error and message contains the error
+            val status = manager.status.value as TrackingStatus.Error
+            assertTrue(status.message?.contains("Simulated failure with code") == true)
         }
 
     @Test

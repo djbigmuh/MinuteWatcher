@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -39,15 +40,15 @@ class SimWidgetVisibilityRepositoryImplTest {
         runTest {
             val identity = "icc_abc123"
             dataStore.edit { prefs ->
-                prefs[WidgetSettingsKeys.showSimKey(identity)] = true
-                prefs[WidgetSettingsKeys.showSimIconKey(identity)] = false
+                prefs[DataStoreKeys.showSimKey(identity)] = true
+                prefs[DataStoreKeys.showSimIconKey(identity)] = false
             }
 
             repository.clearOrphanedSettings(listOf(identity))
 
             val prefs = dataStore.data.first()
-            assertNotNull(prefs[WidgetSettingsKeys.showSimKey(identity)])
-            assertNotNull(prefs[WidgetSettingsKeys.showSimIconKey(identity)])
+            assertNotNull(prefs[DataStoreKeys.showSimKey(identity)])
+            assertNotNull(prefs[DataStoreKeys.showSimIconKey(identity)])
         }
 
     @Test
@@ -55,14 +56,14 @@ class SimWidgetVisibilityRepositoryImplTest {
         runTest {
             val fallbackIdentity = "sim_0"
             dataStore.edit { prefs ->
-                prefs[WidgetSettingsKeys.showSimKey(fallbackIdentity)] = true
+                prefs[DataStoreKeys.showSimKey(fallbackIdentity)] = true
             }
 
             // sim_0 is NOT in activeIdentities
             repository.clearOrphanedSettings(emptyList())
 
             val prefs = dataStore.data.first()
-            assertNotNull(prefs[WidgetSettingsKeys.showSimKey(fallbackIdentity)])
+            assertNotNull(prefs[DataStoreKeys.showSimKey(fallbackIdentity)])
         }
 
     @Test
@@ -72,15 +73,15 @@ class SimWidgetVisibilityRepositoryImplTest {
             val activeIdentity = "icc_active"
 
             dataStore.edit { prefs ->
-                prefs[WidgetSettingsKeys.showSimKey(oldIdentity)] = true
-                prefs[WidgetSettingsKeys.showSimKey(activeIdentity)] = true
+                prefs[DataStoreKeys.showSimKey(oldIdentity)] = true
+                prefs[DataStoreKeys.showSimKey(activeIdentity)] = true
             }
 
             repository.clearOrphanedSettings(listOf(activeIdentity))
 
             val prefs = dataStore.data.first()
-            assertNull(prefs[WidgetSettingsKeys.showSimKey(oldIdentity)])
-            assertNotNull(prefs[WidgetSettingsKeys.showSimKey(activeIdentity)])
+            assertNull(prefs[DataStoreKeys.showSimKey(oldIdentity)])
+            assertNotNull(prefs[DataStoreKeys.showSimKey(activeIdentity)])
         }
 
     @Test
@@ -88,25 +89,25 @@ class SimWidgetVisibilityRepositoryImplTest {
         runTest {
             val identity = "icc_test"
             dataStore.edit { prefs ->
-                prefs[WidgetSettingsKeys.showSimKey(identity)] = true
-                prefs[WidgetSettingsKeys.showSimIconKey(identity)] = true
-                prefs[WidgetSettingsKeys.showSimNameKey(identity)] = true
-                prefs[WidgetSettingsKeys.showMinutesKey(identity)] = true
-                prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] = true
-                prefs[WidgetSettingsKeys.showTrafficKey(identity)] = true
-                prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] = true
+                prefs[DataStoreKeys.showSimKey(identity)] = true
+                prefs[DataStoreKeys.showSimIconKey(identity)] = true
+                prefs[DataStoreKeys.showSimNameKey(identity)] = true
+                prefs[DataStoreKeys.showMinutesKey(identity)] = true
+                prefs[DataStoreKeys.showMinutesLimitKey(identity)] = true
+                prefs[DataStoreKeys.showTrafficKey(identity)] = true
+                prefs[DataStoreKeys.showTrafficLimitKey(identity)] = true
             }
 
             // Remove it
             repository.clearOrphanedSettings(emptyList())
 
             val prefs = dataStore.data.first()
-            assertNull(prefs[WidgetSettingsKeys.showSimKey(identity)])
-            assertNull(prefs[WidgetSettingsKeys.showSimIconKey(identity)])
-            assertNull(prefs[WidgetSettingsKeys.showSimNameKey(identity)])
-            assertNull(prefs[WidgetSettingsKeys.showMinutesKey(identity)])
-            assertNull(prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)])
-            assertNull(prefs[WidgetSettingsKeys.showTrafficKey(identity)])
-            assertNull(prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)])
+            assertNull(prefs[DataStoreKeys.showSimKey(identity)])
+            assertNull(prefs[DataStoreKeys.showSimIconKey(identity)])
+            assertNull(prefs[DataStoreKeys.showSimNameKey(identity)])
+            assertNull(prefs[DataStoreKeys.showMinutesKey(identity)])
+            assertNull(prefs[DataStoreKeys.showMinutesLimitKey(identity)])
+            assertNull(prefs[DataStoreKeys.showTrafficKey(identity)])
+            assertNull(prefs[DataStoreKeys.showTrafficLimitKey(identity)])
         }
 }

@@ -17,6 +17,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
 
+/**
+ * Manages automatic resets of SIM usage stats based on billing cycles.
+ *
+ * Implementation of [AutoResetUseCase].
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class ResetManager
     @Inject
@@ -36,6 +42,14 @@ class ResetManager
         private val resetMutex = Mutex()
         private val lastResetCheck = ConcurrentHashMap<String, Long>()
 
+        /**
+         * Checks and performs automatic resets for all active SIMs.
+         *
+         * @param shouldNotify True if a data change notification should be broadcasted after reset.
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore operations fail.
+         * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
+         */
         override suspend fun performAutoReset(shouldNotify: Boolean) {
             resetMutex.withLock {
                 try {

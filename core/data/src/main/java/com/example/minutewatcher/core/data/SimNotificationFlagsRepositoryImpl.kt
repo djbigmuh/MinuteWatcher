@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.model.Constants.SimConstants
@@ -11,6 +12,13 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Implementation of [SimNotificationFlagsRepository] using [DataStore].
+ *
+ * Tracks if specific usage notifications have been shown for SIM identities.
+ * AOSP DataStore compliant.
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class SimNotificationFlagsRepositoryImpl
     @Inject
@@ -21,14 +29,25 @@ class SimNotificationFlagsRepositoryImpl
         // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
         // Это соответствует принципу Dependency Inversion.
 
+        /**
+         * Returns a flow indicating if low minutes notification was shown for the identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedLowMinutes called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(false)
             }
-            return getData(NotificationSettingsKeys.notifiedLowMinutesKey(identity), false)
+            return getData(DataStoreKeys.notifiedLowMinutesKey(identity), false)
         }
 
+        /**
+         * Sets the low minutes notification flag.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setNotifiedLowMinutes(
             identity: String,
             notified: Boolean,
@@ -37,17 +56,28 @@ class SimNotificationFlagsRepositoryImpl
                 AppLogger.w("setNotifiedLowMinutes called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = notified }
+            dataStore.edit { it[DataStoreKeys.notifiedLowMinutesKey(identity)] = notified }
         }
 
+        /**
+         * Returns a flow indicating if low traffic notification was shown for the identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedLowTraffic called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(false)
             }
-            return getData(NotificationSettingsKeys.notifiedLowTrafficKey(identity), false)
+            return getData(DataStoreKeys.notifiedLowTrafficKey(identity), false)
         }
 
+        /**
+         * Sets the low traffic notification flag.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setNotifiedLowTraffic(
             identity: String,
             notified: Boolean,
@@ -56,17 +86,28 @@ class SimNotificationFlagsRepositoryImpl
                 AppLogger.w("setNotifiedLowTraffic called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = notified }
+            dataStore.edit { it[DataStoreKeys.notifiedLowTrafficKey(identity)] = notified }
         }
 
+        /**
+         * Returns a flow indicating if exhausted minutes notification was shown for the identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedExhaustedMinutes called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(false)
             }
-            return getData(NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity), false)
+            return getData(DataStoreKeys.notifiedExhaustedMinutesKey(identity), false)
         }
 
+        /**
+         * Sets the exhausted minutes notification flag.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setNotifiedExhaustedMinutes(
             identity: String,
             notified: Boolean,
@@ -75,17 +116,28 @@ class SimNotificationFlagsRepositoryImpl
                 AppLogger.w("setNotifiedExhaustedMinutes called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = notified }
+            dataStore.edit { it[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = notified }
         }
 
+        /**
+         * Returns a flow indicating if exhausted traffic notification was shown for the identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedExhaustedTraffic called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(false)
             }
-            return getData(NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity), false)
+            return getData(DataStoreKeys.notifiedExhaustedTrafficKey(identity), false)
         }
 
+        /**
+         * Sets the exhausted traffic notification flag.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setNotifiedExhaustedTraffic(
             identity: String,
             notified: Boolean,
@@ -94,6 +146,6 @@ class SimNotificationFlagsRepositoryImpl
                 AppLogger.w("setNotifiedExhaustedTraffic called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = notified }
+            dataStore.edit { it[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = notified }
         }
     }

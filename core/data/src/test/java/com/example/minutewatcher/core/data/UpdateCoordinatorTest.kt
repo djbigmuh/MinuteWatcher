@@ -36,6 +36,12 @@ import kotlin.time.Duration.Companion.seconds
 // Opt-in для InternalCoroutinesApi: MutableSharedFlow реализует SharedFlow,
 // часть контрактов которого помечена как unstable. Использование ограничено
 // тестовым кодом и не влияет на production-контракты.
+
+/**
+ * @Suppress("MaxLineLength", "TooGenericExceptionThrown") is required because:
+ * 1. Long comments in Russian describing complex concurrent test scenarios.
+ * 2. Intentional throwing of RuntimeException in FailingStateFlow to simulate repository failures.
+ */
 @Suppress("MaxLineLength", "TooGenericExceptionThrown")
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -114,7 +120,6 @@ class UpdateCoordinatorTest {
         }
 
     @Test
-    @Suppress("UNREACHABLE_CODE")
     fun `observation retries on repository failure with exponential backoff`() =
         runTest {
             var collectCount = 0
@@ -352,7 +357,8 @@ class UpdateCoordinatorTest {
             var collectCount = 0
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
 
-            // Проверка сброса счетчика попыток (observationRetryCount) после успешного восстановления и прохождения таймера.
+            // Проверка сброса счетчика попыток (observationRetryCount) после успешного
+            // восстановления и прохождения таймера.
             val mockStateFlow =
                 FailingStateFlow(stateFlow.value) {
                     collectCount++

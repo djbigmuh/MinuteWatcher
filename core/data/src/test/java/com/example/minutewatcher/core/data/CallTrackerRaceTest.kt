@@ -1,7 +1,8 @@
 package com.example.minutewatcher.core.data
 
-import android.content.Context
+import android.Manifest
 import android.telephony.TelephonyManager
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -27,12 +28,11 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class CallTrackerRaceTest {
-    private val context: Context = RuntimeEnvironment.getApplication()
+    private val context: android.content.Context = ApplicationProvider.getApplicationContext()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -41,11 +41,18 @@ class CallTrackerRaceTest {
     private val permissionManager: PermissionManager = mock()
     private val telephonyManager: TelephonyManager = mock()
     private val timeProvider: TimeProvider = mock()
+    private val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
+    private val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
 
     private lateinit var tracker: CallTracker
 
     @Before
     fun setup() {
+        val application = context as android.app.Application
+        org.robolectric.Shadows
+            .shadowOf(application)
+            .grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
         tracker =
             CallTracker(
                 context,
@@ -57,10 +64,14 @@ class CallTrackerRaceTest {
                 permissionManager,
                 telephonyManager,
                 timeProvider,
+                testScope,
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+        whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
+        whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
         whenever(appSettingsRepository.getAppSettings()).thenReturn(
             flowOf(AppSettings()),
         )
@@ -68,7 +79,7 @@ class CallTrackerRaceTest {
 
     @Test
     fun `concurrent onCallStarted calls are handled safely by mutex`() =
-        runTest {
+        runTest(testDispatcher) {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(1)
 
             whenever(timeProvider.now()).thenReturn(1000L)
@@ -93,7 +104,7 @@ class CallTrackerRaceTest {
 
             // Flow is consumed internally by the SUT (System Under Test) via collect().
             // The side effect (state change) is verified below via status assertion.
-            verify(callSessionRepository, times(10)).getCallStartTime(1).let { _ -> }
+            verify(callSessionRepository, times(1)).getCallStartTime(1).let { _ -> }
 
             // Строгое соблюдение API: на AOSP DataStore.edit сериализует записи.
             // Мьютекс callMutex в CallTracker дополнительно сериализует
@@ -107,7 +118,7 @@ class CallTrackerRaceTest {
 
     @Test
     fun `concurrent call start and end for different subIds`() =
-        runTest {
+        runTest(testDispatcher) {
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())

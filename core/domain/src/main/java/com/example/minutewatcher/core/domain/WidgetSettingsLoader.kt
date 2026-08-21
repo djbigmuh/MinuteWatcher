@@ -1,39 +1,68 @@
 package com.example.minutewatcher.core.domain
 
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Результат сохранения настроек виджета.
+ * Result of saving widget settings.
  */
 sealed interface WidgetSaveResult {
     /**
-     * Все запрошенные настройки (общие и SIM-специфичные) успешно сохранены.
+     * All requested settings (general and SIM-specific) were successfully saved.
      */
     data object Success : WidgetSaveResult
 
     /**
-     * Частичный успех: общие настройки сохранены, но часть или все SIM-специфичные
-     * настройки не были сохранены (например, из-за недоступности seed или отсутствия SIM).
+     * Partial success: general settings saved, but some SIM settings failed.
      */
     data object PartialSuccess : WidgetSaveResult
 }
 
+/**
+ * Loader and saver for widget-related settings.
+ *
+ * All methods are safe to call from any coroutine context.
+ * Implementation must comply with AOSP DataStore best practices.
+ * Operations are typically bounded by SHORT_TIMEOUT_MS.
+ */
 interface WidgetSettingsLoader {
+    /**
+     * Loads the current widget settings state.
+     *
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
     suspend fun load(): WidgetSettingsState
 
+    /**
+     * Saves the widget settings state.
+     *
+     * @param state The state to save.
+     * @param skipSimSettings Whether to skip saving SIM-specific settings.
+     * @return [WidgetSaveResult] indicating the outcome.
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
     suspend fun save(
         state: WidgetSettingsState,
         skipSimSettings: Boolean = false,
     ): WidgetSaveResult
 
     /**
-     * Сохраняет только общие настройки виджета.
+     * Saves only the general widget settings.
+     *
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun saveGeneralSettings(state: WidgetSettingsState)
 
     /**
-     * Сохраняет только SIM-специфичные настройки.
-     * @return true если все SIM успешно сохранены.
+     * Saves only the SIM-specific widget settings.
+     *
+     * @return true if all SIM settings were successfully saved.
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun saveSimSettings(state: WidgetSettingsState): Boolean
 }

@@ -13,12 +13,23 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Helper class for scheduling background work using [WorkManager].
+ *
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class WorkScheduler
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
     ) {
+        /**
+         * Schedules one-time initial setup work.
+         *
+         * Uses [ExistingWorkPolicy.REPLACE] to ensure fresh initialization.
+         * Safe to call from any coroutine context.
+         */
         fun scheduleInitialSetup() {
             val workRequest =
                 OneTimeWorkRequestBuilder<InitialSetupWorker>()
@@ -37,6 +48,12 @@ class WorkScheduler
             )
         }
 
+        /**
+         * Schedules periodic usage check work (hourly).
+         *
+         * Requires non-low battery constraint.
+         * Safe to call from any coroutine context.
+         */
         fun schedulePeriodicUsageCheck() {
             val constraints =
                 Constraints

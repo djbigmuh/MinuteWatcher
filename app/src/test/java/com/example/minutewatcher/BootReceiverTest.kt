@@ -1,5 +1,6 @@
 package com.example.minutewatcher
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.Lifecycle
@@ -26,12 +27,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
+import org.robolectric.util.ReflectionHelpers
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Tests verify that goAsync() contract is respected:
+ * - finish() is called exactly once
+ * - finish() is called even if work throws exception
+ * - finish() is called after all async work completes
+ *
+ * This is strict Android lifecycle compliance, not optional.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = TestMinuteWatcherApp::class, sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -78,21 +92,74 @@ class BootReceiverTest {
     fun testOnReceiveEnqueuesWork() =
         runTest {
             val receiver = BootReceiver()
+            val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
+            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
 
             receiver.onReceive(context, intent)
 
-            // Wait for coroutines in lifecycleScope to finish
+            // Wait for coroutines to finish
             advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
             var workInfos: List<WorkInfo> = emptyList()
             repeat(20) {
-                workInfos = workManager.getWorkInfosForUniqueWork("INITIAL_SETUP").get(1, TimeUnit.SECONDS)
+                workInfos =
+                    workManager
+                        .getWorkInfosForUniqueWork("INITIAL_SETUP")
+                        .get(1, TimeUnit.SECONDS)
                 if (workInfos.isNotEmpty()) return@repeat
                 delay(50.milliseconds)
             }
 
             assertTrue("Work INITIAL_SETUP should be enqueued", workInfos.isNotEmpty())
+            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+        }
+
+    @Test
+    fun `onReceive calls pendingResult finish after work completes`() =
+        runTest {
+            val receiver = BootReceiver()
+            val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
+            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+
+            val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
+
+            receiver.onReceive(context, intent)
+
+            advanceUntilIdle()
+            ShadowLooper.idleMainLooper()
+
+            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+        }
+
+    @Test
+    fun `onReceive calls pendingResult finish even on exception`() =
+        runTest {
+            val receiver = BootReceiver()
+            val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
+            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+
+            // Mock context to throw exception when applicationContext is accessed inside the coroutine.
+            // Note: In BootReceiver, appContext is retrieved BEFORE the coroutine.
+            // So we need to mock something used INSIDE the coroutine.
+            val failingContext = mock(Context::class.java)
+            val mockAppContext = mock(Context::class.java)
+            whenever(failingContext.applicationContext).thenReturn(mockAppContext)
+
+            // WorkManager.getInstance(mockAppContext) will throw if WorkManager is not initialized for this context
+            // and we didn't use WorkManagerTestInitHelper for it.
+            // Or we can mock mockAppContext.getSystemService(...) to throw.
+            whenever(mockAppContext.getSystemService(anyString())).thenThrow(RuntimeException("Intentional failure"))
+
+            val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
+
+            receiver.onReceive(failingContext, intent)
+
+            advanceUntilIdle()
+            ShadowLooper.idleMainLooper()
+
+            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
         }
 }

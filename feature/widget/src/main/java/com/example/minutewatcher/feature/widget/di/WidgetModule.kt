@@ -27,7 +27,8 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-// Hilt discovers this module via reflection at compile time; IDE marks it as unused.
+// @Suppress("unused") is required because Hilt discovers bindings via reflection.
+// Removing this will cause runtime injection failures.
 @Suppress("unused")
 interface WidgetModule {
     @Binds

@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -62,6 +63,14 @@ import kotlin.time.Duration.Companion.milliseconds
 // Подавление TooManyFunctions оставлено намеренно: SimIdentityRepositoryImpl является центральным узлом управления
 // идентичностью всех SIM-карт в приложении. Разделение на несколько репозиториев нарушит атомарность
 // управления кэшем и DataStore, что критично для стабильности identity.
+
+/**
+ * Implementation of [SimIdentityRepository] using [DataStore].
+ *
+ * Central hub for managing SIM identities, discovery, and persistence.
+ * AOSP DataStore compliant.
+ * Safe to call from any coroutine context.
+ */
 @Suppress("TooManyFunctions")
 @Singleton
 class SimIdentityRepositoryImpl
@@ -237,6 +246,8 @@ class SimIdentityRepositoryImpl
                                             listener,
                                         )
                                     } else {
+                                        // @Suppress("DEPRECATION") is required for backward compatibility with API < 30
+                                        // where executor-based listener registration is not available.
                                         @Suppress("DEPRECATION")
                                         subscriptionManager.addOnSubscriptionsChangedListener(listener)
                                     }
@@ -372,6 +383,14 @@ class SimIdentityRepositoryImpl
          *   `SeedUnavailableException` возможна только при деградации DataStore на кастомной прошивке.
          *   Это проблема кастомной прошивки, не проекта.
          * @throws SimNotFoundException если активная подписка SIM физически отсутствует в указанном слоте.
+         *
+         * Returns the stable string identity for the specified slot.
+         *
+         * Uses [Constants.Flow.SHORT_TIMEOUT_MS] for internal identity resolution.
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore read fails.
+         * @throws com.example.minutewatcher.core.domain.SeedUnavailableException if identity seed is unavailable.
+         * @throws com.example.minutewatcher.core.domain.SimNotFoundException if SIM is not found in the slot.
          */
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
@@ -417,6 +436,15 @@ class SimIdentityRepositoryImpl
          *   Это проблема кастомной прошивки, не проекта.
          * @throws SimNotFoundException если активная подписка SIM физически отсутствует в указанном слоте.
          * @throws CancellationException пробрасывается для корректной отмены корутины.
+         *
+         * Returns the stable [SimIdentity] for the specified slot.
+         *
+         * Uses [Constants.Flow.SHORT_TIMEOUT_MS] for internal identity resolution.
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore read fails.
+         * @throws com.example.minutewatcher.core.domain.SeedUnavailableException if identity seed is unavailable.
+         * @throws com.example.minutewatcher.core.domain.SimNotFoundException if SIM is not found in the slot.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
             require(slot in SimConstants.SUPPORTED_SLOT_INDICES) {
@@ -617,8 +645,8 @@ class SimIdentityRepositoryImpl
             identity: SimIdentity,
             prefs: Preferences,
         ): Boolean {
-            val currentSlot = prefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
-            val currentSub = prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)]
+            val currentSlot = prefs[DataStoreKeys.slotIndexKey(identity.stableId)]
+            val currentSub = prefs[DataStoreKeys.subscriptionIdKey(identity.stableId)]
             return (currentSlot != identity.slotIndex) || (currentSub != identity.subscriptionId)
         }
 
@@ -626,7 +654,7 @@ class SimIdentityRepositoryImpl
             identity: SimIdentity,
             prefs: Preferences,
         ): Boolean {
-            val currentSlot = prefs[SimSettingsKeys.slotIndexKey(identity.stableId)]
+            val currentSlot = prefs[DataStoreKeys.slotIndexKey(identity.stableId)]
             return (currentSlot == null) && migratedIdentities.add(identity.stableId)
         }
 
@@ -634,10 +662,10 @@ class SimIdentityRepositoryImpl
             dataStore.edit { prefs ->
                 toUpdate.forEach { identity ->
                     identity.slotIndex?.let { slot ->
-                        prefs[SimSettingsKeys.slotIndexKey(identity.stableId)] = slot
+                        prefs[DataStoreKeys.slotIndexKey(identity.stableId)] = slot
                     }
                     identity.subscriptionId?.let { subId ->
-                        prefs[SimSettingsKeys.subscriptionIdKey(identity.stableId)] = subId
+                        prefs[DataStoreKeys.subscriptionIdKey(identity.stableId)] = subId
                     }
                 }
             }
@@ -786,38 +814,65 @@ class SimIdentityRepositoryImpl
             }
         }
 
+        /**
+         * Returns a flow of currently active SIM identity strings.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getActiveIdentities(): Flow<List<String>> =
             observeActiveSims()
                 .map { sims ->
                     sims.map { it.identity.stableId }
                 }.distinctUntilChanged()
 
+        /**
+         * Returns a debounced flow of active SIM identity strings.
+         *
+         * Uses [Constants.Flow.DEBOUNCE_MS] for debouncing.
+         * Safe to call from any coroutine context.
+         */
         @OptIn(FlowPreview::class)
         override fun observeIdentities(): Flow<List<String>> =
             getActiveIdentities()
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
 
+        /**
+         * Returns a flow of the SIM operator name for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getSimOperator(identity: String): Flow<String> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimOperator called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf("")
             }
             return combine(
-                getData(SimSettingsKeys.simOperatorKey(identity), ""),
+                getData(DataStoreKeys.simOperatorKey(identity), ""),
                 getCustomSimOperator(identity),
             ) { resolved, custom ->
                 custom ?: resolved
             }
         }
 
+        /**
+         * Returns a flow of the custom SIM operator name for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getCustomSimOperator(identity: String): Flow<String?> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getCustomSimOperator called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(null)
             }
-            return dataStore.data.map { it[SimSettingsKeys.customSimOperatorKey(identity)] }
+            return dataStore.data.map { it[DataStoreKeys.customSimOperatorKey(identity)] }
         }
 
+        /**
+         * Updates the SIM operator name for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setSimOperator(
             identity: String,
             name: String,
@@ -826,9 +881,15 @@ class SimIdentityRepositoryImpl
                 AppLogger.w("setSimOperator called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.simOperatorKey(identity)] = name }
+            dataStore.edit { it[DataStoreKeys.simOperatorKey(identity)] = name }
         }
 
+        /**
+         * Updates the custom SIM operator name for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setCustomSimOperator(
             identity: String,
             name: String?,
@@ -839,21 +900,32 @@ class SimIdentityRepositoryImpl
             }
             dataStore.edit { prefs ->
                 if (name == null) {
-                    prefs.remove(SimSettingsKeys.customSimOperatorKey(identity))
+                    prefs.remove(DataStoreKeys.customSimOperatorKey(identity))
                 } else {
-                    prefs[SimSettingsKeys.customSimOperatorKey(identity)] = name
+                    prefs[DataStoreKeys.customSimOperatorKey(identity)] = name
                 }
             }
         }
 
+        /**
+         * Returns a flow of the SIM numeric code (MCC+MNC) for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getSimCode(identity: String): Flow<String> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimCode called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf("")
             }
-            return getData(SimSettingsKeys.simCodeKey(identity), "")
+            return getData(DataStoreKeys.simCodeKey(identity), "")
         }
 
+        /**
+         * Updates the SIM numeric code for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setSimCode(
             identity: String,
             code: String,
@@ -862,7 +934,7 @@ class SimIdentityRepositoryImpl
                 AppLogger.w("setSimCode called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.simCodeKey(identity)] = code }
+            dataStore.edit { it[DataStoreKeys.simCodeKey(identity)] = code }
         }
 
         private suspend fun generateSeedWithRetry(): String? =

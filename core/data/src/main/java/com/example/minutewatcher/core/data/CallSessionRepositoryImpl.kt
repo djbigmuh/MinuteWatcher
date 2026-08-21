@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.data.di.AppDataStore
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -11,6 +12,13 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Implementation of [CallSessionRepository] using [DataStore].
+ *
+ * Tracks transient call session data (start times, identities) for attribution.
+ * AOSP DataStore compliant.
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class CallSessionRepositoryImpl
     @Inject
@@ -25,77 +33,144 @@ class CallSessionRepositoryImpl
             defaultValue: T,
         ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
-        override fun getLastDataSubId(): Flow<Int> = get(SettingsKeys.LAST_DATA_SUB_ID, -1)
+        /**
+         * Returns the subId of the last used data SIM.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override fun getLastDataSubId(): Flow<Int> = get(DataStoreKeys.LAST_DATA_SUB_ID, -1)
 
+        /**
+         * Updates the subId of the last used data SIM.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if write fails.
+         */
         override suspend fun setLastDataSubId(subId: Int) {
-            dataStore.edit { it[SettingsKeys.LAST_DATA_SUB_ID] = subId }
+            dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
         }
 
-        override fun getCallStartTime(subId: Int): Flow<Long> = get(DynamicSettingsKeys.callStartTimeKey(subId), 0L)
+        /**
+         * Returns the call start time for the given subId.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override fun getCallStartTime(subId: Int): Flow<Long> = get(DataStoreKeys.callStartTimeKey(subId), 0L)
 
+        /**
+         * Sets the call start time for the given subId.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if write fails.
+         */
         override suspend fun setCallStartTime(
             subId: Int,
             time: Long,
         ) {
-            dataStore.edit { it[DynamicSettingsKeys.callStartTimeKey(subId)] = time }
+            dataStore.edit { it[DataStoreKeys.callStartTimeKey(subId)] = time }
         }
 
-        override fun getBootTime(subId: Int): Flow<Long> = get(DynamicSettingsKeys.bootTimeKey(subId), 0L)
+        /**
+         * Returns the device boot time recorded when the call started on the given subId.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override fun getBootTime(subId: Int): Flow<Long> = get(DataStoreKeys.bootTimeKey(subId), 0L)
 
+        /**
+         * Records the device boot time for a call on the given subId.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if write fails.
+         */
         override suspend fun setBootTime(
             subId: Int,
             time: Long,
         ) {
-            dataStore.edit { it[DynamicSettingsKeys.bootTimeKey(subId)] = time }
+            dataStore.edit { it[DataStoreKeys.bootTimeKey(subId)] = time }
         }
 
-        override fun getUptime(subId: Int): Flow<Long> = get(DynamicSettingsKeys.uptimeKey(subId), 0L)
+        /**
+         * Returns the device uptime recorded when the call started on the given subId.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override fun getUptime(subId: Int): Flow<Long> = get(DataStoreKeys.uptimeKey(subId), 0L)
 
+        /**
+         * Records the device uptime for a call on the given subId.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if write fails.
+         */
         override suspend fun setUptime(
             subId: Int,
             time: Long,
         ) {
-            dataStore.edit { it[DynamicSettingsKeys.uptimeKey(subId)] = time }
+            dataStore.edit { it[DataStoreKeys.uptimeKey(subId)] = time }
         }
 
+        /**
+         * Returns the stable SIM identity associated with the active call on the given subId.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getCallIdentity(subId: Int): Flow<String?> =
             dataStore.data.map {
-                it[DynamicSettingsKeys.callIdentityKey(subId)]
+                it[DataStoreKeys.callIdentityKey(subId)]
             }
 
+        /**
+         * Sets the stable SIM identity for an active call on the given subId.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if write fails.
+         */
         override suspend fun setCallIdentity(
             subId: Int,
             identity: String?,
         ) {
             dataStore.edit {
                 if (identity == null) {
-                    it.remove(DynamicSettingsKeys.callIdentityKey(subId))
+                    it.remove(DataStoreKeys.callIdentityKey(subId))
                 } else {
-                    it[DynamicSettingsKeys.callIdentityKey(subId)] = identity
+                    it[DataStoreKeys.callIdentityKey(subId)] = identity
                 }
             }
         }
 
+        /**
+         * Clears all recorded call session data.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if write fails.
+         */
         override suspend fun clearAllCallSessions() {
             dataStore.edit { prefs ->
                 prefs
                     .asMap()
                     .keys
                     .filter { key ->
-                        key.name.startsWith(DynamicSettingsKeys.CALL_START_TIME_PREFIX) ||
-                            key.name.startsWith(DynamicSettingsKeys.BOOT_TIME_PREFIX) ||
-                            key.name.startsWith(DynamicSettingsKeys.UPTIME_PREFIX) ||
-                            key.name.startsWith(DynamicSettingsKeys.CALL_IDENTITY_PREFIX)
+                        key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX) ||
+                            key.name.startsWith(DataStoreKeys.BOOT_TIME_PREFIX) ||
+                            key.name.startsWith(DataStoreKeys.UPTIME_PREFIX) ||
+                            key.name.startsWith(DataStoreKeys.CALL_IDENTITY_PREFIX)
                     }.forEach { key ->
                         prefs.remove(key)
                     }
             }
         }
 
+        /**
+         * Returns a list of subscription IDs that currently have active call sessions.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if read fails.
+         */
         override suspend fun getActiveCallSubIds(): List<Int> =
             dataStore.data.first().asMap().entries.mapNotNull { (key, value) ->
-                if (key.name.startsWith(DynamicSettingsKeys.CALL_START_TIME_PREFIX) && (value as? Long ?: 0L) > 0L) {
-                    key.name.removePrefix(DynamicSettingsKeys.CALL_START_TIME_PREFIX).toIntOrNull()
+                if (key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX) && (value as? Long ?: 0L) > 0L) {
+                    key.name.removePrefix(DataStoreKeys.CALL_START_TIME_PREFIX).toIntOrNull()
                 } else {
                     null
                 }

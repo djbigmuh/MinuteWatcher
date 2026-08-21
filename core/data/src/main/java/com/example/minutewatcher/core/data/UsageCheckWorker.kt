@@ -65,9 +65,7 @@ class UsageCheckWorker
                 } catch (e: SecurityException) {
                     AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
                     Result.failure()
-                } catch (
-                    @Suppress("TooGenericExceptionCaught") e: Exception,
-                ) {
+                } catch (e: Exception) {
                     AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
                     Result.failure()
                 }
@@ -78,6 +76,7 @@ class UsageCheckWorker
             return checkUsageAndNotify()
         }
 
+        // @Suppress("ReturnCount") is required for early exits on permission checks and timeouts.
         @Suppress("ReturnCount")
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
@@ -109,10 +108,7 @@ class UsageCheckWorker
                 true
             } catch (e: CancellationException) {
                 throw e
-            } catch (
-                @Suppress("TooGenericExceptionCaught")
-                e: Exception,
-            ) {
+            } catch (e: Exception) {
                 AppLogger.e("Auto-reset failed in UsageCheckWorker, retrying", e)
                 false
             }
@@ -158,10 +154,7 @@ class UsageCheckWorker
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (
-                @Suppress("TooGenericExceptionCaught")
-                e: Exception,
-            ) {
+            } catch (e: Exception) {
                 AppLogger.e("UsageCheckWorker: error processing SIM slot ${simSnapshot.slot}", e)
             }
         }

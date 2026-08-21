@@ -63,6 +63,8 @@ object SimUtils {
 
     // Кастомный language switcher в приложении использует AppCompatDelegate.setApplicationLocales(),
     // что не требует android:localeConfig в манифесте. Это строгое соответствие API 33+.
+    // @Suppress("AppBundleLocaleChanges") is required because we handle locales manually
+    // via AppCompatDelegate and don't need the automated App Bundle locale generation.
     @Suppress("AppBundleLocaleChanges")
     private fun getLocalizedContext(context: Context): Context {
         val appLocales =

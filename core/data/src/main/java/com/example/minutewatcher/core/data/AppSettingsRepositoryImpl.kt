@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.data.di.AppDataStore
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
@@ -22,6 +23,13 @@ import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Implementation of [AppSettingsRepository] using [DataStore].
+ *
+ * This implementation is AOSP DataStore compliant and follows strict consistency rules
+ * for atomic updates using [Mutex].
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class AppSettingsRepositoryImpl
     @Inject
@@ -41,16 +49,31 @@ class AppSettingsRepositoryImpl
                     AppSettings(),
                 )
 
+        /**
+         * Returns a flow of application settings.
+         *
+         * Safe to call from any coroutine context.
+         * @throws IOException if DataStore reading fails.
+         */
         override fun getAppSettings(): Flow<AppSettings> = dataStore.data.map { prefs -> prefs.toAppSettings() }
 
+        /**
+         * Returns a state flow of application settings.
+         *
+         * Initialized using [Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS] for efficient resource management.
+         * Safe to call from any coroutine context.
+         */
         override fun observeAppSettings(): StateFlow<AppSettings> = appSettingsState
 
         private val updateMutex = Mutex()
 
         /**
-         * Атомарно обновляет настройки приложения.
-         * Строгое соблюдение API: Использование Mutex гарантирует,
-         * что между чтением и записью не произойдёт конкурентная модификация.
+         * Atomically updates application settings using a transform function.
+         *
+         * Guaranteed to be atomic via [Mutex].
+         * Safe to call from any coroutine context.
+         * @throws IOException if DataStore write operation fails.
+         * @throws CancellationException if the update process is cancelled.
          */
         override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
             updateMutex.withLock {
@@ -74,12 +97,12 @@ class AppSettingsRepositoryImpl
             prefs: MutablePreferences,
             updated: AppSettings,
         ) {
-            prefs[SettingsKeys.APP_THEME] = updated.theme.value
+            prefs[DataStoreKeys.APP_THEME] = updated.theme.value
             val language = updated.language
             if (language == null) {
-                prefs.remove(SettingsKeys.APP_LANGUAGE)
+                prefs.remove(DataStoreKeys.APP_LANGUAGE)
             } else {
-                prefs[SettingsKeys.APP_LANGUAGE] = language
+                prefs[DataStoreKeys.APP_LANGUAGE] = language
             }
         }
 
@@ -87,63 +110,65 @@ class AppSettingsRepositoryImpl
             prefs: MutablePreferences,
             updated: AppSettings,
         ) {
-            prefs[SettingsKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
-            prefs[SettingsKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
-            prefs[SettingsKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
-            prefs[SettingsKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
-            prefs[SettingsKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
-            prefs[SettingsKeys.WIDGET_LIMIT_EXCEEDED] = updated.widgetLimitExceeded
+            prefs[DataStoreKeys.WIDGET_LAYOUT_MODE] = updated.widgetLayoutMode
+            prefs[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] = updated.widgetSimArrangement
+            prefs[DataStoreKeys.WIDGET_TRANSPARENCY] = updated.widgetTransparency
+            prefs[DataStoreKeys.WIDGET_FONT_SIZE] = updated.widgetFontSize
+            prefs[DataStoreKeys.WIDGET_BACKGROUND_COLOR] = updated.widgetBackgroundColor
+            prefs[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] = updated.widgetLimitExceeded
         }
 
         private fun updateSystemSettings(
             prefs: MutablePreferences,
             updated: AppSettings,
         ) {
-            prefs[SettingsKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
-            prefs[SettingsKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
-            prefs[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
-            prefs[SettingsKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
-            prefs[SettingsKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
+            prefs[DataStoreKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
+            prefs[DataStoreKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
+            prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
+            prefs[DataStoreKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
+            prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
         }
 
         private fun updateTrackingSettings(
             prefs: MutablePreferences,
             updated: AppSettings,
         ) {
-            prefs[SettingsKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
-            prefs[SettingsKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
-            prefs[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
-            prefs[SettingsKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
+            prefs[DataStoreKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
+            prefs[DataStoreKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
+            prefs[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
+            prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
+        // @Suppress("CyclomaticComplexMethod") is required because mapping many DataStore fields
+        // to AppSettings results in many decision points (elvis operators), exceeding the default limit.
         @Suppress("CyclomaticComplexMethod", "detekt.CyclomaticComplexMethod")
         private fun Preferences.toAppSettings(): AppSettings =
             AppSettings(
-                theme = AppTheme.fromValue(this[SettingsKeys.APP_THEME] ?: -1),
-                language = this[SettingsKeys.APP_LANGUAGE],
-                notifyLowMinutes = this[SettingsKeys.NOTIFY_LOW_MINUTES] ?: DEFAULT_SETTINGS.notifyLowMinutes,
-                notifyLowTraffic = this[SettingsKeys.NOTIFY_LOW_TRAFFIC] ?: DEFAULT_SETTINGS.notifyLowTraffic,
-                widgetLayoutMode = this[SettingsKeys.WIDGET_LAYOUT_MODE] ?: DEFAULT_SETTINGS.widgetLayoutMode,
+                theme = AppTheme.fromValue(this[DataStoreKeys.APP_THEME] ?: -1),
+                language = this[DataStoreKeys.APP_LANGUAGE],
+                notifyLowMinutes = this[DataStoreKeys.NOTIFY_LOW_MINUTES] ?: DEFAULT_SETTINGS.notifyLowMinutes,
+                notifyLowTraffic = this[DataStoreKeys.NOTIFY_LOW_TRAFFIC] ?: DEFAULT_SETTINGS.notifyLowTraffic,
+                widgetLayoutMode = this[DataStoreKeys.WIDGET_LAYOUT_MODE] ?: DEFAULT_SETTINGS.widgetLayoutMode,
                 widgetSimArrangement =
-                    this[SettingsKeys.WIDGET_SIM_ARRANGEMENT] ?: DEFAULT_SETTINGS.widgetSimArrangement,
-                widgetTransparency = this[SettingsKeys.WIDGET_TRANSPARENCY] ?: DEFAULT_SETTINGS.widgetTransparency,
-                widgetFontSize = this[SettingsKeys.WIDGET_FONT_SIZE] ?: DEFAULT_SETTINGS.widgetFontSize,
+                    this[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] ?: DEFAULT_SETTINGS.widgetSimArrangement,
+                widgetTransparency = this[DataStoreKeys.WIDGET_TRANSPARENCY] ?: DEFAULT_SETTINGS.widgetTransparency,
+                widgetFontSize = this[DataStoreKeys.WIDGET_FONT_SIZE] ?: DEFAULT_SETTINGS.widgetFontSize,
                 widgetBackgroundColor =
-                    this[SettingsKeys.WIDGET_BACKGROUND_COLOR] ?: DEFAULT_SETTINGS.widgetBackgroundColor,
+                    this[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: DEFAULT_SETTINGS.widgetBackgroundColor,
                 migrationV1Completed =
-                    this[SettingsKeys.MIGRATION_V1_COMPLETED] ?: DEFAULT_SETTINGS.migrationV1Completed,
-                onboardingCompleted = this[SettingsKeys.ONBOARDING_COMPLETED] ?: DEFAULT_SETTINGS.onboardingCompleted,
+                    this[DataStoreKeys.MIGRATION_V1_COMPLETED] ?: DEFAULT_SETTINGS.migrationV1Completed,
+                onboardingCompleted = this[DataStoreKeys.ONBOARDING_COMPLETED] ?: DEFAULT_SETTINGS.onboardingCompleted,
                 notificationPermissionRequested =
-                    this[SettingsKeys.NOTIFICATION_PERMISSION_REQUESTED]
+                    this[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED]
                         ?: DEFAULT_SETTINGS.notificationPermissionRequested,
                 phonePermissionRequested =
-                    this[SettingsKeys.PHONE_PERMISSION_REQUESTED] ?: DEFAULT_SETTINGS.phonePermissionRequested,
-                benchmarkSimCount = this[SettingsKeys.BENCHMARK_SIM_COUNT] ?: DEFAULT_SETTINGS.benchmarkSimCount,
-                widgetLimitExceeded = this[SettingsKeys.WIDGET_LIMIT_EXCEEDED] ?: DEFAULT_SETTINGS.widgetLimitExceeded,
+                    this[DataStoreKeys.PHONE_PERMISSION_REQUESTED] ?: DEFAULT_SETTINGS.phonePermissionRequested,
+                benchmarkSimCount = this[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: DEFAULT_SETTINGS.benchmarkSimCount,
+                widgetLimitExceeded = this[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: DEFAULT_SETTINGS.widgetLimitExceeded,
                 inaccurateCallAttributionsCount =
-                    this[SettingsKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
+                    this[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
                         ?: DEFAULT_SETTINGS.inaccurateCallAttributionsCount,
-                callTrackingEnabled = this[SettingsKeys.CALL_TRACKING_ENABLED] ?: DEFAULT_SETTINGS.callTrackingEnabled,
+                callTrackingEnabled = this[DataStoreKeys.CALL_TRACKING_ENABLED] ?: DEFAULT_SETTINGS.callTrackingEnabled,
             )
 
         companion object {

@@ -2,6 +2,8 @@ package com.example.minutewatcher.core.domain
 
 /**
  * Interface to provide navigation targets, avoiding hardcoded class names.
+ *
+ * Safe to access from any thread.
  */
 interface NavigationProvider {
     /**

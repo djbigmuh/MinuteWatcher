@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.common.util
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -14,6 +13,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Utility for managing and checking Android system permissions.
+ *
+ * **Thread safety:** All methods are safe to call from any thread.
+ * System service access is handled by the Android Framework.
+ */
 @Singleton
 class PermissionManager
     @Inject
@@ -46,10 +51,14 @@ class PermissionManager
             return granted
         }
 
-        // MissingPermission is suppressed because hasPhoneStatePermission() is explicitly checked before access.
-        // We use explicit check inside the method instead of @RequiresPermission to avoid propagating
-        // the requirement to all callers, allowing for graceful failure at the call site.
-        @SuppressLint("MissingPermission")
+        // @Suppress("MissingPermission") is required because Lint does not recognize
+        // the explicit check performed via ContextCompat.checkSelfPermission.
+
+        /**
+         * Requires [Manifest.permission.READ_PHONE_STATE].
+         * Caller must ensure permission is granted before invoking this method.
+         */
+        @Suppress("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
             if (ContextCompat.checkSelfPermission(
                     context,
@@ -66,9 +75,10 @@ class PermissionManager
             return emptyList()
         }
 
-        // MissingPermission is suppressed because a manual check is performed before calling the API.
-        // This prevents Lint from requiring @RequiresPermission on this method.
-        @SuppressLint("MissingPermission")
+        /**
+         * Requires [Manifest.permission.READ_PHONE_STATE].
+         * Caller must ensure permission is granted before invoking this method.
+         */
         fun getDefaultVoiceSubscriptionId(): Int {
             if (ContextCompat.checkSelfPermission(
                     context,
@@ -85,9 +95,10 @@ class PermissionManager
             return -1
         }
 
-        // MissingPermission is suppressed because a manual check is performed before calling the API.
-        // This prevents Lint from requiring @RequiresPermission on this method.
-        @SuppressLint("MissingPermission")
+        /**
+         * Requires [Manifest.permission.READ_PHONE_STATE].
+         * Caller must ensure permission is granted before invoking this method.
+         */
         fun getDefaultDataSubscriptionId(): Int {
             if (ContextCompat.checkSelfPermission(
                     context,

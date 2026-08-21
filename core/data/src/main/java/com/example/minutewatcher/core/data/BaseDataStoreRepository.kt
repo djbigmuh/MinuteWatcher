@@ -7,12 +7,18 @@ import kotlinx.coroutines.flow.map
 
 /**
  * Base class for DataStore repositories providing common helpers.
+ *
+ * This class ensures AOSP DataStore compliance for child repositories.
+ * Safe to call from any coroutine context.
  */
 abstract class BaseDataStoreRepository(
     protected val dataStore: DataStore<Preferences>,
 ) {
     /**
      * Generic helper to get a value from DataStore with a default.
+     *
+     * Safe to call from any coroutine context.
+     * @throws IOException if DataStore reading fails.
      */
     protected fun <T> getData(
         key: Preferences.Key<T>,

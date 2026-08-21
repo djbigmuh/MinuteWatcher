@@ -3,14 +3,15 @@ package com.example.minutewatcher.feature.main.controller
 import javax.inject.Inject
 
 /**
- * Контейнер контроллеров для MainViewModel.
- * Содержит контроллеры диалогов, баннеров, обновления, настроек и данных SIM.
+ * Container for controllers used by MainViewModel.
  *
- * @property dialog Контроллер диалогов.
- * @property banner Контроллер баннеров.
- * @property refresh Контроллер обновления.
- * @property settings Контроллер настроек.
- * @property simData Контроллер данных SIM.
+ * **Thread Safety:** Safe to call from any coroutine context.
+ *
+ * @property dialog Controller for dialog states.
+ * @property banner Controller for tracking banners.
+ * @property refresh Controller for SIM data refresh operations.
+ * @property settings Controller for application settings.
+ * @property simData Controller for SIM card data management.
  */
 class MainViewModelControllers
     @Inject

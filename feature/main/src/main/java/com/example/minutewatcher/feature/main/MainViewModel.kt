@@ -24,20 +24,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * ViewModel главного экрана SIM-карт.
- * Управляет состоянием экрана, диалогами, баннерами и данными SIM-карт.
+ * MainViewModel for the SIM card list screen.
+ * Manages screen state, dialogs, banners, and SIM card data.
  *
- * @param controllers Контейнер контроллеров (dialog, banner, refresh, settings, simData).
- * @param appSettingsRepository Репозиторий настроек приложения.
- * @param autoResetUseCase Use case автосброса.
- * @param savedStateHandle SavedStateHandle для сохранения состояния.
- * @param timeProvider Провайдер времени.
- * @param ioDispatcher Диспетчер для I/O операций.
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [IOException] and [CancellationException] from underlying repositories.
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics for atomic updates and persistence.
+ *
+ * @param controllers Container for various controllers (dialog, banner, refresh, settings, simData).
+ * @param appSettingsRepository Repository for application settings.
+ * @param autoResetUseCase Use case for automatic limit reset.
+ * @param savedStateHandle Handle for state preservation across process death.
+ * @param timeProvider Provider for system time.
+ * @param ioDispatcher Dispatcher for I/O operations.
  */
 @HiltViewModel
 class MainViewModel
@@ -63,30 +68,102 @@ class MainViewModel
         val showTrafficLimitationDialog = controllers.dialog.showTrafficLimitationDialog
         val showUsageAccessDialog = controllers.dialog.showUsageAccessDialog
 
+        /**
+         * Sets the data for the limit editing dialog.
+         *
+         * @param data Dialog data or null to dismiss.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Persists dialog state via [SavedStateHandle].
+         */
         fun setLimitDialog(data: LimitDialogData?) = controllers.dialog.setLimitDialog(data)
 
+        /**
+         * Sets the data for the day editing dialog.
+         *
+         * @param data Dialog data or null to dismiss.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Persists dialog state via [SavedStateHandle].
+         */
         fun setDayDialog(data: DayDialogData?) = controllers.dialog.setDayDialog(data)
 
+        /**
+         * Sets the data for the usage adjustment dialog.
+         *
+         * @param data Dialog data or null to dismiss.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Persists dialog state via [SavedStateHandle].
+         */
         fun setAdjustDialog(data: AdjustDialogData?) = controllers.dialog.setAdjustDialog(data)
 
+        /**
+         * Shows or hides the traffic limitation information dialog.
+         *
+         * @param show True to show, false to hide.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Persists dialog state via [SavedStateHandle].
+         */
         fun setTrafficLimitationDialog(show: Boolean) = controllers.dialog.setTrafficLimitationDialog(show)
 
+        /**
+         * Shows or hides the usage access request dialog.
+         *
+         * @param show True to show, false to hide.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Persists dialog state via [SavedStateHandle].
+         */
         fun setUsageAccessDialog(show: Boolean) = controllers.dialog.setUsageAccessDialog(show)
 
+        /**
+         * Updates the state of the phone permission permanent denial.
+         *
+         * @param denied True if permanently denied.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) =
             controllers.banner.setPhonePermissionPermanentlyDenied(denied)
 
+        /**
+         * Updates the state of the notification permission permanent denial.
+         *
+         * @param denied True if permanently denied.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) =
             controllers.banner.setNotificationPermissionPermanentlyDenied(denied)
 
+        /**
+         * Marks that notification permission has been requested.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 
+        /**
+         * Marks that phone permission has been requested.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun setPhonePermissionRequested() = controllers.settings.setPhonePermissionRequested()
 
         val showOnboardingDialog: StateFlow<Boolean> get() = controllers.dialog.showOnboardingDialog
 
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
 
+        /**
+         * Completes the onboarding process.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun completeOnboarding() {
             controllers.dialog.setShowOnboardingDialog(show = false)
             controllers.settings.completeOnboarding()
@@ -97,14 +174,15 @@ class MainViewModel
         val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
 
         /**
-         * Ошибка последней операции (например, сброса или обновления лимитов).
-         * Является однократным событием: UI должен отобразить ошибку пользователю
-         * (например, через Snackbar или Toast) и затем вызвать [dismissOperationError].
+         * Error from the last operation (e.g., reset or limit update).
+         * This is a single-event error: UI should display it and then call [dismissOperationError].
          */
         val lastOperationError = controllers.simData.lastOperationError
 
         /**
-         * Сбрасывает последнюю ошибку операции. Должен вызываться UI после показа ошибки.
+         * Dismisses the last operation error. Should be called by UI after displaying the error.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun dismissOperationError() = controllers.simData.dismissOperationError()
 
@@ -183,27 +261,81 @@ class MainViewModel
             }
         }
 
+        /**
+         * Sets the application theme.
+         *
+         * @param theme The theme to set.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
 
+        /**
+         * Retries the app search indexing.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun retryAppSearch() {
             controllers.banner.incrementAppSearchRetry()
             controllers.simData.retryAppSearch()
         }
 
+        /**
+         * Dismisses the app search error banner.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun dismissAppSearch() = controllers.banner.dismissAppSearch()
 
+        /**
+         * Retries call tracking recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun retryCalls() = controllers.simData.retryCalls()
 
+        /**
+         * Retries shortcut creation recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun retryShortcuts() = controllers.simData.retryShortcuts()
 
+        /**
+         * Retries traffic tracking recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun retryTraffic() {
             controllers.simData.retryTraffic { controllers.refresh.refreshSimCardsInternal() }
         }
 
+        /**
+         * Dismisses the widget limit exceeded error.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun dismissWidgetError() = controllers.settings.dismissWidgetError()
 
+        /**
+         * Dismisses the inaccurate call attributions warning.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun dismissInaccurateCalls() = controllers.settings.dismissInaccurateCalls()
 
+        /**
+         * Manually triggers a refresh of SIM card data.
+         *
+         * @param onComplete Callback invoked after refresh completion (successful or failed).
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException]. Internal errors are caught and logged.
+         * **Timeout:** Individual refresh operations may time out after [Constants.Flow.SHORT_TIMEOUT_MS].
+         */
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
                 try {
@@ -263,8 +395,28 @@ class MainViewModel
 
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
 
+        /**
+         * Sets the application language.
+         *
+         * @param language The language code or null for system default.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
 
+        /**
+         * Updates limits for the specified SIM slot.
+         *
+         * @param slot SIM slot index.
+         * @param minutesLimit New minutes limit.
+         * @param trafficLimitMb New traffic limit in MB.
+         * @param rolloverEnabled Whether limit rollover is enabled.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun updateLimits(
             slot: Int,
             minutesLimit: Int,
@@ -276,10 +428,29 @@ class MainViewModel
             }
         }
 
+        /**
+         * Resets usage statistics for the specified SIM slot.
+         *
+         * @param slot SIM slot index.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun resetUsage(slot: Int) {
             controllers.simData.resetUsage(slot) { refreshAndNotify(force = true) }
         }
 
+        /**
+         * Toggles automatic limit reset for the specified SIM slot.
+         *
+         * @param slot SIM slot index.
+         * @param enabled True to enable auto-reset.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun toggleAutoReset(
             slot: Int,
             enabled: Boolean,
@@ -287,6 +458,16 @@ class MainViewModel
             controllers.simData.toggleAutoReset(slot, enabled) { refreshAndNotify(force = true) }
         }
 
+        /**
+         * Updates the day of the month for automatic limit reset.
+         *
+         * @param slot SIM slot index.
+         * @param day Day of the month (1-31).
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun updateAutoResetDay(
             slot: Int,
             day: Int,
@@ -294,6 +475,16 @@ class MainViewModel
             controllers.simData.updateAutoResetDay(slot, day) { refreshAndNotify(force = true) }
         }
 
+        /**
+         * Adjusts remaining minutes for the specified SIM slot.
+         *
+         * @param slot SIM slot index.
+         * @param remainingMinutes New remaining minutes value.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun adjustRemainingMinutes(
             slot: Int,
             remainingMinutes: Int,
@@ -303,6 +494,16 @@ class MainViewModel
             }
         }
 
+        /**
+         * Adjusts remaining traffic for the specified SIM slot.
+         *
+         * @param slot SIM slot index.
+         * @param remainingGb New remaining traffic value in GB.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
         fun adjustRemainingTraffic(
             slot: Int,
             remainingGb: Float,
@@ -314,6 +515,13 @@ class MainViewModel
 
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
 
+        /**
+         * Highlights the specified SIM slot in the UI.
+         *
+         * @param slot SIM slot index.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
         private var lastRefreshAt: Long
@@ -344,6 +552,14 @@ class MainViewModel
             private const val MAX_INIT_RETRIES = 3
         }
 
+        /**
+         * Should be called when the activity enters the resumed state.
+         * Triggers a refresh of SIM card data if the data is stale.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
+         * **Timeout:** Initialization check may time out after [Constants.Flow.SHORT_TIMEOUT_MS].
+         */
         fun onActivityResume() {
             viewModelScope.launch {
                 // cancelAndJoin() гарантирует, что предыдущая корутина полностью

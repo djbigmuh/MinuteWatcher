@@ -37,6 +37,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Implementation of [UsageStateRepository] that aggregates usage data into [GlobalSnapshot]s.
+ *
+ * AOSP DataStore compliant.
+ * Safe to call from any coroutine context.
+ */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Singleton
 class UsageStateRepositoryImpl
@@ -70,9 +76,19 @@ class UsageStateRepositoryImpl
                     emit(emptyList())
                 }
 
+        /**
+         * Returns a flow of all active SIM usages.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun observeSimUsages(): Flow<List<SimUsage>> =
             combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
 
+        /**
+         * Returns a flow of UI models for all active SIM cards.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
             observeSimUsages()
                 .map { usages ->
@@ -165,21 +181,19 @@ class UsageStateRepositoryImpl
                 suppressWidgetUpdate = false,
             )
 
+        /**
+         * Returns a state flow of the latest [GlobalSnapshot].
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
         /**
-         * Принудительно обновляет данные и возвращает результат.
+         * Forcefully refreshes usage data and returns the resulting snapshot.
          *
-         * Используется Mutex вместо synchronized, т.к. внутри критической секции могут быть suspend-вызовы.
-         * Это строгое соответствие Kotlin Coroutines API.
-         *
-         * NOTE: Concurrency safety. We avoid holding locks during I/O operations to prevent deadlocks.
-         * We use tryLock to prevent reentrant calls from hanging and to coalesce multiple refresh requests.
-         * The wait for snapshot update happens outside the lock.
-         *
-         * Строгое соблюдение API: на AOSP observeSnapshot() не выбрасывает исключений.
-         * Таймаут возможен только при деградации DataStore на кастомных прошивках,
-         * не соответствующих документации Google.
+         * Uses [Constants.Data.SNAPSHOT_TIMEOUT_MS] for snapshot update detection.
+         * Safe to call from any coroutine context.
+         * @throws kotlinx.coroutines.CancellationException if the refresh is cancelled.
          */
         override suspend fun refresh(): RefreshResult {
             val currentTimestamp = snapshotFlow.value.timestamp

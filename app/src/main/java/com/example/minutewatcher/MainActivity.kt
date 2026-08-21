@@ -212,14 +212,13 @@ class MainActivity : AppCompatActivity() {
 
         private fun handlePhoneResult(granted: Boolean) {
             if (granted) {
+                // WorkManager.enqueue() performs disk I/O internally.
+                // Dispatchers.IO prevents potential ANR on slow storage.
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
                         workScheduler.scheduleInitialSetup()
                         workScheduler.schedulePeriodicUsageCheck()
-                    } catch (
-                        @Suppress("TooGenericExceptionCaught")
-                        e: Exception,
-                    ) {
+                    } catch (e: Exception) {
                         AppLogger.e(
                             "MainActivity: Failed to schedule background work after phone permission granted",
                             e,
@@ -263,14 +262,13 @@ class MainActivity : AppCompatActivity() {
                 val settings = viewModel.appSettings.first()
                 if (permissionManager.hasPhoneStatePermission()) {
                     viewModel.setPhonePermissionPermanentlyDenied(false)
+                    // WorkManager.enqueue() performs disk I/O internally.
+                    // Dispatchers.IO prevents potential ANR on slow storage.
                     launch(Dispatchers.IO) {
                         try {
                             workScheduler.scheduleInitialSetup()
                             workScheduler.schedulePeriodicUsageCheck()
-                        } catch (
-                            @Suppress("TooGenericExceptionCaught")
-                            e: Exception,
-                        ) {
+                        } catch (e: Exception) {
                             AppLogger.e("MainActivity: Failed to schedule background work during init", e)
                         }
                     }
@@ -341,20 +339,14 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent(this))
             return
-        } catch (
-            @Suppress("TooGenericExceptionCaught")
-            e: Exception,
-        ) {
+        } catch (e: Exception) {
             AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
         }
         // Fallback: общий список приложений с доступом к данным об использовании.
         try {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             return
-        } catch (
-            @Suppress("TooGenericExceptionCaught")
-            e: Exception,
-        ) {
+        } catch (e: Exception) {
             AppLogger.e("Usage access settings not found, opening app details", e)
         }
         openAppSettings()

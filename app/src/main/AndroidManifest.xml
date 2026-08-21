@@ -39,8 +39,12 @@
             </intent-filter>
         </receiver>
 
-        <!-- Receiver используется только для бенчмарков через adb shell am broadcast.
-             Защищен разрешением DUMP и отключается в release-сборках. -->
+        <!--
+          BenchmarkReceiver is exported but protected by DUMP permission.
+          Only system/ADB tools (used by Macrobenchmark) can trigger it.
+          This is required by Android Lint for exported receivers and
+          follows the principle of least privilege.
+        -->
         <receiver
             android:name=".benchmark.BenchmarkReceiver"
             android:enabled="${benchmarkReceiverEnabled}"

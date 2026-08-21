@@ -50,15 +50,19 @@ class BenchmarkReceiverTest {
             val receiver = BenchmarkReceiver()
             val simCount = 2
             val intent =
-                Intent(BenchmarkReceiver.ACTION_POPULATE_DATA).apply {
-                    putExtra(BenchmarkReceiver.EXTRA_SIM_COUNT, simCount)
-                }
+                Intent(BenchmarkReceiver.ACTION_POPULATE_DATA)
+                    .apply {
+                        putExtra(BenchmarkReceiver.EXTRA_SIM_COUNT, simCount)
+                    }
 
             receiver.onReceive(context, intent)
 
             ShadowLooper.idleMainLooper()
 
-            val workInfos = workManager.getWorkInfosForUniqueWork("benchmark_populate_data").get()
+            val workInfos =
+                workManager
+                    .getWorkInfosForUniqueWork("benchmark_populate_data")
+                    .get()
 
             assertTrue("Work should be enqueued", workInfos.isNotEmpty())
         }
@@ -73,7 +77,10 @@ class BenchmarkReceiverTest {
 
             ShadowLooper.idleMainLooper()
 
-            val workInfos = workManager.getWorkInfosForUniqueWork("benchmark_populate_data").get()
+            val workInfos =
+                workManager
+                    .getWorkInfosForUniqueWork("benchmark_populate_data")
+                    .get()
 
             assertTrue("Work should not be enqueued", workInfos.isEmpty())
         }

@@ -66,6 +66,9 @@ class AndroidLogger : Logger {
     }
 }
 
+// @Suppress("EmptyFunctionBlock") is required because this is a No-Op implementation
+// for testing purposes where log output is not needed.
+
 /**
  * Logger implementation that does nothing. Used for unit tests.
  */

@@ -78,6 +78,8 @@ class UsageDocument {
     @StringProperty
     var status: String = ""
 
+    // @Suppress("unused") is required for AppSearch reflection-based instantiation.
+
     /**
      * Обязательный конструктор без аргументов для AppSearch.
      *
@@ -90,11 +92,11 @@ class UsageDocument {
      * **Отклонение кастомной прошивки:** если кастомная прошивка не обеспечивает
      * корректную рефлексию для AppSearch — это проблема кастомной прошивки.
      */
-    @Suppress("unused", "UNUSED_PARAMETER")
-    @SuppressWarnings("unused")
+    @Suppress("unused")
     constructor()
 
     // UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.
+    // @Suppress("LongParameterList") is required because AppSearch requires a flat DTO schema.
     @Suppress("LongParameterList")
     constructor(
         namespace: String,

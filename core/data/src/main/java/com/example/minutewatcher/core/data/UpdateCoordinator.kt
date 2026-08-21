@@ -61,6 +61,11 @@ class UpdateCoordinator
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+/**
+         * Recovers widget observation state.
+         *
+         * Safe to call from any coroutine context.
+         */
         override suspend fun recover() {
             restartObservation()
         }
@@ -116,6 +121,11 @@ class UpdateCoordinator
                     .launchIn(CoroutineScope(scope.coroutineContext + handler))
         }
 
+        /**
+         * Restarts the observation of usage state snapshots.
+         *
+         * Safe to call from any coroutine context.
+         */
         fun restartObservation() {
             observationJob?.cancel()
             observationRetryCount.set(0)
@@ -241,20 +251,12 @@ class UpdateCoordinator
         }
 
         /**
-         * Уведомляет об изменении данных.
+         * Notifies the coordinator that data has changed, potentially triggering a widget update.
          *
-         * При [force] = true выполняется немедленное обновление виджетов через [performForcedUpdate]
-         * и запускается обновление данных. При этом обновление виджета в реактивном цикле
-         * подавляется (через `suppressWidgetUpdate` = true), чтобы избежать дублирования.
-         *
-         * При [force] = false запускается только обновление данных. Виджет обновится
-         * реактивно через блок инициализации только в том случае, если новые данные приведут
-         * к изменению хэша содержимого ([SnapshotUtils.calculateContentHash]).
-         * Если данные не изменились, но требуется принудительное обновление (например,
-         * при изменении настроек оформления), необходимо использовать [force] = true.
-         *
-         * @param updateWidget если true — инициирует обновление.
-         * @param force если true — принудительное немедленное обновление виджета.
+         * @param updateWidget If true, a widget update will be initiated.
+         * @param force If true, an immediate widget update is forced, bypassing hash checks.
+         * Safe to call from any coroutine context.
+         * @throws kotlinx.coroutines.CancellationException if the notification process is cancelled.
          */
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,

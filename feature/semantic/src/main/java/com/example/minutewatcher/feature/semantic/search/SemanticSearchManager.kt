@@ -43,8 +43,19 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Manages AppSearch indexing for usage data.
+ * SemanticSearchManager manages AppSearch indexing for usage data.
  * Ensures that data is searchable via global system search.
+ *
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [CancellationException].
+ * Handles [AppSearchException] and specific initialization errors.
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via [dataStore].
+ *
+ * @property context Application context.
+ * @property scope Application-wide coroutine scope for async operations.
+ * @property appSearchWrapper Wrapper for AppSearch API.
+ * @property ioDispatcher Dispatcher for I/O bound operations.
+ * @property dataStore DataStore for persisting internal state.
  *
  * Реализовано строгое соблюдение API и SDK. Отклонения кастомных прошивок
  * не маскируются, а обрабатываются как системные сбои с переводом в Error.
@@ -81,16 +92,22 @@ open class SemanticSearchManager
         private val lastIndexFailureTime = AtomicLong(0L)
 
         /**
-         * Восстанавливает работу менеджера после ошибки.
-         * Строгое соблюдение API: функция гарантирует, что после возврата
-         * инициализация завершена и менеджер готов к работе.
-         * На AOSP восстановление занимает миллисекунды.
-         * Задержка возможна только при деградации хранилища на кастомной прошивке.
+         * Recovers the manager state by re-initializing with the last known flow.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
          */
         override suspend fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
         }
 
+        /**
+         * Sets an error state for the manager.
+         *
+         * @param message Error message.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun setError(message: String?) {
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
@@ -115,6 +132,13 @@ open class SemanticSearchManager
          * последовательно. Debounce гарантирует отсутствие дублирующих индексаций.
          * Если кастомная прошивка эмитит значения вне порядка — это проблема
          * кастомной прошивки.
+         *
+         * Initializes the manager for observing snapshot changes.
+         *
+         * @param snapshotFlow Flow of global usage snapshots.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
          */
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
@@ -343,6 +367,16 @@ open class SemanticSearchManager
             return false
         }
 
+        /**
+         * Indexes a usage snapshot in AppSearch.
+         *
+         * @param snapshot Global usage snapshot to index.
+         * @return True if successful.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
+         * **Timeout:** Indexing operations may time out after [Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS].
+         */
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
             val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
             val currentHash =

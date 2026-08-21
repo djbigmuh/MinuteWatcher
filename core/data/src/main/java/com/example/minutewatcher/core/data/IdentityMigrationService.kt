@@ -11,12 +11,20 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.AppDataStore
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Service for migrating legacy DataStore keys to the modern identity-based format.
+ *
+ * This implementation is AOSP DataStore compliant and follows strict consistency rules
+ * for atomic updates.
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class IdentityMigrationService
     @Inject
@@ -24,11 +32,17 @@ class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
+        /**
+         * Checks if there is any legacy data that needs migration.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore reading fails.
+         */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean =
             try {
                 val appPrefs = appDataStore.data.first()
-                val currentSchema = appPrefs[SettingsKeys.DATA_SCHEMA_VERSION] ?: 0
-                if (currentSchema >= SettingsKeys.CURRENT_DATA_SCHEMA_VERSION) {
+                val currentSchema = appPrefs[DataStoreKeys.DATA_SCHEMA_VERSION] ?: 0
+                if (currentSchema >= DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION) {
                     false
                 } else {
                     val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
@@ -87,14 +101,27 @@ class IdentityMigrationService
             return legacySubPattern.containsMatchIn(name) || legacyIccPattern.containsMatchIn(name)
         }
 
+        /**
+         * Marks the data schema as current to prevent redundant migration checks.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore write fails.
+         */
         suspend fun markSchemaCurrent() {
             try {
-                appDataStore.edit { it[SettingsKeys.DATA_SCHEMA_VERSION] = SettingsKeys.CURRENT_DATA_SCHEMA_VERSION }
+                appDataStore.edit { it[DataStoreKeys.DATA_SCHEMA_VERSION] = DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION }
             } catch (e: Exception) {
                 AppLogger.e("IdentityMigrationService: Failed to mark schema current", e)
             }
         }
 
+        /**
+         * Migrates legacy data for the specified active SIM identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore migration fails.
+         * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
+         */
         suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {
             try {
                 performMigration(activeIdentity)

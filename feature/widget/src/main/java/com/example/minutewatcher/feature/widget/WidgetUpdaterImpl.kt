@@ -18,9 +18,16 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Реализация WidgetUpdater.
- * Обновляет все экземпляры виджета с ограниченной экспоненциальной
- * стратегией повторных попыток.
+ * WidgetUpdaterImpl updates all widget instances with an exponential backoff retry strategy.
+ *
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [CancellationException].
+ * Handles [android.os.TransactionTooLargeException] by falling back to simplified layouts.
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via [appSettingsRepository].
+ *
+ * @property context Application context.
+ * @property appSettingsRepository Repository for application settings.
+ * @property renderer Renderer for widget content.
  *
  * Стратегия повторных попыток:
  * 1. Транзиентные ошибки: повтор до MAX_UPDATE_ATTEMPTS с экспоненциальной задержкой.
@@ -109,28 +116,13 @@ class WidgetUpdaterImpl
         }
 
         /**
-         * Обновляет все экземпляры виджета с ограниченной экспоненциальной стратегией повторных попыток.
+         * Updates all widget instances with an exponential backoff retry strategy.
          *
-         * Стратегия повторных попыток:
-         * 1. Транзиентные ошибки (Binder congestion, RuntimeException): повтор до
-         *    [Constants.Widget.MAX_UPDATE_ATTEMPTS] с экспоненциальной задержкой.
-         *    Старт: [Constants.Widget.RETRY_BACKOFF_MS], удвоение на каждой попытке,
-         *    потолок: [Constants.Widget.MAX_RETRY_DELAY_MS].
-         * 2. Перманентные ошибки (destroyed context, IllegalStateException, не-RemoteViews IllegalArgumentException):
-         *    повтор НЕ выполняется.
-         * 3. Превышение лимита RemoteViews (TransactionTooLargeException в cause-цепочке):
-         *    немедленный рендер с упрощённым layout, НЕ считается попыткой повтора.
+         * @return True if update was successful.
          *
-         * Строгое соблюдение API: На AOSP GlanceAppWidget.updateAll() не бросает исключений
-         * при корректном lifecycle. TransactionTooLargeException возможен только при
-         * превышении лимита Binder (~1 МБ).
-         *
-         * Отклонение кастомной прошивки: Если кастомная прошивка бросает исключения
-         * при корректном lifecycle виджета — это проблема кастомной прошивки.
-         * Стратегия retry является защитным механизмом.
-         *
-         * @return true если обновление завершилось успешно, false в противном случае.
-         * @throws CancellationException при отмене корутины (пробрасывается для кооперативной отмены).
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
+         * **Timeout:** Individual updates may time out after [WIDGET_UPDATE_TIMEOUT_MS].
          */
         override suspend fun updateAll(): Boolean {
             var delayMs = Constants.Widget.RETRY_BACKOFF_MS
@@ -405,6 +397,7 @@ class WidgetUpdaterImpl
                 setWidgetLimitExceeded(value = true)
                 throw e
             } catch (e: Exception) {
+                AppLogger.e("Widget: performProbeUpdate failed", e)
                 setWidgetLimitExceeded(value = true)
                 throw e
             }

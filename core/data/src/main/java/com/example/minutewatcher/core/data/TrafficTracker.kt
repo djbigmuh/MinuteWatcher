@@ -25,6 +25,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+// @Suppress("LargeClass") is required because TrafficTracker encapsulates complex logic for
+// network statistics collection, SIM attribution, and background tracking state management.
+
 /**
  * Tracks mobile traffic usage for the device.
  * Attributes all mobile traffic to the CURRENT DEFAULT DATA SIM.
@@ -47,6 +50,12 @@ class TrafficTracker
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        /**
+         * Recovers traffic tracking state.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if recovery fails.
+         */
         override suspend fun recover() {
             updateTrafficUsage()
         }
@@ -110,8 +119,11 @@ class TrafficTracker
 
         /**
          * Resets the traffic baseline for a specific identity.
-         * @throws java.io.IOException if DataStore write fails
-         * @throws SecurityException if permission is revoked during operation
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore write fails.
+         * @throws SecurityException if permission is revoked during operation.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         suspend fun resetBaseline(identity: String) {
             trafficMutex.withLock {
@@ -164,19 +176,13 @@ class TrafficTracker
         }
 
         /**
-         * Обновляет данные о трафике для текущей default data SIM.
+         * Updates mobile traffic usage for the current default data SIM.
          *
-         * **Строгое соблюдение API:** на AOSP `observeActiveSims()` и `getSimUsage()`
-         * завершаются за миллисекунды. Таймаут `LONG_TIMEOUT_MS` (10 сек) — защитный запас.
-         *
-         * **Отклонение кастомной прошивки:** таймаут указывает на деградацию DataStore
-         * на кастомной прошивке. Это проблема прошивки.
-         *
-         * **Стратегия:** при таймауте статус переводится в Error, метод возвращает управление.
-         * Повторная попытка при следующем вызове Worker.
-         *
-         * @throws java.io.IOException if DataStore write fails
-         * @throws SecurityException if permission is revoked during operation
+         * Uses [Constants.Flow.LONG_TIMEOUT_MS] for active SIM observation.
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore write fails.
+         * @throws SecurityException if permission is revoked during operation.
+         * @throws kotlinx.coroutines.CancellationException if the update process is cancelled.
          */
         @Suppress("ReturnCount")
         suspend fun updateTrafficUsage() {
@@ -745,6 +751,9 @@ internal class TrafficTargetResolver(
 
         object InconsistentFirmware : TargetResult
     }
+
+    // @Suppress("ReturnCount") is required for attribution resolution logic where each branch
+    // represents a specific fallback strategy or terminal error state.
 
     /**
      * Определяет целевую SIM-карту для атрибуции трафика.

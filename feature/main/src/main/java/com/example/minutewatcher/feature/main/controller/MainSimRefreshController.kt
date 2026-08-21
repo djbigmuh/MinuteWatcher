@@ -12,12 +12,15 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Контроллер обновления данных SIM.
- * Выполняет обновление данных SIM через UsageStateRepository.
+ * MainSimRefreshController handles refreshing SIM card data.
  *
- * @property usageUseCase Use case использования.
- * @property usageStateRepository Репозиторий состояния использования.
- * @property ioDispatcher Диспетчер для I/O операций.
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [CancellationException]. Internal refresh errors are caught and logged.
+ * **AOSP DataStore:** Interacts with AOSP DataStore via [UsageUseCase] and [UsageStateRepository].
+ *
+ * @property usageUseCase Use case for refreshing operator info.
+ * @property usageStateRepository Repository for triggering usage state refresh.
+ * @property ioDispatcher Dispatcher for I/O bound operations.
  */
 class MainSimRefreshController
     @Inject
@@ -28,6 +31,14 @@ class MainSimRefreshController
     ) {
         private val simCheckMutex = Mutex()
 
+        /**
+         * Refreshes SIM card data internally.
+         *
+         * @return [RefreshResult] if update was performed, null if a refresh is already in progress.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
+         */
         suspend fun refreshSimCardsInternal(): RefreshResult? =
             withContext(ioDispatcher) {
                 if (!simCheckMutex.tryLock()) {

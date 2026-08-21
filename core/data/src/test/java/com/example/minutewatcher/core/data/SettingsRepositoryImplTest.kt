@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -47,26 +48,26 @@ class SettingsRepositoryImplTest {
             val repository = CallSessionRepositoryImpl(dataStore)
 
             dataStore.edit { prefs ->
-                prefs[DynamicSettingsKeys.callStartTimeKey(1)] = 1000L
-                prefs[DynamicSettingsKeys.bootTimeKey(1)] = 5000L
-                prefs[DynamicSettingsKeys.callIdentityKey(1)] = "id1"
+                prefs[DataStoreKeys.callStartTimeKey(1)] = 1000L
+                prefs[DataStoreKeys.bootTimeKey(1)] = 5000L
+                prefs[DataStoreKeys.callIdentityKey(1)] = "id1"
 
-                prefs[DynamicSettingsKeys.callStartTimeKey(2)] = 2000L
-                prefs[DynamicSettingsKeys.bootTimeKey(2)] = 6000L
+                prefs[DataStoreKeys.callStartTimeKey(2)] = 2000L
+                prefs[DataStoreKeys.bootTimeKey(2)] = 6000L
 
-                prefs[SettingsKeys.APP_THEME] = AppTheme.DARK.value
+                prefs[DataStoreKeys.APP_THEME] = AppTheme.DARK.value
             }
 
             repository.clearAllCallSessions()
 
             val prefs = dataStore.data.first()
-            assertNull(prefs[DynamicSettingsKeys.callStartTimeKey(1)])
-            assertNull(prefs[DynamicSettingsKeys.bootTimeKey(1)])
-            assertNull(prefs[DynamicSettingsKeys.callIdentityKey(1)])
-            assertNull(prefs[DynamicSettingsKeys.callStartTimeKey(2)])
-            assertNull(prefs[DynamicSettingsKeys.bootTimeKey(2)])
+            assertNull(prefs[DataStoreKeys.callStartTimeKey(1)])
+            assertNull(prefs[DataStoreKeys.bootTimeKey(1)])
+            assertNull(prefs[DataStoreKeys.callIdentityKey(1)])
+            assertNull(prefs[DataStoreKeys.callStartTimeKey(2)])
+            assertNull(prefs[DataStoreKeys.bootTimeKey(2)])
 
-            assertEquals(AppTheme.DARK.value, prefs[SettingsKeys.APP_THEME])
+            assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
         }
 
     @Test
@@ -75,9 +76,9 @@ class SettingsRepositoryImplTest {
             val repository = CallSessionRepositoryImpl(dataStore)
 
             dataStore.edit { prefs ->
-                prefs[DynamicSettingsKeys.callStartTimeKey(1)] = 1000L
-                prefs[DynamicSettingsKeys.callStartTimeKey(3)] = 3000L
-                prefs[DynamicSettingsKeys.callStartTimeKey(5)] = 0L
+                prefs[DataStoreKeys.callStartTimeKey(1)] = 1000L
+                prefs[DataStoreKeys.callStartTimeKey(3)] = 3000L
+                prefs[DataStoreKeys.callStartTimeKey(5)] = 0L
             }
 
             val activeSubIds = repository.getActiveCallSubIds()
@@ -111,8 +112,8 @@ class SettingsRepositoryImplTest {
             }
 
             val prefs = dataStore.data.first()
-            assertEquals(AppTheme.LIGHT.value, prefs[SettingsKeys.APP_THEME])
-            assertEquals(75, prefs[SettingsKeys.WIDGET_TRANSPARENCY])
+            assertEquals(AppTheme.LIGHT.value, prefs[DataStoreKeys.APP_THEME])
+            assertEquals(75, prefs[DataStoreKeys.WIDGET_TRANSPARENCY])
         }
 
     @Test
@@ -121,8 +122,8 @@ class SettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             dataStore.edit {
-                it[SettingsKeys.ONBOARDING_COMPLETED] = true
-                it[SettingsKeys.APP_THEME] = AppTheme.DARK.value
+                it[DataStoreKeys.ONBOARDING_COMPLETED] = true
+                it[DataStoreKeys.APP_THEME] = AppTheme.DARK.value
             }
 
             repository.updateAppSettings { current ->
@@ -130,9 +131,9 @@ class SettingsRepositoryImplTest {
             }
 
             val prefs = dataStore.data.first()
-            assertEquals(true, prefs[SettingsKeys.ONBOARDING_COMPLETED])
-            assertEquals(AppTheme.DARK.value, prefs[SettingsKeys.APP_THEME])
-            assertEquals(10, prefs[SettingsKeys.WIDGET_TRANSPARENCY])
+            assertEquals(true, prefs[DataStoreKeys.ONBOARDING_COMPLETED])
+            assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
+            assertEquals(10, prefs[DataStoreKeys.WIDGET_TRANSPARENCY])
         }
 
     @Test

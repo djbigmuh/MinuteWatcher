@@ -10,6 +10,11 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import javax.inject.Inject
 
+/**
+ * Implementation of [BenchmarkUseCase] for populating mock data in UI tests and benchmarks.
+ *
+ * Safe to call from any coroutine context.
+ */
 class BenchmarkUseCaseImpl
     @Inject
     constructor(
@@ -19,6 +24,14 @@ class BenchmarkUseCaseImpl
         private val appSettingsRepository: AppSettingsRepository,
         private val migrationFlagsRepository: MigrationFlagsRepository,
     ) : BenchmarkUseCase {
+        /**
+         * Populates DataStore with mock data for a specified number of SIMs.
+         *
+         * @param simCount Number of SIMs to mock, coerced to [SimConstants.MAX_SUPPORTED_SIM_SLOTS].
+         * Safe to call from any coroutine context.
+         * @throws IOException if any DataStore update fails.
+         * @throws CancellationException if the population process is cancelled.
+         */
         override suspend fun populateMockData(simCount: Int) {
             val safeCount = simCount.coerceIn(1, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
 

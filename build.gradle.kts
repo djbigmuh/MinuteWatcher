@@ -42,20 +42,21 @@ subprojects {
         }
     }
 
-    // NOTE: Detekt 1.23.8 + Gradle 9.7 + Kotlin 2.4 requires explicit jvmToolchain
-    // and reportsDir override. If this breaks after a detekt upgrade, revisit
-    // whether the workaround is still needed.
-    // Detekt 1.23.8 использует встроенный Kotlin 1.9, который не парсит Java version strings >= 25.
-    // Workaround принудительно использует JDK 21 через Toolchains. Удалить после миграции на Detekt 2.x.
+    // NOTE: Detekt 1.23.8 + Gradle 9.7 + Kotlin 2.4 requires explicit jvmToolchain and reportsDir override.
+    // This workaround must be revisited when upgrading Detekt to 2.x.
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         val reporting = project.extensions.getByType<ReportingExtension>()
         reportsDir.set(
             reporting.baseDirectory.dir("detekt").map { it.asFile },
         )
 
-        project.extensions.findByType<JavaToolchainService>()?.let { javaToolchains ->
+        // Detekt 1.23.8 embeds Kotlin 1.9, which cannot parse Java version strings >= 25.
+        // Force JDK 21 toolchain regardless of the host JAVA_HOME to avoid
+        // java.lang.IllegalArgumentException during JVM version parsing.
+        // This is a strict API compatibility requirement, not a heuristic.
+        project.extensions.findByType<JavaToolchainService>()?.let { toolchains ->
             jdkHome.set(
-                javaToolchains.launcherFor {
+                toolchains.launcherFor {
                     languageVersion.set(JavaLanguageVersion.of(21))
                 }.map { it.metadata.installationPath }
             )

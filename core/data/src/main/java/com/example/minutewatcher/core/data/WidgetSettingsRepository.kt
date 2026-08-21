@@ -18,6 +18,12 @@ import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository for managing unified widget settings, aggregating app and SIM settings.
+ *
+ * Implementation of [WidgetSettingsLoader].
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class WidgetSettingsRepository
     @Inject
@@ -26,6 +32,12 @@ class WidgetSettingsRepository
         private val simIdentityRepository: SimIdentityRepository,
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
     ) : WidgetSettingsLoader {
+        /**
+         * Loads the current unified widget settings state.
+         *
+         * Uses [Constants.Flow.LONG_TIMEOUT_MS] for DataStore operations.
+         * Safe to call from any coroutine context.
+         */
         override suspend fun load(): WidgetSettingsState =
             coroutineScope {
                 val settings =
@@ -170,6 +182,12 @@ class WidgetSettingsRepository
             }
         }
 
+        /**
+         * Saves general widget settings (layout, transparency, etc.) to DataStore.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
             appSettingsRepository.updateAppSettings { current ->
                 current.copy(
@@ -184,6 +202,13 @@ class WidgetSettingsRepository
             }
         }
 
+        /**
+         * Saves SIM-specific visibility settings to DataStore.
+         *
+         * Safe to call from any coroutine context.
+         * @return True if all active SIM settings were saved successfully.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean {
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             var allSucceeded = true

@@ -34,8 +34,11 @@ import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Контроллер баннеров отслеживания.
- * Управляет состоянием баннеров ошибок и уведомлений.
+ * MainBannerController manages the state of tracking banners (errors and notifications).
+ *
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [CancellationException]. Observes errors are handled with exponential backoff.
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via observed flows.
  *
  * Стратегия повторных попыток наблюдения:
  * - Бесконечные повторные попытки с экспоненциальной задержкой (cap 30 сек).
@@ -56,12 +59,26 @@ class MainBannerController
     ) {
         private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
 
+        /**
+         * Sets whether the phone permission is permanently denied.
+         *
+         * @param denied True if permanently denied.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
             isPhonePermissionPermanentlyDenied.value = denied
         }
 
         private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
 
+        /**
+         * Sets whether the notification permission is permanently denied.
+         *
+         * @param denied True if permanently denied.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
             isNotificationPermissionPermanentlyDenied.value = denied
         }
@@ -69,10 +86,20 @@ class MainBannerController
         private val appSearchRetryCount = MutableStateFlow(0)
         private val appSearchBannerDismissed = MutableStateFlow(false)
 
+        /**
+         * Increments the app search retry count.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun incrementAppSearchRetry() {
             appSearchRetryCount.value++
         }
 
+        /**
+         * Dismisses the app search error banner.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun dismissAppSearch() {
             appSearchBannerDismissed.value = true
         }
@@ -194,6 +221,8 @@ class MainBannerController
                 appSearchBannerDismissed,
                 bannerExtraData,
             ) { args ->
+                // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
+                // when using more than 5 flows.
                 @Suppress("UNCHECKED_CAST")
                 val status = args[ARG_STATUS] as Map<String, TrackingStatus>
                 val phone = args[ARG_PHONE] as Boolean
@@ -202,6 +231,8 @@ class MainBannerController
                 val retry = args[ARG_RETRY] as Int
                 val dismissed = args[ARG_DISMISSED] as Boolean
 
+                // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
+                // when using more than 5 flows.
                 @Suppress("UNCHECKED_CAST")
                 val extra = args[ARG_EXTRA] as Triple<Boolean, Boolean, AppSettings>
 

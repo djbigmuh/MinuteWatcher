@@ -1,4 +1,8 @@
 <resources>
+    <!--
+      Localization note: Ensure translations respect RTL layout for Arabic.
+      Test with android:layoutDirection="rtl" in preview.
+    -->
     <!-- General UI -->
     <string name="sim_cards_title">بطاقات SIM</string>
     <string name="no_sim_found">لم يتم العثور على بطاقات SIM</string>
@@ -127,6 +131,10 @@
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Arabic requires: zero (0), one (1), two (2), few (3-10), many (11-99), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
+    <!--
+      Strict Android localization contract: Missing quantity causes Lint fatal error
+      and runtime fallback to 'other'. All quantities must be defined for each locale.
     -->
     <plurals name="minutes_plurals">
         <item quantity="zero">%1$d دقيقة</item>

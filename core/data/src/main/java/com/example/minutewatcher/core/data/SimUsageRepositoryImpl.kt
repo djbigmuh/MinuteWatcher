@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -21,6 +22,14 @@ import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Implementation of [SimUsageRepository], [SimUsageAdjustmentRepository],
+ * and [SimUsageResetRepository] using [DataStore].
+ *
+ * Tracks and manages call duration and traffic usage for SIM identities.
+ * AOSP DataStore compliant.
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class SimUsageRepositoryImpl
     @Inject
@@ -36,6 +45,11 @@ class SimUsageRepositoryImpl
 
         private val resetMutex = Mutex()
 
+        /**
+         * Returns a flow of [SimUsage] for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getSimUsage(identity: String): Flow<SimUsage> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimUsage called with invalid identity: $identity")
@@ -67,24 +81,30 @@ class SimUsageRepositoryImpl
             prefs: Preferences,
         ) = SimUsage(
             identity = identity,
-            slotIndex = prefs[SimSettingsKeys.slotIndexKey(identity)] ?: 0,
-            subscriptionId = prefs[SimSettingsKeys.subscriptionIdKey(identity)],
+            slotIndex = prefs[DataStoreKeys.slotIndexKey(identity)] ?: 0,
+            subscriptionId = prefs[DataStoreKeys.subscriptionIdKey(identity)],
             operator =
-                prefs[SimSettingsKeys.customSimOperatorKey(identity)]
-                    ?: prefs[SimSettingsKeys.simOperatorKey(identity)]
+                prefs[DataStoreKeys.customSimOperatorKey(identity)]
+                    ?: prefs[DataStoreKeys.simOperatorKey(identity)]
                     ?: "",
-            minutesUsed = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0,
-            minutesLimit = prefs[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0,
-            trafficUsedMb = prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f,
-            trafficLimitMb = prefs[SimSettingsKeys.trafficLimitKey(identity)] ?: 0,
-            manualAdjustment = prefs[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0,
-            trafficAdjustmentGb = prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f,
-            autoReset = prefs[SimSettingsKeys.autoResetKey(identity)] ?: false,
-            autoResetDay = prefs[SimSettingsKeys.autoResetDayKey(identity)] ?: 1,
-            lastResetDate = prefs[SimSettingsKeys.lastResetDateKey(identity)] ?: 0L,
-            rolloverEnabled = prefs[SimSettingsKeys.rolloverEnabledKey(identity)] ?: false,
+            minutesUsed = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0,
+            minutesLimit = prefs[DataStoreKeys.monthlyLimitKey(identity)] ?: 0,
+            trafficUsedMb = prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f,
+            trafficLimitMb = prefs[DataStoreKeys.trafficLimitKey(identity)] ?: 0,
+            manualAdjustment = prefs[DataStoreKeys.manualAdjustmentKey(identity)] ?: 0,
+            trafficAdjustmentGb = prefs[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f,
+            autoReset = prefs[DataStoreKeys.autoResetKey(identity)] ?: false,
+            autoResetDay = prefs[DataStoreKeys.autoResetDayKey(identity)] ?: 1,
+            lastResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: 0L,
+            rolloverEnabled = prefs[DataStoreKeys.rolloverEnabledKey(identity)] ?: false,
         )
 
+        /**
+         * Sets the absolute value of minutes used for the identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setMinutesUsed(
             identity: String,
             value: Int,
@@ -93,9 +113,15 @@ class SimUsageRepositoryImpl
                 AppLogger.w("setMinutesUsed called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.minutesUsedKey(identity)] = value }
+            dataStore.edit { it[DataStoreKeys.minutesUsedKey(identity)] = value }
         }
 
+        /**
+         * Increments minutes used for the identity by the given delta.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun incrementMinutesUsed(
             identity: String,
             delta: Int,
@@ -105,11 +131,17 @@ class SimUsageRepositoryImpl
                 return
             }
             dataStore.edit { prefs ->
-                val current = prefs[SimSettingsKeys.minutesUsedKey(identity)] ?: 0
-                prefs[SimSettingsKeys.minutesUsedKey(identity)] = current + delta
+                val current = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0
+                prefs[DataStoreKeys.minutesUsedKey(identity)] = current + delta
             }
         }
 
+        /**
+         * Sets the absolute value of traffic used in MB for the identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setTrafficUsed(
             identity: String,
             valueMb: Float,
@@ -118,9 +150,15 @@ class SimUsageRepositoryImpl
                 AppLogger.w("setTrafficUsed called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.trafficUsedKey(identity)] = valueMb }
+            dataStore.edit { it[DataStoreKeys.trafficUsedKey(identity)] = valueMb }
         }
 
+        /**
+         * Increments traffic used in MB for the identity by the given delta.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun incrementTrafficUsed(
             identity: String,
             deltaMb: Float,
@@ -130,12 +168,18 @@ class SimUsageRepositoryImpl
                 return
             }
             dataStore.edit { prefs ->
-                val current = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                val current = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 val newValue = (current + deltaMb.toDouble()).toFloat().coerceAtMost(MAX_TRAFFIC_MB)
-                prefs[SimSettingsKeys.trafficUsedKey(identity)] = newValue
+                prefs[DataStoreKeys.trafficUsedKey(identity)] = newValue
             }
         }
 
+        /**
+         * Sets the manual adjustment for minutes for the identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setManualAdjustment(
             identity: String,
             value: Int,
@@ -144,9 +188,15 @@ class SimUsageRepositoryImpl
                 AppLogger.w("setManualAdjustment called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.manualAdjustmentKey(identity)] = value }
+            dataStore.edit { it[DataStoreKeys.manualAdjustmentKey(identity)] = value }
         }
 
+        /**
+         * Sets the manual adjustment for traffic in GB for the identity.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setTrafficAdjustment(
             identity: String,
             valueGb: Float,
@@ -155,9 +205,15 @@ class SimUsageRepositoryImpl
                 AppLogger.w("setTrafficAdjustment called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.trafficAdjustmentKey(identity)] = valueGb }
+            dataStore.edit { it[DataStoreKeys.trafficAdjustmentKey(identity)] = valueGb }
         }
 
+        /**
+         * Updates multiple usage statistics atomically.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun updateSimStats(
             identity: String,
             minutesUsed: Int,
@@ -169,12 +225,20 @@ class SimUsageRepositoryImpl
                 return
             }
             dataStore.edit {
-                it[SimSettingsKeys.minutesUsedKey(identity)] = minutesUsed
-                it[SimSettingsKeys.trafficUsedKey(identity)] = trafficUsedMb
-                it[SimSettingsKeys.manualAdjustmentKey(identity)] = manualAdjustment
+                it[DataStoreKeys.minutesUsedKey(identity)] = minutesUsed
+                it[DataStoreKeys.trafficUsedKey(identity)] = trafficUsedMb
+                it[DataStoreKeys.manualAdjustmentKey(identity)] = manualAdjustment
             }
         }
 
+        /**
+         * Resets SIM usage stats with rollover support.
+         *
+         * Guaranteed to be atomic via [resetMutex].
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
+         */
         override suspend fun resetSimUsage(identity: String) {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("resetSimUsage called with invalid identity: $identity")
@@ -187,6 +251,14 @@ class SimUsageRepositoryImpl
             }
         }
 
+        /**
+         * Manually resets SIM usage stats to zero without rollover.
+         *
+         * Guaranteed to be atomic via [resetMutex].
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
+         */
         override suspend fun resetSimUsageManual(identity: String) {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("resetSimUsageManual called with invalid identity: $identity")
@@ -194,17 +266,28 @@ class SimUsageRepositoryImpl
             }
             resetMutex.withLock {
                 dataStore.edit { prefs ->
-                    prefs[SimSettingsKeys.minutesUsedKey(identity)] = 0
-                    prefs[SimSettingsKeys.trafficUsedKey(identity)] = 0f
-                    prefs[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
-                    prefs[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
-                    prefs[SimSettingsKeys.lastResetDateKey(identity)] = timeProvider.now()
+                    prefs[DataStoreKeys.minutesUsedKey(identity)] = 0
+                    prefs[DataStoreKeys.trafficUsedKey(identity)] = 0f
+                    prefs[DataStoreKeys.manualAdjustmentKey(identity)] = 0
+                    prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = 0f
+                    prefs[DataStoreKeys.lastResetDateKey(identity)] = timeProvider.now()
 
                     prefs.resetNotificationFlags(identity)
                 }
             }
         }
 
+        /**
+         * Resets SIM usage if the billing period has passed.
+         *
+         * @param autoResetDay Day of month for reset.
+         * @param nowMillis Current timestamp.
+         * @return True if reset was actually performed.
+         * Guaranteed to be atomic via [resetMutex].
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
+         */
         override suspend fun resetSimUsageIfDue(
             identity: String,
             autoResetDay: Int,
@@ -220,7 +303,7 @@ class SimUsageRepositoryImpl
                 var actuallyReset = false
                 dataStore.edit { prefs ->
                     val innerLastResetDate =
-                        prefs[SimSettingsKeys.lastResetDateKey(identity)]
+                        prefs[DataStoreKeys.lastResetDateKey(identity)]
                             ?: Constants.Data.EMPTY_TIMESTAMP
                     if (innerLastResetDate < periodStart) {
                         prefs.applyResetWithRollover(identity, nowMillis)
@@ -235,20 +318,20 @@ class SimUsageRepositoryImpl
             identity: String,
             nowMillis: Long,
         ) {
-            val rollover = this[SimSettingsKeys.rolloverEnabledKey(identity)] ?: false
+            val rollover = this[DataStoreKeys.rolloverEnabledKey(identity)] ?: false
             if (rollover) {
-                val minutesLimit = this[SimSettingsKeys.monthlyLimitKey(identity)] ?: 0
-                val minutesUsed = this[SimSettingsKeys.minutesUsedKey(identity)] ?: 0
-                val manualAdj = this[SimSettingsKeys.manualAdjustmentKey(identity)] ?: 0
+                val minutesLimit = this[DataStoreKeys.monthlyLimitKey(identity)] ?: 0
+                val minutesUsed = this[DataStoreKeys.minutesUsedKey(identity)] ?: 0
+                val manualAdj = this[DataStoreKeys.manualAdjustmentKey(identity)] ?: 0
                 val remainingMinutes =
                     maxOf(
                         0L,
                         (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong(),
                     ).toInt()
 
-                val trafficLimitMb = this[SimSettingsKeys.trafficLimitKey(identity)] ?: 0
-                val trafficUsedMb = (this[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val trafficAdjGb = (this[SimSettingsKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
+                val trafficLimitMb = this[DataStoreKeys.trafficLimitKey(identity)] ?: 0
+                val trafficUsedMb = (this[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                val trafficAdjGb = (this[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
                 val remainingMb =
                     maxOf(
                         0.0,
@@ -256,25 +339,25 @@ class SimUsageRepositoryImpl
                     )
                 val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
 
-                this[SimSettingsKeys.manualAdjustmentKey(identity)] = remainingMinutes
-                this[SimSettingsKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb
+                this[DataStoreKeys.manualAdjustmentKey(identity)] = remainingMinutes
+                this[DataStoreKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb
             } else {
-                this[SimSettingsKeys.manualAdjustmentKey(identity)] = 0
-                this[SimSettingsKeys.trafficAdjustmentKey(identity)] = 0f
+                this[DataStoreKeys.manualAdjustmentKey(identity)] = 0
+                this[DataStoreKeys.trafficAdjustmentKey(identity)] = 0f
             }
 
-            this[SimSettingsKeys.minutesUsedKey(identity)] = 0
-            this[SimSettingsKeys.trafficUsedKey(identity)] = 0f
-            this[SimSettingsKeys.lastResetDateKey(identity)] = nowMillis
+            this[DataStoreKeys.minutesUsedKey(identity)] = 0
+            this[DataStoreKeys.trafficUsedKey(identity)] = 0f
+            this[DataStoreKeys.lastResetDateKey(identity)] = nowMillis
 
             resetNotificationFlags(identity)
         }
 
         private fun MutablePreferences.resetNotificationFlags(identity: String) {
-            this[NotificationSettingsKeys.notifiedLowMinutesKey(identity)] = false
-            this[NotificationSettingsKeys.notifiedLowTrafficKey(identity)] = false
-            this[NotificationSettingsKeys.notifiedExhaustedMinutesKey(identity)] = false
-            this[NotificationSettingsKeys.notifiedExhaustedTrafficKey(identity)] = false
+            this[DataStoreKeys.notifiedLowMinutesKey(identity)] = false
+            this[DataStoreKeys.notifiedLowTrafficKey(identity)] = false
+            this[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = false
+            this[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
         override fun getLastResetDate(identity: String): Flow<Long> {
@@ -282,7 +365,7 @@ class SimUsageRepositoryImpl
                 AppLogger.w("getLastResetDate called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(0L)
             }
-            return getData(SimSettingsKeys.lastResetDateKey(identity), 0L)
+            return getData(DataStoreKeys.lastResetDateKey(identity), 0L)
         }
 
         override suspend fun setLastResetDate(
@@ -293,7 +376,7 @@ class SimUsageRepositoryImpl
                 AppLogger.w("setLastResetDate called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[SimSettingsKeys.lastResetDateKey(identity)] = value }
+            dataStore.edit { it[DataStoreKeys.lastResetDateKey(identity)] = value }
         }
 
         override fun getLastTotalBytes(identity: String): Flow<Long> {
@@ -301,7 +384,7 @@ class SimUsageRepositoryImpl
                 AppLogger.w("getLastTotalBytes called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(-1L)
             }
-            return getData(DynamicSettingsKeys.lastTotalBytesKey(identity), -1L)
+            return getData(DataStoreKeys.lastTotalBytesKey(identity), -1L)
         }
 
         override suspend fun setLastTotalBytes(
@@ -312,7 +395,7 @@ class SimUsageRepositoryImpl
                 AppLogger.w("setLastTotalBytes called with invalid identity: $identity")
                 return
             }
-            dataStore.edit { it[DynamicSettingsKeys.lastTotalBytesKey(identity)] = bytes }
+            dataStore.edit { it[DataStoreKeys.lastTotalBytesKey(identity)] = bytes }
         }
 
         override suspend fun incrementTrafficAndSetBaseline(
@@ -326,12 +409,12 @@ class SimUsageRepositoryImpl
             }
             dataStore.edit { prefs ->
                 // 1. Increment traffic
-                val currentUsage = (prefs[SimSettingsKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 val newValue = (currentUsage + deltaMb.toDouble()).toFloat().coerceAtMost(MAX_TRAFFIC_MB)
-                prefs[SimSettingsKeys.trafficUsedKey(identity)] = newValue
+                prefs[DataStoreKeys.trafficUsedKey(identity)] = newValue
 
                 // 2. Update baseline
-                prefs[DynamicSettingsKeys.lastTotalBytesKey(identity)] = totalBytes
+                prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes
             }
         }
 

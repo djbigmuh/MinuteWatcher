@@ -153,7 +153,6 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
-                @Suppress("UNCHECKED_CAST")
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
                 mockSettings.value = transform(mockSettings.value)
             }

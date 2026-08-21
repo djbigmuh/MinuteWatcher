@@ -128,6 +128,10 @@
       German requires: one (1), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
     -->
+    <!--
+      Strict Android localization contract: Missing quantity causes Lint fatal error
+      and runtime fallback to 'other'. All quantities must be defined for each locale.
+    -->
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d Minute</item>
         <item quantity="other">%1$d Minuten</item>

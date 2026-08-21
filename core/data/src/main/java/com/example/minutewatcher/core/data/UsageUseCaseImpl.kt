@@ -20,6 +20,11 @@ import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Implementation of [UsageUseCase] providing business logic for usage management.
+ *
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class UsageUseCaseImpl
     @Inject
@@ -35,6 +40,13 @@ class UsageUseCaseImpl
     ) : UsageUseCase {
         private val adjustmentMutex = Mutex()
 
+        /**
+         * Refreshes carrier names and MCC/MNC codes for all active SIMs.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore write fails.
+         * @throws kotlinx.coroutines.CancellationException if the process is cancelled.
+         */
         override suspend fun refreshOperatorInfo() {
             try {
                 val activeList = permissionManager.getActiveSubscriptions()
@@ -67,6 +79,14 @@ class UsageUseCaseImpl
             }
         }
 
+        /**
+         * Adjusts the manual minutes correction to match the specified remaining minutes.
+         *
+         * @param slot SIM slot index.
+         * @param remainingMinutes User-specified remaining minutes.
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore operations fail.
+         */
         override suspend fun adjustMinutes(
             slot: Int,
             remainingMinutes: Int,
@@ -89,6 +109,14 @@ class UsageUseCaseImpl
             }
         }
 
+        /**
+         * Adjusts the manual traffic correction in GB to match the specified remaining traffic.
+         *
+         * @param slot SIM slot index.
+         * @param remainingGb User-specified remaining traffic in GB.
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore operations fail.
+         */
         override suspend fun adjustTraffic(
             slot: Int,
             remainingGb: Float,
@@ -113,6 +141,12 @@ class UsageUseCaseImpl
             }
         }
 
+        /**
+         * Resets all usage counters and baselines for the specified SIM slot.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore operations fail.
+         */
         override suspend fun resetCounters(slot: Int) {
             val identity = simIdentityRepository.getIdentity(slot)
             simUsageResetRepository.resetSimUsageManual(identity)

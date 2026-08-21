@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.Constants.SimConstants
@@ -13,6 +14,13 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Implementation of [SimWidgetVisibilityRepository] using [DataStore].
+ *
+ * Manages visibility and display settings for SIM components in the app widget.
+ * AOSP DataStore compliant.
+ * Safe to call from any coroutine context.
+ */
 @Singleton
 class SimWidgetVisibilityRepositoryImpl
     @Inject
@@ -22,6 +30,11 @@ class SimWidgetVisibilityRepositoryImpl
         // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
         // Это соответствует принципу Dependency Inversion.
 
+        /**
+         * Returns a flow of [SimSettingsState] for the given identity.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getSimSettings(identity: String): Flow<SimSettingsState> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimSettings called with invalid identity: $identity")
@@ -29,38 +42,49 @@ class SimWidgetVisibilityRepositoryImpl
             }
             return dataStore.data.map { prefs ->
                 SimSettingsState(
-                    showSim = prefs[WidgetSettingsKeys.showSimKey(identity)] ?: true,
-                    showIcon = prefs[WidgetSettingsKeys.showSimIconKey(identity)] ?: true,
-                    showName = prefs[WidgetSettingsKeys.showSimNameKey(identity)] ?: true,
-                    showMinutes = prefs[WidgetSettingsKeys.showMinutesKey(identity)] ?: true,
-                    showMinutesLimit = prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] ?: false,
-                    showTraffic = prefs[WidgetSettingsKeys.showTrafficKey(identity)] ?: true,
-                    showTrafficLimit = prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] ?: false,
+                    showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
+                    showIcon = prefs[DataStoreKeys.showSimIconKey(identity)] ?: true,
+                    showName = prefs[DataStoreKeys.showSimNameKey(identity)] ?: true,
+                    showMinutes = prefs[DataStoreKeys.showMinutesKey(identity)] ?: true,
+                    showMinutesLimit = prefs[DataStoreKeys.showMinutesLimitKey(identity)] ?: false,
+                    showTraffic = prefs[DataStoreKeys.showTrafficKey(identity)] ?: true,
+                    showTrafficLimit = prefs[DataStoreKeys.showTrafficLimitKey(identity)] ?: false,
                 )
             }
         }
 
+        /**
+         * Returns a flow of a map from identity to its [SimSettingsState] for a list of identities.
+         *
+         * Safe to call from any coroutine context.
+         */
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
                 identities
                     .filter { !it.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX) }
                     .mapNotNull { identity ->
-                        val showSim = prefs[WidgetSettingsKeys.showSimKey(identity)]
+                        val showSim = prefs[DataStoreKeys.showSimKey(identity)]
                         if (showSim == null) return@mapNotNull null
 
                         identity to
                             SimSettingsState(
                                 showSim = showSim,
-                                showIcon = prefs[WidgetSettingsKeys.showSimIconKey(identity)] ?: true,
-                                showName = prefs[WidgetSettingsKeys.showSimNameKey(identity)] ?: true,
-                                showMinutes = prefs[WidgetSettingsKeys.showMinutesKey(identity)] ?: true,
-                                showMinutesLimit = prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] ?: false,
-                                showTraffic = prefs[WidgetSettingsKeys.showTrafficKey(identity)] ?: true,
-                                showTrafficLimit = prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] ?: false,
+                                showIcon = prefs[DataStoreKeys.showSimIconKey(identity)] ?: true,
+                                showName = prefs[DataStoreKeys.showSimNameKey(identity)] ?: true,
+                                showMinutes = prefs[DataStoreKeys.showMinutesKey(identity)] ?: true,
+                                showMinutesLimit = prefs[DataStoreKeys.showMinutesLimitKey(identity)] ?: false,
+                                showTraffic = prefs[DataStoreKeys.showTrafficKey(identity)] ?: true,
+                                showTrafficLimit = prefs[DataStoreKeys.showTrafficLimitKey(identity)] ?: false,
                             )
                     }.toMap()
             }
 
+        /**
+         * Updates settings for multiple identities in a single DataStore transaction.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if write fails.
+         */
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
             dataStore.edit { prefs ->
                 settingsMap.forEach { (identity, settings) ->
@@ -68,13 +92,13 @@ class SimWidgetVisibilityRepositoryImpl
                         AppLogger.w("setSimSettingsBatch skipped for invalid identity: $identity")
                         return@forEach
                     }
-                    prefs[WidgetSettingsKeys.showSimKey(identity)] = settings.showSim
-                    prefs[WidgetSettingsKeys.showSimIconKey(identity)] = settings.showIcon
-                    prefs[WidgetSettingsKeys.showSimNameKey(identity)] = settings.showName
-                    prefs[WidgetSettingsKeys.showMinutesKey(identity)] = settings.showMinutes
-                    prefs[WidgetSettingsKeys.showMinutesLimitKey(identity)] = settings.showMinutesLimit
-                    prefs[WidgetSettingsKeys.showTrafficKey(identity)] = settings.showTraffic
-                    prefs[WidgetSettingsKeys.showTrafficLimitKey(identity)] = settings.showTrafficLimit
+                    prefs[DataStoreKeys.showSimKey(identity)] = settings.showSim
+                    prefs[DataStoreKeys.showSimIconKey(identity)] = settings.showIcon
+                    prefs[DataStoreKeys.showSimNameKey(identity)] = settings.showName
+                    prefs[DataStoreKeys.showMinutesKey(identity)] = settings.showMinutes
+                    prefs[DataStoreKeys.showMinutesLimitKey(identity)] = settings.showMinutesLimit
+                    prefs[DataStoreKeys.showTrafficKey(identity)] = settings.showTraffic
+                    prefs[DataStoreKeys.showTrafficLimitKey(identity)] = settings.showTrafficLimit
                 }
             }
         }
@@ -124,7 +148,7 @@ class SimWidgetVisibilityRepositoryImpl
          * Извлекает identity из имени ключа DataStore.
          *
          * **Критичность порядка обхода префиксов:**
-         * [WidgetSettingsKeys.ALL_PREFIXES] отсортированы по убыванию длины.
+         * [DataStoreKeys.ALL_WIDGET_PREFIXES] отсортированы по убыванию длины.
          * Это гарантирует, что более специфичные префиксы проверяются первыми:
          * - `widget_show_sim_icon_` проверяется ПЕРЕД `widget_show_sim_`
          * - `widget_show_minutes_limit_` проверяется ПЕРЕД `widget_show_minutes_`
@@ -136,7 +160,7 @@ class SimWidgetVisibilityRepositoryImpl
          * **Валидация identity:** после извлечения проверяется, что identity
          * начинается с одного из допустимых префиксов (`icc_`, `sub_`, `sim_`).
          * Это защищает от повреждения данных и некорректных ключей.
-         * На AOSP все ключи генерируются через WidgetSettingsKeys и всегда валидны.
+         * На AOSP все ключи генерируются через DataStoreKeys и всегда валидны.
          * Невалидный identity возможен только при повреждении DataStore
          * на кастомной прошивке. Это проблема кастомной прошивки.
          *
@@ -150,7 +174,7 @@ class SimWidgetVisibilityRepositoryImpl
         private fun extractIdentity(keyName: String): String? {
             if (!keyName.startsWith("widget_show_")) return null
 
-            val prefixes = WidgetSettingsKeys.ALL_PREFIXES
+            val prefixes = DataStoreKeys.ALL_WIDGET_PREFIXES
             for (prefix in prefixes) {
                 if (keyName.startsWith(prefix)) {
                     val identity = keyName.removePrefix(prefix)

@@ -35,6 +35,18 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * ShortcutManager manages dynamic shortcuts for SIM card usage data.
+ *
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [CancellationException].
+ * Handles [UnsupportedOperationException] for devices not supporting shortcuts.
+ *
+ * @property context Application context.
+ * @property scope Application-wide coroutine scope for async operations.
+ * @property navigationProvider Provider for main activity class name.
+ * @property ioDispatcher Dispatcher for I/O bound operations.
+ */
 @Singleton
 class ShortcutManager
     @Inject
@@ -62,6 +74,13 @@ class ShortcutManager
          * последовательно. Debounce гарантирует отсутствие дублирующих индексаций.
          * Если кастомная прошивка эмитит значения вне порядка — это проблема
          * кастомной прошивки.
+         *
+         * Initializes the shortcut manager by observing the snapshot flow.
+         *
+         * @param snapshotFlow Flow of global usage snapshots.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
          */
         @OptIn(FlowPreview::class)
         @Suppress("InstanceOfCheckForException")
@@ -113,16 +132,34 @@ class ShortcutManager
             }
         }
 
+        /**
+         * Recovers the shortcut manager state by re-initializing with the last known flow.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         override suspend fun recover() {
             lastSnapshotFlow?.let { initialize(it) }
         }
 
+        /**
+         * Sets an error state for the shortcut manager.
+         *
+         * @param message Error message.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun setError(message: String?) {
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
         /**
-         * Updates shortcuts synchronously. Returns true if successful.
+         * Updates shortcuts synchronously.
+         *
+         * @param snapshot Global usage snapshot to apply.
+         * @return True if successful.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [CancellationException].
          */
         @Suppress("InstanceOfCheckForException")
         suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean =

@@ -4,8 +4,8 @@ plugins {
 
 group = "com.example.minutewatcher.buildlogic"
 
-// Официальный API Gradle 8+ для доступа к каталогам версий в build-logic.
-// Заменяет устаревший extensions.getByType<VersionCatalogsExtension>().named("libs").
+// versionCatalogs is the modern accessor (Gradle 7.4+).
+// VersionCatalogsExtension is deprecated and will be removed in Gradle 10.
 val libs = versionCatalogs.named("libs")
 
 dependencies {

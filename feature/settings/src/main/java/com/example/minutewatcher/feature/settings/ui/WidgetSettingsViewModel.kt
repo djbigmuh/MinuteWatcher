@@ -21,11 +21,25 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * WidgetSettingsViewModel manages the state and persistence of widget settings.
+ *
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [IOException] and [CancellationException].
+ * Handles timeouts and concurrent access.
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via [WidgetSettingsLoader]
+ * and [WidgetSettingsSaver].
+ *
+ * @property loader Loader for widget settings.
+ * @property saver Saver for widget settings.
+ * @param usageStateRepository Repository for observed usage state snapshots.
+ */
 @HiltViewModel
 class WidgetSettingsViewModel
     @Inject
@@ -107,6 +121,11 @@ class WidgetSettingsViewModel
             loadSettings()
         }
 
+        /**
+         * Retries loading the widget settings.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun retryLoad() {
             loadSettings()
         }
@@ -187,6 +206,13 @@ class WidgetSettingsViewModel
                 }
         }
 
+        /**
+         * Updates the current widget settings state.
+         *
+         * @param transform Function to transform the current state.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
             _settingsState.update { current ->
                 current?.let(transform) ?: current
@@ -201,11 +227,24 @@ class WidgetSettingsViewModel
          * LaunchedEffect keyed on saveResult перезапускается при изменении
          * saveResult. После consumeSaveResult() saveResult становится null,
          * эффект перезапускается с null и ничего не делает.
+         *
+         * Consumes the last save result, resetting it to null.
+         * Should be called by UI after displaying the result.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun consumeSaveResult() {
             _saveResult.value = null
         }
 
+        /**
+         * Updates settings for a specific SIM slot.
+         *
+         * @param slot SIM slot index.
+         * @param update Function to transform the current SIM settings state.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
         fun updateSimSettings(
             slot: Int,
             update: (SimSettingsState) -> SimSettingsState,
@@ -240,6 +279,13 @@ class WidgetSettingsViewModel
          *
          * Строгое соблюдение API: Mutex в Kotlin НЕ является reentrant.
          * tryLock() возвращает false, если мьютекс уже залочен другой корутиной.
+         *
+         * Saves current settings and notifies the system of changes.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Timeout:** Save operations may time out after [Constants.Flow.LONG_TIMEOUT_MS].
+         * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         suspend fun saveAndNotify() {
             // tryLock() — неблокирующая операция. Если мьютекс уже залочен

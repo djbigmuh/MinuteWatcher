@@ -4,6 +4,9 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Repository for observing permission states.
+ *
+ * All flows are safe to collect from any coroutine context.
+ * Implementation must comply with AOSP DataStore best practices if applicable.
  */
 interface PermissionRepository {
     /**

@@ -53,4 +53,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.mockingCore)
+    testImplementation(libs.kotlinxCoroutinesTesting)
 }
