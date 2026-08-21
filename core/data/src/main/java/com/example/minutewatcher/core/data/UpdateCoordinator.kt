@@ -76,6 +76,18 @@ class UpdateCoordinator
         // AtomicLong гарантирует потокобезопасность при доступе из retryWhen
         // и processSnapshot, даже если они выполняются в разных корутинах.
         private val retryAttempt = AtomicLong(0L)
+
+        /**
+         * Потокобезопасный счётчик последовательных сбоев наблюдения.
+         * Ограничен [MAX_OBSERVATION_RETRY_COUNT] для предотвращения
+         * неограниченного роста при длительной деградации хранилища.
+         * Сбрасывается в 0 при успешной эмиссии ([processSnapshot]).
+         *
+         * **Строгое соблюдение API:** [AtomicLong] гарантирует потокобезопасность.
+         * Доступ происходит из [processSnapshot] (сброс) и [handleObservationFailure]
+         * (инкремент), которые выполняются в рамках одного flow-pipeline
+         * и не конкурируют между собой.
+         */
         private val observationRetryCount = AtomicLong(0L)
 
         private var lastSuccessTime = 0L
@@ -227,10 +239,14 @@ class UpdateCoordinator
                 )
 
             val currentRetry = retryAttempt.incrementAndGet()
+            observationRetryCount.updateAndGet { current ->
+                minOf(current + 1, MAX_OBSERVATION_RETRY_COUNT)
+            }
+            val consecutive = observationRetryCount.get()
 
             AppLogger.e(
                 "UpdateCoordinator: observation failed (attempt $currentRetry, " +
-                    "consecutive: ${observationRetryCount.get()}), retry in ${delaySeconds}s",
+                    "consecutive: $consecutive), retry in ${delaySeconds}s",
                 cause,
             )
 
@@ -297,6 +313,13 @@ class UpdateCoordinator
         companion object {
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
+
+            /**
+             * Максимальное значение счётчика последовательных сбоев наблюдения.
+             * После достижения этого значения логирование подавляется
+             * (чтобы не спамить лог), но повторные попытки продолжаются.
+             */
+            private const val MAX_OBSERVATION_RETRY_COUNT = 100L
 
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L

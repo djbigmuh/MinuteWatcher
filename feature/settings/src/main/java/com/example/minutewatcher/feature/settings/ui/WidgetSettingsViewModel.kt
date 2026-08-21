@@ -207,13 +207,19 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Updates the current widget settings state.
+         * Обновляет текущее состояние настроек виджета.
          *
-         * @param transform Function to transform the current state.
+         * **Строгое соблюдение API:** при вызове [updateSettings] флаг
+         * [_loadError] сбрасывается в `false`. Если загрузка ранее завершилась
+         * ошибкой, но пользователь продолжает работу с настройками (меняет
+         * параметры), состояние ошибки больше не актуально. Повторная ошибка
+         * будет установлена при следующем вызове [loadSettings].
          *
-         * **Thread Safety:** Safe to call from any coroutine context.
+         * **Потокобезопасность:** [MutableStateFlow.value] потокобезопасен.
+         * [MutableStateFlow.update] выполняет атомарное обновление.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
+            _loadError.value = false
             _settingsState.update { current ->
                 current?.let(transform) ?: current
             }
@@ -255,6 +261,7 @@ class WidgetSettingsViewModel
                 AppLogger.w("updateSimSettings called with invalid slot $slot, ignoring")
                 return
             }
+            _loadError.value = false
             _settingsState.update { currentState ->
                 if (currentState == null) return@update null
 

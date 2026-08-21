@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -71,6 +72,7 @@ open class SemanticSearchManager
         @com.example.minutewatcher.core.common.di.IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
         @AppDataStore private val dataStore: DataStore<Preferences>,
+        private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
@@ -89,15 +91,34 @@ open class SemanticSearchManager
          * Доступ из recover() и корутины коллекционирования snapshotFlow.
          */
         private val consecutiveIndexFailures = AtomicInteger(0)
+
+        /**
+         * Время последнего сбоя индексации (монотонное, elapsedRealtime).
+         *
+         * **Строгое соблюдение API:** используется [TimeProvider.elapsedRealtime]
+         * (монотонное время), а не [System.currentTimeMillis] (wall-clock).
+         * Это гарантирует, что перевод системных часов пользователем не повлияет
+         * на интервал между сбоями и не приведёт к ложному сбросу счётчика.
+         * На кастомной прошивке, где elapsedRealtime не монотонен, возможна
+         * некорректная периодичность — это проблема кастомной прошивки.
+         */
         private val lastIndexFailureTime = AtomicLong(0L)
 
         /**
-         * Recovers the manager state by re-initializing with the last known flow.
+         * Восстанавливает менеджер, перезапуская наблюдение за snapshot-потоком.
          *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException].
+         * **Строгое соблюдение API:** перед перезапуском сбрасываются счётчики
+         * ошибок ([consecutiveIndexFailures], [lastIndexFailureTime]).
+         * Без сброса повторный вызов [initialize] немедленно столкнулся бы
+         * с проверкой `consecutiveIndexFailures >= MAX_CONSECUTIVE_INDEX_FAILURES`
+         * и пропустил бы индексацию, сделав кнопку «Retry» неэффективной.
+         *
+         * **Thread Safety:** [AtomicInteger.set] и [AtomicLong.set] потокобезопасны.
+         * Вызов [initialize] сериализован через мьютекс внутри самого метода.
          */
         override suspend fun recover() {
+            consecutiveIndexFailures.set(0)
+            lastIndexFailureTime.set(0L)
             lastSnapshotFlow?.let { initialize(it) }
         }
 
@@ -339,7 +360,7 @@ open class SemanticSearchManager
 
         private fun handleIndexFailure() {
             val failures = consecutiveIndexFailures.incrementAndGet()
-            lastIndexFailureTime.set(System.currentTimeMillis())
+            lastIndexFailureTime.set(timeProvider.elapsedRealtime())
             if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
                     "SemanticSearchManager: $failures consecutive indexing failures. " +

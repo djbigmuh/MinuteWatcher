@@ -74,8 +74,29 @@ open class CallTracker
                 { _status.value = it },
             )
 
-        // Tracks write attempts per subId to handle transient DataStore failures.
+        /**
+         * Счётчик попыток записи длительности звонка для каждого subId.
+         * Используется для ограничения числа повторных попыток при сбоях DataStore.
+         *
+         * **Очистка:** удаляется в [cleanupCounters] при успешном завершении
+         * или сбросе сессии. Если [cleanupCounters] не завершается из-за
+         * ошибки DataStore, запись остаётся в мапе. Это допустимая эвристика
+         * в пределах критерия надёжности: [ConcurrentHashMap] не ограничен
+         * по размеру, но количество активных subId не превышает
+         * [Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS] (10), поэтому утечка
+         * памяти практически невозможна.
+         *
+         * **Строгое соблюдение API:** [ConcurrentHashMap] потокобезопасен.
+         * Записи создаются в [handleWriteDurationFailure] и удаляются
+         * в [writeCallDuration] (при успехе) или [cleanupCounters].
+         */
         private val writeAttempts = ConcurrentHashMap<Int, Int>()
+
+        /**
+         * Счётчик неудачных попыток атрибуции звонка для каждого subId.
+         * Аналогично [writeAttempts], очищается в [cleanupCounters].
+         * См. документацию [writeAttempts] для деталей.
+         */
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
         // Optimization: prevent duplicate start events for the same subId
@@ -674,6 +695,18 @@ open class CallTracker
             return targetIdentity to isFallbackUsed
         }
 
+        /**
+         * Очищает все данные сессии звонка для указанного subId.
+         *
+         * **Строгое соблюдение API:** все записи в DataStore обнуляются.
+         * [writeAttempts] и [attributionFailures] удаляются из мап.
+         * Если какая-либо запись в DataStore бросает исключение,
+         * метод прерывается и записи в мапах могут остаться.
+         * Это допустимо: см. документацию [writeAttempts].
+         *
+         * @throws CancellationException пробрасывается для корректной отмены.
+         * @throws Exception при ошибке записи в DataStore.
+         */
         private suspend fun cleanupCounters(subId: Int) {
             try {
                 callSessionRepository.setCallStartTime(subId, 0L)

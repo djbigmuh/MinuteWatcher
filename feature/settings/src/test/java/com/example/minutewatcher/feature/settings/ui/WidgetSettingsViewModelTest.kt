@@ -288,4 +288,36 @@ class WidgetSettingsViewModelTest {
             assertEquals(SaveResult.PartialFailure("SIM settings skipped"), viewModel.saveResult.value)
             verify(saver).save(any(), eq(true))
         }
+
+    @Test
+    fun `updateSettings resets loadError`() =
+        runTest {
+            // Имитировать ошибку загрузки
+            whenever(loader.load()).thenThrow(RuntimeException("Fail"))
+            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            testScheduler.advanceUntilIdle()
+            assertTrue(vm.loadError.value)
+
+            // Обновить настройки
+            vm.updateSettings { it.copy(fontSize = 10) }
+
+            // Ошибка должна быть сброшена
+            assertFalse(vm.loadError.value)
+        }
+
+    @Test
+    fun `updateSimSettings resets loadError`() =
+        runTest {
+            // Имитировать ошибку загрузки
+            whenever(loader.load()).thenThrow(RuntimeException("Fail"))
+            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            testScheduler.advanceUntilIdle()
+            assertTrue(vm.loadError.value)
+
+            // Обновить настройки SIM
+            vm.updateSimSettings(0) { it.copy(showTraffic = true) }
+
+            // Ошибка должна быть сброшена
+            assertFalse(vm.loadError.value)
+        }
 }

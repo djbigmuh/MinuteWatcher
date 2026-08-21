@@ -19,9 +19,20 @@ import java.util.LinkedHashMap
  */
 object SimCardMapper {
     /**
-     * Cache to track which SIM identities have already been logged for negative values in a slot.
-     * Prevents [AppLogger.e] from being called repeatedly for the same inaccurate state.
-     * The map size is limited to [MAX_LOGGED_SIZE] to prevent memory leaks.
+     * Кэш identity SIM-карт, для которых уже было залогировано предупреждение
+     * об отрицательных значениях. Предотвращает повторное логирование
+     * одного и того же identity в одном слоте.
+     *
+     * **Потокобезопасность:** обёрнут в [Collections.synchronizedMap].
+     * Все составные операции (проверка размера + удаление) выполняются
+     * внутри явного `synchronized(negativeLogged)` блока.
+     *
+     * **Эвикция:** при превышении [MAX_LOGGED_SIZE] удаляется самый старый
+     * ключ (FIFO). [LinkedHashMap] сохраняет порядок вставки, поэтому
+     * `keys.firstOrNull()` возвращает первый вставленный ключ.
+     * Это допустимая эвристика в пределах критерия надёжности:
+     * кэш ограничен 20 записями, что покрывает все реальные слоты
+     * (максимум [Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS] = 10).
      */
     private val negativeLogged = Collections.synchronizedMap(LinkedHashMap<Int, String>())
     private const val MAX_LOGGED_SIZE = 20
@@ -115,7 +126,12 @@ object SimCardMapper {
             negativeLogged[slot] = usage.identity
             // Clean up when overflowing to maintain cache size limit
             if (negativeLogged.size > MAX_LOGGED_SIZE) {
-                negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
+                // LinkedHashMap сохраняет порядок вставки. firstOrNull() возвращает
+                // самый старый ключ (FIFO). Удаляем его для ограничения размера кэша.
+                val eldestKey = negativeLogged.keys.firstOrNull()
+                if (eldestKey != null) {
+                    negativeLogged.remove(eldestKey)
+                }
             }
         }
     }

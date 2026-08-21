@@ -9,6 +9,7 @@ import androidx.appsearch.exceptions.AppSearchException
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -49,6 +50,7 @@ class SemanticSearchManagerTest {
     val tmpFolder = TemporaryFolder()
 
     private val context: Context = mock()
+    private val timeProvider: TimeProvider = mock()
     private var currentTime = 1000000L
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -57,6 +59,10 @@ class SemanticSearchManagerTest {
 
     @Before
     fun setup() {
+        whenever(timeProvider.now()).thenAnswer { currentTime }
+        whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime }
+        whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime }
+
         fakeWrapper = FakeAppSearchWrapper()
         dataStore =
             PreferenceDataStoreFactory.create(
@@ -548,6 +554,36 @@ class SemanticSearchManagerTest {
             assertEquals(currentTypes, savedTypes)
         }
 
+    @Test
+    fun `recover resets failure counters`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // 1. Force 5 failures
+            fakeWrapper.failNextWithGenericError = true
+            repeat(5) {
+                manager.indexSnapshot(snapshot)
+            }
+
+            assertTrue("Status should be Error after 5 failures", manager.status.value is TrackingStatus.Error)
+
+            // 2. Call recover
+            manager.recover()
+
+            // 3. Verify counters via reflection
+            val failureField = SemanticSearchManager::class.java.getDeclaredField("consecutiveIndexFailures")
+            failureField.isAccessible = true
+            val failures = (failureField.get(manager) as java.util.concurrent.atomic.AtomicInteger).get()
+
+            val timeField = SemanticSearchManager::class.java.getDeclaredField("lastIndexFailureTime")
+            timeField.isAccessible = true
+            val lastTime = (timeField.get(manager) as java.util.concurrent.atomic.AtomicLong).get()
+
+            assertEquals(0, failures)
+            assertEquals(0L, lastTime)
+        }
+
     private fun createManager(scope: CoroutineScope) =
         SemanticSearchManager(
             context = context,
@@ -555,6 +591,7 @@ class SemanticSearchManagerTest {
             appSearchWrapper = fakeWrapper,
             ioDispatcher = testDispatcher,
             dataStore = dataStore,
+            timeProvider = timeProvider,
         )
 
     private fun createEntity(

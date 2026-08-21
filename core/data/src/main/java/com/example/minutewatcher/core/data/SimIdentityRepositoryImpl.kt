@@ -108,22 +108,32 @@ class SimIdentityRepositoryImpl
 
         /**
          * Кэш результатов прямого резолва SIM identity.
-         * Используется ТОЛЬКО когда SIM не найдена в [activeSimsCache].
+         * Используется ТОЛЬКО когда SIM не найден в [activeSimsCache].
          *
-         * Потокобезопасность: ConcurrentHashMap обеспечивает потокобезопасность.
-         * Доступ из getSimIdentity() (чтение/запись) и из init-блока (удаление).
-         * init-блок выполняется один раз при конструировании, getSimIdentity()
+         * **Потокобезопасность:** [ConcurrentHashMap] обеспечивает потокобезопасность.
+         * Доступ из [getSimIdentity] (чтение/запись) и из init-блока (удаление).
+         * init-блок выполняется один раз при конструировании, [getSimIdentity]
          * вызывается позже. После конструирования оба доступа конкурентны,
-         * ConcurrentHashMap обрабатывает это корректно.
+         * [ConcurrentHashMap] обрабатывает это корректно.
          *
-         * Инвалидация:
-         * - При удалении слота из активного списка (в init-блоке при эмиссии activeSimsCache).
+         * **TTL:** каждая запись хранит пару (identity, timestamp).
+         * Timestamp — [TimeProvider.elapsedRealtime] (монотонное время).
+         * Запись считается валидной, если `elapsedRealtime() - timestamp < [MANUAL_RESOLUTION_CACHE_TTL_MS]`.
+         *
+         * **Строгое соблюдение API:** используется монотонное время
+         * ([TimeProvider.elapsedRealtime]), а не wall-clock. Это гарантирует,
+         * что перевод системных часов пользователем не повлияет на TTL кэша.
+         * На кастомной прошивке, где elapsedRealtime не монотонен, возможна
+         * некорректная работа TTL — это проблема кастомной прошивки.
+         *
+         * **Ограничение размера:** кэш не имеет явного ограничения по размеру,
+         * но количество слотов ограничено [SimConstants.SUPPORTED_SLOT_INDICES]
+         * (максимум 10), поэтому утечка памяти невозможна.
+         *
+         * **Инвалидация:**
+         * - При удалении слота из активного списка (в init-блоке при эмиссии [activeSimsCache]).
          * - При истечении TTL ([MANUAL_RESOLUTION_CACHE_TTL_MS]).
          * - При нахождении SIM в [activeSimsCache] (запись удаляется).
-         *
-         * Строгое соблюдение API: на AOSP observeActiveSims() эмитит значения
-         * последовательно. WhileSubscribed гарантирует остановку потока при
-         * отсутствии подписчиков.
          */
         private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
 
