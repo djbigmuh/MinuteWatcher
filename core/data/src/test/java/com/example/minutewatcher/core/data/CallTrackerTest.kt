@@ -559,7 +559,7 @@ class CallTrackerTest {
         }
 
     @Test
-    fun `call duration excludes deep sleep`() =
+    fun `call duration includes time in deep sleep`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -579,8 +579,8 @@ class CallTrackerTest {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            // Duration should be 1 minute
-            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsed(eq("id_0"), eq(1))
+            // Duration should be 2 minutes (60s + 40s = 100s -> 2 min ceiling)
+            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsed(eq("id_0"), eq(2))
         }
 
     @Test
