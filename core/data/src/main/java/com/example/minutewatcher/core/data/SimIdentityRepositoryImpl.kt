@@ -72,6 +72,7 @@ class SimIdentityRepositoryImpl
         @ApplicationScope private val scope: CoroutineScope,
     ) : SimIdentityRepository {
         private val activeSimsMutex = Mutex()
+
         @VisibleForTesting
         constructor(
             discoveryDeps: SimDiscoveryDependencies,

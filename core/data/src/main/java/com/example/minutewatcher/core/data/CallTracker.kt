@@ -2,11 +2,8 @@ package com.example.minutewatcher.core.data
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
-import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
@@ -245,10 +242,11 @@ open class CallTracker
 
         private suspend fun isCallTrackingEnabled(): Boolean {
             val settings =
-                retryHelper.readWithRetry(
-                    label = "isCallTrackingEnabled",
-                    reader = { appSettingsRepository.getAppSettings() },
-                ).getOrThrow()
+                retryHelper
+                    .readWithRetry(
+                        label = "isCallTrackingEnabled",
+                        reader = { appSettingsRepository.getAppSettings() },
+                    ).getOrThrow()
             return settings.callTrackingEnabled
         }
 
@@ -558,7 +556,6 @@ open class CallTracker
                     ?.stableId
             }
 
-
         @Suppress("ReturnCount")
         private suspend fun writeCallDuration(
             subId: Int,
@@ -747,4 +744,3 @@ open class CallTracker
             private const val MAX_ATTRIBUTION_FAILURES = 3
         }
     }
-

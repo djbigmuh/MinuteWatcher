@@ -235,14 +235,15 @@ class SimIdentityRepositoryRaceTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-            val discovery = SimIdentityDiscovery(
-                SimDiscoveryDependencies(
-                    context = mock(),
-                    subscriptionManager = mock(),
-                    permissionManager = permissionManager,
-                    permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) }
+            val discovery =
+                SimIdentityDiscovery(
+                    SimDiscoveryDependencies(
+                        context = mock(),
+                        subscriptionManager = mock(),
+                        permissionManager = permissionManager,
+                        permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) },
+                    ),
                 )
-            )
 
             val persistence = mock<SimIdentityPersistence>()
             // Track number of calls to saveSimIdentitiesInfo
@@ -252,21 +253,23 @@ class SimIdentityRepositoryRaceTest {
                 Unit
             }
 
-            val repository = SimIdentityRepositoryImpl(
-                discovery = discovery,
-                persistence = persistence,
-                cache = SimIdentityCache(mock { on { elapsedRealtime() } doReturn 1000L }),
-                seedRepository = seedRepo,
-                appSettingsRepository = appSettingsRepository,
-                mockSimProvider = mockSimProvider,
-                scope = backgroundScope
-            )
+            val repository =
+                SimIdentityRepositoryImpl(
+                    discovery = discovery,
+                    persistence = persistence,
+                    cache = SimIdentityCache(mock { on { elapsedRealtime() } doReturn 1000L }),
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    mockSimProvider = mockSimProvider,
+                    scope = backgroundScope,
+                )
 
-            val jobs = List(10) {
-                launch {
-                    repository.getSimIdentity(0)
+            val jobs =
+                List(10) {
+                    launch {
+                        repository.getSimIdentity(0)
+                    }
                 }
-            }
             jobs.joinAll()
 
             // Because of the mutex and caching, saveSimIdentitiesInfo should be called only once

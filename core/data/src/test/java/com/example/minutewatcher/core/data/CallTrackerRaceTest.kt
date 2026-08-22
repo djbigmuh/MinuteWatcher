@@ -70,7 +70,7 @@ class CallTrackerRaceTest {
                         label: String,
                         attempts: Int,
                         retryDelayMs: Long,
-                        reader: () -> kotlinx.coroutines.flow.Flow<T>
+                        reader: () -> kotlinx.coroutines.flow.Flow<T>,
                     ): Result<T> = Result.success(reader().first())
                 },
                 testScope,

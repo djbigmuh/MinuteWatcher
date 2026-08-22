@@ -27,6 +27,7 @@ class SimWidgetVisibilityRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimWidgetVisibilityRepository {
+        private val prefixMap = DataStoreKeys.ALL_WIDGET_PREFIXES.associateWith { it.length }
         // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
         // Это соответствует принципу Dependency Inversion.
 
@@ -53,18 +54,13 @@ class SimWidgetVisibilityRepositoryImpl
             }
         }
 
-        /**
-         * Returns a flow of a map from identity to its [SimSettingsState] for a list of identities.
-         *
-         * Safe to call from any coroutine context.
-         */
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
                 identities
+                    .asSequence()
                     .filter { !it.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX) }
                     .mapNotNull { identity ->
-                        val showSim = prefs[DataStoreKeys.showSimKey(identity)]
-                        if (showSim == null) return@mapNotNull null
+                        val showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: return@mapNotNull null
 
                         identity to
                             SimSettingsState(
@@ -135,7 +131,7 @@ class SimWidgetVisibilityRepositoryImpl
                         // Protect sim_$slot fallback keys
                         val isFallbackKey = fallbackRegex.matches(identity)
 
-                        identity !in activeSet && !isFallbackKey
+                        (identity !in activeSet) && !isFallbackKey
                     }
                 if (orphanedKeys.isNotEmpty()) {
                     AppLogger.d("Clearing ${orphanedKeys.size} orphaned widget settings keys")
@@ -145,62 +141,30 @@ class SimWidgetVisibilityRepositoryImpl
         }
 
         /**
-         * Извлекает identity из имени ключа DataStore.
+         * Extracts identity from a DataStore key name by matching known widget prefixes.
          *
-         * **Критичность порядка обхода префиксов:**
-         * [DataStoreKeys.ALL_WIDGET_PREFIXES] отсортированы по убыванию длины.
-         * Это гарантирует, что более специфичные префиксы проверяются первыми:
-         * - `widget_show_sim_icon_` проверяется ПЕРЕД `widget_show_sim_`
-         * - `widget_show_minutes_limit_` проверяется ПЕРЕД `widget_show_minutes_`
+         * **Prefix Matching:** Uses [prefixMap] (ordered by length descending)
+         * to ensure the most specific prefix is matched first.
          *
-         * Без сортировки ключ `widget_show_sim_icon_icc_abc` мог бы быть
-         * ошибочно обработан префиксом `widget_show_sim_`, что дало бы
-         * identity = `icon_icc_abc` вместо корректного `icc_abc`.
+         * **Validation:** Extracted identity must start with a valid prefix (icc_, sub_, sim_)
+         * and must not be empty. This prevents data corruption or incorrect parsing.
          *
-         * **Валидация identity:** после извлечения проверяется, что identity
-         * начинается с одного из допустимых префиксов (`icc_`, `sub_`, `sim_`).
-         * Это защищает от повреждения данных и некорректных ключей.
-         * На AOSP все ключи генерируются через DataStoreKeys и всегда валидны.
-         * Невалидный identity возможен только при повреждении DataStore
-         * на кастомной прошивке. Это проблема кастомной прошивки.
-         *
-         * @param keyName Полное имя ключа в DataStore.
-         * @return Извлечённый identity или null, если ключ не относится к настройкам виджета
-         *         или identity имеет недопустимый формат.
+         * @param keyName Full name of the key in DataStore.
+         * @return Extracted identity or null if the key doesn't belong to widget settings or is invalid.
          */
         @Suppress("ReturnCount")
-        // Подавление ReturnCount оправдано: метод реализует линейную логику извлечения и
-        // валидации identity с ранними выходами при несовпадении форматов.
         private fun extractIdentity(keyName: String): String? {
             if (!keyName.startsWith("widget_show_")) return null
 
-            val prefixes = DataStoreKeys.ALL_WIDGET_PREFIXES
-            for (prefix in prefixes) {
-                if (keyName.startsWith(prefix)) {
-                    val identity = keyName.removePrefix(prefix)
-                    // Защита от ключей, состоящих только из префикса (пустой identity).
-                    // Такие ключи не должны существовать в нормальных условиях,
-                    // но защита обеспечивает устойчивость к повреждению данных.
-                    if (identity.isEmpty()) return null
+            val matchedPrefix = prefixMap.keys.firstOrNull { keyName.startsWith(it) } ?: return null
 
-                    // Валидация: identity должен начинаться с одного из допустимых префиксов.
-                    // Это защищает от ситуаций, когда identity (например, "icon_foo") ошибочно
-                    // интерпретируется как "foo" из-за совпадения с суффиксом префикса
-                    // "widget_show_sim_icon_".
-                    val isValid =
+            return keyName.removePrefix(matchedPrefix).takeIf { identity ->
+                identity.isNotEmpty() &&
+                    (
                         identity.startsWith("icc_") ||
                             identity.startsWith("sub_") ||
-                            // Проверка на fallback-ключи: identity начинается с "sim_".
-                            // На AOSP все fallback-ключи имеют формат "sim_<число>".
-                            // Если identity не начинается с допустимого префикса (icc_, sub_, sim_),
-                            // он считается невалидным и возвращается null.
-                            // Отклонение кастомной прошивки: если прошивка генерирует
-                            // нестандартные форматы identity — это проблема кастомной прошивки.
                             identity.startsWith("sim_")
-
-                    return if (isValid) identity else null
-                }
+                    )
             }
-            return null
         }
     }

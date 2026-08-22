@@ -66,7 +66,7 @@ class TrafficTracker
                         val currentDataSubId =
                             try {
                                 permissionManager.getDefaultDataSubscriptionId()
-                            } catch (ignored: Exception) {
+                            } catch (_: Exception) {
                                 -1
                             }
                         simChangeHandler.updateLastDataSubId(currentDataSubId)
@@ -75,11 +75,10 @@ class TrafficTracker
             }
         }
 
-        @Suppress("ReturnCount")
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
-                try {
-                    if (!checkPermissions()) return
+                runCatching {
+                    if (!checkPermissions()) return@runCatching
 
                     var activeSims =
                         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -101,26 +100,20 @@ class TrafficTracker
                                 TrackingStatus.ErrorType.UNKNOWN,
                                 "SIM list read timeout",
                             )
-                        return
+                        return@runCatching
                     }
                     if (activeSims.isEmpty()) {
                         baselineManager.cleanupRetries(emptySet())
                         _status.value = TrackingStatus.Idle
-                        return
+                        return@runCatching
                     }
 
                     val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
                     baselineManager.cleanupRetries(activeIdentities)
 
                     processActiveSimsTraffic(activeSims)
-                } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException in TrafficTracker", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Error updating traffic", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                }.onFailure { error ->
+                    handleTrafficError(error, _status)
                 }
             }
         }
@@ -275,5 +268,35 @@ class TrafficTracker
                 }
             error?.let { _status.value = it }
             return error == null
+        }
+
+        /**
+         * Centralized error handler for traffic tracking operations.
+         *
+         * @param error The caught throwable.
+         * @param status StateFlow to update with error status.
+         *
+         * **Error Types Handled:**
+         * - [SecurityException]: Permission revoked at runtime. Sets [TrackingStatus.ErrorType.PERMISSION_MISSING].
+         * - [CancellationException]: Coroutine cancelled. Rethrown to comply with structured concurrency.
+         * - [Exception]: Generic unexpected failure. Sets [TrackingStatus.ErrorType.UNKNOWN].
+         */
+        private fun handleTrafficError(
+            error: Throwable,
+            status: MutableStateFlow<TrackingStatus>,
+        ) {
+            if (error is CancellationException) throw error
+
+            when (error) {
+                is SecurityException -> {
+                    AppLogger.e("SecurityException in TrafficTracker", error)
+                    status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, error.message)
+                }
+
+                else -> {
+                    AppLogger.e("Error updating traffic", error)
+                    status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error.message)
+                }
+            }
         }
     }

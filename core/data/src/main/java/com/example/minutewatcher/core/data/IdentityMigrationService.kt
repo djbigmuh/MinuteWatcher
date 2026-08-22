@@ -33,7 +33,19 @@ class IdentityMigrationService
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
         /**
-         * Checks if there is any legacy data that needs migration.
+         * Checks if there is any legacy data in the DataStore that needs migration to the new identity-based format.
+         *
+         * Data is considered legacy if the schema version is less than [DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION]
+         * and there are keys matching legacy suffix patterns (e.g., "_sim_0", "_sub_123").
+         *
+         * @param activeIdentities The set of currently active stable SIM identities to protect from being
+         * treated as legacy.
+         * @return `true` if legacy keys are found and migration is required, `false` otherwise.
+         *
+         * **Example:**
+         * ```kotlin
+         * val needsMigration = migrationService.hasLegacyData(setOf("icc_abc123"))
+         * ```
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore reading fails.
@@ -102,7 +114,15 @@ class IdentityMigrationService
         }
 
         /**
-         * Marks the data schema as current to prevent redundant migration checks.
+         * Marks the DataStore schema version as current.
+         *
+         * Should be called after successful completion of all required migrations to avoid
+         * redundant checks on subsequent app launches.
+         *
+         * **Example:**
+         * ```kotlin
+         * migrationService.markSchemaCurrent()
+         * ```
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore write fails.
@@ -116,7 +136,17 @@ class IdentityMigrationService
         }
 
         /**
-         * Migrates legacy data for the specified active SIM identity.
+         * Performs the migration of legacy data associated with the given active SIM identity.
+         *
+         * Scans all DataStore keys for legacy suffixes matching the identity's slot, subscription ID,
+         * or historical ICCID mappings, and re-maps them to the new stable identity format.
+         *
+         * @param activeIdentity The current active SIM identity to migrate data for.
+         *
+         * **Example:**
+         * ```kotlin
+         * migrationService.migrateLegacyData(activeSimIdentity)
+         * ```
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore migration fails.
@@ -188,23 +218,33 @@ class IdentityMigrationService
         ): List<String> {
             val suffixes = mutableListOf<String>()
 
-            // Always try to migrate from old slot-based keys (V1)
+            // 1. V1 Slot-based Migration:
+            // Migrates from very old versions where data was stored as "key_sim_N" where N is slot index.
+            // This is a universal fallback for all SIMs that have a known slot.
             activeIdentity.slotIndex?.let {
                 suffixes.add("_sim_$it")
             }
 
-            // If current is ICCID, we might have legacy data under sub_N (e.g. from transition sub -> icc)
+            // 2. ICCID transition:
+            // If the current SIM is identified by ICCID, it might have legacy data stored under its
+            // Subscription ID (e.g. from a version that used SubID before ICCID became available).
             if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.ICCID) {
                 activeIdentity.subscriptionId?.let { subId ->
                     suffixes.add("_sub_$subId")
                 }
             }
 
-            // If current is SUBSCRIPTION_ID, we might have legacy data under icc_... (e.g. OS upgrade Android 9 -> 10)
+            // 3. Historical Mapping Migration:
+            // If the current SIM is identified by Subscription ID (usually on older Android APIs),
+            // it might have legacy data under a previously generated ICCID identity
+            // (e.g. if the user upgraded from a newer Android version to an older one,
+            // or if ICCID became unavailable due to OS policy changes).
             if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
                 val subId = activeIdentity.subscriptionId
                 if (subId != null) {
                     val simPrefs = simDataStore.data.first()
+                    // Find all "subscription_id_icc_..." keys that map to this subId.
+                    // These keys were created by previous versions to maintain identity stability.
                     val iccIdentities =
                         simPrefs
                             .asMap()

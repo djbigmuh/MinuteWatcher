@@ -7,63 +7,68 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PermissionLogicTest {
-
     @Test
     fun `TrackingBannerMapper uses wasPhonePermissionRequestedBefore to determine DENIED state`() {
-        val settings = AppSettings(
-            wasPhonePermissionRequestedBefore = true,
-            onboardingCompleted = true
-        )
+        val settings =
+            AppSettings(
+                wasPhonePermissionRequestedBefore = true,
+                onboardingCompleted = true,
+            )
 
-        val state = TrackingBannerMapper.mapToBannerState(
-            statusMap = emptyMap(),
-            phoneGranted = false,
-            usageGranted = true,
-            notificationsGranted = true,
-            phonePermanentlyDenied = false,
-            notificationPermanentlyDenied = false,
-            settings = settings
-        )
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = false,
+                usageGranted = true,
+                notificationsGranted = true,
+                phonePermanentlyDenied = false,
+                notificationPermanentlyDenied = false,
+                settings = settings,
+            )
 
         assertEquals(PermissionUiState.DENIED, state.phonePermissionState)
     }
 
     @Test
     fun `TrackingBannerMapper uses wasPhonePermissionRequestedBefore to determine NOT_REQUESTED state`() {
-        val settings = AppSettings(
-            wasPhonePermissionRequestedBefore = false,
-            onboardingCompleted = true
-        )
+        val settings =
+            AppSettings(
+                wasPhonePermissionRequestedBefore = false,
+                onboardingCompleted = true,
+            )
 
-        val state = TrackingBannerMapper.mapToBannerState(
-            statusMap = emptyMap(),
-            phoneGranted = false,
-            usageGranted = true,
-            notificationsGranted = true,
-            phonePermanentlyDenied = false,
-            notificationPermanentlyDenied = false,
-            settings = settings
-        )
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = false,
+                usageGranted = true,
+                notificationsGranted = true,
+                phonePermanentlyDenied = false,
+                notificationPermanentlyDenied = false,
+                settings = settings,
+            )
 
         assertEquals(PermissionUiState.NOT_REQUESTED, state.phonePermissionState)
     }
 
     @Test
     fun `TrackingBannerMapper uses permanentlyDenied flag`() {
-        val settings = AppSettings(
-            wasPhonePermissionRequestedBefore = true,
-            onboardingCompleted = true
-        )
+        val settings =
+            AppSettings(
+                wasPhonePermissionRequestedBefore = true,
+                onboardingCompleted = true,
+            )
 
-        val state = TrackingBannerMapper.mapToBannerState(
-            statusMap = emptyMap(),
-            phoneGranted = false,
-            usageGranted = true,
-            notificationsGranted = true,
-            phonePermanentlyDenied = true,
-            notificationPermanentlyDenied = false,
-            settings = settings
-        )
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = false,
+                usageGranted = true,
+                notificationsGranted = true,
+                phonePermanentlyDenied = true,
+                notificationPermanentlyDenied = false,
+                settings = settings,
+            )
 
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
     }

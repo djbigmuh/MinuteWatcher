@@ -308,6 +308,7 @@ class WidgetSettingsViewModel
          * Чтение .value из MutableStateFlow потокобезопасно.
          * Синхронизация не требуется.
          */
+        @Suppress("ReturnCount")
         private fun determineSaveState(): SaveState {
             if (_loadError.value) return SaveState.LoadFailed
             val currentState = _settingsState.value ?: return SaveState.NotLoaded
@@ -315,8 +316,8 @@ class WidgetSettingsViewModel
             return SaveState.Ready(currentState)
         }
 
-        private suspend fun performSaveInternal(): SaveResult {
-            return when (val saveState = determineSaveState()) {
+        private suspend fun performSaveInternal(): SaveResult =
+            when (val saveState = determineSaveState()) {
                 is SaveState.LoadFailed -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
                     SaveResult.Failed
@@ -331,7 +332,6 @@ class WidgetSettingsViewModel
                     executeSave(saveState.state)
                 }
             }
-        }
 
         private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
             val isPartial = state.simListLoadFailed
@@ -407,12 +407,16 @@ class WidgetSettingsViewModel
              * занимает больше 10 секунд — это проблема кастомной прошивки.
              * Таймаут здесь указывает на деградацию DataStore на кастомной прошивке.
              */
-        private val LOAD_TIMEOUT: Duration = 10.seconds
+            private val LOAD_TIMEOUT: Duration = 10.seconds
         }
 
         private sealed class SaveState {
             data object LoadFailed : SaveState()
+
             data object NotLoaded : SaveState()
-            data class Ready(val state: WidgetSettingsState) : SaveState()
+
+            data class Ready(
+                val state: WidgetSettingsState,
+            ) : SaveState()
         }
     }

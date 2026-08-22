@@ -30,7 +30,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -341,12 +340,21 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify returns Failed when state is not yet loaded`() =
         runTest {
             val deferred = CompletableDeferred<WidgetSettingsState>()
-            val slowLoader = object : WidgetSettingsLoader {
-                override suspend fun load(): WidgetSettingsState = deferred.await()
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) = com.example.minutewatcher.core.domain.WidgetSaveResult.Success
-                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
-                override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
-            }
+            val slowLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = deferred.await()
+
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) = com.example.minutewatcher.core.domain.WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        // No-op for testing
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+                }
 
             val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
             // Do NOT advance time, so it's still loading inside init -> loadSettings

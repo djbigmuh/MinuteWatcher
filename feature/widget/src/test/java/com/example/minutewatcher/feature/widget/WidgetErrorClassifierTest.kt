@@ -1,0 +1,87 @@
+package com.example.minutewatcher.feature.widget
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class WidgetErrorClassifierTest {
+    private val classifier = WidgetErrorClassifier()
+
+    @Before
+    fun setup() {
+        com.example.minutewatcher.core.common.util.AppLogger.init(
+            mock(),
+            com.example.minutewatcher.core.common.util
+                .NoOpLogger(),
+        )
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true when cause is TransactionTooLargeException`() {
+        val cause = android.os.TransactionTooLargeException()
+        val e = IllegalArgumentException("Too large", cause)
+        assertTrue(classifier.isRemoteViewsLimitException(e))
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns true when deeply nested cause is TransactionTooLargeException`() {
+        val cause = android.os.TransactionTooLargeException()
+        val inner = RuntimeException("Inner", cause)
+        val e = IllegalArgumentException("Outer", inner)
+        assertTrue(classifier.isRemoteViewsLimitException(e))
+    }
+
+    @Test
+    fun `isRemoteViewsLimitException returns false for other exceptions`() {
+        val e = IllegalArgumentException("Other error")
+        assertFalse(classifier.isRemoteViewsLimitException(e))
+    }
+
+    @Test
+    fun `classifyUpdateError returns LimitExceeded for TransactionTooLargeException`() {
+        val cause = android.os.TransactionTooLargeException()
+        val e = IllegalArgumentException("Too large", cause)
+
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+
+        assertEquals(UpdateResult.LimitExceeded, result)
+    }
+
+    @Test
+    fun `classifyUpdateError returns GenericFailure retryable for generic IllegalArgumentException`() {
+        val e = IllegalArgumentException("Generic")
+
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+
+        assertTrue(result is UpdateResult.GenericFailure)
+        assertTrue((result as UpdateResult.GenericFailure).isRetryable)
+    }
+
+    @Test
+    fun `classifyUpdateError returns GenericFailure non-retryable for IllegalStateException`() {
+        val e = IllegalStateException("Bad state")
+
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+
+        assertTrue(result is UpdateResult.GenericFailure)
+        assertFalse((result as UpdateResult.GenericFailure).isRetryable)
+    }
+
+    @Test
+    fun `classifyUpdateError returns GenericFailure retryable for unknown exception`() {
+        val e = Exception("Unknown")
+
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+
+        assertTrue(result is UpdateResult.GenericFailure)
+        assertTrue((result as UpdateResult.GenericFailure).isRetryable)
+    }
+}

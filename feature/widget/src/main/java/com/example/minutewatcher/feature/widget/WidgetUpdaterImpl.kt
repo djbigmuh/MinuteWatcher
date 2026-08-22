@@ -128,7 +128,6 @@ class WidgetUpdaterImpl
             }
         }
 
-
         @VisibleForTesting
         constructor(
             context: Context,
