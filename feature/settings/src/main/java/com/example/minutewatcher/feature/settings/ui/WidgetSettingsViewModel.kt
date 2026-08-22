@@ -346,12 +346,7 @@ class WidgetSettingsViewModel
             val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
 
             return withTimeoutOrNull(timeout) {
-                val result = saver.save(validatedState, skipSimSettings = isPartial)
-                if (isPartial && ((result is SaveResult.PartialSuccess) || (result is SaveResult.Success))) {
-                    SaveResult.PartialFailure("SIM settings skipped")
-                } else {
-                    result
-                }
+                saver.save(validatedState, skipSimSettings = isPartial)
             } ?: run {
                 AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
                 SaveResult.Failed

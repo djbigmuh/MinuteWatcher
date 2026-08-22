@@ -224,8 +224,6 @@ class UpdateCoordinator
                 lastResetTime = now
             }
 
-            observationRetryCount.incrementAndGet()
-
             /**
              * Сбрасываем lastSnapshotHash в null при сбое, чтобы гарантировать
              * полную переиндексацию и принудительное обновление виджетов

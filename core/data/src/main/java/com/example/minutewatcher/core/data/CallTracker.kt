@@ -416,6 +416,13 @@ open class CallTracker
                     reader = { callSessionRepository.getBootTime(subId) },
                 )
             val savedBootTime = savedBootTimeResult.getOrElse { 0L }
+
+            if (savedBootTime == 0L) {
+                AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
+                cleanupCounters(subId)
+                return
+            }
+
             val currentBootTime = timeProvider.elapsedRealtime()
             val durationSeconds =
                 ((currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
@@ -474,6 +481,12 @@ open class CallTracker
             // Защита: отрицательная длительность игнорируется, сессия очищается.
             if (durationSeconds < 0) {
                 AppLogger.w("CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring")
+                return true
+            }
+
+            if (durationSeconds > Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) {
+                AppLogger.w("CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId")
+                cleanupCounters(subId)
                 return true
             }
 

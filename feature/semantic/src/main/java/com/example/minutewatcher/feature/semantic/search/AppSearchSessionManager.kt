@@ -26,6 +26,7 @@ class AppSearchSessionManager
         private val errorHandler: AppSearchErrorHandler,
     ) {
         private val sessionMutex = Mutex()
+        @Volatile
         var session: AppSearchSessionWrapper? = null
             private set
 

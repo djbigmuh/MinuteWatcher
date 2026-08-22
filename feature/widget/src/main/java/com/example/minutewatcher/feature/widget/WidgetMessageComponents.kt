@@ -68,10 +68,7 @@ internal fun WidgetMessage(
         text = text,
         style =
             TextStyle(
-                fontSize =
-                    Constants.Time.MILLIS_IN_SECOND
-                        .let { Constants.Widget.FONT_SIZE_MEDIUM }
-                        .sp,
+                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
                 color = color,
             ),
     )

@@ -132,7 +132,7 @@ class MainBannerController
          * На кастомной прошивке, где elapsedRealtime не монотонен, возможна
          * некорректная периодичность — это проблема кастомной прошивки.
          */
-        private var lastLoggedTime = 0L
+        private val lastLoggedTime = AtomicLong(0L)
 
         /**
          * Мьютекс сериализует обновление счётчика [observationRetryCount].
@@ -151,7 +151,7 @@ class MainBannerController
                     )
                 }
                 observationRetryCount.set(0L)
-                lastLoggedTime = 0L
+                lastLoggedTime.set(0L)
             }
         }
 
@@ -277,8 +277,8 @@ class MainBannerController
                     if (currentRetry <= MAX_LOGGED_RETRIES) {
                         true
                     } else {
-                        if (now - lastLoggedTime > PERIODIC_LOG_INTERVAL_MS) {
-                            lastLoggedTime = now
+                        if (now - lastLoggedTime.get() > PERIODIC_LOG_INTERVAL_MS) {
+                            lastLoggedTime.set(now)
                             true
                         } else {
                             false
