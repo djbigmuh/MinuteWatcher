@@ -118,6 +118,8 @@
     <string name="used_text">Verbraucht</string>
     <string name="limit_text">Limit</string>
     <string name="minutes_abbr"> Min.</string>
+    <string name="unit_minutes">min</string>
+    <string name="unit_gigabytes">GB</string>
     <string name="traffic_label">Daten</string>
     <string name="traffic_remaining_text">Verbleibendes Datenvolumen: </string>
     <string name="gb_abbr"> GB</string>

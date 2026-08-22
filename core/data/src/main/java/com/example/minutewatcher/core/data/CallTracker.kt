@@ -22,7 +22,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -103,51 +103,49 @@ open class CallTracker
          * Requires [Manifest.permission.READ_PHONE_STATE].
          * Safe to call from any coroutine context.
          */
-        fun onCallStarted(subId: Int) {
-            scope.launch {
+        suspend fun onCallStarted(subId: Int) {
+            try {
+                if (!isCallTrackingEnabled()) {
+                    AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $subId")
+                    return
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                AppLogger.e("SecurityException checking if tracking enabled", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                return
+            } catch (e: Exception) {
+                AppLogger.e("Error checking if tracking enabled", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                return
+            }
+
+            callMutex.withLock {
+                var operationCompleted = false
                 try {
-                    if (!isCallTrackingEnabled()) {
-                        AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $subId")
-                        return@launch
-                    }
+                    if (!checkPermissions()) return@withLock
+                    handleCallStarted(subId)
+                    operationCompleted = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException checking if tracking enabled", e)
+                    AppLogger.e("SecurityException in onCallStarted", e)
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                    return@launch
                 } catch (e: Exception) {
-                    AppLogger.e("Error checking if tracking enabled", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    return@launch
-                }
-
-                callMutex.withLock {
-                    var operationCompleted = false
-                    try {
-                        if (!checkPermissions()) return@withLock
-                        handleCallStarted(subId)
-                        operationCompleted = true
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: SecurityException) {
-                        AppLogger.e("SecurityException in onCallStarted", e)
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                    } catch (e: Exception) {
-                        AppLogger.e("Error in onCallStarted", e)
-                        // If it's already an error (e.g. set by internal logic), don't overwrite with UNKNOWN
-                        if (_status.value !is TrackingStatus.Error) {
-                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                        }
-                    } finally {
-                        withContext(NonCancellable) {
-                            try {
-                                if (operationCompleted || (_status.value is TrackingStatus.Error)) {
-                                    refreshStatus()
-                                }
-                            } catch (e: Exception) {
-                                AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
+                    AppLogger.e("Error in onCallStarted", e)
+                    // If it's already an error (e.g. set by internal logic), don't overwrite with UNKNOWN
+                    if (_status.value !is TrackingStatus.Error) {
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    }
+                } finally {
+                    withContext(NonCancellable) {
+                        try {
+                            if (operationCompleted || (_status.value is TrackingStatus.Error)) {
+                                refreshStatus()
                             }
+                        } catch (e: Exception) {
+                            AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                         }
                     }
                 }
@@ -160,24 +158,22 @@ open class CallTracker
          * Requires [Manifest.permission.READ_PHONE_STATE].
          * Safe to call from any coroutine context.
          */
-        fun onCallEnded(subId: Int) {
-            scope.launch {
-                try {
-                    if (handleTrackingDisabled(subId)) return@launch
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException checking if tracking enabled", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                    return@launch
-                } catch (e: Exception) {
-                    AppLogger.e("Error checking if tracking enabled in onCallEnded", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    return@launch
-                }
-
-                performCallEnd(subId)
+        suspend fun onCallEnded(subId: Int) {
+            try {
+                if (handleTrackingDisabled(subId)) return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                AppLogger.e("SecurityException checking if tracking enabled", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                return
+            } catch (e: Exception) {
+                AppLogger.e("Error checking if tracking enabled in onCallEnded", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                return
             }
+
+            performCallEnd(subId)
         }
 
         private suspend fun handleTrackingDisabled(subId: Int): Boolean {

@@ -17,7 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.TimeoutCancellationException
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -69,16 +69,11 @@ class MainSimDataController
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
                 }.retryWhen { cause, attempt ->
                     // Строгое соблюдение API kotlinx.coroutines: CancellationException должен
-                    // пробрасываться для корректной отмены. TimeoutCancellationException —
-                    // подкласс CancellationException, но является retryable по контракту
-                    // withTimeoutOrNull. На AOSP observeSimCardUiModels() не бросает IOException;
-                    // таймаут возможен только при деградации DataStore на кастомных прошивках.
-                    if (cause is CancellationException && cause !is TimeoutCancellationException) {
+                    // пробрасываться для корректной отмены.
+                    if (cause is CancellationException) {
                         throw cause
                     }
-                    if ((attempt < MAX_RETRY_ATTEMPTS) &&
-                        ((cause is IOException) || (cause is TimeoutCancellationException))
-                    ) {
+                    if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
                         val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
                         delay(delayMs.milliseconds)
                         true

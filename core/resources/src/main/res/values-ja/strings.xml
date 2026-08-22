@@ -118,6 +118,8 @@
     <string name="used_text">使用済み</string>
     <string name="limit_text">制限</string>
     <string name="minutes_abbr"> 分</string>
+    <string name="unit_minutes">分</string>
+    <string name="unit_gigabytes">GB</string>
     <string name="traffic_label">通信量</string>
     <string name="traffic_remaining_text">残り通信量: </string>
     <string name="gb_abbr"> GB</string>

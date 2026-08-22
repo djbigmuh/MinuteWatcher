@@ -122,6 +122,8 @@
     <string name="used_text">المستخدم</string>
     <string name="limit_text">الحد</string>
     <string name="minutes_abbr">دقيقة</string>
+    <string name="unit_minutes">دقيقة</string>
+    <string name="unit_gigabytes">جيجابايت</string>
     <string name="traffic_label">البيانات</string>
     <string name="traffic_remaining_text">حركة البيانات المتبقية:</string>
     <string name="gb_abbr">جيجابايت</string>

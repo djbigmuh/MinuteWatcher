@@ -118,6 +118,8 @@
     <string name="used_text">Использовано</string>
     <string name="limit_text">Лимит</string>
     <string name="minutes_abbr">мин.</string>
+    <string name="unit_minutes">мин</string>
+    <string name="unit_gigabytes">ГБ</string>
     <string name="traffic_label">Трафик</string>
     <string name="traffic_remaining_text">Трафика осталось:</string>
     <string name="gb_abbr">ГБ</string>

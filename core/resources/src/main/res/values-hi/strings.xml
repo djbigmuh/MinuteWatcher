@@ -118,6 +118,8 @@
     <string name="used_text">उपयोग किया गया</string>
     <string name="limit_text">सीमा</string>
     <string name="minutes_abbr"> मिनट</string>
+    <string name="unit_minutes">मिनट</string>
+    <string name="unit_gigabytes">GB</string>
     <string name="traffic_label">ट्रैफ़िक</string>
     <string name="traffic_remaining_text">शेष ट्रैफ़िक: </string>
     <string name="gb_abbr"> GB</string>

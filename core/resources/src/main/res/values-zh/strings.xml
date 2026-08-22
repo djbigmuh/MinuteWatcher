@@ -118,6 +118,8 @@
     <string name="used_text">已用</string>
     <string name="limit_text">限制</string>
     <string name="minutes_abbr"> 分钟</string>
+    <string name="unit_minutes">分钟</string>
+    <string name="unit_gigabytes">GB</string>
     <string name="traffic_label">流量</string>
     <string name="traffic_remaining_text">剩余流量: </string>
     <string name="gb_abbr"> GB</string>

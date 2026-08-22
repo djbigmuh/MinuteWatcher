@@ -14,7 +14,7 @@ import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.TimeoutCancellationException
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -253,9 +253,9 @@ class MainBannerController
                     _status.value = TrackingStatus.Active
                 }
             }.retryWhen { cause, _ ->
-                // CancellationException (кроме TimeoutCancellationException) пробрасывается
-                // для корректной отмены корутины. Это строгое соблюдение API kotlinx.coroutines.
-                if (cause is CancellationException && cause !is TimeoutCancellationException) {
+                // CancellationException пробрасывается для корректной отмены корутины.
+                // Это строгое соблюдение API kotlinx.coroutines.
+                if (cause is CancellationException) {
                     throw cause
                 }
 
