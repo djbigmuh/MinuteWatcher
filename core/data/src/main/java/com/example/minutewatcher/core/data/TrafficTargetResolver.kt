@@ -25,6 +25,7 @@ class TrafficTargetResolver
             object InconsistentFirmware : TargetResult
         }
 
+        @Suppress("ReturnCount")
         fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
             if (activeSims.isEmpty()) return TargetResult.NoActiveSims
             val (targetSim, currentDataSubId) = resolveTargetSim(activeSims) ?: return TargetResult.InconsistentFirmware

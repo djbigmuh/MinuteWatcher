@@ -102,9 +102,9 @@ class CallTrackerRaceTest {
             jobs.joinAll()
             advanceUntilIdle()
 
-            // Flow is consumed internally by the SUT (System Under Test) via collect().
-            // The side effect (state change) is verified below via status assertion.
-            verify(callSessionRepository, times(1)).getCallStartTime(1).let { _ -> }
+            // Since internalActiveSessions is removed, each call to onCallStarted will read from DataStore
+            // to check if a session is already active. Mutex ensures they happen one by one.
+            verify(callSessionRepository, times(10)).getCallStartTime(1).let { _ -> }
 
             // Строгое соблюдение API: на AOSP DataStore.edit сериализует записи.
             // Мьютекс callMutex в CallTracker дополнительно сериализует

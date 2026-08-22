@@ -91,13 +91,16 @@ class TrafficSimChangeHandler
                 baselineManager.baselineNeedsRetry.entries.removeIf { it.key != identity }
 
                 if (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-                    AppLogger.e("TrafficSimChangeHandler: Baseline reset failed after $retryCount retries for $identity")
+                    AppLogger.e(
+                        "TrafficSimChangeHandler: Baseline reset failed after $retryCount retries for $identity",
+                    )
                     updateLastDataSubId(currentDataSubId)
                     baselineManager.baselineNeedsRetry.remove(identity)
-                    status.value = TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Baseline reset failed after $retryCount retries for $identity",
-                    )
+                    status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Baseline reset failed after $retryCount retries for $identity",
+                        )
                     return
                 }
 
@@ -109,12 +112,13 @@ class TrafficSimChangeHandler
                     AppLogger.d("Baseline reset successfully for $identity")
                     status.value = TrackingStatus.Active
                 } else {
-                    val reason = if (statsResult is StatsResult.Error) {
-                        AppLogger.e("Traffic stats query failed on SIM change", statsResult.exception)
-                        statsResult.exception.message
-                    } else {
-                        "Stats unavailable"
-                    }
+                    val reason =
+                        if (statsResult is StatsResult.Error) {
+                            AppLogger.e("Traffic stats query failed on SIM change", statsResult.exception)
+                            statsResult.exception.message
+                        } else {
+                            "Stats unavailable"
+                        }
                     AppLogger.w("Stats unavailable on SIM change for $identity: $reason. Retrying.")
                     baselineManager.baselineNeedsRetry[identity] = retryCount + 1
                     status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, reason)

@@ -125,7 +125,9 @@ open class SemanticSearchManager
                         .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                         .collect { snapshot ->
                             ensureActive()
-                            if (errorHandler.consecutiveIndexFailures.get() >= AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
+                            if (errorHandler.consecutiveIndexFailures.get() >=
+                                AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES
+                            ) {
                                 return@collect
                             }
                             try {
@@ -150,6 +152,7 @@ open class SemanticSearchManager
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
+        @Suppress("ReturnCount")
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
             val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
             val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
@@ -198,7 +201,8 @@ open class SemanticSearchManager
                     } catch (retryException: Exception) {
                         AppLogger.e("AppSearch indexing failed again after retry", retryException)
                         resetLastSnapshotState()
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, retryException.message)
+                        _status.value =
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, retryException.message)
                         false
                     }
                 }
@@ -254,7 +258,6 @@ open class SemanticSearchManager
                 }
                 result
             }
-
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal open fun createPutRequest(documents: List<UsageDocument>) = indexer.createPutRequest(documents)

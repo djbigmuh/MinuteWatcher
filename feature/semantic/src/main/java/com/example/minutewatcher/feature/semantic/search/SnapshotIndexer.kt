@@ -29,6 +29,7 @@ open class SnapshotIndexer
     constructor(
         private val appSearchWrapper: AppSearchWrapper,
         private val errorHandler: AppSearchErrorHandler,
+        @com.example.minutewatcher.core.data.di.AppDataStore
         private val dataStore: DataStore<Preferences>,
     ) {
         suspend fun performIndexUpdate(

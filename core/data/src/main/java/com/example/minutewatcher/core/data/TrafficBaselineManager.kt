@@ -56,12 +56,13 @@ class TrafficBaselineManager
                     baselineNeedsRetry.remove(identity)
                     status.value = TrackingStatus.Active
                 } else {
-                    val message = if (statsResult is StatsResult.Error) {
-                        AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
-                        statsResult.exception.message
-                    } else {
-                        "Stats unavailable"
-                    }
+                    val message =
+                        if (statsResult is StatsResult.Error) {
+                            AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
+                            statsResult.exception.message
+                        } else {
+                            "Stats unavailable"
+                        }
                     status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                 }
             } catch (e: SecurityException) {
@@ -79,11 +80,12 @@ class TrafficBaselineManager
             identity: String,
             onSync: suspend () -> Unit,
         ) {
-            val currentDataSubId = try {
-                permissionManager.getDefaultDataSubscriptionId()
-            } catch (ignored: Exception) {
-                -1
-            }
+            val currentDataSubId =
+                try {
+                    permissionManager.getDefaultDataSubscriptionId()
+                } catch (ignored: Exception) {
+                    -1
+                }
             if (currentDataSubId != -1) {
                 val info = permissionManager.getActiveSubscriptions().find { it.subscriptionId == currentDataSubId }
                 if (info != null) {
@@ -95,6 +97,7 @@ class TrafficBaselineManager
             }
         }
 
+        @Suppress("ReturnCount")
         suspend fun handleBaselineRetry(
             target: TargetInfo,
             targetIdentity: String,
@@ -113,7 +116,8 @@ class TrafficBaselineManager
                 }
             } else if (baselineNeedsRetry.getOrDefault(targetIdentity, 0) > 0) {
                 AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
-                status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable, retry pending")
+                status.value =
+                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable, retry pending")
                 return true
             }
             return false

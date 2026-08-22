@@ -87,6 +87,7 @@ class WidgetUpdaterImpl
                 }
             }
 
+        @Suppress("ReturnCount")
         private suspend fun handleLimitExceeded(): UpdateOutcome {
             val settings =
                 appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
@@ -146,6 +147,5 @@ class WidgetUpdaterImpl
         )
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal fun isRemoteViewsLimitException(e: Throwable): Boolean =
-            errorClassifier.isRemoteViewsLimitException(e)
+        internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)
     }

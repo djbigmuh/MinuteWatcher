@@ -28,6 +28,7 @@ import javax.inject.Singleton
  *
  * Safe to call from any coroutine context.
  */
+@Suppress("TooManyFunctions")
 @Singleton
 class SimIdentityPersistence
     @Inject
@@ -120,19 +121,20 @@ class SimIdentityPersistence
         private suspend fun performMigrationsIfNeeded(toMigrate: List<SimIdentity>) {
             if (toMigrate.isEmpty()) return
             try {
-                toMigrate.forEach { identity ->
-                    if (migratingIdentities.add(identity.stableId)) {
-                        try {
-                            migrationService.migrateLegacyData(identity)
-                        } finally {
-                            migratingIdentities.remove(identity.stableId)
-                        }
-                    }
-                }
+                toMigrate.forEach { migrateSingle(it) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Migration failed in SimIdentityPersistence", e)
+            }
+        }
+
+        private suspend fun migrateSingle(identity: SimIdentity) {
+            if (!migratingIdentities.add(identity.stableId)) return
+            try {
+                migrationService.migrateLegacyData(identity)
+            } finally {
+                migratingIdentities.remove(identity.stableId)
             }
         }
 
@@ -141,15 +143,27 @@ class SimIdentityPersistence
         }
 
         fun getSimOperator(identity: String): Flow<String> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return kotlinx.coroutines.flow.flowOf("")
+            if (identity.startsWith(
+                    SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
+                )
+            ) {
+                return kotlinx.coroutines.flow.flowOf("")
+            }
             return combine(
                 getData(DataStoreKeys.simOperatorKey(identity), ""),
                 getCustomSimOperator(identity),
-            ) { resolved, custom -> custom ?: resolved }
+            ) { resolved, custom ->
+                custom ?: resolved
+            }
         }
 
         fun getCustomSimOperator(identity: String): Flow<String?> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return kotlinx.coroutines.flow.flowOf(null)
+            if (identity.startsWith(
+                    SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
+                )
+            ) {
+                return kotlinx.coroutines.flow.flowOf(null)
+            }
             return dataStore.data.map { it[DataStoreKeys.customSimOperatorKey(identity)] }
         }
 
@@ -176,7 +190,12 @@ class SimIdentityPersistence
         }
 
         fun getSimCode(identity: String): Flow<String> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return kotlinx.coroutines.flow.flowOf("")
+            if (identity.startsWith(
+                    SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
+                )
+            ) {
+                return kotlinx.coroutines.flow.flowOf("")
+            }
             return getData(DataStoreKeys.simCodeKey(identity), "")
         }
 

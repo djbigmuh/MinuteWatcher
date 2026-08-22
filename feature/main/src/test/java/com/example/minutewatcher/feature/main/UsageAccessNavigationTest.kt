@@ -97,6 +97,7 @@ class UsageAccessNavigationTest {
         Dispatchers.resetMain()
     }
 
+    @Suppress("LongMethod")
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = MainDialogController(savedStateHandle)
         val bannerController =
@@ -131,6 +132,25 @@ class UsageAccessNavigationTest {
                 scope = scope,
             )
 
+        val autoResetScheduler =
+            com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
+                savedStateHandle,
+                autoResetUseCase,
+                timeProvider,
+            )
+        val initController =
+            com.example.minutewatcher.feature.main.controller.MainInitializationController(
+                appSettingsRepository = appSettingsRepository,
+                refreshController = refreshController,
+                dialogController = dialogController,
+                autoResetScheduler = autoResetScheduler,
+                timeProvider = timeProvider,
+                ioDispatcher = testDispatcher,
+            )
+        val resumeController =
+            com.example.minutewatcher.feature.main.controller
+                .MainResumeController(timeProvider)
+
         val controllers =
             MainViewModelControllers(
                 dialog = dialogController,
@@ -138,15 +158,15 @@ class UsageAccessNavigationTest {
                 refresh = refreshController,
                 settings = settingsController,
                 simData = simDataController,
+                init = initController,
+                resume = resumeController,
             )
 
         return MainViewModel(
             controllers = controllers,
-            appSettingsRepository = appSettingsRepository,
             autoResetUseCase = autoResetUseCase,
             savedStateHandle = savedStateHandle,
             timeProvider = timeProvider,
-            ioDispatcher = testDispatcher,
         )
     }
 

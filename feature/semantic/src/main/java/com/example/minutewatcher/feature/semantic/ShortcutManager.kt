@@ -49,6 +49,7 @@ import javax.inject.Singleton
  * @property navigationProvider Provider for main activity class name.
  * @property ioDispatcher Dispatcher for I/O bound operations.
  */
+@Suppress("TooManyFunctions")
 @Singleton
 class ShortcutManager
     @Inject
@@ -117,9 +118,11 @@ class ShortcutManager
                                 e: Exception,
                             ) {
                                 AppLogger.e("Failed to update dynamic shortcuts", e)
+                                @Suppress("InstanceOfCheckForException")
                                 val type =
-                                    if (e is UnsupportedOperationException ||
-                                        e.message?.contains("Shortcut") == true
+                                    if (
+                                        (e is UnsupportedOperationException) ||
+                                        (e.message?.contains("Shortcut") == true)
                                     ) {
                                         TrackingStatus.ErrorType.NOT_SUPPORTED
                                     } else {

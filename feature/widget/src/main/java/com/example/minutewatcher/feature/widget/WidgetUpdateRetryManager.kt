@@ -13,44 +13,43 @@ import kotlin.time.Duration.Companion.milliseconds
  * Safe to call from any coroutine context.
  */
 @Singleton
-class WidgetUpdateRetryManager @Inject constructor() {
+class WidgetUpdateRetryManager
+    @Inject
+    constructor() {
+        suspend fun updateWithRetry(updateBlock: suspend (Int) -> UpdateOutcome): Boolean {
+            var delayMs = Constants.Widget.RETRY_BACKOFF_MS
+            var result = false
+            var attempt = 1
+            var keepGoing = true
 
-    suspend fun updateWithRetry(
-        updateBlock: suspend (Int) -> UpdateOutcome,
-    ): Boolean {
-        var delayMs = Constants.Widget.RETRY_BACKOFF_MS
-        var result = false
-        var attempt = 1
-        var keepGoing = true
+            while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && keepGoing) {
+                val outcome = updateBlock(attempt)
 
-        while (attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS && keepGoing) {
-            val outcome = updateBlock(attempt)
-
-            when (outcome) {
-                is UpdateOutcome.Success -> {
-                    result = true
-                    keepGoing = false
-                }
-                is UpdateOutcome.Stop -> {
-                    keepGoing = false
-                }
-                is UpdateOutcome.Retry -> {
-                    if (attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
-                        AppLogger.e("Widget update exhausted all retry attempts.")
+                when (outcome) {
+                    is UpdateOutcome.Success -> {
+                        result = true
                         keepGoing = false
-                    } else {
-                        AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
-                        delay(delayMs.milliseconds)
-                        delayMs = (delayMs * 2).coerceAtMost(Constants.Widget.MAX_RETRY_DELAY_MS)
-                        attempt++
+                    }
+                    is UpdateOutcome.Stop -> {
+                        keepGoing = false
+                    }
+                    is UpdateOutcome.Retry -> {
+                        if (attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                            AppLogger.e("Widget update exhausted all retry attempts.")
+                            keepGoing = false
+                        } else {
+                            AppLogger.w("Widget update attempt $attempt failed, retrying in ${delayMs}ms")
+                            delay(delayMs.milliseconds)
+                            delayMs = (delayMs * 2).coerceAtMost(Constants.Widget.MAX_RETRY_DELAY_MS)
+                            attempt++
+                        }
                     }
                 }
             }
-        }
 
-        if (!result) {
-            AppLogger.e("Widget update failed after $attempt attempts")
+            if (!result) {
+                AppLogger.e("Widget update failed after $attempt attempts")
+            }
+            return result
         }
-        return result
     }
-}

@@ -37,6 +37,9 @@ class SimIdentitySeedRaceTest {
     private lateinit var permissionStateNotifier: PermissionStateNotifier
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var seedRepository: SimIdentitySeedRepository
+    private val timeProvider =
+        com.example.minutewatcher.core.common.util
+            .FixedTimeProvider(currentTime = 1000000L)
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var discoveryDeps: SimDiscoveryDependencies
@@ -62,6 +65,7 @@ class SimIdentitySeedRaceTest {
             }
         seedRepository = mock()
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
+        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
         discoveryDeps =
             SimDiscoveryDependencies(
@@ -84,13 +88,12 @@ class SimIdentitySeedRaceTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    discovery = SimIdentityDiscovery(discoveryDeps),
+                    persistence = SimIdentityPersistence(dataStore, migrationService),
+                    cache = SimIdentityCache(timeProvider),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
-                    migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
-                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 
@@ -126,13 +129,12 @@ class SimIdentitySeedRaceTest {
 
             val repository =
                 SimIdentityRepositoryImpl(
-                    discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    discovery = SimIdentityDiscovery(discoveryDeps),
+                    persistence = SimIdentityPersistence(dataStore, migrationService),
+                    cache = SimIdentityCache(timeProvider),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
-                    migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
-                    timeProvider = mock(),
                     scope = backgroundScope,
                 )
 

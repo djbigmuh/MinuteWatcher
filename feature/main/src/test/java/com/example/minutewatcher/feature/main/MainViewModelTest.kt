@@ -131,6 +131,7 @@ class MainViewModelTest {
         Dispatchers.resetMain()
     }
 
+    @Suppress("LongMethod")
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = MainDialogController(savedStateHandle)
         val bannerController =
@@ -190,11 +191,9 @@ class MainViewModelTest {
 
         return MainViewModel(
             controllers = controllers,
-            appSettingsRepository = appSettingsRepository,
             autoResetUseCase = autoResetUseCase,
             savedStateHandle = savedStateHandle,
             timeProvider = timeProvider,
-            ioDispatcher = testDispatcher,
         )
     }
 

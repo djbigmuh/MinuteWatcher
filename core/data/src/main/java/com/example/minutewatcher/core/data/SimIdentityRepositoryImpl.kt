@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.UUID
@@ -57,6 +56,7 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Safe to call from any coroutine context.
  */
+@Suppress("TooManyFunctions")
 @Singleton
 class SimIdentityRepositoryImpl
     @Inject
@@ -142,6 +142,7 @@ class SimIdentityRepositoryImpl
                 }.launchIn(scope)
         }
 
+        @Suppress("ReturnCount")
         private suspend fun fetchActiveSimsWithRetry(seed: SeedResult): List<ActiveSimInfo> {
             var retryDelay = Constants.Flow.RETRY_DELAY_MS
             val maxDelay = Constants.Flow.LONG_TIMEOUT_MS * MAX_DELAY_MULTIPLIER
@@ -166,6 +167,7 @@ class SimIdentityRepositoryImpl
             return emptyList()
         }
 
+        @Suppress("ReturnCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val seedValue =
                 when (seed) {

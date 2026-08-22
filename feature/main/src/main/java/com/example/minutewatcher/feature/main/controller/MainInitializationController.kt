@@ -31,6 +31,7 @@ class MainInitializationController
         private val dialogController: MainDialogController,
         private val autoResetScheduler: AutoResetScheduler,
         private val timeProvider: TimeProvider,
+        @com.example.minutewatcher.core.common.di.IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val _initializationState = MutableStateFlow(false)
@@ -63,10 +64,11 @@ class MainInitializationController
                         if (result is RefreshResult.Success) break
 
                         if (attempt < MAX_INIT_RETRIES) {
-                            val reason = when (result) {
-                                is RefreshResult.Timeout -> "timeout"
-                                null -> "busy/error"
-                            }
+                            val reason =
+                                when (result) {
+                                    is RefreshResult.Timeout -> "timeout"
+                                    null -> "busy/error"
+                                }
                             AppLogger.d(
                                 "initializeApp: refresh failed ($reason), " +
                                     "retrying in ${retryDelay}ms (attempt ${attempt + 1}/$MAX_INIT_RETRIES)",

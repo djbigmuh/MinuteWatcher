@@ -549,9 +549,13 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // Verify sim_1 is in baselineNeedsRetry
-            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
+            baselineManagerField.isAccessible = true
+            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
+
+            val field = TrafficBaselineManager::class.java.getDeclaredField("baselineNeedsRetry")
             field.isAccessible = true
-            val map = field[tracker] as Map<*, *>
+            val map = field[baselineManager] as Map<*, *>
             assertTrue("sim_1 should be in retry map", map.containsKey("sim_1"))
 
             // 3. SIM swap back to SubId 1 (sim_0)
@@ -597,10 +601,14 @@ class TrafficTrackerTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
 
             // Manually inject retry count to skip the 1..4 iterations
-            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
+            baselineManagerField.isAccessible = true
+            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
+
+            val field = TrafficBaselineManager::class.java.getDeclaredField("baselineNeedsRetry")
             field.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val map = field[tracker] as MutableMap<String, Int>
+            val map = field[baselineManager] as MutableMap<String, Int>
             map["sim_1"] = 5 // MAX_BASELINE_RETRIES
 
             // Act
@@ -686,9 +694,13 @@ class TrafficTrackerTest {
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
             tracker.updateTrafficUsage()
 
-            val field = TrafficTracker::class.java.getDeclaredField("inMemoryLastDataSubId")
+            val simChangeHandlerField = TrafficTracker::class.java.getDeclaredField("simChangeHandler")
+            simChangeHandlerField.isAccessible = true
+            val simChangeHandler = simChangeHandlerField[tracker] as TrafficSimChangeHandler
+
+            val field = TrafficSimChangeHandler::class.java.getDeclaredField("inMemoryLastDataSubId")
             field.isAccessible = true
-            val subId = field[tracker] as Int
+            val subId = field[simChangeHandler] as Int
             assertEquals(1, subId)
 
             // 2. Timeout on observeActiveSims
@@ -697,7 +709,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
-            val subIdAfter = field[tracker] as Int
+            val subIdAfter = field[simChangeHandler] as Int
             assertEquals("inMemoryLastDataSubId should NOT be reset on timeout", 1, subIdAfter)
         }
 
@@ -781,10 +793,14 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             // Arrange: add an entry to baselineNeedsRetry
             val identity = "sim_0"
-            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
+            baselineManagerField.isAccessible = true
+            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
+
+            val field = TrafficBaselineManager::class.java.getDeclaredField("baselineNeedsRetry")
             field.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val map = field[tracker] as MutableMap<String, Int>
+            val map = field[baselineManager] as MutableMap<String, Int>
             map[identity] = 1
 
             // Mock timeout
@@ -820,10 +836,14 @@ class TrafficTrackerTest {
     fun `baselineNeedsRetry is cleared of inactive SIMs after successful call following timeout`() =
         runTest(testDispatcher) {
             val staleIdentity = "stale_sim"
-            val field = TrafficTracker::class.java.getDeclaredField("baselineNeedsRetry")
+            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
+            baselineManagerField.isAccessible = true
+            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
+
+            val field = TrafficBaselineManager::class.java.getDeclaredField("baselineNeedsRetry")
             field.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val map = field[tracker] as MutableMap<String, Int>
+            val map = field[baselineManager] as MutableMap<String, Int>
             map[staleIdentity] = 1
 
             // 1. First call: timeout on observeActiveSims

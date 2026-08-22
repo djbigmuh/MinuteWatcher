@@ -22,6 +22,7 @@ object AppLogger {
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
     private const val LOG_QUEUE_CAPACITY = 2048
+    private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
 
     private var logDir: File? = null
@@ -48,7 +49,9 @@ object AppLogger {
     }
 
     private class PriorityLogRejectionHandler : RejectedExecutionHandler {
-        private val droppedCount = java.util.concurrent.atomic.AtomicLong(0)
+        private val droppedCount =
+            java.util.concurrent.atomic
+                .AtomicLong(0)
 
         override fun rejectedExecution(
             r: Runnable?,
@@ -84,7 +87,7 @@ object AppLogger {
                 droppedCount.incrementAndGet()
             }
 
-            if (droppedCount.get() % 50L == 1L) {
+            if (droppedCount.get() % DROPPED_LOGS_REPORT_INTERVAL == 1L) {
                 Log.w(TAG, "Log queue full! Total dropped/displaced non-critical logs: ${droppedCount.get()}")
             }
         }

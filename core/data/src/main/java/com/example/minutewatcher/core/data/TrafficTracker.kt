@@ -75,6 +75,7 @@ class TrafficTracker
             }
         }
 
+        @Suppress("ReturnCount")
         suspend fun updateTrafficUsage() {
             trafficMutex.withLock {
                 try {
@@ -143,6 +144,7 @@ class TrafficTracker
             }
         }
 
+        @Suppress("ReturnCount")
         private suspend fun performTrafficUpdate(
             target: TargetInfo,
             targetIdentity: String,
@@ -182,13 +184,18 @@ class TrafficTracker
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     simUsageRepository.getSimUsage(targetIdentity).first()
                 } ?: run {
-                AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
-                return
-            }
+                    AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+                    return
+                }
 
             val statsResult = baselineManager.getCurrentMobileBytes(usage.lastResetDate)
-            if (baselineManager.handleBaselineRetry(target, targetIdentity, statsResult, _status) {
+            if (baselineManager.handleBaselineRetry(
+                    target,
+                    targetIdentity,
+                    statsResult,
+                    _status,
+                ) {
                     simChangeHandler.updateLastDataSubId(it)
                 }
             ) {
@@ -231,7 +238,12 @@ class TrafficTracker
             lastTotalBytes: Long,
         ) {
             if (statsResult !is StatsResult.Success) {
-                val message = if (statsResult is StatsResult.Error) statsResult.exception.message else "Stats unavailable"
+                val message =
+                    if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message
+                    } else {
+                        "Stats unavailable"
+                    }
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                 return
             }

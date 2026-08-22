@@ -136,7 +136,7 @@ class UsageDocument {
             val usageStatus = ColorProvider.getUsageStatus(entity.remaining.toFloat(), entity.limit.toFloat()).name
 
             return UsageDocument(
-                namespace = SemanticSearchManager.NAMESPACE,
+                namespace = AppSearchConstants.NAMESPACE,
                 id = entity.id,
                 score = 0,
                 operatorName = entity.operatorName,

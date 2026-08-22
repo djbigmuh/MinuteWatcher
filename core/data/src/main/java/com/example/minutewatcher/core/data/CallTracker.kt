@@ -99,7 +99,6 @@ open class CallTracker
          */
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
-
         /**
          * Records call start time for a specific subscription ID.
          *

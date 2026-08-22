@@ -9,7 +9,7 @@ import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager.Companion.NAMESPACE
+import com.example.minutewatcher.feature.semantic.search.AppSearchConstants.NAMESPACE
 import kotlinx.coroutines.guava.await
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
