@@ -141,7 +141,12 @@ class MainSettingsController
          */
         fun setPhonePermissionRequested() {
             scope.launch {
-                appSettingsRepository.updateAppSettings { it.copy(phonePermissionRequested = true) }
+                appSettingsRepository.updateAppSettings {
+                    it.copy(
+                        wasPhonePermissionRequestedBefore = true,
+                        phonePermissionRequested = true,
+                    )
+                }
             }
         }
     }

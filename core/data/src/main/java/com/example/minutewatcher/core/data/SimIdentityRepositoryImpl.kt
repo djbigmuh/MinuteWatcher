@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.UUID
@@ -69,6 +71,7 @@ class SimIdentityRepositoryImpl
         private val mockSimProvider: MockSimProvider,
         @ApplicationScope private val scope: CoroutineScope,
     ) : SimIdentityRepository {
+        private val activeSimsMutex = Mutex()
         @VisibleForTesting
         constructor(
             discoveryDeps: SimDiscoveryDependencies,
@@ -221,36 +224,37 @@ class SimIdentityRepositoryImpl
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
-        override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+        override suspend fun getSimIdentity(slot: Int): SimIdentity =
+            activeSimsMutex.withLock {
+                require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
 
-            activeSimsCache.value.find { it.slotIndex == slot }?.let {
-                cache.removeManual(slot)
-                return it.identity
-            }
-
-            cache.getManual(slot)?.let { return it }
-
-            val seed =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    seedFlow.firstOrNull()
-                } ?: SeedResult.Fallback
-
-            val seedValue =
-                when (seed) {
-                    is SeedResult.Real -> seed.value
-                    is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                    cache.removeManual(slot)
+                    return@withLock it.identity
                 }
 
-            val resolved =
-                discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                    SimIdentityUtils.createIdentityFromInfo(it, seedValue)
-                } ?: throw SimNotFoundException(slot)
+                cache.getManual(slot)?.let { return@withLock it }
 
-            cache.putManual(slot, resolved)
-            persistence.saveSimIdentitiesInfo(listOf(resolved))
-            return resolved
-        }
+                val seed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        seedFlow.firstOrNull()
+                    } ?: SeedResult.Fallback
+
+                val seedValue =
+                    when (seed) {
+                        is SeedResult.Real -> seed.value
+                        is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                    }
+
+                val resolved =
+                    discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                        SimIdentityUtils.createIdentityFromInfo(it, seedValue)
+                    } ?: throw SimNotFoundException(slot)
+
+                cache.putManual(slot, resolved)
+                persistence.saveSimIdentitiesInfo(listOf(resolved))
+                resolved
+            }
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache
 

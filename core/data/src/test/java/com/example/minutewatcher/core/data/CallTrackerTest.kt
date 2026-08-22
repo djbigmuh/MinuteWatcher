@@ -61,6 +61,14 @@ class CallTrackerTest {
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionManager: PermissionManager = mock()
     private val telephonyManager: TelephonyManager = mock()
+    private val retryHelper = object : com.example.minutewatcher.core.data.util.DataStoreRetryHelper() {
+        override suspend fun <T> readWithRetry(
+            label: String,
+            attempts: Int,
+            retryDelayMs: Long,
+            reader: () -> kotlinx.coroutines.flow.Flow<T>
+        ): Result<T> = Result.success(reader().first())
+    }
 
     private val timeProvider =
         FixedTimeProvider(
@@ -104,6 +112,7 @@ class CallTrackerTest {
             permissionManager,
             telephonyManager,
             timeProvider,
+            retryHelper,
             testScope,
         )
 

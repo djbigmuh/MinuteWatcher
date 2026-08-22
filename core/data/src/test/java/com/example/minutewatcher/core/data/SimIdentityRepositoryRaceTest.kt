@@ -14,6 +14,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -215,5 +217,61 @@ class SimIdentityRepositoryRaceTest {
             assertEquals("Should not emit Fallback after Real", 1, emissions.size)
 
             job.cancel()
+        }
+
+    @Test
+    fun `concurrent getSimIdentity calls are serialized by mutex`() =
+        runTest {
+            val seedRepo = mock<SimIdentitySeedRepository>()
+            whenever(seedRepo.seedFlow).thenReturn(flowOf("test-seed"))
+            whenever(seedRepo.getOrCreateSeed(any())).thenReturn("test-seed")
+
+            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.iccId).thenReturn("icc_1")
+
+            val permissionManager = mock<PermissionManager>()
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+            val discovery = SimIdentityDiscovery(
+                SimDiscoveryDependencies(
+                    context = mock(),
+                    subscriptionManager = mock(),
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) }
+                )
+            )
+
+            val persistence = mock<SimIdentityPersistence>()
+            // Track number of calls to saveSimIdentitiesInfo
+            var saveCalls = 0
+            whenever(persistence.saveSimIdentitiesInfo(any())).thenAnswer {
+                saveCalls++
+                Unit
+            }
+
+            val repository = SimIdentityRepositoryImpl(
+                discovery = discovery,
+                persistence = persistence,
+                cache = SimIdentityCache(mock { on { elapsedRealtime() } doReturn 1000L }),
+                seedRepository = seedRepo,
+                appSettingsRepository = appSettingsRepository,
+                mockSimProvider = mockSimProvider,
+                scope = backgroundScope
+            )
+
+            val jobs = List(10) {
+                launch {
+                    repository.getSimIdentity(0)
+                }
+            }
+            jobs.joinAll()
+
+            // Because of the mutex and caching, saveSimIdentitiesInfo should be called only once
+            // (or more precisely, it should be called only when cache is empty.
+            // The first call fills the cache, subsequent calls should return from cache).
+            assertEquals("Persistence should be called once due to synchronization and caching", 1, saveCalls)
         }
 }

@@ -278,7 +278,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         checkNotifications(autoRequest = true)
                     }
-                } else if (settings.phonePermissionRequested) {
+                } else if (settings.wasPhonePermissionRequestedBefore) {
                     // Если разрешение не выдано, но мы его уже запрашивали ранее,
                     // проверяем, заблокирован ли запрос.
                     val shouldShowRationale =
@@ -287,11 +287,12 @@ class MainActivity : AppCompatActivity() {
                             Manifest.permission.READ_PHONE_STATE,
                         )
                     // Если рациональ НЕ должна показываться при отсутствующем разрешении,
-                    // значит оно либо еще не запрашивалось (но флаг true?), либо заблокировано "Don't ask again".
-                    // На некоторых устройствах флаг рациональности сбрасывается.
-                    // Безопаснее считать заблокированным только если рациональ была true, а стала false после отказа.
+                    // значит оно либо еще не запрашивалось, либо заблокировано "Don't ask again".
+                    // Мы используем флаг wasPhonePermissionRequestedBefore, чтобы отличить эти случаи.
                     viewModel.setPhonePermissionPermanentlyDenied(!shouldShowRationale)
                 } else {
+                    // Первый запуск: разрешение еще не запрашивалось.
+                    viewModel.setPhonePermissionPermanentlyDenied(false)
                     viewModel.setPhonePermissionRequested()
                     phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                 }

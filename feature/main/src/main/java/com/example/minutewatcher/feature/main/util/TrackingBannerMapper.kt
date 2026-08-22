@@ -26,7 +26,7 @@ object TrackingBannerMapper {
             determinePhonePermissionState(
                 phoneGranted,
                 phonePermanentlyDenied,
-                settings.phonePermissionRequested,
+                settings.wasPhonePermissionRequestedBefore,
             )
 
         if (!settings.onboardingCompleted) {

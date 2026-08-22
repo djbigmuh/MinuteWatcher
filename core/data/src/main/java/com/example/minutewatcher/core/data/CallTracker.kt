@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -21,7 +22,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,7 +43,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Uses a Mutex to prevent race conditions during concurrent call events.
  */
 @Singleton
-@Suppress("LongParameterList", "LargeClass")
+@Suppress("LongParameterList")
 open class CallTracker
     @Inject
     constructor(
@@ -56,6 +56,7 @@ open class CallTracker
         private val permissionManager: PermissionManager,
         private val telephonyManager: TelephonyManager,
         private val timeProvider: TimeProvider,
+        private val retryHelper: DataStoreRetryHelper,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "CallTracker"
@@ -244,7 +245,7 @@ open class CallTracker
 
         private suspend fun isCallTrackingEnabled(): Boolean {
             val settings =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "isCallTrackingEnabled",
                     reader = { appSettingsRepository.getAppSettings() },
                 ).getOrThrow()
@@ -278,7 +279,7 @@ open class CallTracker
         @Suppress("ReturnCount")
         private suspend fun validateAndRecordStart(targetSubId: Int): Boolean {
             val startTimeResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "getCallStartTime",
                     reader = { callSessionRepository.getCallStartTime(targetSubId) },
                 )
@@ -320,7 +321,7 @@ open class CallTracker
 
         private suspend fun isSessionStale(subId: Int): Boolean {
             val bootTimeResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "getBootTime",
                     reader = { callSessionRepository.getBootTime(subId) },
                 )
@@ -392,7 +393,7 @@ open class CallTracker
             notify: Boolean = true,
         ) {
             val startTimeResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "endCall:startTime",
                     reader = { callSessionRepository.getCallStartTime(subId) },
                 )
@@ -416,13 +417,14 @@ open class CallTracker
             // в пределах одной загрузки устройства. Если кастомная прошивка возвращает
             // немонотонный elapsedRealtime — это проблема кастомной прошивки.
             val savedBootTimeResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "endCall:bootTimeForDuration",
                     reader = { callSessionRepository.getBootTime(subId) },
                 )
             val savedBootTime = savedBootTimeResult.getOrElse { 0L }
             val currentBootTime = timeProvider.elapsedRealtime()
-            val durationSeconds = ((currentBootTime - savedBootTime) / MILLIS_IN_SECOND).toInt()
+            val durationSeconds =
+                ((currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
 
             if (validateDurationAndProcess(durationSeconds, subId, notify)) {
                 cleanupCounters(subId)
@@ -443,7 +445,7 @@ open class CallTracker
         private suspend fun isSessionStaleInEndCall(subId: Int): Boolean {
             try {
                 val savedBootTimeResult =
-                    readWithRetry(
+                    retryHelper.readWithRetry(
                         label = "endCall:bootTime",
                         reader = { callSessionRepository.getBootTime(subId) },
                     )
@@ -485,7 +487,7 @@ open class CallTracker
             if (!validateUptime(subId)) return true
 
             val savedIdentityResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "endCall:identity",
                     reader = { callSessionRepository.getCallIdentity(subId) },
                 )
@@ -497,7 +499,7 @@ open class CallTracker
         private suspend fun validateUptime(subId: Int): Boolean {
             val currentUptime = timeProvider.uptimeMillis()
             val savedUptimeResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "endCall:uptime",
                     reader = { callSessionRepository.getUptime(subId) },
                 )
@@ -515,7 +517,7 @@ open class CallTracker
 
             // 1. Try last data SIM
             val lastResult =
-                readWithRetry(
+                retryHelper.readWithRetry(
                     label = "resolveEffectiveSubId:lastData",
                     reader = { callSessionRepository.getLastDataSubId() },
                 )
@@ -556,39 +558,6 @@ open class CallTracker
                     ?.stableId
             }
 
-        private suspend fun <T> readWithRetry(
-            label: String,
-            attempts: Int = READ_RETRY_ATTEMPTS,
-            retryDelayMs: Long = READ_RETRY_DELAY_MS,
-            reader: () -> kotlinx.coroutines.flow.Flow<T>,
-        ): Result<T> {
-            var lastException: Exception? = null
-            var currentDelay = retryDelayMs
-
-            for (attempt in 1..attempts) {
-                try {
-                    val result =
-                        withTimeoutOrNull(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS.milliseconds) {
-                            reader().first()
-                        }
-                    if (result != null) return Result.success(result)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    lastException = e
-                }
-
-                if (attempt < attempts) {
-                    AppLogger.w(
-                        "DataStore read retry ($label): attempt $attempt/$attempts failed. " +
-                            "Retrying in ${currentDelay}ms",
-                    )
-                    delay(currentDelay)
-                    currentDelay *= 2
-                }
-            }
-            return Result.failure(lastException ?: IOException("DataStore read Timeout ($label)"))
-        }
 
         @Suppress("ReturnCount")
         private suspend fun writeCallDuration(
@@ -682,7 +651,8 @@ open class CallTracker
             return false
         }
 
-        private fun calculateDurationMinutes(seconds: Int): Int = (seconds + CEIL_SECONDS_OFFSET) / SECONDS_IN_MINUTE
+        private fun calculateDurationMinutes(seconds: Int): Int =
+            (seconds + Constants.Time.CEIL_SECONDS_OFFSET) / Constants.Time.SECONDS_IN_MINUTE
 
         private suspend fun resolveTargetIdentity(
             subId: Int,
@@ -773,142 +743,8 @@ open class CallTracker
         }
 
         companion object {
-            private const val READ_RETRY_ATTEMPTS = 3
-            private const val READ_RETRY_DELAY_MS = 500L
             private const val MAX_WRITE_ATTEMPTS = 3
             private const val MAX_ATTRIBUTION_FAILURES = 3
-            private const val MILLIS_IN_SECOND = 1000
-            private const val SECONDS_IN_MINUTE = 60
-            private const val CEIL_SECONDS_OFFSET = 59
         }
     }
 
-/**
- * Вспомогательный класс для разрешения завершения звонков в неопределенных ситуациях.
- * Вынесен из [CallTracker] для уменьшения количества методов в основном классе.
- */
-internal class CallEndResolver(
-    private val context: Context,
-    private val callSessionRepository: CallSessionRepository,
-    private val permissionManager: PermissionManager,
-    private val telephonyManager: TelephonyManager,
-    private val dataChangeNotifier: DataChangeNotifier,
-    private val endCall: suspend (Int, Boolean) -> Unit,
-    private val setError: (TrackingStatus.Error) -> Unit,
-) {
-    suspend fun resolveUnknownSubIdEnd() {
-        if (!permissionManager.hasPhoneStatePermission()) {
-            AppLogger.w("CallEndResolver: permission revoked during resolveUnknownSubIdEnd")
-            setError(
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.PERMISSION_MISSING,
-                    "Permission revoked during call end resolution",
-                ),
-            )
-            dataChangeNotifier.notifyDataChanged()
-            return
-        }
-        val activeSubIds =
-            try {
-                callSessionRepository.getActiveCallSubIds()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: SecurityException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to read active call sessions on unknown subId end", e)
-                emptyList()
-            }
-
-        if (activeSubIds.isEmpty()) {
-            AppLogger.d("Call ended with unknown subId and no active sessions found")
-        } else if (isDeviceIdle(activeSubIds)) {
-            handleGlobalIdle(activeSubIds)
-        } else {
-            val target: Int? = findTargetSubId(activeSubIds)
-            if (target != null) {
-                endCall(target, true)
-            } else {
-                handleAmbiguousIdle(activeSubIds)
-            }
-        }
-    }
-
-    @Suppress("MissingPermission")
-    private fun isDeviceIdle(activeSubIds: List<Int>): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            activeSubIds.all { id ->
-                if (ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_PHONE_STATE,
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
-                    state == TelephonyManager.CALL_STATE_IDLE
-                } else {
-                    AppLogger.w("Permission not granted, skipping API call for isDeviceIdle")
-                    false
-                }
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val state = telephonyManager.callState
-                state == TelephonyManager.CALL_STATE_IDLE
-            } else {
-                AppLogger.w("Permission not granted, skipping API call for isDeviceIdle (legacy)")
-                false
-            }
-        }
-
-    private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
-        AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-        for (subId in activeSubIds) {
-            endCall(subId, false)
-        }
-        dataChangeNotifier.notifyDataChanged()
-    }
-
-    private fun handleAmbiguousIdle(activeSubIds: List<Int>) {
-        val message = "Cannot attribute unknown IDLE event for multiple active calls (${activeSubIds.size})"
-        AppLogger.e(message, null)
-        setError(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
-    }
-
-    @Suppress("MissingPermission")
-    private fun findTargetSubId(activeSubIds: List<Int>): Int? {
-        if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_PHONE_STATE,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            AppLogger.w("Permission not granted, skipping API call for findTargetSubId")
-            return null
-        }
-
-        return when {
-            activeSubIds.size == 1 -> activeSubIds.first()
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                activeSubIds
-                    .asSequence()
-                    .filter { id ->
-                        if (ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.READ_PHONE_STATE,
-                            ) == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
-                            state == TelephonyManager.CALL_STATE_IDLE
-                        } else {
-                            false
-                        }
-                    }.singleOrNull()
-            }
-            else -> null
-        }
-    }
-}

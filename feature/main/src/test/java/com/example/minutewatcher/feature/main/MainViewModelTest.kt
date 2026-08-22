@@ -308,7 +308,7 @@ class MainViewModelTest {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
-                        phonePermissionRequested = false,
+                        wasPhonePermissionRequestedBefore = false,
                         onboardingCompleted = true,
                     ),
                 )
@@ -329,7 +329,7 @@ class MainViewModelTest {
             // Case 2: Requested but denied
             settingsFlow.value =
                 AppSettings(
-                    phonePermissionRequested = true,
+                    wasPhonePermissionRequestedBefore = true,
                     onboardingCompleted = true,
                 )
             testScheduler.advanceUntilIdle()

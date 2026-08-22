@@ -65,7 +65,7 @@ class WidgetSettingsViewModel
         // При начале новой загрузки (retryLoad) сбрасывается в false.
         //
         // Потокобезопасность: MutableStateFlow потокобезопасен.
-        private val _loadError = MutableStateFlow(false)
+        private val _loadError = MutableStateFlow(value = false)
         val loadError: StateFlow<Boolean> = _loadError.asStateFlow()
 
         // saveMutex — мьютекс для предотвращения конкурентных сохранений.
@@ -308,66 +308,52 @@ class WidgetSettingsViewModel
          * Чтение .value из MutableStateFlow потокобезопасно.
          * Синхронизация не требуется.
          */
-        @Suppress("ReturnCount")
+        private fun determineSaveState(): SaveState {
+            if (_loadError.value) return SaveState.LoadFailed
+            val currentState = _settingsState.value ?: return SaveState.NotLoaded
+            if (currentState.settingsLoadFailed) return SaveState.LoadFailed
+            return SaveState.Ready(currentState)
+        }
+
         private suspend fun performSaveInternal(): SaveResult {
-            if (_loadError.value) {
-                AppLogger.w("saveAndNotify skipped: settings load failed previously")
-                return SaveResult.Failed
-            }
+            return when (val saveState = determineSaveState()) {
+                is SaveState.LoadFailed -> {
+                    AppLogger.w("saveAndNotify skipped: settings load failed previously")
+                    SaveResult.Failed
+                }
 
-            val currentState = _settingsState.value
-            if (currentState == null) {
-                AppLogger.w("saveAndNotify called before settings were loaded")
-                return SaveResult.Failed
-            }
+                is SaveState.NotLoaded -> {
+                    AppLogger.w("saveAndNotify called before settings were loaded")
+                    SaveResult.Failed
+                }
 
-            if (currentState.settingsLoadFailed) {
-                AppLogger.w("saveAndNotify: skipping save because settings were not loaded successfully")
-                return SaveResult.Failed
-            }
-
-            return if (currentState.simListLoadFailed) {
-                savePartialSettings(currentState)
-            } else {
-                saveFullSettings(currentState)
+                is SaveState.Ready -> {
+                    executeSave(saveState.state)
+                }
             }
         }
 
-        private suspend fun savePartialSettings(state: WidgetSettingsState): SaveResult {
-            AppLogger.w(
-                "saveAndNotify: SIM list was not loaded successfully. " +
-                    "Saving only general settings via skipSimSettings = true.",
-            )
+        private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
+            val isPartial = state.simListLoadFailed
+            if (isPartial) {
+                AppLogger.w(
+                    "saveAndNotify: SIM list was not loaded successfully. " +
+                        "Saving only general settings via skipSimSettings = true.",
+                )
+            }
+
             val validatedState = validateSettings(state)
-            /**
-             * Строгое соблюдение API: на AOSP save() завершается за миллисекунды.
-             * Таймаут 10 с — защитный запас. Таймаут здесь указывает на
-             * деградацию DataStore на кастомной прошивке.
-             */
-            return withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                val result = saver.save(validatedState, skipSimSettings = true)
-                if (result is SaveResult.PartialSuccess || result is SaveResult.Success) {
+            val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
+
+            return withTimeoutOrNull(timeout) {
+                val result = saver.save(validatedState, skipSimSettings = isPartial)
+                if (isPartial && ((result is SaveResult.PartialSuccess) || (result is SaveResult.Success))) {
                     SaveResult.PartialFailure("SIM settings skipped")
                 } else {
                     result
                 }
             } ?: run {
-                AppLogger.e("saveAndNotify: timeout during partial save. Possible DataStore degradation.")
-                SaveResult.Failed
-            }
-        }
-
-        private suspend fun saveFullSettings(state: WidgetSettingsState): SaveResult {
-            val validatedState = validateSettings(state)
-            /**
-             * Строгое соблюдение API: на AOSP save() завершается за миллисекунды.
-             * Таймаут 10 с — защитный запас. Таймаут здесь указывает на
-             * деградацию DataStore на кастомной прошивке.
-             */
-            return withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                saver.save(validatedState)
-            } ?: run {
-                AppLogger.e("saveAndNotify: timeout during full save. Possible DataStore degradation.")
+                AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
                 SaveResult.Failed
             }
         }
@@ -421,6 +407,12 @@ class WidgetSettingsViewModel
              * занимает больше 10 секунд — это проблема кастомной прошивки.
              * Таймаут здесь указывает на деградацию DataStore на кастомной прошивке.
              */
-            private val LOAD_TIMEOUT: Duration = 10.seconds
+        private val LOAD_TIMEOUT: Duration = 10.seconds
+        }
+
+        private sealed class SaveState {
+            data object LoadFailed : SaveState()
+            data object NotLoaded : SaveState()
+            data class Ready(val state: WidgetSettingsState) : SaveState()
         }
     }

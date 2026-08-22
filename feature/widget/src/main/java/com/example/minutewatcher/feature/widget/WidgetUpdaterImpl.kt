@@ -41,7 +41,7 @@ class WidgetUpdaterImpl
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome =
             updateMutex.withLock {
                 val outcome =
-                    withTimeoutOrNull(WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                         val result =
                             try {
                                 val settings = appSettingsRepository.observeAppSettings().value
@@ -128,9 +128,6 @@ class WidgetUpdaterImpl
             }
         }
 
-        companion object {
-            private const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
-        }
 
         @VisibleForTesting
         constructor(

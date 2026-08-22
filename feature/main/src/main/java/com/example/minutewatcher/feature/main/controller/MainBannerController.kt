@@ -298,7 +298,7 @@ class MainBannerController
                 }
 
                 val delayMillis =
-                    (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.MILLIS_PER_SECOND)
+                    (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.Time.MILLIS_IN_SECOND)
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
                 true
@@ -313,7 +313,7 @@ class MainBannerController
 
         companion object {
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal const val MAX_RETRY_DELAY_MS = 30_000L
+            internal const val MAX_RETRY_DELAY_MS = Constants.Time.MAX_RETRY_DELAY_MS
 
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val PERIODIC_LOG_INTERVAL_MS = 5 * 60 * 1000L

@@ -13,7 +13,8 @@ data class AppSettings(
     val migrationV1Completed: Boolean = false,
     val onboardingCompleted: Boolean = false,
     val notificationPermissionRequested: Boolean = false,
-    val phonePermissionRequested: Boolean = false,
+    val wasPhonePermissionRequestedBefore: Boolean = false,
+    val phonePermissionRequested: Boolean = false, // Deprecated, use wasPhonePermissionRequestedBefore
     val benchmarkSimCount: Int = 0,
     val widgetLimitExceeded: Boolean = false,
     val inaccurateCallAttributionsCount: Int = 0,

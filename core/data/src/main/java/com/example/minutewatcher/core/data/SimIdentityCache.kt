@@ -45,7 +45,7 @@ class SimIdentityCache
         }
 
         fun cleanupManual(activeSlots: Set<Int>) {
-            manualResolutionCache.keys.removeAll { it !in activeSlots }
+            manualResolutionCache.keys.removeAll { it in activeSlots }
         }
 
         companion object {

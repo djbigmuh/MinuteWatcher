@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -64,6 +65,14 @@ class CallTrackerRaceTest {
                 permissionManager,
                 telephonyManager,
                 timeProvider,
+                object : com.example.minutewatcher.core.data.util.DataStoreRetryHelper() {
+                    override suspend fun <T> readWithRetry(
+                        label: String,
+                        attempts: Int,
+                        retryDelayMs: Long,
+                        reader: () -> kotlinx.coroutines.flow.Flow<T>
+                    ): Result<T> = Result.success(reader().first())
+                },
                 testScope,
             )
 

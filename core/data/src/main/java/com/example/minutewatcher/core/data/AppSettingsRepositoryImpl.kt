@@ -126,6 +126,7 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
             prefs[DataStoreKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
             prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
+            prefs[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE] = updated.wasPhonePermissionRequestedBefore
             prefs[DataStoreKeys.PHONE_PERMISSION_REQUESTED] = updated.phonePermissionRequested
             prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
         }
@@ -162,6 +163,9 @@ class AppSettingsRepositoryImpl
                 notificationPermissionRequested =
                     this[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED]
                         ?: DEFAULT_SETTINGS.notificationPermissionRequested,
+                wasPhonePermissionRequestedBefore =
+                    this[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE]
+                        ?: DEFAULT_SETTINGS.wasPhonePermissionRequestedBefore,
                 phonePermissionRequested =
                     this[DataStoreKeys.PHONE_PERMISSION_REQUESTED] ?: DEFAULT_SETTINGS.phonePermissionRequested,
                 benchmarkSimCount = this[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: DEFAULT_SETTINGS.benchmarkSimCount,

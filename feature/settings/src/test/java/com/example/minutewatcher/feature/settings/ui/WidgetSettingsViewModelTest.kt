@@ -30,8 +30,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -317,7 +319,43 @@ class WidgetSettingsViewModelTest {
             // Обновить настройки SIM
             vm.updateSimSettings(0) { it.copy(showTraffic = true) }
 
-            // Ошибка должна быть сброшена
             assertFalse(vm.loadError.value)
+        }
+
+    @Test
+    fun `saveAndNotify returns Failed when loading failed previously`() =
+        runTest {
+            whenever(loader.load()).thenThrow(RuntimeException("Fail"))
+            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            testScheduler.advanceUntilIdle()
+            assertTrue(vm.loadError.value)
+
+            vm.saveAndNotify()
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(SaveResult.Failed, vm.saveResult.value)
+            verify(saver, never()).save(any(), any())
+        }
+
+    @Test
+    fun `saveAndNotify returns Failed when state is not yet loaded`() =
+        runTest {
+            val deferred = CompletableDeferred<WidgetSettingsState>()
+            val slowLoader = object : WidgetSettingsLoader {
+                override suspend fun load(): WidgetSettingsState = deferred.await()
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) = com.example.minutewatcher.core.domain.WidgetSaveResult.Success
+                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
+                override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+            }
+
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            // Do NOT advance time, so it's still loading inside init -> loadSettings
+
+            vm.saveAndNotify()
+            testScheduler.runCurrent()
+
+            assertEquals(SaveResult.Failed, vm.saveResult.value)
+            verify(saver, never()).save(any(), any())
+            deferred.complete(WidgetSettingsState())
         }
 }

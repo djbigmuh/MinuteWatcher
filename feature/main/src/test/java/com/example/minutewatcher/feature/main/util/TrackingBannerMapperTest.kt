@@ -39,7 +39,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(phonePermissionRequested = false, onboardingCompleted = true),
+                settings = AppSettings(wasPhonePermissionRequestedBefore = false, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.NOT_REQUESTED, state.phonePermissionState)
 
@@ -52,7 +52,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(phonePermissionRequested = true, onboardingCompleted = true),
+                settings = AppSettings(wasPhonePermissionRequestedBefore = true, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.DENIED, state.phonePermissionState)
 
@@ -65,7 +65,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 phonePermanentlyDenied = true,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(phonePermissionRequested = true, onboardingCompleted = true),
+                settings = AppSettings(wasPhonePermissionRequestedBefore = true, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
     }
@@ -160,7 +160,7 @@ class TrackingBannerMapperTest {
                 notificationsGranted = false,
                 phonePermanentlyDenied = true,
                 notificationPermanentlyDenied = false,
-                settings = AppSettings(onboardingCompleted = false, phonePermissionRequested = true),
+                settings = AppSettings(onboardingCompleted = false, wasPhonePermissionRequestedBefore = true),
             )
 
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)

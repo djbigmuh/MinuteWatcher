@@ -237,7 +237,7 @@ class UpdateCoordinator
 
             val delaySeconds =
                 minOf(
-                    (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.MILLIS_PER_SECOND) *
+                    (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.Time.MILLIS_IN_SECOND) *
                         (1L shl minOf(retryAttempt.get().toInt(), MAX_RETRY_EXPONENT)),
                     MAX_RETRY_DELAY_SECONDS,
                 )

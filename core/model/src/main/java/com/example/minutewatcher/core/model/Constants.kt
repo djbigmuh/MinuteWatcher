@@ -130,6 +130,26 @@ object Constants {
     }
 
     /**
+     * Константы времени.
+     */
+    object Time {
+        /** Количество миллисекунд в одной секунде. */
+        const val MILLIS_IN_SECOND = 1000L
+
+        /** Количество секунд в одной минуте. */
+        const val SECONDS_IN_MINUTE = 60
+
+        /** Смещение для округления секунд вверх до минуты. */
+        const val CEIL_SECONDS_OFFSET = 59
+
+        /** Таймаут обновления виджета (мс). */
+        const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
+
+        /** Максимальная задержка между повторными попытками (мс). */
+        const val MAX_RETRY_DELAY_MS = 30_000L
+    }
+
+    /**
      * Константы потоков.
      *
      * WHILE_SUBSCRIBED_STOP_TIMEOUT_MS — таймаут остановки WhileSubscribed (мс).
@@ -171,7 +191,8 @@ object Constants {
      *   максимум для одного звонка.
      */
     object Calls {
-        const val MAX_CALL_DURATION_MS = 12 * 60 * 60 * 1000L
+        const val MAX_CALL_DURATION_MS =
+            12 * Time.SECONDS_IN_MINUTE.toLong() * Time.SECONDS_IN_MINUTE.toLong() * Time.MILLIS_IN_SECOND
     }
 
     /**
@@ -198,16 +219,6 @@ object Constants {
         val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
         const val INVALID_SLOT_IDENTITY_PREFIX = "invalid_slot_"
     }
-
-    /**
-     * Количество миллисекунд в секунде (1000).
-     */
-    const val MILLIS_PER_SECOND = 1000L
-
-    /**
-     * Количество секунд в минуте (60).
-     */
-    const val SECONDS_PER_MINUTE = 60
 
     /**
      * Количество байт в мегабайте (1024 × 1024 = 1048576).
