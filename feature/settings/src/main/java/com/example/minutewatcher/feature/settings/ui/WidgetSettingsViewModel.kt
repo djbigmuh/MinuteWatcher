@@ -146,6 +146,7 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             _loadError.value = false
+            loadJob.getAndSet(null)?.cancel()
             val newJob =
                 viewModelScope.launch {
                     loadMutex.withLock {
@@ -170,7 +171,7 @@ class WidgetSettingsViewModel
                     }
                 }
 
-            loadJob.getAndSet(newJob)?.cancel()
+            loadJob.set(newJob)
         }
 
         /**
@@ -342,23 +343,15 @@ class WidgetSettingsViewModel
                 )
             }
 
-            val validatedState = validateSettings(state)
             val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
 
             return withTimeoutOrNull(timeout) {
-                saver.save(validatedState, skipSimSettings = isPartial)
+                saver.save(state, skipSimSettings = isPartial)
             } ?: run {
                 AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
                 SaveResult.Failed
             }
         }
-
-        /**
-         * Валидирует настройки перед сохранением.
-         * Делегирует выполнение в WidgetSettingsState.validate.
-         */
-        private fun validateSettings(state: WidgetSettingsState): WidgetSettingsState =
-            WidgetSettingsState.validate(state)
 
         companion object {
             /**

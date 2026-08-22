@@ -163,6 +163,9 @@ class SimIdentityRepositoryImpl
                     }
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: SecurityException) {
+                    AppLogger.e("SimIdentityRepository: permission error fetching active SIMs", e)
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to fetch active SIMs", e)
                     return emptyList()
@@ -225,37 +228,40 @@ class SimIdentityRepositoryImpl
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
-        override suspend fun getSimIdentity(slot: Int): SimIdentity =
-            activeSimsMutex.withLock {
-                require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+        override suspend fun getSimIdentity(slot: Int): SimIdentity {
+            val resolved =
+                activeSimsMutex.withLock {
+                    require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
 
-                activeSimsCache.value.find { it.slotIndex == slot }?.let {
-                    cache.removeManual(slot)
-                    return@withLock it.identity
-                }
-
-                cache.getManual(slot)?.let { return@withLock it }
-
-                val seed =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        seedFlow.firstOrNull()
-                    } ?: SeedResult.Fallback
-
-                val seedValue =
-                    when (seed) {
-                        is SeedResult.Real -> seed.value
-                        is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                    activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                        cache.removeManual(slot)
+                        return@withLock it.identity
                     }
 
-                val resolved =
-                    discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                        SimIdentityUtils.createIdentityFromInfo(it, seedValue)
-                    } ?: throw SimNotFoundException(slot)
+                    cache.getManual(slot)?.let { return@withLock it }
 
-                cache.putManual(slot, resolved)
-                persistence.saveSimIdentitiesInfo(listOf(resolved))
-                resolved
-            }
+                    val seed =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            seedFlow.firstOrNull()
+                        } ?: SeedResult.Fallback
+
+                    val seedValue =
+                        when (seed) {
+                            is SeedResult.Real -> seed.value
+                            is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                        }
+
+                    val result =
+                        discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                            SimIdentityUtils.createIdentityFromInfo(it, seedValue)
+                        } ?: throw SimNotFoundException(slot)
+
+                    cache.putManual(slot, result)
+                    result
+                }
+            persistence.saveSimIdentitiesInfo(listOf(resolved))
+            return resolved
+        }
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache
 

@@ -17,6 +17,11 @@ sealed interface WidgetSaveResult {
      * Partial success: general settings saved, but some SIM settings failed.
      */
     data object PartialSuccess : WidgetSaveResult
+
+    /**
+     * Saving failed completely.
+     */
+    data object Failed : WidgetSaveResult
 }
 
 /**

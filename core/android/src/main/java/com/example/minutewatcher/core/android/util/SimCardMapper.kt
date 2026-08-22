@@ -43,6 +43,8 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
+        require(slot in Constants.SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+
         // Мапа negativeLogged подавляет повторное логирование отрицательных
         // значений для одного и того же identity в слоте. При смене SIM
         // в слоте (identity изменился) старая запись удаляется, чтобы

@@ -182,4 +182,28 @@ class WidgetUpdaterImplTest {
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
             assertTrue("widgetLimitExceeded flag should be set", mockSettings.value.widgetLimitExceeded)
         }
+
+    @Test
+    fun `updateAll uses limitManager to check for probing when limit is exceeded`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            val mockLimitManager: WidgetLimitManager = mock()
+            whenever(mockLimitManager.shouldProbe()).thenReturn(true)
+
+            val updaterWithMock =
+                WidgetUpdaterImpl(
+                    context = context,
+                    appSettingsRepository = appSettingsRepository,
+                    renderer = renderer,
+                    limitManager = mockLimitManager,
+                )
+
+            updaterWithMock.updateAll()
+
+            verify(mockLimitManager).shouldProbe()
+            verify(mockLimitManager).performProbeUpdate(eq(context), any())
+        }
 }

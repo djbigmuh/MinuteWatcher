@@ -8,7 +8,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.color.ColorProvider
+import androidx.glance.unit.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -124,17 +124,7 @@ internal fun SimItemText(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    val textColor =
-        if (uiState.useSystemColors && component.color == sim.textColor) {
-            GlanceTheme.colors.onSurface
-        } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
-            GlanceTheme.colors.onSurfaceVariant
-        } else {
-            val composeColor =
-                androidx.compose.ui.graphics
-                    .Color(component.color)
-            ColorProvider(day = composeColor, night = composeColor)
-        }
+    val textColor = resolveTextColor(uiState, sim, component)
 
     Text(
         text = component.text,
@@ -146,6 +136,21 @@ internal fun SimItemText(
             ),
     )
 }
+
+@Composable
+private fun resolveTextColor(
+    uiState: WidgetUiState,
+    sim: SimUiState,
+    component: SimLayoutComponent.Text,
+): ColorProvider =
+    if (uiState.useSystemColors && component.color == sim.textColor) {
+        GlanceTheme.colors.onSurface
+    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+        GlanceTheme.colors.onSurfaceVariant
+    } else {
+        val composeColor = androidx.compose.ui.graphics.Color(component.color)
+        androidx.glance.color.ColorProvider(day = composeColor, night = composeColor)
+    }
 
 /**
  * Рендерит spacer в виджете.

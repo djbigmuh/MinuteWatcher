@@ -27,9 +27,9 @@ class WidgetUpdaterImpl
         @param:ApplicationContext private val context: Context,
         private val appSettingsRepository: AppSettingsRepository,
         private val renderer: WidgetRenderer,
-        private val retryManager: WidgetUpdateRetryManager,
-        private val limitManager: WidgetLimitManager,
-        private val errorClassifier: WidgetErrorClassifier,
+        private val retryManager: WidgetUpdateRetryManager = WidgetUpdateRetryManager(),
+        private val limitManager: WidgetLimitManager = WidgetLimitManager(appSettingsRepository),
+        private val errorClassifier: WidgetErrorClassifier = WidgetErrorClassifier(),
     ) : WidgetUpdater {
         private val updateMutex = Mutex()
 
@@ -123,20 +123,6 @@ class WidgetUpdaterImpl
             } catch (e: Exception) {
                 errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
-
-        @VisibleForTesting
-        constructor(
-            context: Context,
-            appSettingsRepository: AppSettingsRepository,
-            renderer: WidgetRenderer,
-        ) : this(
-            context = context,
-            appSettingsRepository = appSettingsRepository,
-            renderer = renderer,
-            retryManager = WidgetUpdateRetryManager(),
-            limitManager = WidgetLimitManager(appSettingsRepository),
-            errorClassifier = WidgetErrorClassifier(),
-        )
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)

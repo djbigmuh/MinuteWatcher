@@ -167,10 +167,10 @@ class WidgetSettingsRepository
                 val label = if (state.settingsLoadFailed) "all saves" else "SIM-specific settings save"
                 val reason = if (skipSimSettings) "skipSimSettings=true" else "SIM list was not loaded successfully"
                 AppLogger.w("save: $reason. Skipping $label.")
-                return if (state.simListLoadFailed && generalSaved) {
-                    WidgetSaveResult.PartialSuccess
-                } else {
-                    WidgetSaveResult.Success
+                return when {
+                    generalSaved && state.simListLoadFailed -> WidgetSaveResult.PartialSuccess
+                    generalSaved -> WidgetSaveResult.Success
+                    else -> WidgetSaveResult.Failed
                 }
             } else {
                 val simSuccess = saveSimSettings(state)

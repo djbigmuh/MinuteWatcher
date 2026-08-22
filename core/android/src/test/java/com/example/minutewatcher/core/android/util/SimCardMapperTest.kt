@@ -111,4 +111,26 @@ class SimCardMapperTest {
             jobs.awaitAll()
         }
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `map throws for invalid slot index`() {
+        val usage =
+            SimUsage(
+                identity = "test_id",
+                slotIndex = 0,
+                subscriptionId = 1,
+                operator = "TestOp",
+                minutesUsed = 0,
+                minutesLimit = 100,
+                manualAdjustment = 0,
+                trafficUsedMb = 0f,
+                trafficLimitMb = 1024,
+                trafficAdjustmentGb = 0f,
+                autoReset = false,
+                autoResetDay = 1,
+                lastResetDate = 0L,
+                rolloverEnabled = false,
+            )
+        SimCardMapper.map(context, 100, usage)
+    }
 }

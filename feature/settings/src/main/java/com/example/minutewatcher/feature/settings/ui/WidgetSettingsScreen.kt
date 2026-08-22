@@ -82,7 +82,7 @@ fun WidgetSettingsScreen(
     // строки обновятся при следующем пересоздании Activity — это проблема кастомной прошивки.
     val strings = remember(configuration) { WidgetStringsFactory.create(context) }
 
-    // uiState вычисляется через remember(state, snapshot, strings, context).
+    // uiState вычисляется через remember(state, snapshot, strings).
     // Перевычисляется при изменении любого из ключей.
     // Это предотвращает лишние вычисления при рекомпозиции.
     //
@@ -90,7 +90,7 @@ fun WidgetSettingsScreen(
     // snapshot обновляется при изменении данных.
     // state обновляется при изменении настроек.
     val uiState =
-        remember(state, snapshot, strings, context) {
+        remember(state, snapshot, strings) {
             val nonNullState = state ?: return@remember null
             val operatorNames = WidgetStringsFactory.createOperatorNames(context, snapshot.simSnapshots)
             WidgetUiMapper.mapFromSnapshot(

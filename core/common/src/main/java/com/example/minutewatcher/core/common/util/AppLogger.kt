@@ -25,8 +25,8 @@ object AppLogger {
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
 
-    private var logDir: File? = null
-    private var logger: Logger = AndroidLogger()
+    @Volatile private var logDir: File? = null
+    @Volatile private var logger: Logger = AndroidLogger()
 
     private val executor: ThreadPoolExecutor by lazy {
         ThreadPoolExecutor(
