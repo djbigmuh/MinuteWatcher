@@ -136,7 +136,13 @@ class SimIdentityRepositoryImpl
             ) { physical, settings ->
                 val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
                 mocks ?: physical
-            }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+            }
+                .distinctUntilChanged()
+                .stateIn(
+                    scope,
+                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    emptyList(),
+                )
 
         init {
             activeSimsCache
@@ -257,9 +263,9 @@ class SimIdentityRepositoryImpl
                         } ?: throw SimNotFoundException(slot)
 
                     cache.putManual(slot, result)
+                    persistence.saveSimIdentitiesInfo(listOf(result))
                     result
                 }
-            persistence.saveSimIdentitiesInfo(listOf(resolved))
             return resolved
         }
 

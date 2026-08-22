@@ -4,6 +4,8 @@ import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,11 +57,12 @@ class WidgetLimitManager
                 }
                 return probeResult
             } catch (e: CancellationException) {
-                setWidgetLimitExceeded(value = true)
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Widget: performProbeUpdate failed", e)
-                setWidgetLimitExceeded(value = true)
+                withContext(NonCancellable) {
+                    setWidgetLimitExceeded(value = true)
+                }
                 throw e
             }
         }

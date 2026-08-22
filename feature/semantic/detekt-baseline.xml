@@ -2,7 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ReturnCount:SemanticSearchManager.kt$SemanticSearchManager$private suspend fun ensureSession(forceOverride: Boolean = false): Boolean</ID>
     <ID>ReturnCount:ShortcutManager.kt$ShortcutManager$private fun createMinutesShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat?</ID>
     <ID>ReturnCount:ShortcutManager.kt$ShortcutManager$private fun createTrafficShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat?</ID>
   </CurrentIssues>

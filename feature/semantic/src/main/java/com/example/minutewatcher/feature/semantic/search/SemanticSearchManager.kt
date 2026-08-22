@@ -98,8 +98,7 @@ open class SemanticSearchManager
             job?.cancel()
             job?.join()
             initMutex.withLock {
-                errorHandler.consecutiveIndexFailures.set(0)
-                errorHandler.lastIndexFailureTime.set(0L)
+                errorHandler.resetFailures()
                 lastSnapshotFlow?.let { setupObservation(it) }
             }
         }
@@ -125,16 +124,16 @@ open class SemanticSearchManager
                         .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                         .collect { snapshot ->
                             ensureActive()
-                            if (errorHandler.consecutiveIndexFailures.get() >=
+                            if (errorHandler.consecutiveIndexFailures >=
                                 AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES
                             ) {
+                                errorHandler.handleIndexFailure(_status)
                                 return@collect
                             }
                             try {
                                 val success = indexSnapshot(snapshot)
                                 if (success) {
-                                    errorHandler.consecutiveIndexFailures.set(0)
-                                    errorHandler.lastIndexFailureTime.set(0L)
+                                    errorHandler.resetFailures()
                                 } else {
                                     errorHandler.handleIndexFailure(_status)
                                 }

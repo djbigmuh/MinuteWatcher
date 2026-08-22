@@ -106,6 +106,7 @@ class SimIdentityPersistence
         }
 
         private suspend fun updatePrefsWithIdentities(toUpdate: List<SimIdentity>) {
+            if (toUpdate.isEmpty()) return
             dataStore.edit { prefs ->
                 toUpdate.forEach { identity ->
                     identity.slotIndex?.let { slot ->

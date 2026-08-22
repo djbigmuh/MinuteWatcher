@@ -578,13 +578,13 @@ class SemanticSearchManagerTest {
             errorHandlerField.isAccessible = true
             val errorHandler = errorHandlerField.get(manager) as AppSearchErrorHandler
 
-            val failureField = AppSearchErrorHandler::class.java.getDeclaredField("consecutiveIndexFailures")
-            failureField.isAccessible = true
-            val failures = (failureField.get(errorHandler) as java.util.concurrent.atomic.AtomicInteger).get()
-
-            val timeField = AppSearchErrorHandler::class.java.getDeclaredField("lastIndexFailureTime")
-            timeField.isAccessible = true
-            val lastTime = (timeField.get(errorHandler) as java.util.concurrent.atomic.AtomicLong).get()
+            // Updated to reflect AtomicReference implementation in AppSearchErrorHandler
+            val failureStateField = AppSearchErrorHandler::class.java.getDeclaredField("failureState")
+            failureStateField.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val state = failureStateField.get(errorHandler)
+                as java.util.concurrent.atomic.AtomicReference<Pair<Int, Long>>
+            val (failures, lastTime) = state.get()
 
             assertEquals(0, failures)
             assertEquals(0L, lastTime)
@@ -613,6 +613,106 @@ class SemanticSearchManagerTest {
             // Even with many calls, we should have at least one session created
             assertTrue(fakeWrapper.createdSessions >= 1)
         }
+
+    @Test
+    fun `after MAX_CONSECUTIVE_INDEX_FAILURES consecutive failures status becomes suppressed Error`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+            fakeWrapper.failAllPutDocuments = true
+
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+
+            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
+                flow.value = createTestSnapshot(100L + it)
+                testScheduler.advanceUntilIdle()
+            }
+
+            val status = manager.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
+            assertEquals("Indexing suppressed after 5 failures", status.message)
+        }
+
+    @Test
+    fun `after recover counter is reset and next error starts from 1`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+            fakeWrapper.failAllPutDocuments = true
+
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+
+            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
+                flow.value = createTestSnapshot(100L + it)
+                testScheduler.advanceUntilIdle()
+            }
+
+            // Disable failures so recover() results in a successful indexing and 0 counter.
+            // We need to clear it both on the wrapper and the current session if it exists.
+            fakeWrapper.failAllPutDocuments = false
+            (fakeWrapper.lastSession as? FakeAppSearchSessionWrapper)?.failPutDocuments = false
+
+            manager.recover()
+            testScheduler.advanceUntilIdle()
+
+            val errorHandler = getErrorHandler(manager)
+            assertEquals(0, errorHandler.consecutiveIndexFailures)
+
+            // Trigger one failure
+            fakeWrapper.failAllPutDocuments = true
+            flow.value = createTestSnapshot(200L)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(1, errorHandler.consecutiveIndexFailures)
+        }
+
+    @Test
+    fun `handleIndexFailure is idempotent when already suppressed`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val errorHandler = getErrorHandler(manager)
+            val status = MutableStateFlow<TrackingStatus>(TrackingStatus.Active)
+
+            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
+                errorHandler.handleIndexFailure(status)
+            }
+
+            val suppressedStatus = status.value
+            assertTrue(suppressedStatus is TrackingStatus.Error)
+            val initialFailures = errorHandler.consecutiveIndexFailures
+
+            errorHandler.handleIndexFailure(status)
+
+            assertEquals("Status should not change", suppressedStatus, status.value)
+            assertEquals("Counter should not increment further", initialFailures, errorHandler.consecutiveIndexFailures)
+        }
+
+    @Test
+    fun `concurrent handleIndexFailure calls are thread safe`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val errorHandler = getErrorHandler(manager)
+
+            val count = 100
+            val jobs =
+                List(count) {
+                    launch {
+                        // Use fresh status each time to ensure each call attempts an increment
+                        errorHandler.handleIndexFailure(MutableStateFlow(TrackingStatus.Active))
+                    }
+                }
+            jobs.joinAll()
+
+            assertEquals(count, errorHandler.consecutiveIndexFailures)
+        }
+
+    private fun getErrorHandler(manager: SemanticSearchManager): AppSearchErrorHandler {
+        val field = SemanticSearchManager::class.java.getDeclaredField("errorHandler")
+        field.isAccessible = true
+        return field.get(manager) as AppSearchErrorHandler
+    }
 
     private fun createManager(scope: CoroutineScope) =
         SemanticSearchManager(

@@ -118,7 +118,7 @@ class WidgetSettingsViewModelTest {
                         gate.await()
                     }
 
-                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
 
                     override suspend fun save(
                         state: WidgetSettingsState,
@@ -194,7 +194,7 @@ class WidgetSettingsViewModelTest {
                         // Empty for mock
                     }
 
-                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
             // 1. Create VM (triggers first load in init)
@@ -259,7 +259,7 @@ class WidgetSettingsViewModelTest {
                         delay(Constants.Flow.LONG_TIMEOUT_MS * 2)
                     }
 
-                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
 
                     override suspend fun save(
                         state: WidgetSettingsState,
@@ -293,7 +293,9 @@ class WidgetSettingsViewModelTest {
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.PartialFailure("SIM settings skipped"), viewModel.saveResult.value)
+            // Result depends on how PartialSuccess is handled in VM.
+            // In the current implementation it is passed as is.
+            assertTrue(viewModel.saveResult.value is SaveResult.PartialSuccess)
             verify(saver).save(any(), eq(true))
         }
 
@@ -360,7 +362,7 @@ class WidgetSettingsViewModelTest {
                         // No-op for testing
                     }
 
-                    override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean = true
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
             val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)

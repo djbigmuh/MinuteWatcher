@@ -65,9 +65,9 @@ interface WidgetSettingsLoader {
     /**
      * Saves only the SIM-specific widget settings.
      *
-     * @return true if all SIM settings were successfully saved.
+     * @return List of slot indices for which settings failed to save. Empty if all succeeded.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
-    suspend fun saveSimSettings(state: WidgetSettingsState): Boolean
+    suspend fun saveSimSettings(state: WidgetSettingsState): List<Int>
 }

@@ -158,6 +158,33 @@ class WidgetSettingsRepositoryTest {
         }
 
     @Test
+    fun `saveSimSettings should return list of failed slots on exception`() =
+        runTest {
+            val state =
+                WidgetSettingsState(
+                    simStates =
+                        mapOf(
+                            0 to SimSettingsState(showSim = true),
+                            1 to SimSettingsState(showSim = true),
+                        ),
+                )
+            whenever(simIdentityRepository.getIdentity(0))
+                .thenThrow(com.example.minutewatcher.core.domain.SeedUnavailableException(0))
+            whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim1")
+
+            val failedSlots = repository.saveSimSettings(state)
+
+            assertEquals(listOf(0), failedSlots)
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(
+                org.mockito.kotlin.check { map ->
+                    assertEquals(2, map.size)
+                    assertEquals(true, map["sim1"]?.showSim)
+                    assertEquals(true, map["sim_1"]?.showSim)
+                },
+            )
+        }
+
+    @Test
     @Suppress("UNUSED_VARIABLE")
     fun `load returns fallback with simListLoadFailed when observeActiveSims times out`() =
         runTest {

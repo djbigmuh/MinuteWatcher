@@ -335,7 +335,8 @@ class WidgetSettingsViewModel
             }
 
         private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
-            val isPartial = state.simListLoadFailed
+            val validatedState = WidgetSettingsState.validate(state)
+            val isPartial = validatedState.simListLoadFailed
             if (isPartial) {
                 AppLogger.w(
                     "saveAndNotify: SIM list was not loaded successfully. " +
@@ -345,12 +346,21 @@ class WidgetSettingsViewModel
 
             val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
 
-            return withTimeoutOrNull(timeout) {
-                saver.save(state, skipSimSettings = isPartial)
-            } ?: run {
-                AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
-                SaveResult.Failed
+            val result =
+                withTimeoutOrNull(timeout) {
+                    saver.save(validatedState, skipSimSettings = isPartial)
+                } ?: run {
+                    AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
+                    SaveResult.Failed
+                }
+
+            if (result is SaveResult.PartialFailure) {
+                AppLogger.e("Widget settings partial save failure: ${result.message}")
+            } else if (result is SaveResult.Failed) {
+                AppLogger.e("Widget settings save failed")
             }
+
+            return result
         }
 
         companion object {

@@ -51,7 +51,7 @@ class WidgetSettingsSaver
                 val validatedState = WidgetSettingsState.validate(state)
 
                 saveGeneralSettings(validatedState)
-                val simsSucceeded = saveSimSettings(validatedState, skipSimSettings)
+                val failedSlots = saveSimSettings(validatedState, skipSimSettings)
 
                 // После успешного сохранения уведомляем систему об изменениях.
                 // force = true гарантирует немедленное обновление виджета,
@@ -63,14 +63,15 @@ class WidgetSettingsSaver
                 // на кастомной прошивке.
                 dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
 
-                if (simsSucceeded) {
+                if (failedSlots.isEmpty()) {
                     if (skipSimSettings) {
                         SaveResult.PartialSuccess(skippedSimSettings = true)
                     } else {
                         SaveResult.Success
                     }
                 } else {
-                    SaveResult.PartialFailure("Some SIM settings could not be saved")
+                    val slotsString = failedSlots.joinToString(", ")
+                    SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
                 }
             } catch (e: CancellationException) {
                 // Пробрасываем для кооперативной отмены корутины.
@@ -87,8 +88,8 @@ class WidgetSettingsSaver
         private suspend fun saveSimSettings(
             state: WidgetSettingsState,
             skipSimSettings: Boolean,
-        ): Boolean {
-            if (skipSimSettings) return true
+        ): List<Int> {
+            if (skipSimSettings) return emptyList()
             return loader.saveSimSettings(state)
         }
     }

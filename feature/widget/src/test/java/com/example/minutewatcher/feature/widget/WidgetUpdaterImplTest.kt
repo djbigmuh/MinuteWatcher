@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -192,6 +193,12 @@ class WidgetUpdaterImplTest {
 
             val mockLimitManager: WidgetLimitManager = mock()
             whenever(mockLimitManager.shouldProbe()).thenReturn(true)
+            whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
+                runBlocking {
+                    val updateBlock = it.arguments[1] as suspend (Context, Boolean) -> UpdateResult
+                    updateBlock(context, true)
+                }
+            }
 
             val updaterWithMock =
                 WidgetUpdaterImpl(
@@ -206,4 +213,32 @@ class WidgetUpdaterImplTest {
             verify(mockLimitManager).shouldProbe()
             verify(mockLimitManager).performProbeUpdate(eq(context), any())
         }
+
+    @Test
+    fun `updateAll returns false and does not retry on SecurityException`() = runTest {
+        val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+        whenever(renderer.renderAll(any())).thenThrow(SecurityException("No permission"))
+
+        val result = updater.updateAll()
+
+        assertFalse("updateAll should return false on SecurityException", result)
+        verify(renderer).renderAll(any()) // Should be called only once
+    }
+
+    @Test
+    fun `updateAll returns false and does not retry on Error`() = runTest {
+        val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+        whenever(renderer.renderAll(any())).thenThrow(OutOfMemoryError("Out of memory"))
+
+        val result = updater.updateAll()
+
+        assertFalse("updateAll should return false on Error", result)
+        verify(renderer).renderAll(any()) // Should be called only once
+    }
 }

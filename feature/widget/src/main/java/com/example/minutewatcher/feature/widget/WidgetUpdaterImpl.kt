@@ -38,6 +38,7 @@ class WidgetUpdaterImpl
                 performSingleUpdate(attempt)
             }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome =
             updateMutex.withLock {
                 val outcome =
@@ -59,6 +60,12 @@ class WidgetUpdaterImpl
                                 }
                             } catch (e: CancellationException) {
                                 throw e
+                            } catch (e: SecurityException) {
+                                AppLogger.e("Security error updating widgets (attempt $attempt)", e)
+                                UpdateResult.GenericFailure(isRetryable = false)
+                            } catch (e: Error) {
+                                AppLogger.e("Fatal error updating widgets (attempt $attempt)", e)
+                                UpdateResult.GenericFailure(isRetryable = false)
                             } catch (e: Exception) {
                                 AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
                                 UpdateResult.GenericFailure(isRetryable = true)
@@ -119,6 +126,8 @@ class WidgetUpdaterImpl
                 renderer.renderAll(context)
                 UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
                 throw e
             } catch (e: Exception) {
                 errorClassifier.classifyUpdateError(e, isFullAttempt)

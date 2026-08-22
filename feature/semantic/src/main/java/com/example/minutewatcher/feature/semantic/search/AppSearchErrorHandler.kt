@@ -8,8 +8,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,8 +23,13 @@ class AppSearchErrorHandler
     constructor(
         private val timeProvider: TimeProvider,
     ) {
-        val consecutiveIndexFailures = AtomicInteger(0)
-        val lastIndexFailureTime = AtomicLong(0L)
+        private val failureState = AtomicReference(0 to 0L)
+        val consecutiveIndexFailures: Int get() = failureState.get().first
+        val lastIndexFailureTime: Long get() = failureState.get().second
+
+        fun resetFailures() {
+            failureState.set(0 to 0L)
+        }
 
         fun handleSchemaException(
             e: AppSearchException,
@@ -77,8 +81,22 @@ class AppSearchErrorHandler
         }
 
         fun handleIndexFailure(status: MutableStateFlow<TrackingStatus>) {
-            val failures = consecutiveIndexFailures.incrementAndGet()
-            lastIndexFailureTime.set(timeProvider.elapsedRealtime())
+            val suppressedMessage = "Indexing suppressed after $MAX_CONSECUTIVE_INDEX_FAILURES failures"
+
+            // Idempotency check: if status is already suppressed Error, do nothing.
+            val currentStatus = status.value
+            if (currentStatus is TrackingStatus.Error &&
+                currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
+                currentStatus.message == suppressedMessage
+            ) {
+                return
+            }
+
+            val newState =
+                failureState.updateAndGet { (count, _) ->
+                    (count + 1) to timeProvider.elapsedRealtime()
+                }
+            val failures = newState.first
             if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
                     "SemanticSearchManager: $failures consecutive indexing failures. " +
@@ -87,7 +105,7 @@ class AppSearchErrorHandler
                 status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Indexing suppressed after $failures failures",
+                        suppressedMessage,
                     )
             }
         }

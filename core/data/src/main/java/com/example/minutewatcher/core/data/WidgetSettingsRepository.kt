@@ -173,8 +173,8 @@ class WidgetSettingsRepository
                     else -> WidgetSaveResult.Failed
                 }
             } else {
-                val simSuccess = saveSimSettings(state)
-                return if (simSuccess) {
+                val failedSlots = saveSimSettings(state)
+                return if (failedSlots.isEmpty()) {
                     WidgetSaveResult.Success
                 } else {
                     WidgetSaveResult.PartialSuccess
@@ -206,12 +206,12 @@ class WidgetSettingsRepository
          * Saves SIM-specific visibility settings to DataStore.
          *
          * Safe to call from any coroutine context.
-         * @return True if all active SIM settings were saved successfully.
+         * @return List of slot indices that failed to save.
          * @throws java.io.IOException if write fails.
          */
-        override suspend fun saveSimSettings(state: WidgetSettingsState): Boolean {
+        override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> {
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
-            var allSucceeded = true
+            val failedSlots = mutableListOf<Int>()
             for ((slot, simSettings) in state.simStates) {
                 try {
                     val identity = simIdentityRepository.getIdentity(slot)
@@ -222,18 +222,20 @@ class WidgetSettingsRepository
                     }
                 } catch (e: SeedUnavailableException) {
                     AppLogger.w("saveSimSettings: seed unavailable for slot $slot. Skipping this SIM.", e)
-                    allSucceeded = false
+                    failedSlots.add(slot)
                 } catch (e: SimNotFoundException) {
                     AppLogger.w("saveSimSettings: SIM not found in slot $slot. Skipping this SIM.", e)
-                    allSucceeded = false
+                    failedSlots.add(slot)
                 }
             }
             if (simSettingsMap.isNotEmpty()) {
                 simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
-            } else if (state.simStates.isNotEmpty()) {
-                allSucceeded = false
+            } else if (state.simStates.isNotEmpty() && failedSlots.isEmpty()) {
+                // If we have states to save but none could be mapped to an identity (and no exceptions were caught)
+                // this is also a failure.
+                failedSlots.addAll(state.simStates.keys)
             }
-            return allSucceeded
+            return failedSlots
         }
 
         private fun getFallbackWidgetSettings(
