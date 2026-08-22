@@ -1,9 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
-import com.example.minutewatcher.core.common.util.NoOpLogger
+import com.example.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -15,7 +14,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
@@ -32,7 +30,7 @@ class SimUsageRepositoryConcurrencyTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
     }
 
     @Test
@@ -45,45 +43,41 @@ class SimUsageRepositoryConcurrencyTest {
             val uniqueName = "test_concurrency_${UUID.randomUUID()}.preferences_pb"
             val file = File(dir, uniqueName)
 
-            try {
-                // 2. Создаем СТРОГО ОДИН экземпляр DataStore и Repository
-                // Используем backgroundScope для корректного ожидания фоновых задач DataStore
-                val dataStore =
-                    PreferenceDataStoreFactory.create(
-                        scope = backgroundScope,
-                        produceFile = { file },
-                    )
-                val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
+            // 2. Создаем СТРОГО ОДИН экземпляр DataStore и Repository
+            // Используем backgroundScope для корректного ожидания фоновых задач DataStore
+            val dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { file },
+                )
+            val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
 
-                val identity = "test_sim"
-                val autoResetDay = 1
-                val now = 1000000000000L
+            val identity = "test_sim"
+            val autoResetDay = 1
+            val now = 1000000000000L
 
-                // Подготовка данных
-                repository.setLastResetDate(identity, 0L)
-                repository.setMinutesUsed(identity, 50)
+            // Подготовка данных
+            repository.setLastResetDate(identity, 0L)
+            repository.setMinutesUsed(identity, 50)
 
-                // 3. Запускаем конкурентные вызовы на ОДНОМ И ТОМ ЖЕ экземпляре репозитория
-                val concurrentCalls = 10
-                val results =
-                    (1..concurrentCalls)
-                        .map {
-                            async {
-                                repository.resetSimUsageIfDue(identity, autoResetDay, now)
-                            }
-                        }.awaitAll()
+            // 3. Запускаем конкурентные вызовы на ОДНОМ И ТОМ ЖЕ экземпляре репозитория
+            val concurrentCalls = 10
+            val results =
+                (1..concurrentCalls)
+                    .map {
+                        async {
+                            repository.resetSimUsageIfDue(identity, autoResetDay, now)
+                        }
+                    }.awaitAll()
 
-                // Даем время DataStore завершить фоновые операции переименования файлов
-                testScheduler.advanceUntilIdle()
+            // Даем время DataStore завершить фоновые операции переименования файлов
+            testScheduler.advanceUntilIdle()
 
-                val resetCount = results.count { it }
-                assertEquals("Should only perform reset once", 1, resetCount)
+            val resetCount = results.count { it }
+            assertEquals("Should only perform reset once", 1, resetCount)
 
-                val usage = repository.getSimUsage(identity).first()
-                assertEquals(0, usage.minutesUsed)
-                assertEquals(now, usage.lastResetDate)
-            } finally {
-                // TemporaryFolder очистит файлы автоматически, но мы можем помочь GC
-            }
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(0, usage.minutesUsed)
+            assertEquals(now, usage.lastResetDate)
         }
 }

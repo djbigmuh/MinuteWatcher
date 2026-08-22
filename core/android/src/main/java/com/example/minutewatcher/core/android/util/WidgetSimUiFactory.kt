@@ -47,7 +47,7 @@ object WidgetSimUiFactory {
         return SimUiState(
             slot = sim.slot,
             operatorName = operatorName,
-            operatorIconRes = SimUtils.getOperatorIconResource(sim.operator),
+            operatorIconRes = SimUtils.getOperatorIconResource(sim.operatorName),
             showSim = simConfig?.showSim ?: true,
             showIcon = simConfig?.showIcon ?: true,
             showName = simConfig?.showName ?: true,
@@ -77,7 +77,6 @@ object WidgetSimUiFactory {
         val color: Int,
         val showLimit: Boolean,
         val limitText: String,
-        val hasData: Boolean,
         val usedFull: String,
         val limitFull: String,
     )
@@ -110,7 +109,6 @@ object WidgetSimUiFactory {
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
             limitText = strings.fractionFormat.format(limit.toString()),
-            hasData = hasData,
             usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
             limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
@@ -150,7 +148,6 @@ object WidgetSimUiFactory {
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
             limitText = strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb)),
-            hasData = hasData,
             usedFull =
                 "${strings.usedText}: ${
                     formatWithSuffix(

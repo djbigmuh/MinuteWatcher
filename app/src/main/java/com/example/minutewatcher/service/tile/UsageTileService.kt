@@ -123,7 +123,7 @@ class UsageTileService : TileService() {
                 it.entities[PackageType.MINUTES]?.remaining ?: Long.MAX_VALUE
             } ?: activeSims[0]
 
-        val operatorName = SimUtils.getShortOperatorName(this, activeSim.operator)
+        val operatorName = SimUtils.getShortOperatorName(this, activeSim.operatorName)
         val minutes = activeSim.entities[PackageType.MINUTES]
 
         if (minutes != null) {

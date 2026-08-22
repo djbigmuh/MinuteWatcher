@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -109,5 +110,22 @@ class SimWidgetVisibilityRepositoryImplTest {
             assertNull(prefs[DataStoreKeys.showMinutesLimitKey(identity)])
             assertNull(prefs[DataStoreKeys.showTrafficKey(identity)])
             assertNull(prefs[DataStoreKeys.showTrafficLimitKey(identity)])
+        }
+
+    @Test
+    fun `getSimSettingsBatch returns defaults for missing keys`() =
+        runTest {
+            val identity = "icc_new"
+            val settings = repository.getSimSettingsBatch(listOf(identity)).first()
+
+            val result = settings[identity]
+            assertNotNull(result)
+            assertEquals(true, result?.showSim)
+            assertEquals(true, result?.showIcon)
+            assertEquals(true, result?.showName)
+            assertEquals(true, result?.showMinutes)
+            assertEquals(false, result?.showMinutesLimit)
+            assertEquals(true, result?.showTraffic)
+            assertEquals(false, result?.showTrafficLimit)
         }
 }

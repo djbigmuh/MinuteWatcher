@@ -7,9 +7,11 @@ import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.RefreshResult
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -642,7 +644,7 @@ class MainViewModelTest {
                             com.example.minutewatcher.core.model.SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "Test",
+                                operatorName = "Test",
                                 isActive = true,
                                 entities = emptyMap(),
                                 autoResetDay = 1,
@@ -744,5 +746,45 @@ class MainViewModelTest {
             scheduler.checkOnStart()
 
             verify(autoResetUseCase, times(2)).performAutoReset(eq(false))
+        }
+
+    @Test
+    fun `executeSimOperation sets OperationError on SeedUnavailableException`() =
+        runTest(testDispatcher) {
+            val viewModel = createViewModel(backgroundScope)
+            val slot = 1
+            whenever(simIdentityRepository.getIdentity(slot)).thenThrow(SeedUnavailableException(slot))
+
+            viewModel.updateLimits(slot, 100, 1000)
+            advanceUntilIdle()
+
+            val error = viewModel.lastOperationError.value
+            assertTrue("Expected OperationError but was $error", error != null)
+            assertEquals(slot, error?.slot)
+            val message = error?.message ?: ""
+            assertTrue(
+                "Message should mention storage unavailable: $message",
+                message.contains("Storage unavailable"),
+            )
+        }
+
+    @Test
+    fun `executeSimOperation sets OperationError on SimNotFoundException`() =
+        runTest(testDispatcher) {
+            val viewModel = createViewModel(backgroundScope)
+            val slot = 0
+            whenever(simIdentityRepository.getIdentity(slot)).thenThrow(SimNotFoundException(slot))
+
+            viewModel.updateLimits(slot, 100, 1000)
+            advanceUntilIdle()
+
+            val error = viewModel.lastOperationError.value
+            assertTrue("Expected OperationError but was $error", error != null)
+            assertEquals(slot, error?.slot)
+            val message = error?.message ?: ""
+            assertTrue(
+                "Message should mention SIM removed: $message",
+                message.contains("SIM was removed"),
+            )
         }
 }

@@ -1,9 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
-import com.example.minutewatcher.core.common.util.NoOpLogger
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
@@ -34,7 +33,7 @@ class UsageStateRepositoryImplTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
         whenever(dataRefreshNotifier.refreshFlow).thenReturn(MutableSharedFlow())
         whenever(semanticVersion.getVersion()).thenReturn(SchemaVersion(1, 0, 0))

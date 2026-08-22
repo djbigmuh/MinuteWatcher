@@ -55,7 +55,7 @@ object WidgetUiMapper {
                             strings,
                             sim,
                             simConfig,
-                            operatorNames[sim.slot] ?: sim.operator,
+                            operatorNames[sim.slot] ?: sim.operatorName,
                             luminance,
                             textColor,
                             secondaryTextColor,

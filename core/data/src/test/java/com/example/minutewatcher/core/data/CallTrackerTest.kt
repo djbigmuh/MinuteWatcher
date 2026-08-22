@@ -1137,4 +1137,107 @@ class CallTrackerTest {
 
             assertEquals(1, attempts)
         }
+
+    @Test
+    fun `calculateDurationMinutes rounding 0s to 0m`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+        }
+
+    @Test
+    fun `calculateDurationMinutes rounding 1s to 1m`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            timeProvider.advance(1000) // 1 second
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(1))
+        }
+
+    @Test
+    fun `calculateDurationMinutes rounding 59s to 1m`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            timeProvider.advance(59000) // 59 seconds
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(1))
+        }
+
+    @Test
+    fun `calculateDurationMinutes rounding 60s to 1m`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            timeProvider.advance(60000) // 60 seconds
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(1))
+        }
+
+    @Test
+    fun `calculateDurationMinutes rounding 61s to 2m`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            timeProvider.advance(61000) // 61 seconds
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(2))
+        }
 }

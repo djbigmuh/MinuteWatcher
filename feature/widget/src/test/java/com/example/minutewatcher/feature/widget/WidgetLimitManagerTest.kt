@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.widget
 
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,11 +28,7 @@ class WidgetLimitManagerTest {
 
     @Before
     fun setup() {
-        com.example.minutewatcher.core.common.util.AppLogger.init(
-            mock(),
-            com.example.minutewatcher.core.common.util
-                .NoOpLogger(),
-        )
+        initTestLogger()
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
         manager = WidgetLimitManager(appSettingsRepository)
     }

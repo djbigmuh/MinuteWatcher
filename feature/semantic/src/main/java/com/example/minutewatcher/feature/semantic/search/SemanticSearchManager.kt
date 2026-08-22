@@ -258,10 +258,4 @@ open class SemanticSearchManager
                 }
                 result
             }
-
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal open fun createPutRequest(documents: List<UsageDocument>) = indexer.createPutRequest(documents)
-
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal open fun createRemoveRequest(ids: Set<String>) = indexer.createRemoveRequest(ids)
     }

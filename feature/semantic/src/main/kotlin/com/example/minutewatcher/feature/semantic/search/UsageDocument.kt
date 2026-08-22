@@ -7,7 +7,6 @@ import androidx.appsearch.annotation.Document.Namespace
 import androidx.appsearch.annotation.Document.Score
 import androidx.appsearch.annotation.Document.StringProperty
 import androidx.appsearch.app.AppSearchSchema
-import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.util.ColorProvider
@@ -18,7 +17,7 @@ import com.example.minutewatcher.core.model.util.ColorProvider
  * **Зависимость от annotation processor:** класс-конвертер
  * `$$__AppSearch__UsageDocument` генерируется `appsearch-compiler` (KSP).
  * Без работающего KSP конвертер не будет сгенерирован, и AppSearch
- * бросит [AppSearchException] с RESULT_INTERNAL_ERROR при попытке
+ * бросит [androidx.appsearch.exceptions.AppSearchException] с RESULT_INTERNAL_ERROR при попытке
  * индексации. Это проблема сборки, не runtime.
  *
  * **ProGuard/R8:** правила keep для `$$__AppSearch__*` находятся
@@ -132,7 +131,7 @@ class UsageDocument {
         private const val PERCENT_MAX = 100
 
         fun fromSemanticEntity(entity: SemanticEntity): UsageDocument {
-            val percent = if (entity.limit > 0) (entity.remaining * PERCENT_MAX / entity.limit) else 0L
+            val percent = if (entity.limit > 0) ((entity.remaining * PERCENT_MAX) / entity.limit) else 0L
             val usageStatus = ColorProvider.getUsageStatus(entity.remaining.toFloat(), entity.limit.toFloat()).name
 
             return UsageDocument(

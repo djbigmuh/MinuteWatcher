@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic
 
 import android.content.Context
+import androidx.core.content.pm.ShortcutInfoCompat
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.DataSourceType
@@ -19,6 +20,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -190,6 +192,23 @@ class ShortcutManagerTest {
             jobs.joinAll()
 
             assertTrue(shortcutManager.status.value is TrackingStatus.Active)
+        }
+
+    @Test
+    fun `unsupported operation sets NOT_SUPPORTED status`() =
+        runTest(testDispatcher) {
+            val manager =
+                object : ShortcutManager(context, testScope, navigationProvider, testDispatcher) {
+                    override fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) =
+                        throw UnsupportedOperationException("Shortcuts not supported")
+                }
+
+            val result = manager.updateShortcutsSync(createSnapshot(emptyList()))
+
+            assertFalse(result)
+            val status = manager.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
         }
 
     @Suppress("SameParameterValue")

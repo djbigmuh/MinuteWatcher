@@ -176,7 +176,7 @@ class SnapshotUtilsTest {
                 lastUpdateTime = 0,
                 sourceType = DataSourceType.SYSTEM,
             )
-        return SimSnapshot(slot, "ABC", "ABC", true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
+        return SimSnapshot(slot, "ABC", operatorName, true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
     }
 
     private fun createSnapshot(
@@ -203,7 +203,7 @@ class SnapshotUtilsTest {
                 lastUpdateTime = lastUpdateTime,
                 sourceType = DataSourceType.SYSTEM,
             )
-        val sim = SimSnapshot(0, "ABC", "ABC", true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
+        val sim = SimSnapshot(0, "ABC", operatorName, true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
             timestamp = timestamp,

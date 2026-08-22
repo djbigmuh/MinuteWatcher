@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data.util
 
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.NoOpLogger
+import com.example.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -10,7 +9,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.mock
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -19,7 +17,7 @@ class DataStoreRetryHelperTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
         helper = DataStoreRetryHelper()
     }
 

@@ -16,12 +16,11 @@ class WidgetErrorClassifier
         fun classifyUpdateError(
             e: Exception,
             isFullAttempt: Boolean,
-            isProbe: Boolean,
         ): UpdateResult =
             when (e) {
                 is IllegalArgumentException -> {
                     if (isRemoteViewsLimitException(e)) {
-                        logLimitExceeded(e, isProbe, isFullAttempt)
+                        logLimitExceeded(e, isFullAttempt)
                         UpdateResult.LimitExceeded
                     } else {
                         AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
@@ -36,7 +35,7 @@ class WidgetErrorClassifier
 
                 is RuntimeException -> {
                     if (isRemoteViewsLimitException(e)) {
-                        logLimitExceeded(e, isProbe, isFullAttempt)
+                        logLimitExceeded(e, isFullAttempt)
                         UpdateResult.LimitExceeded
                     } else {
                         AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
@@ -67,13 +66,10 @@ class WidgetErrorClassifier
 
         private fun logLimitExceeded(
             e: Exception,
-            isProbe: Boolean,
             isFullAttempt: Boolean,
         ) {
-            if (isProbe) {
-                AppLogger.d("Widget full layout probe failed: still too large")
-            } else if (isFullAttempt) {
-                AppLogger.e("Widget update failed due to size limit. Detection confirmed.", e)
+            if (isFullAttempt) {
+                AppLogger.e("Widget update failed due to size limit", e)
             } else {
                 AppLogger.e("CRITICAL: Widget size limit exceeded even with simplified layout!", e)
             }

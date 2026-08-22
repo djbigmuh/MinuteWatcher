@@ -1,4 +1,3 @@
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 plugins {
     id("minutewatcher.android-library")
 }
@@ -9,10 +8,8 @@ kotlin {
 
 android {
     namespace = "com.example.minutewatcher.core.domain"
-    compileSdk = 37
 
     defaultConfig {
-        minSdk = 26
     }
 
     compileOptions {

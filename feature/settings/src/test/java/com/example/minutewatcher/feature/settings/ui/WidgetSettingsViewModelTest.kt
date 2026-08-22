@@ -30,9 +30,11 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -159,7 +161,9 @@ class WidgetSettingsViewModelTest {
         runTest {
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(fontSize = 10) }
-            assertEquals(10, viewModel.settingsState.value?.fontSize)
+            val state = viewModel.settingsState.value
+            assertNotNull(state)
+            assertEquals(10, state!!.fontSize)
         }
 
     @Test
@@ -206,7 +210,9 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // 4. Assert state contains result from second load
-            assertEquals(20, vm.settingsState.value?.fontSize)
+            val state = vm.settingsState.value
+            assertNotNull(state)
+            assertEquals(20, state!!.fontSize)
             assertEquals(2, fakeLoader.callCount)
         }
 
@@ -224,11 +230,12 @@ class WidgetSettingsViewModelTest {
                 }
             deferreds.awaitAll()
 
-            val finalFontSize = viewModel.settingsState.value?.fontSize
-            assertNotNull(finalFontSize)
+            val state = viewModel.settingsState.value
+            assertNotNull(state)
+            val finalFontSize = state!!.fontSize
             assertTrue(
                 "FontSize should be one of the updated values and not default",
-                finalFontSize!! in 100 until (100 + totalUpdates),
+                finalFontSize in 100 until (100 + totalUpdates),
             )
         }
 
@@ -365,5 +372,57 @@ class WidgetSettingsViewModelTest {
             assertEquals(SaveResult.Failed, vm.saveResult.value)
             verify(saver, never()).save(any(), any())
             deferred.complete(WidgetSettingsState())
+        }
+
+    @Test
+    fun `validate clamps out-of-range values`() =
+        runTest {
+            testScheduler.advanceUntilIdle()
+
+            // Test MAX values
+            viewModel.updateSettings {
+                it.copy(
+                    layoutMode = Constants.Widget.MAX_LAYOUT_MODE + 1,
+                    simArrangement = Constants.Widget.MAX_SIM_ARRANGEMENT + 1,
+                    transparency = Constants.Widget.MAX_TRANSPARENCY + 1,
+                    fontSize = Constants.Widget.MAX_FONT_SIZE + 1,
+                    widgetLimitExceeded = true,
+                )
+            }
+
+            viewModel.saveAndNotify()
+            testScheduler.advanceUntilIdle()
+
+            argumentCaptor<WidgetSettingsState>().apply {
+                verify(saver).save(capture(), any())
+                val captured = firstValue
+                assertEquals(Constants.Widget.MAX_LAYOUT_MODE, captured.layoutMode)
+                assertEquals(Constants.Widget.MAX_SIM_ARRANGEMENT, captured.simArrangement)
+                assertEquals(Constants.Widget.MAX_TRANSPARENCY, captured.transparency)
+                assertEquals(Constants.Widget.MAX_FONT_SIZE, captured.fontSize)
+                assertFalse(captured.widgetLimitExceeded)
+            }
+
+            // Test MIN values
+            viewModel.updateSettings {
+                it.copy(
+                    layoutMode = Constants.Widget.MIN_LAYOUT_MODE - 1,
+                    simArrangement = Constants.Widget.MIN_SIM_ARRANGEMENT - 1,
+                    transparency = Constants.Widget.MIN_TRANSPARENCY - 1,
+                    fontSize = Constants.Widget.MIN_FONT_SIZE - 1,
+                )
+            }
+
+            viewModel.saveAndNotify()
+            testScheduler.advanceUntilIdle()
+
+            argumentCaptor<WidgetSettingsState>().apply {
+                verify(saver, times(2)).save(capture(), any())
+                val captured = lastValue
+                assertEquals(Constants.Widget.MIN_LAYOUT_MODE, captured.layoutMode)
+                assertEquals(Constants.Widget.MIN_SIM_ARRANGEMENT, captured.simArrangement)
+                assertEquals(Constants.Widget.MIN_TRANSPARENCY, captured.transparency)
+                assertEquals(Constants.Widget.MIN_FONT_SIZE, captured.fontSize)
+            }
         }
 }

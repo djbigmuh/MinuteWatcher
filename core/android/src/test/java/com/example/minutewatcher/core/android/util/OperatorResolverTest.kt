@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -71,5 +72,24 @@ class OperatorResolverTest {
     fun testResolve_Movistar() {
         val result = OperatorResolver.resolve(context, "", "21407", 0)
         assertEquals(context.getString(R.string.operator_movistar), result)
+    }
+
+    @Test
+    fun `all tokenToResKey values exist in operatorResourceMap`() {
+        val missingKeys =
+            OperatorResolver.tokenToResKey.values
+                .filter { it !in OperatorResolver.operatorResourceMap }
+
+        assertTrue(
+            "tokenToResKey references missing operatorResourceMap keys: $missingKeys",
+            missingKeys.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `isValidSpecificName rejects null string case-insensitively`() {
+        // "NULL", "Null", etc. should trigger MCC/MNC resolution
+        val result = OperatorResolver.resolve(context, "NULL", "25001", 0)
+        assertEquals(context.getString(R.string.operator_mts), result)
     }
 }

@@ -179,7 +179,7 @@ class SemanticSearchManagerTest {
                         SimSnapshot(
                             slot = 1,
                             identity = "sim_1",
-                            operator = "B",
+                            operatorName = "B",
                             isActive = true,
                             entities =
                                 mapOf(
@@ -332,7 +332,7 @@ class SemanticSearchManagerTest {
                         SimSnapshot(
                             slot = 1,
                             identity = "sim_1",
-                            operator = "B",
+                            operatorName = "B",
                             isActive = true,
                             entities =
                                 mapOf(
@@ -453,7 +453,7 @@ class SemanticSearchManagerTest {
                         SimSnapshot(
                             slot = 1,
                             identity = "sim_1",
-                            operator = "B",
+                            operatorName = "B",
                             isActive = true,
                             entities =
                                 mapOf(
@@ -658,7 +658,7 @@ class SemanticSearchManagerTest {
                 SimSnapshot(
                     slot = 0,
                     identity = "sim_0",
-                    operator = "A",
+                    operatorName = "A",
                     isActive = true,
                     entities =
                         mapOf(

@@ -139,7 +139,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(
@@ -211,7 +211,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(
@@ -270,7 +270,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(
@@ -329,7 +329,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(
@@ -387,7 +387,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(
@@ -475,7 +475,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(
@@ -535,7 +535,7 @@ class UsageCheckWorkerTest {
                             SimSnapshot(
                                 slot = 0,
                                 identity = identity,
-                                operator = "MTS",
+                                operatorName = "MTS",
                                 isActive = true,
                                 entities =
                                     mapOf(

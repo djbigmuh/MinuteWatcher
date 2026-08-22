@@ -124,7 +124,7 @@ class UsageStateRepositoryImpl
             timestamp: Long,
         ): SimSnapshot {
             val slot = usage.slotIndex
-            val operator = usage.operator
+            val operatorName = usage.operator
             val isActive = true // Every item in usages corresponds to an active physical SIM
 
             val minutes =
@@ -146,7 +146,7 @@ class UsageStateRepositoryImpl
                     PackageType.MINUTES to
                         SemanticMapper.mapMinutes(
                             slot,
-                            operator,
+                            operatorName,
                             minutes,
                             usage.autoResetDay,
                             timestamp,
@@ -154,7 +154,7 @@ class UsageStateRepositoryImpl
                     PackageType.DATA to
                         SemanticMapper.mapTraffic(
                             slot,
-                            operator,
+                            operatorName,
                             traffic,
                             usage.autoResetDay,
                             timestamp,
@@ -164,7 +164,7 @@ class UsageStateRepositoryImpl
             return SimSnapshot(
                 slot = slot,
                 identity = usage.identity,
-                operator = operator,
+                operatorName = operatorName,
                 isActive = isActive,
                 entities = entities,
                 autoResetDay = usage.autoResetDay,

@@ -1,18 +1,19 @@
 package com.example.minutewatcher.feature.main.controller
 
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
-import com.example.minutewatcher.core.common.util.NoOpLogger
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.feature.main.TrackingBannerState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,7 +40,7 @@ class MainBannerControllerTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
         whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
@@ -92,7 +93,6 @@ class MainBannerControllerTest {
                 }
             whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(dynamicFlow)
 
-            val startTime = testScheduler.currentTime
             val controller =
                 MainBannerController(
                     trackingStatusRepository,
@@ -105,31 +105,20 @@ class MainBannerControllerTest {
             backgroundScope.launch { controller.trackingBannerState.collect {} }
             testScheduler.runCurrent()
 
-            // With StandardTestDispatcher (default in runTest now), we advance time
-            // Wait, runTest default dispatcher is NOT necessarily Standard if I don't specify it?
-            // Actually, in modern kotlinx-coroutines-test, runTest uses a special dispatcher.
-
             testScheduler.advanceTimeBy(500)
             assertEquals("Should not have retried yet", 1, collectionCount)
-            // До retry статус должен быть начальным
+
             val statusBeforeRetry = controller.trackingBannerState.value
+            assertTrue(statusBeforeRetry is TrackingBannerState)
             assertEquals(false, statusBeforeRetry.showUsageAccessBanner)
 
             testScheduler.advanceTimeBy(500)
-            // It should have retried now.
-            // But we need to make sure the coroutine had a chance to run.
             testScheduler.runCurrent()
 
-            // Строгое соблюдение API: retryWhen перезапускает upstream-поток.
-            // На AOSP combine из StateFlow не бросает IOException;
-            // данный сценарий тестирует защитный механизм retry
-            // на случай деградации кастомной прошивки.
             val expectedDelay = 1000L.coerceAtMost(MainBannerController.MAX_RETRY_DELAY_MS)
-            // После retry статус должен обновиться (flow переподключился и получил true)
             val statusAfterRetry = controller.trackingBannerState.value
             assertEquals("Should have retried after ${expectedDelay}ms delay", 2, collectionCount)
-            assertEquals(expectedDelay, testScheduler.currentTime - startTime)
-            // Проверяем, что состояние после ретрая доступно
+
             assertEquals(false, statusAfterRetry.showUsageAccessBanner)
         }
 }

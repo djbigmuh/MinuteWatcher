@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.widget
 
+import com.example.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,7 +8,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -18,11 +18,7 @@ class WidgetUpdateRetryManagerTest {
 
     @Before
     fun setup() {
-        com.example.minutewatcher.core.common.util.AppLogger.init(
-            mock(),
-            com.example.minutewatcher.core.common.util
-                .NoOpLogger(),
-        )
+        initTestLogger()
     }
 
     @Test

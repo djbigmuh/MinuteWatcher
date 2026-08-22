@@ -24,8 +24,9 @@ object SimCardMapper {
      * одного и того же identity в одном слоте.
      *
      * **Потокобезопасность:** обёрнут в [Collections.synchronizedMap].
-     * Все составные операции (проверка размера + удаление) выполняются
-     * внутри явного `synchronized(negativeLogged)` блока.
+     * Все составные операции (проверка + удаление) выполняются внутри
+     * единого `synchronized(negativeLogged)` блока с однократным чтением
+     * для исключения TOCTOU-гонок.
      *
      * **Эвикция:** при превышении [MAX_LOGGED_SIZE] удаляется самый старый
      * ключ (FIFO). [LinkedHashMap] сохраняет порядок вставки, поэтому
@@ -47,7 +48,8 @@ object SimCardMapper {
         // в слоте (identity изменился) старая запись удаляется, чтобы
         // логирование для нового identity не было подавлено.
         synchronized(negativeLogged) {
-            if ((negativeLogged[slot] != null) && (negativeLogged[slot] != usage.identity)) {
+            val existing = negativeLogged[slot]
+            if (existing != null && existing != usage.identity) {
                 negativeLogged.remove(slot)
             }
         }

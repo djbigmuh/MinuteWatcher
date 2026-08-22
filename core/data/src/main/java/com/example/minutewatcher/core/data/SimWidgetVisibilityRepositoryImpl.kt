@@ -54,17 +54,24 @@ class SimWidgetVisibilityRepositoryImpl
             }
         }
 
+        /**
+         * Returns visibility settings for multiple identities.
+         *
+         * Missing keys in DataStore will result in [SimSettingsState] with default values.
+         * Safe to call from any coroutine context.
+         *
+         * @param identities List of SIM identities to fetch settings for.
+         * @return A flow of a map where keys are SIM identities and values are their visibility settings.
+         */
         override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
             dataStore.data.map { prefs ->
                 identities
                     .asSequence()
                     .filter { !it.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX) }
-                    .mapNotNull { identity ->
-                        val showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: return@mapNotNull null
-
+                    .map { identity ->
                         identity to
                             SimSettingsState(
-                                showSim = showSim,
+                                showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
                                 showIcon = prefs[DataStoreKeys.showSimIconKey(identity)] ?: true,
                                 showName = prefs[DataStoreKeys.showSimNameKey(identity)] ?: true,
                                 showMinutes = prefs[DataStoreKeys.showMinutesKey(identity)] ?: true,

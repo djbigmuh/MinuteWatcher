@@ -1,9 +1,8 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
-import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -52,7 +51,7 @@ class TrafficTrackerTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
         setupPermissionMocks()
         setupIdentityMocks()
         setupUsageMocks()

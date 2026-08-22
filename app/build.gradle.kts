@@ -1,4 +1,3 @@
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 import com.android.build.api.dsl.ApplicationExtension
 
 plugins {
@@ -17,15 +16,11 @@ java {
 
 configure<ApplicationExtension> {
     namespace = "com.example.minutewatcher"
-    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.minutewatcher"
-        minSdk = 26
-        targetSdk = 37
         versionCode = 303
         versionName = "3.0.3"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }

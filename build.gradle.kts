@@ -1,6 +1,5 @@
 import org.gradle.api.reporting.ReportingExtension
 
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.androidApplication) apply false
@@ -75,8 +74,10 @@ subprojects {
         }
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
-        // Robolectric требует --add-opens для JDK 17+ из-за использования internal API.
-        // Это строгое соответствие требованиям Robolectric, не эвристика.
+        // Centralized Robolectric configuration
+        systemProperty("robolectric.sdk", "37")
+        // Robolectric и Mockito требуют --add-opens для JDK 17+ из-за использования internal API.
+        // Это строгое соответствие требованиям инструментов тестирования, не эвристика.
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
             "--add-opens=java.base/java.io=ALL-UNNAMED",
@@ -84,6 +85,9 @@ subprojects {
             "--add-opens=java.base/java.util=ALL-UNNAMED",
             "--add-opens=java.base/java.lang=ALL-UNNAMED",
             "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens=java.base/java.text=ALL-UNNAMED",
+            "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+            "--add-opens=java.base/java.nio=ALL-UNNAMED",
             "--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
         )

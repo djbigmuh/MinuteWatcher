@@ -19,7 +19,7 @@ object SemanticMapper {
     @JvmStatic
     fun mapMinutes(
         slot: Int,
-        operator: String,
+        operatorName: String,
         model: MinutesModel,
         resetDay: Int,
         nowMillis: Long,
@@ -29,7 +29,7 @@ object SemanticMapper {
         return SemanticEntity(
             id = getDocumentId(slot, PackageType.MINUTES),
             simSlot = slot,
-            operatorName = operator,
+            operatorName = operatorName,
             packageType = PackageType.MINUTES,
             limit = model.effectiveLimit.toLong(),
             used = model.used.toLong(),
@@ -45,7 +45,7 @@ object SemanticMapper {
     @JvmStatic
     fun mapTraffic(
         slot: Int,
-        operator: String,
+        operatorName: String,
         model: TrafficModel,
         resetDay: Int,
         nowMillis: Long,
@@ -63,7 +63,7 @@ object SemanticMapper {
         return SemanticEntity(
             id = getDocumentId(slot, PackageType.DATA),
             simSlot = slot,
-            operatorName = operator,
+            operatorName = operatorName,
             packageType = PackageType.DATA,
             limit = limitBytes,
             used = usedBytes,

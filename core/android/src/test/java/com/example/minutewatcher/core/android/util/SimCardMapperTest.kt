@@ -2,6 +2,10 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,5 +76,39 @@ class SimCardMapperTest {
         assertEquals(0f, model.effectiveTrafficLimitGb, 0.001f)
         assertEquals(0, model.minutesRemaining)
         assertEquals(0f, model.trafficRemainingGb, 0.001f)
+    }
+
+    @Test
+    fun `concurrent map calls with different identities do not corrupt cache`() {
+        runBlocking {
+            val slot = 0
+            val identities = List(10) { "identity_$it" }
+
+            val jobs =
+                identities.map { id ->
+                    async(Dispatchers.Default) {
+                        val usage =
+                            SimUsage(
+                                identity = id,
+                                slotIndex = slot,
+                                subscriptionId = 1,
+                                operator = "TestOp",
+                                minutesUsed = -1, // trigger log path
+                                minutesLimit = 100,
+                                manualAdjustment = 0,
+                                trafficUsedMb = 0f,
+                                trafficLimitMb = 1024,
+                                trafficAdjustmentGb = 0f,
+                                autoReset = false,
+                                autoResetDay = 1,
+                                lastResetDate = 0L,
+                                rolloverEnabled = false,
+                            )
+                        SimCardMapper.map(context, slot, usage)
+                    }
+                }
+
+            jobs.awaitAll()
+        }
     }
 }

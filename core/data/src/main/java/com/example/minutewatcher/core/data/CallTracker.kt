@@ -648,8 +648,10 @@ open class CallTracker
             return false
         }
 
+        // Округление вверх: 1 секунда -> 1 минута, 61 секунда -> 2 минуты.
+        // Соответствует политике биллинга операторов.
         private fun calculateDurationMinutes(seconds: Int): Int =
-            (seconds + Constants.Time.CEIL_SECONDS_OFFSET) / Constants.Time.SECONDS_IN_MINUTE
+            (seconds + Constants.Time.SECONDS_IN_MINUTE - 1) / Constants.Time.SECONDS_IN_MINUTE
 
         private suspend fun resolveTargetIdentity(
             subId: Int,

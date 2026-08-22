@@ -1,4 +1,3 @@
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
@@ -13,10 +12,8 @@ kotlin {
 
 android {
     namespace = "com.example.minutewatcher.feature.main"
-    compileSdk = 37
 
     defaultConfig {
-        minSdk = 26
     }
 
     buildFeatures {
@@ -33,18 +30,6 @@ android {
             isIncludeAndroidResources = true
         }
     }
-}
-
-tasks.withType<Test>().configureEach {
-    jvmArgs(
-        "--add-opens=java.base/java.lang=ALL-UNNAMED",
-        "--add-opens=java.base/java.util=ALL-UNNAMED",
-        "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
-        "--add-opens=java.base/java.text=ALL-UNNAMED",
-        "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
-        "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
-        "--add-opens=java.base/java.nio=ALL-UNNAMED",
-    )
 }
 
 dependencies {

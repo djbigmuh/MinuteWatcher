@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.telephony.TelephonyManager
+import androidx.annotation.VisibleForTesting
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,51 +12,34 @@ import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.guava.await
-import kotlinx.coroutines.launch
 
-class UsageMonitorReceiver : BroadcastReceiver() {
+open class UsageMonitorReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
         val action = intent.action
 
-        if (action != TelephonyManager.ACTION_PHONE_STATE_CHANGED &&
-            action != "android.telephony.action.PHONE_STATE_CHANGED"
+        if ((action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) &&
+            (action != "android.telephony.action.PHONE_STATE_CHANGED")
         ) {
             return
         }
 
-        // goAsync() extends the receiver's lifetime until finish() is called.
-        // Required because WorkManager.enqueue() may block on disk I/O.
-        // Without this, the system may kill the receiver process before
-        // the work is actually enqueued.
-        val pendingResult = goAsync()
-        val appContext = context.applicationContext
-
-        // Строгое соблюдение API: BroadcastReceiver с goAsync() должен вызвать
-        // PendingResult.finish() до завершения. SupervisorJob гарантирует, что
-        // отмена одной корутины не повлияет на другие. finish() вызывается в
-        // finally, поэтому даже при отмене корутины он будет вызван.
-        // На AOSP BroadcastReceiver с goAsync() живёт до вызова finish().
-        // Если кастомная прошивка убивает процесс до вызова finish() —
-        // это проблема кастомной прошивки.
-        CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+        goAsyncWithScope(context, acquirePendingResult()) { appContext ->
             try {
                 processPhoneStateChange(appContext, intent)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
-            } finally {
-                pendingResult.finish()
             }
         }
     }
+
+    @VisibleForTesting
+    protected open fun acquirePendingResult(): BroadcastReceiver.PendingResult = goAsync()
 
     private suspend fun processPhoneStateChange(
         appContext: Context,

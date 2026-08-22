@@ -1,4 +1,3 @@
-// DO NOT DOWNGRADE SDK VERSIONS. minSdk 26, targetSdk 37, compileSdk 37 are project requirements.
 plugins {
     id("minutewatcher.android-test")
 }
@@ -9,7 +8,6 @@ kotlin {
 
 android {
     namespace = "com.example.minutewatcher.macrobenchmark"
-    compileSdk = 37
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -17,10 +15,6 @@ android {
     }
 
     defaultConfig {
-        minSdk = 26
-        targetSdk = 37
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     targetProjectPath = ":app"

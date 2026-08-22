@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import org.json.JSONException
@@ -20,7 +21,8 @@ object OperatorResolver {
 
     private val genericSimRegex = Regex("^sim\\s*\\d*$", RegexOption.IGNORE_CASE)
 
-    private val operatorResourceMap =
+    @VisibleForTesting
+    internal val operatorResourceMap =
         mapOf(
             "operator_mts" to R.string.operator_mts,
             "operator_megafon" to R.string.operator_megafon,
@@ -89,7 +91,8 @@ object OperatorResolver {
             "operator_claro" to R.string.operator_claro,
         )
 
-    private val tokenToResKey =
+    @VisibleForTesting
+    internal val tokenToResKey =
         mapOf(
             "mts" to "operator_mts",
             "beeline" to "operator_beeline",
@@ -199,11 +202,17 @@ object OperatorResolver {
         return resolved ?: fallbackResolution(context, networkOperator, simSlot)
     }
 
+    /**
+     * Проверяет, является ли имя оператора специфичным и валидным.
+     *
+     * **Валидность:** имя считается валидным, если оно не является неактивной SIM
+     * (пустое или "null") и не совпадает с общим паттерном "SIM N".
+     *
+     * @param name Имя оператора для проверки.
+     * @return True, если имя специфично и может быть использовано как есть.
+     */
     private fun isValidSpecificName(name: String): Boolean =
-        name.isNotEmpty() &&
-            name != "null" &&
-            !genericSimRegex.matches(name.trim()) &&
-            !SimUtils.isInactiveSim(name)
+        !SimUtils.isInactiveSim(name) && !genericSimRegex.matches(name.trim())
 
     private fun resolveFromDbKey(
         context: Context,

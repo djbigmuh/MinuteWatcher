@@ -48,14 +48,14 @@ class WidgetUpdaterImpl
                                 if (settings.widgetLimitExceeded) {
                                     if (limitManager.shouldProbe()) {
                                         limitManager.performProbeUpdate(context) { ctx, _ ->
-                                            safeUpdateInternal(ctx, isProbe = true)
+                                            safeUpdateInternal(ctx, isFullAttempt = true)
                                         }
                                     } else {
-                                        safeUpdateInternal(context, isProbe = false)
+                                        safeUpdateInternal(context, isFullAttempt = false)
                                     }
                                 } else {
                                     limitManager.resetCounter()
-                                    safeUpdateInternal(context, isProbe = false)
+                                    safeUpdateInternal(context, isFullAttempt = true)
                                 }
                             } catch (e: CancellationException) {
                                 throw e
@@ -98,7 +98,7 @@ class WidgetUpdaterImpl
             limitManager.setWidgetLimitExceeded(value = true)
             AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
 
-            val result = safeUpdateInternal(context, isProbe = false)
+            val result = safeUpdateInternal(context, isFullAttempt = false)
             return when (result) {
                 is UpdateResult.Success -> UpdateOutcome.Success()
                 is UpdateResult.LimitExceeded -> {
@@ -113,20 +113,16 @@ class WidgetUpdaterImpl
 
         private suspend fun safeUpdateInternal(
             context: Context,
-            isProbe: Boolean,
-        ): UpdateResult {
-            val limitExceeded = appSettingsRepository.observeAppSettings().value.widgetLimitExceeded
-            val isFullAttempt = isProbe || !limitExceeded
-
-            return try {
+            isFullAttempt: Boolean,
+        ): UpdateResult =
+            try {
                 renderer.renderAll(context)
                 UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                errorClassifier.classifyUpdateError(e, isFullAttempt, isProbe)
+                errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
-        }
 
         @VisibleForTesting
         constructor(

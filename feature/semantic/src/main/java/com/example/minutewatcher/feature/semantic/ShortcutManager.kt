@@ -51,7 +51,7 @@ import javax.inject.Singleton
  */
 @Suppress("TooManyFunctions")
 @Singleton
-class ShortcutManager
+open class ShortcutManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
@@ -118,16 +118,7 @@ class ShortcutManager
                                 e: Exception,
                             ) {
                                 AppLogger.e("Failed to update dynamic shortcuts", e)
-                                @Suppress("InstanceOfCheckForException")
-                                val type =
-                                    if (
-                                        (e is UnsupportedOperationException) ||
-                                        (e.message?.contains("Shortcut") == true)
-                                    ) {
-                                        TrackingStatus.ErrorType.NOT_SUPPORTED
-                                    } else {
-                                        TrackingStatus.ErrorType.UNKNOWN
-                                    }
+                                val type = classifyShortcutError(e)
                                 _status.value = TrackingStatus.Error(type, e.message)
                             }
                         }
@@ -183,20 +174,23 @@ class ShortcutManager
                 e: Exception,
             ) {
                 AppLogger.e("Failed to update dynamic shortcuts", e)
-                // Эвристика определения NOT_SUPPORTED: проверяем тип исключения и сообщение.
-                // **Строгое соблюдение API:** На AOSP ShortcutManagerCompat бросает
-                // UnsupportedOperationException при отсутствии поддержки ярлыков.
-                // Проверка по сообщению "Shortcut" — последний рубеж для кастомных прошивок,
-                // которые бросают иные типы исключений. Если прошивка не соответствует
-                // документации Google — это проблема кастомной прошивки.
-                val type =
-                    if (e is UnsupportedOperationException || e.message?.contains("Shortcut") == true) {
-                        TrackingStatus.ErrorType.NOT_SUPPORTED
-                    } else {
-                        TrackingStatus.ErrorType.UNKNOWN
-                    }
+                val type = classifyShortcutError(e)
                 _status.value = TrackingStatus.Error(type, e.message)
                 false
+            }
+
+        /**
+         * Классифицирует ошибку работы с ярлыками.
+         *
+         * **Строгое соблюдение API:** На AOSP [ShortcutManagerCompat] бросает
+         * [UnsupportedOperationException] при отсутствии поддержки ярлыков.
+         * Если кастомная прошивка бросает иной тип исключения — это проблема кастомной прошивки.
+         */
+        private fun classifyShortcutError(e: Exception): TrackingStatus.ErrorType =
+            if (e is UnsupportedOperationException) {
+                TrackingStatus.ErrorType.NOT_SUPPORTED
+            } else {
+                TrackingStatus.ErrorType.UNKNOWN
             }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
@@ -222,7 +216,7 @@ class ShortcutManager
             if (entity == null || entity.limit <= 0) return null
 
             val slot = sim.slot
-            val operator = SimUtils.getShortOperatorName(context, sim.operator)
+            val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
             val label = "${entity.remaining} ${context.getString(R.string.minutes_abbr).trim()}"
             val longLabel = "$operator: ${context.getString(R.string.remaining_text).trim()} $label"
 
@@ -240,7 +234,7 @@ class ShortcutManager
             if (entity == null || entity.limit <= 0) return null
 
             val slot = sim.slot
-            val operator = SimUtils.getShortOperatorName(context, sim.operator)
+            val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
             val trafficGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
             val label =
                 String.format(
@@ -270,7 +264,7 @@ class ShortcutManager
                     putExtra(IntentExtras.SIM_SLOT, slot)
                 }
 
-        private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
+        protected open fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
             try {
                 if (shortcuts.isNotEmpty()) {
                     ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
@@ -284,6 +278,7 @@ class ShortcutManager
                 e: Exception,
             ) {
                 AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
+                throw e // Rethrow to be caught by executeSimOperation/updateShortcutsSync
             }
         }
 

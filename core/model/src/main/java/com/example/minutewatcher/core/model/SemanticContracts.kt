@@ -70,7 +70,7 @@ data class SchemaVersion(
 data class SimSnapshot(
     val slot: Int,
     val identity: String,
-    val operator: String,
+    val operatorName: String,
     val isActive: Boolean,
     val entities: Map<PackageType, SemanticEntity>,
     val autoResetDay: Int,

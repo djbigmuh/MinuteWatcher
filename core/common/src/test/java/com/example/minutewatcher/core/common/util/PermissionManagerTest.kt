@@ -22,37 +22,10 @@ class PermissionManagerTest {
     private val subscriptionManager: SubscriptionManager = mock()
     private lateinit var permissionManager: PermissionManager
 
-    private val mockLogger =
-        object : Logger {
-            override fun d(
-                tag: String,
-                message: String,
-            ) {
-                // No-op for testing
-            }
-
-            override fun w(
-                tag: String,
-                message: String,
-                throwable: Throwable?,
-            ) {
-                // No-op for testing
-            }
-
-            override fun e(
-                tag: String,
-                message: String,
-                throwable: Throwable?,
-            ) {
-                // No-op for testing
-            }
-        }
-
     @Before
     fun setup() {
-        whenever(context.filesDir).thenReturn(mock())
+        initTestLogger(context)
         whenever(context.packageName).thenReturn("com.example.minutewatcher")
-        AppLogger.init(context, mockLogger)
         whenever(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)).thenReturn(subscriptionManager)
         permissionManager = PermissionManager(context)
     }

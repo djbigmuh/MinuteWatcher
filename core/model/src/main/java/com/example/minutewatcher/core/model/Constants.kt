@@ -139,9 +139,6 @@ object Constants {
         /** Количество секунд в одной минуте. */
         const val SECONDS_IN_MINUTE = 60
 
-        /** Смещение для округления секунд вверх до минуты. */
-        const val CEIL_SECONDS_OFFSET = 59
-
         /** Таймаут обновления виджета (мс). */
         const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
 

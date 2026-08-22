@@ -1,4 +1,18 @@
+import com.android.build.api.dsl.ApplicationExtension
+import com.example.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("com.android.application")
     id("minutewatcher.android.lint")
+}
+
+extensions.configure<ApplicationExtension> {
+    compileSdk = SdkVersions.COMPILE_SDK
+
+    defaultConfig {
+        minSdk = SdkVersions.MIN_SDK
+        targetSdk = SdkVersions.TARGET_SDK
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 }

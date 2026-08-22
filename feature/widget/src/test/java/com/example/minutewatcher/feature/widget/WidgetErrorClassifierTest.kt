@@ -1,12 +1,12 @@
 package com.example.minutewatcher.feature.widget
 
+import com.example.minutewatcher.core.common.util.initTestLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -17,11 +17,7 @@ class WidgetErrorClassifierTest {
 
     @Before
     fun setup() {
-        com.example.minutewatcher.core.common.util.AppLogger.init(
-            mock(),
-            com.example.minutewatcher.core.common.util
-                .NoOpLogger(),
-        )
+        initTestLogger()
     }
 
     @Test
@@ -50,7 +46,7 @@ class WidgetErrorClassifierTest {
         val cause = android.os.TransactionTooLargeException()
         val e = IllegalArgumentException("Too large", cause)
 
-        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true)
 
         assertEquals(UpdateResult.LimitExceeded, result)
     }
@@ -59,7 +55,7 @@ class WidgetErrorClassifierTest {
     fun `classifyUpdateError returns GenericFailure retryable for generic IllegalArgumentException`() {
         val e = IllegalArgumentException("Generic")
 
-        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true)
 
         assertTrue(result is UpdateResult.GenericFailure)
         assertTrue((result as UpdateResult.GenericFailure).isRetryable)
@@ -69,7 +65,7 @@ class WidgetErrorClassifierTest {
     fun `classifyUpdateError returns GenericFailure non-retryable for IllegalStateException`() {
         val e = IllegalStateException("Bad state")
 
-        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true)
 
         assertTrue(result is UpdateResult.GenericFailure)
         assertFalse((result as UpdateResult.GenericFailure).isRetryable)
@@ -79,7 +75,7 @@ class WidgetErrorClassifierTest {
     fun `classifyUpdateError returns GenericFailure retryable for unknown exception`() {
         val e = Exception("Unknown")
 
-        val result = classifier.classifyUpdateError(e, isFullAttempt = true, isProbe = false)
+        val result = classifier.classifyUpdateError(e, isFullAttempt = true)
 
         assertTrue(result is UpdateResult.GenericFailure)
         assertTrue((result as UpdateResult.GenericFailure).isRetryable)

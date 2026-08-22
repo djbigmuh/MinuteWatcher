@@ -32,6 +32,6 @@ object WidgetStringsFactory {
     ): Map<Int, String> =
         simSnapshots.associateBy(
             keySelector = { it.slot },
-            valueTransform = { SimUtils.getShortOperatorName(context, it.operator) },
+            valueTransform = { SimUtils.getShortOperatorName(context, it.operatorName) },
         )
 }

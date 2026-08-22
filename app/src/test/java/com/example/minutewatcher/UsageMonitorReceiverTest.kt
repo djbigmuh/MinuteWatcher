@@ -32,7 +32,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
-import org.robolectric.util.ReflectionHelpers
 
 /**
  * Tests verify that goAsync() contract is respected:
@@ -83,9 +82,11 @@ class UsageMonitorReceiverTest {
     @Test
     fun testOnReceiveEnqueuesCallEventWork() =
         runTest {
-            val receiver = UsageMonitorReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val intent =
                 Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
@@ -111,9 +112,11 @@ class UsageMonitorReceiverTest {
     @Test
     fun testOnReceiveUnknownSubIdEnqueuesWork() =
         runTest {
-            val receiver = UsageMonitorReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val intent =
                 Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
@@ -138,9 +141,11 @@ class UsageMonitorReceiverTest {
     @Test
     fun testOnReceiveTelephonyActionEnqueuesWork() =
         runTest {
-            val receiver = UsageMonitorReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             // Test the alternative action string
             val intent =
@@ -167,9 +172,11 @@ class UsageMonitorReceiverTest {
     @Test
     fun testOnReceiveNullStateDoesNotEnqueueWork() =
         runTest {
-            val receiver = UsageMonitorReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val intent = Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
             // No EXTRA_STATE put
@@ -193,9 +200,11 @@ class UsageMonitorReceiverTest {
     @Test
     fun `onReceive calls pendingResult finish after work completes`() =
         runTest {
-            val receiver = UsageMonitorReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val intent =
                 Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
@@ -214,9 +223,11 @@ class UsageMonitorReceiverTest {
     @Test
     fun `onReceive calls pendingResult finish even on exception`() =
         runTest {
-            val receiver = UsageMonitorReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val failingContext = mock(Context::class.java)
             val mockAppContext = mock(Context::class.java)

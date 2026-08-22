@@ -1,8 +1,7 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -19,7 +18,7 @@ class TrafficTargetResolverTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
         resolver = TrafficTargetResolver(permissionManager)
     }
 

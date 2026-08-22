@@ -37,7 +37,45 @@ data class WidgetSettingsState(
      * General settings can still be valid and savable if this is true.
      */
     val simListLoadFailed: Boolean = false,
-)
+) {
+    companion object {
+        /**
+         * Валидирует настройки перед сохранением.
+         *
+         * Строгое соблюдение API: значения coerceIn гарантируют, что виджет
+         * получит корректные параметры даже если UI передал некорректные данные.
+         *
+         * @param state Исходное состояние.
+         * @return Валидированное состояние.
+         */
+        fun validate(state: WidgetSettingsState): WidgetSettingsState =
+            state.copy(
+                layoutMode =
+                    state.layoutMode.coerceIn(
+                        Constants.Widget.MIN_LAYOUT_MODE,
+                        Constants.Widget.MAX_LAYOUT_MODE,
+                    ),
+                simArrangement =
+                    state.simArrangement.coerceIn(
+                        Constants.Widget.MIN_SIM_ARRANGEMENT,
+                        Constants.Widget.MAX_SIM_ARRANGEMENT,
+                    ),
+                transparency =
+                    state.transparency.coerceIn(
+                        Constants.Widget.MIN_TRANSPARENCY,
+                        Constants.Widget.MAX_TRANSPARENCY,
+                    ),
+                fontSize =
+                    state.fontSize.coerceIn(
+                        Constants.Widget.MIN_FONT_SIZE,
+                        Constants.Widget.MAX_FONT_SIZE,
+                    ),
+                // Сбрасываем флаг превышения лимита при сохранении настроек пользователем.
+                // Это позволяет вручную "вылечить" виджет, если пользователь изменил состав данных.
+                widgetLimitExceeded = false,
+            )
+    }
+}
 
 /**
  * Настройки одной SIM-карты в виджете.

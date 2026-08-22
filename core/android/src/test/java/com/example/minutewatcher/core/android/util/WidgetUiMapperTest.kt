@@ -42,7 +42,7 @@ class WidgetUiMapperTest {
                         SimSnapshot(
                             slot = 0,
                             identity = "sim_0",
-                            operator = "MTS",
+                            operatorName = "MTS",
                             isActive = true,
                             entities =
                                 mapOf(
@@ -141,7 +141,7 @@ class WidgetUiMapperTest {
                         SimSnapshot(
                             slot = 0,
                             identity = "sim_0",
-                            operator = "MTS",
+                            operatorName = "MTS",
                             isActive = true,
                             entities =
                                 mapOf(
@@ -236,7 +236,7 @@ class WidgetUiMapperTest {
                         SimSnapshot(
                             slot = 0,
                             identity = "sim_0",
-                            operator = "MTS",
+                            operatorName = "MTS",
                             isActive = true,
                             entities =
                                 mapOf(

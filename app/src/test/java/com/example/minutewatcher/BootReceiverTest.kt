@@ -34,7 +34,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
-import org.robolectric.util.ReflectionHelpers
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -91,9 +90,11 @@ class BootReceiverTest {
     @Test
     fun testOnReceiveEnqueuesWork() =
         runTest {
-            val receiver = BootReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : BootReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
 
@@ -120,9 +121,11 @@ class BootReceiverTest {
     @Test
     fun `onReceive calls pendingResult finish after work completes`() =
         runTest {
-            val receiver = BootReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : BootReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
 
@@ -137,9 +140,11 @@ class BootReceiverTest {
     @Test
     fun `onReceive calls pendingResult finish even on exception`() =
         runTest {
-            val receiver = BootReceiver()
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            ReflectionHelpers.setField(receiver, "mPendingResult", mockPendingResult)
+            val receiver =
+                object : BootReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
 
             // Mock context to throw exception when applicationContext is accessed inside the coroutine.
             // Note: In BootReceiver, appContext is retrieved BEFORE the coroutine.

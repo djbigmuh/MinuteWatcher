@@ -1,8 +1,7 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
-import com.example.minutewatcher.core.common.util.NoOpLogger
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdater
@@ -56,7 +55,7 @@ class UpdateCoordinatorTest {
 
     @Before
     fun setup() {
-        AppLogger.init(mock(), NoOpLogger())
+        initTestLogger()
         snapshotFlow.tryEmit(createEmptySnapshot())
         runTest {
             whenever(widgetUpdater.updateAll()).thenReturn(true)
@@ -445,7 +444,7 @@ class UpdateCoordinatorTest {
                 com.example.minutewatcher.core.model.SimSnapshot(
                     slot = 0,
                     identity = "sim_0",
-                    operator = "MTS",
+                    operatorName = "MTS",
                     isActive = true,
                     autoResetDay = 1,
                     entities =
