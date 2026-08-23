@@ -249,10 +249,11 @@ class UpdateCoordinator
 
             if (consecutive >= MAX_OBSERVATION_ATTEMPTS) {
                 AppLogger.e("UpdateCoordinator: observation stopped after $consecutive failures")
-                _status.value = TrackingStatus.Error(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Snapshot observation stopped after $consecutive failures"
-                )
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Snapshot observation stopped after $consecutive failures",
+                    )
                 return false
             }
 
