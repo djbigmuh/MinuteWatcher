@@ -76,21 +76,19 @@ class TrafficTracker
         }
 
         suspend fun updateTrafficUsage() {
-            trafficMutex.withLock {
-                try {
-                    if (!checkPermissions()) return
+            try {
+                if (!checkPermissions()) return
 
-                    val activeSims = fetchActiveSims() ?: return
-                    handleActiveSims(activeSims)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException in TrafficTracker", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                } catch (e: Exception) {
-                    AppLogger.e("Error updating traffic", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                }
+                val activeSims = fetchActiveSims() ?: return
+                handleActiveSims(activeSims)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                AppLogger.e("SecurityException in TrafficTracker", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            } catch (e: Exception) {
+                AppLogger.e("Error updating traffic", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
         }
 
@@ -121,13 +119,17 @@ class TrafficTracker
 
         private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
             if (activeSims.isEmpty()) {
-                baselineManager.cleanupRetries(emptySet())
-                _status.value = TrackingStatus.Idle
+                trafficMutex.withLock {
+                    baselineManager.cleanupRetries(emptySet())
+                    _status.value = TrackingStatus.Idle
+                }
                 return
             }
 
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
-            baselineManager.cleanupRetries(activeIdentities)
+            trafficMutex.withLock {
+                baselineManager.cleanupRetries(activeIdentities)
+            }
 
             processActiveSimsTraffic(activeSims)
         }
@@ -151,7 +153,7 @@ class TrafficTracker
             }
         }
 
-        @Suppress("ReturnCount")
+        @Suppress("ReturnCount", "LongMethod")
         private suspend fun performTrafficUpdate(
             target: TargetInfo,
             targetIdentity: String,
@@ -159,23 +161,27 @@ class TrafficTracker
             val pendingRetry = baselineManager.baselineNeedsRetry[targetIdentity]
             if (pendingRetry != null) {
                 if (pendingRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-                    AppLogger.e("TrafficTracker: baseline reset for $targetIdentity failed after all retries")
-                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                            "Baseline reset failed for $targetIdentity",
-                        )
+                    trafficMutex.withLock {
+                        AppLogger.e("TrafficTracker: baseline reset for $targetIdentity failed after all retries")
+                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Baseline reset failed for $targetIdentity",
+                            )
+                    }
                     return
                 }
                 val statsResult = baselineManager.getCurrentMobileBytes(0L)
-                if (statsResult is StatsResult.Success) {
-                    simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
-                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                    _status.value = TrackingStatus.Active
-                    return
+                trafficMutex.withLock {
+                    if (statsResult is StatsResult.Success) {
+                        simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                        _status.value = TrackingStatus.Active
+                        return@withLock
+                    }
+                    baselineManager.baselineNeedsRetry[targetIdentity] = pendingRetry + 1
                 }
-                baselineManager.baselineNeedsRetry[targetIdentity] = pendingRetry + 1
                 return
             }
 
@@ -191,32 +197,15 @@ class TrafficTracker
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     simUsageRepository.getSimUsage(targetIdentity).first()
                 } ?: run {
-                    AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+                    trafficMutex.withLock {
+                        AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+                    }
                     return
                 }
 
             val statsResult = baselineManager.getCurrentMobileBytes(usage.lastResetDate)
-            if (baselineManager.handleBaselineRetry(
-                    target,
-                    targetIdentity,
-                    statsResult,
-                    _status,
-                ) {
-                    simChangeHandler.updateLastDataSubId(it)
-                }
-            ) {
-                return
-            }
 
-            processStatsResult(target, targetIdentity, statsResult)
-        }
-
-        private suspend fun processStatsResult(
-            target: TargetInfo,
-            targetIdentity: String,
-            statsResult: StatsResult,
-        ) {
             val lastTotalBytes =
                 if (statsResult is StatsResult.Success) {
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -226,15 +215,29 @@ class TrafficTracker
                     -1L
                 }
 
-            if (lastTotalBytes == null) {
-                AppLogger.e("TrafficTracker: getLastTotalBytes timed out for $targetIdentity")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Timeout reading lastTotalBytes",
-                    )
-            } else {
-                executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes)
+            trafficMutex.withLock {
+                if (baselineManager.handleBaselineRetry(
+                        target,
+                        targetIdentity,
+                        statsResult,
+                        _status,
+                    ) {
+                        simChangeHandler.updateLastDataSubId(it)
+                    }
+                ) {
+                    return@withLock
+                }
+
+                if (lastTotalBytes == null) {
+                    AppLogger.e("TrafficTracker: getLastTotalBytes timed out for $targetIdentity")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Timeout reading lastTotalBytes",
+                        )
+                } else {
+                    executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes)
+                }
             }
         }
 

@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -111,6 +113,7 @@ class MainSimDataController
         private val _highlightedSlot = MutableStateFlow<Int?>(null)
         val highlightedSlot: StateFlow<Int?> = _highlightedSlot.asStateFlow()
 
+        private val highlightMutex = Mutex()
         private var highlightJob: Job? = null
 
         /**
@@ -123,19 +126,27 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun highlightSlot(slot: Int) {
-            // Повторный вызов для того же слота не перезапускает таймер.
-            // Это предотвращает «вечную» подсветку при быстрых повторных нажатиях.
-            // Длительность подсветки фиксирована: HIGHLIGHT_DELAY_MS от первого вызова.
-            if (_highlightedSlot.value == slot && highlightJob?.isActive == true) {
-                return
-            }
-            highlightJob?.cancel()
-            _highlightedSlot.value = slot
-            highlightJob =
-                scope.launch {
-                    delay(Constants.UI.HIGHLIGHT_DELAY_MS.milliseconds)
-                    _highlightedSlot.value = null
+            scope.launch {
+                highlightMutex.withLock {
+                    // Повторный вызов для того же слота не перезапускает таймер.
+                    // Это предотвращает «вечную» подсветку при быстрых повторных нажатиях.
+                    // Длительность подсветки фиксирована: HIGHLIGHT_DELAY_MS от первого вызова.
+                    if ((_highlightedSlot.value == slot) && (highlightJob?.isActive == true)) {
+                        return@withLock
+                    }
+                    highlightJob?.cancel()
+                    _highlightedSlot.value = slot
+                    highlightJob =
+                        launch {
+                            delay(Constants.UI.HIGHLIGHT_DELAY_MS.milliseconds)
+                            highlightMutex.withLock {
+                                if (_highlightedSlot.value == slot) {
+                                    _highlightedSlot.value = null
+                                }
+                            }
+                        }
                 }
+            }
         }
 
         /**

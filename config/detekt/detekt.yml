@@ -48,6 +48,15 @@ style:
     maxLineLength: 120
   UnusedImports:
     active: true
+  MagicNumber:
+    active: true
+    excludes: ['**/*Test.kt', '**/*Test*.kt']
+    ignorePropertyDeclaration: true
+    ignoreAnnotated:
+      - 'androidx.compose.runtime.Composable'
+      - 'Composable'
+      - 'org.junit.Test'
+      - 'Test'
 
 potential-bugs:
   active: true

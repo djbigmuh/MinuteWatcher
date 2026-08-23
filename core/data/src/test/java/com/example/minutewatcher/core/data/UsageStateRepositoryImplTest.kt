@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
@@ -18,12 +19,17 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class UsageStateRepositoryImplTest {
-    private val context: Context = mock()
+    private lateinit var context: Context
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val semanticCapabilities: SemanticCapabilities = mock()
@@ -34,6 +40,7 @@ class UsageStateRepositoryImplTest {
     @Before
     fun setup() {
         initTestLogger()
+        context = ApplicationProvider.getApplicationContext()
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
         whenever(dataRefreshNotifier.refreshFlow).thenReturn(MutableSharedFlow())
         whenever(semanticVersion.getVersion()).thenReturn(SchemaVersion(1, 0, 0))

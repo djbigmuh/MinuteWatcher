@@ -141,42 +141,51 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
-        // @Suppress("CyclomaticComplexMethod") is required because mapping many DataStore fields
-        // to AppSettings results in many decision points (elvis operators), exceeding the default limit.
-        @Suppress("CyclomaticComplexMethod", "detekt.CyclomaticComplexMethod")
         private fun Preferences.toAppSettings(): AppSettings =
-            AppSettings(
-                theme = AppTheme.fromValue(this[DataStoreKeys.APP_THEME] ?: -1),
-                language = this[DataStoreKeys.APP_LANGUAGE],
-                notifyLowMinutes = this[DataStoreKeys.NOTIFY_LOW_MINUTES] ?: DEFAULT_SETTINGS.notifyLowMinutes,
-                notifyLowTraffic = this[DataStoreKeys.NOTIFY_LOW_TRAFFIC] ?: DEFAULT_SETTINGS.notifyLowTraffic,
-                widgetLayoutMode = this[DataStoreKeys.WIDGET_LAYOUT_MODE] ?: DEFAULT_SETTINGS.widgetLayoutMode,
-                widgetSimArrangement =
-                    this[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] ?: DEFAULT_SETTINGS.widgetSimArrangement,
-                widgetTransparency = this[DataStoreKeys.WIDGET_TRANSPARENCY] ?: DEFAULT_SETTINGS.widgetTransparency,
-                widgetFontSize = this[DataStoreKeys.WIDGET_FONT_SIZE] ?: DEFAULT_SETTINGS.widgetFontSize,
-                widgetBackgroundColor =
-                    this[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: DEFAULT_SETTINGS.widgetBackgroundColor,
-                migrationV1Completed =
-                    this[DataStoreKeys.MIGRATION_V1_COMPLETED] ?: DEFAULT_SETTINGS.migrationV1Completed,
-                onboardingCompleted = this[DataStoreKeys.ONBOARDING_COMPLETED] ?: DEFAULT_SETTINGS.onboardingCompleted,
+            AppSettings()
+                .mapBasicSettings(this)
+                .mapWidgetSettings(this)
+                .mapSystemSettings(this)
+                .mapTrackingSettings(this)
+
+        private fun AppSettings.mapBasicSettings(prefs: Preferences): AppSettings =
+            copy(
+                theme = AppTheme.fromValue(prefs[DataStoreKeys.APP_THEME] ?: -1),
+                language = prefs[DataStoreKeys.APP_LANGUAGE],
+            )
+
+        private fun AppSettings.mapWidgetSettings(prefs: Preferences): AppSettings =
+            copy(
+                widgetLayoutMode = prefs[DataStoreKeys.WIDGET_LAYOUT_MODE] ?: widgetLayoutMode,
+                widgetSimArrangement = prefs[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] ?: widgetSimArrangement,
+                widgetTransparency = prefs[DataStoreKeys.WIDGET_TRANSPARENCY] ?: widgetTransparency,
+                widgetFontSize = prefs[DataStoreKeys.WIDGET_FONT_SIZE] ?: widgetFontSize,
+                widgetBackgroundColor = prefs[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: widgetBackgroundColor,
+                widgetLimitExceeded = prefs[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: widgetLimitExceeded,
+            )
+
+        private fun AppSettings.mapSystemSettings(prefs: Preferences): AppSettings =
+            copy(
+                migrationV1Completed = prefs[DataStoreKeys.MIGRATION_V1_COMPLETED] ?: migrationV1Completed,
+                onboardingCompleted = prefs[DataStoreKeys.ONBOARDING_COMPLETED] ?: onboardingCompleted,
                 notificationPermissionRequested =
-                    this[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED]
-                        ?: DEFAULT_SETTINGS.notificationPermissionRequested,
+                    prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: notificationPermissionRequested,
                 wasPhonePermissionRequestedBefore =
-                    this[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE]
-                        ?: DEFAULT_SETTINGS.wasPhonePermissionRequestedBefore,
-                phonePermissionRequested =
-                    this[DataStoreKeys.PHONE_PERMISSION_REQUESTED] ?: DEFAULT_SETTINGS.phonePermissionRequested,
-                benchmarkSimCount = this[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: DEFAULT_SETTINGS.benchmarkSimCount,
-                widgetLimitExceeded = this[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: DEFAULT_SETTINGS.widgetLimitExceeded,
+                    prefs[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE] ?: wasPhonePermissionRequestedBefore,
+                phonePermissionRequested = prefs[DataStoreKeys.PHONE_PERMISSION_REQUESTED] ?: phonePermissionRequested,
+                benchmarkSimCount = prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: benchmarkSimCount,
+            )
+
+        private fun AppSettings.mapTrackingSettings(prefs: Preferences): AppSettings =
+            copy(
+                notifyLowMinutes = prefs[DataStoreKeys.NOTIFY_LOW_MINUTES] ?: notifyLowMinutes,
+                notifyLowTraffic = prefs[DataStoreKeys.NOTIFY_LOW_TRAFFIC] ?: notifyLowTraffic,
                 inaccurateCallAttributionsCount =
-                    this[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT]
-                        ?: DEFAULT_SETTINGS.inaccurateCallAttributionsCount,
-                callTrackingEnabled = this[DataStoreKeys.CALL_TRACKING_ENABLED] ?: DEFAULT_SETTINGS.callTrackingEnabled,
+                    prefs[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] ?: inaccurateCallAttributionsCount,
+                callTrackingEnabled = prefs[DataStoreKeys.CALL_TRACKING_ENABLED] ?: callTrackingEnabled,
             )
 
         companion object {
-            private val DEFAULT_SETTINGS = AppSettings()
+            // No-op
         }
     }

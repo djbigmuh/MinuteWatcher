@@ -908,39 +908,29 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `updateTrafficUsage retries observeActiveSims on timeout`() =
+    fun `updateTrafficUsage does not block concurrent calls during IO`() =
         runTest(testDispatcher) {
-            // Setup: first call times out, second call succeeds
-            var callCount = 0
-            val neverFlow = MutableSharedFlow<List<ActiveSimInfo>>()
-            val activeSims =
-                listOf(
-                    ActiveSimInfo(
-                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        displayName = "SIM 1",
-                        carrierName = "Carrier 1",
-                        mccMnc = "25001",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                )
+            val flow = MutableSharedFlow<List<ActiveSimInfo>>()
+            val callCount = java.util.concurrent.atomic.AtomicInteger(0)
 
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
-                callCount++
-                if (callCount == 1) neverFlow else flowOf(activeSims)
+                callCount.incrementAndGet()
+                flow
             }
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            val lastTotalFlow5 = flowOf(1000L)
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow5)
 
-            tracker.updateTrafficUsage()
+            // Start two calls
+            launch { tracker.updateTrafficUsage() }
+            launch { tracker.updateTrafficUsage() }
 
-            // Verify it was called twice
-            @Suppress("UnusedFlow")
-            verify(simIdentityRepository, times(2)).observeActiveSims()
-            assertEquals(TrackingStatus.Active, tracker.status.value)
+            // Allow them to reach fetchActiveSims() -> observeActiveSims().first()
+            advanceUntilIdle()
+
+            // If not blocked by trafficMutex, both should have called observeActiveSims()
+            assertEquals(2, callCount.get())
+
+            // Clean up by emitting empty list to finish the calls
+            flow.emit(emptyList())
+            advanceUntilIdle()
         }
 }
 

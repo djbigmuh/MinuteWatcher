@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
@@ -51,7 +52,7 @@ class SemanticSearchManagerTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private val context: Context = mock()
+    private lateinit var context: Context
     private val timeProvider: TimeProvider = mock()
     private var currentTime = 1000000L
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -61,6 +62,7 @@ class SemanticSearchManagerTest {
 
     @Before
     fun setup() {
+        context = ApplicationProvider.getApplicationContext()
         whenever(timeProvider.now()).thenAnswer { currentTime }
         whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime }
         whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime }

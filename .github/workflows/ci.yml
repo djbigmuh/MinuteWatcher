@@ -75,25 +75,16 @@ jobs:
       if: github.event_name == 'pull_request'
       run: |
         echo "Checking for baseline growth..."
-        # Allow 0 new lines in baselines. To allow growth, add 'allow-baseline-growth' label to PR.
-        # This is a strict enforcement of Instruction E-3.
         if [[ "${{ contains(github.event.pull_request.labels.*.name, 'allow-baseline-growth') }}" == "true" ]]; then
           echo "Baseline growth allowed via PR label."
         else
           git fetch origin ${{ github.base_ref }}
-          GROWTH_FOUND=0
-          for f in $(find . -name "*-baseline.xml"); do
-            if git ls-tree -r origin/${{ github.base_ref }} --name-only | grep -q "$f"; then
-              OLD_LINES=$(git show origin/${{ github.base_ref }}:"$f" | wc -l)
-              NEW_LINES=$(wc -l < "$f")
-              if [ "$NEW_LINES" -gt "$OLD_LINES" ]; then
-                echo "Error: Baseline $f has grown from $OLD_LINES to $NEW_LINES lines."
-                GROWTH_FOUND=1
-              fi
-            fi
-          done
-          if [ "$GROWTH_FOUND" -ne 0 ]; then
-            echo "Baseline growth is prohibited. Please fix the issues instead of adding them to the baseline."
+          # Check for added lines ($1 > 0) or new baseline files in any *-baseline.xml
+          if git diff --numstat origin/${{ github.base_ref }}...HEAD -- '*-baseline.xml' | awk '{if ($1 > 0) exit 1}'; then
+            echo "Baselines are clean (no growth or new files)."
+          else
+            echo "Error: Baselines have grown or new baseline files were created."
+            echo "Baseline growth is prohibited. Please fix the issues instead of adding them to baseline files."
             echo "If growth is absolutely necessary, add the 'allow-baseline-growth' label to this PR."
             exit 1
           fi

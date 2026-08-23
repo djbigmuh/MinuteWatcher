@@ -19,7 +19,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -63,7 +62,7 @@ class WidgetSettingsViewModel
         private val loadMutex = Mutex()
 
         // loadJob — Job текущей загрузки.
-        private val loadJob = AtomicReference<Job?>(null)
+        private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
@@ -79,36 +78,37 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Загружает настройки виджета, используя паттерн атомарной отмены предыдущей загрузки.
+         * Загружает настройки виджета, используя паттерн сериализации через мьютекс.
          */
         private fun loadSettings() {
-            reduce { copy(isLoadError = false) }
-            loadJob.getAndSet(null)?.cancel()
-            val newJob =
-                viewModelScope.launch {
-                    loadMutex.withLock {
-                        try {
-                            val loaded =
-                                withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                    loader.load()
+            viewModelScope.launch {
+                loadMutex.withLock {
+                    loadJob?.cancel()
+                    reduce { copy(isLoadError = false) }
+
+                    loadJob =
+                        launch {
+                            try {
+                                val loaded =
+                                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                                        loader.load()
+                                    }
+                                ensureActive()
+                                if (loaded != null) {
+                                    reduce { copy(settings = loaded) }
+                                } else {
+                                    AppLogger.e("Failed to load widget settings: timeout")
+                                    reduce { copy(isLoadError = true) }
                                 }
-                            ensureActive()
-                            if (loaded != null) {
-                                reduce { copy(settings = loaded) }
-                            } else {
-                                AppLogger.e("Failed to load widget settings: timeout")
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to load widget settings", e)
                                 reduce { copy(isLoadError = true) }
                             }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to load widget settings", e)
-                            reduce { copy(isLoadError = true) }
                         }
-                    }
                 }
-
-            loadJob.set(newJob)
+            }
         }
 
         /**

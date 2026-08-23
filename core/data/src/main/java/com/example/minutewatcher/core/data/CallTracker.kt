@@ -101,9 +101,7 @@ open class CallTracker
 
             if (!shouldProceed) return
 
-            callMutex.withLock {
-                executeCallStart(subId)
-            }
+            executeCallStart(subId)
         }
 
         private fun handleStartTrackingCheckError(e: Exception) {
@@ -120,7 +118,18 @@ open class CallTracker
             var operationCompleted = false
             try {
                 if (!checkPermissions()) return
-                handleCallStarted(subId)
+
+                val targetSubId = resolveTargetSubId(subId)
+                if (targetSubId == -1) {
+                    AppLogger.w("CallTracker: could not attribute start event (unknown subId and no default SIM)")
+                    return
+                }
+
+                val startData = fetchCallStartData(targetSubId)
+
+                callMutex.withLock {
+                    processCallStartLocked(targetSubId, startData)
+                }
                 operationCompleted = true
             } catch (e: CancellationException) {
                 throw e
@@ -129,19 +138,70 @@ open class CallTracker
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             } catch (e: Exception) {
                 AppLogger.e("Error in onCallStarted", e)
-                // If it's already an error (e.g. set by internal logic), don't overwrite with UNKNOWN
                 if (_status.value !is TrackingStatus.Error) {
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             } finally {
-                withContext(NonCancellable) {
-                    try {
-                        if (operationCompleted || (_status.value is TrackingStatus.Error)) {
-                            refreshStatus()
-                        }
-                    } catch (e: Exception) {
-                        AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
+                finalizeCallStart(operationCompleted)
+            }
+        }
+
+        private suspend fun fetchCallStartData(targetSubId: Int): CallStartData {
+            val startTimeResult = retryHelper.readWithRetry(
+                label = "getCallStartTime",
+                reader = { callSessionRepository.getCallStartTime(targetSubId) },
+            )
+            val bootTimeResult = retryHelper.readWithRetry(
+                label = "getBootTime",
+                reader = { callSessionRepository.getBootTime(targetSubId) },
+            )
+            val identity = resolveIdentity(targetSubId)
+            return CallStartData(
+                startTimeResult = startTimeResult,
+                bootTimeResult = bootTimeResult,
+                identity = identity,
+                now = timeProvider.now(),
+                bootTime = timeProvider.elapsedRealtime(),
+                uptime = timeProvider.uptimeMillis(),
+            )
+        }
+
+        private suspend fun processCallStartLocked(targetSubId: Int, data: CallStartData) {
+            if (data.startTimeResult.isFailure) {
+                handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull())
+                return
+            }
+
+            val startTime = data.startTimeResult.getOrThrow()
+            if (startTime != 0L) {
+                val savedBootTime = data.bootTimeResult.getOrElse { 0L }
+                val isStale = savedBootTime > data.bootTime ||
+                    (savedBootTime > 0 && data.bootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS)
+
+                if (!isStale) {
+                    AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
+                    return
+                }
+
+                AppLogger.w("CallTracker: clearing stale session for subId $targetSubId")
+                cleanupCounters(targetSubId)
+            }
+
+            callSessionRepository.setCallStartTime(targetSubId, data.now)
+            callSessionRepository.setBootTime(targetSubId, data.bootTime)
+            callSessionRepository.setUptime(targetSubId, data.uptime)
+            callSessionRepository.setCallIdentity(targetSubId, data.identity)
+            AppLogger.d("Call start recorded for subId $targetSubId at ${data.now} (identity=${data.identity})")
+        }
+
+        private suspend fun finalizeCallStart(operationCompleted: Boolean) {
+            withContext(NonCancellable) {
+                try {
+                    if (operationCompleted || (_status.value is TrackingStatus.Error)) {
+                        refreshStatus()
                     }
+                } catch (e: Exception) {
+                    AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                 }
             }
         }
@@ -194,47 +254,47 @@ open class CallTracker
         }
 
         private suspend fun performCallEnd(subId: Int) {
-            callMutex.withLock {
-                var operationCompleted = false
-                try {
-                    if (!checkPermissions()) return@withLock
+            var operationCompleted = false
+            try {
+                if (!checkPermissions()) return
 
-                    val effectiveSubId = resolveEffectiveSubId(subId)
+                val effectiveSubId = resolveEffectiveSubId(subId)
 
-                    if (effectiveSubId == -1) {
-                        callEndResolver.resolveUnknownSubIdEnd()
-                    } else {
-                        endCall(effectiveSubId)
-                    }
-                    operationCompleted = true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: IOException) {
-                    throw e
-                } catch (e: SecurityException) {
-                    AppLogger.e("SecurityException in onCallEnded", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                } catch (e: Exception) {
-                    AppLogger.e("Error in onCallEnded", e)
-                    if (_status.value !is TrackingStatus.Error) {
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    }
-                    if (subId != -1) {
-                        try {
+                if (effectiveSubId == -1) {
+                    callEndResolver.resolveUnknownSubIdEnd()
+                } else {
+                    endCall(effectiveSubId)
+                }
+                operationCompleted = true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                throw e
+            } catch (e: SecurityException) {
+                AppLogger.e("SecurityException in onCallEnded", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            } catch (e: Exception) {
+                AppLogger.e("Error in onCallEnded", e)
+                if (_status.value !is TrackingStatus.Error) {
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                }
+                if (subId != -1) {
+                    try {
+                        callMutex.withLock {
                             cleanupCounters(subId)
-                        } catch (ex: Exception) {
-                            AppLogger.e("Cleanup failed in onCallEnded catch block", ex)
                         }
+                    } catch (ex: Exception) {
+                        AppLogger.e("Cleanup failed in onCallEnded catch block", ex)
                     }
-                } finally {
-                    withContext(NonCancellable) {
-                        try {
-                            if (operationCompleted && _status.value !is TrackingStatus.Error) {
-                                refreshStatus()
-                            }
-                        } catch (e: Exception) {
-                            AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
+                }
+            } finally {
+                withContext(NonCancellable) {
+                    try {
+                        if (operationCompleted && _status.value !is TrackingStatus.Error) {
+                            refreshStatus()
                         }
+                    } catch (e: Exception) {
+                        AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
                     }
                 }
             }
@@ -250,16 +310,6 @@ open class CallTracker
             return settings.callTrackingEnabled
         }
 
-        private suspend fun handleCallStarted(subId: Int) {
-            val targetSubId = resolveTargetSubId(subId)
-            if (targetSubId != -1) {
-                if (validateAndRecordStart(targetSubId)) {
-                    recordSessionData(targetSubId)
-                }
-            } else {
-                AppLogger.w("CallTracker: could not attribute start event (unknown subId and no default SIM)")
-            }
-        }
 
         private fun resolveTargetSubId(subId: Int): Int =
             if (subId == -1) {
@@ -274,37 +324,6 @@ open class CallTracker
                 subId
             }
 
-        @Suppress("ReturnCount")
-        private suspend fun validateAndRecordStart(targetSubId: Int): Boolean {
-            val startTimeResult =
-                retryHelper.readWithRetry(
-                    label = "getCallStartTime",
-                    reader = { callSessionRepository.getCallStartTime(targetSubId) },
-                )
-
-            if (startTimeResult.isFailure) {
-                handleStartTimeFailure(targetSubId, startTimeResult.exceptionOrNull())
-                return false
-            }
-
-            val startTime = startTimeResult.getOrThrow()
-            if (startTime == 0L) return true
-
-            if (!isSessionStale(targetSubId)) {
-                AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
-                return false
-            }
-
-            AppLogger.w("CallTracker: clearing stale session for subId $targetSubId")
-            try {
-                cleanupCounters(targetSubId)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Non-fatal error clearing stale session", e)
-            }
-            return true
-        }
 
         private suspend fun handleStartTimeFailure(
             targetSubId: Int,
@@ -317,33 +336,6 @@ open class CallTracker
             cleanupCounters(targetSubId)
         }
 
-        private suspend fun isSessionStale(subId: Int): Boolean {
-            val bootTimeResult =
-                retryHelper.readWithRetry(
-                    label = "getBootTime",
-                    reader = { callSessionRepository.getBootTime(subId) },
-                )
-            val savedBootTime = bootTimeResult.getOrElse { 0L }
-
-            return savedBootTime > timeProvider.elapsedRealtime() ||
-                (
-                    savedBootTime > 0 &&
-                        timeProvider.elapsedRealtime() - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS
-                )
-        }
-
-        private suspend fun recordSessionData(targetSubId: Int) {
-            val now = timeProvider.now()
-            val bootTime = timeProvider.elapsedRealtime()
-            val uptime = timeProvider.uptimeMillis()
-            val identity = resolveIdentity(targetSubId)
-
-            callSessionRepository.setCallStartTime(targetSubId, now)
-            callSessionRepository.setBootTime(targetSubId, bootTime)
-            callSessionRepository.setUptime(targetSubId, uptime)
-            callSessionRepository.setCallIdentity(targetSubId, identity)
-            AppLogger.d("Call start recorded for subId $targetSubId at $now (identity=$identity)")
-        }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
         internal open suspend fun refreshStatus(force: Boolean = false) {
@@ -390,49 +382,127 @@ open class CallTracker
             subId: Int,
             notify: Boolean = true,
         ) {
-            val startTimeResult =
-                retryHelper.readWithRetry(
+            val endData = fetchCallEndData(subId)
+
+            callMutex.withLock {
+                processCallEndLocked(subId, endData, notify)
+            }
+        }
+
+        private suspend fun fetchCallEndData(subId: Int): CallEndData =
+            CallEndData(
+                startTimeResult = retryHelper.readWithRetry(
                     label = "endCall:startTime",
                     reader = { callSessionRepository.getCallStartTime(subId) },
-                )
-            if (startTimeResult.isFailure) {
-                handleReadStartTimeFailure(subId, startTimeResult.exceptionOrNull())
+                ),
+                savedBootTimeResult = retryHelper.readWithRetry(
+                    label = "endCall:bootTimeForDuration",
+                    reader = { callSessionRepository.getBootTime(subId) },
+                ),
+                savedIdentityResult = retryHelper.readWithRetry(
+                    label = "endCall:identity",
+                    reader = { callSessionRepository.getCallIdentity(subId) },
+                ),
+                savedUptimeResult = retryHelper.readWithRetry(
+                    label = "endCall:uptime",
+                    reader = { callSessionRepository.getUptime(subId) },
+                ),
+                currentBootTime = timeProvider.elapsedRealtime(),
+                currentUptime = timeProvider.uptimeMillis(),
+            )
+
+        private suspend fun processCallEndLocked(
+            subId: Int,
+            data: CallEndData,
+            notify: Boolean,
+        ) {
+            if (data.startTimeResult.isFailure) {
+                handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull())
                 return
             }
-            val startTime = startTimeResult.getOrThrow()
+            val startTime = data.startTimeResult.getOrThrow()
 
             if (startTime == 0L) {
                 AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
                 return
             }
 
-            if (isSessionStaleInEndCall(subId)) return
+            if (!validateCallDuration(subId, data)) return
 
-            // Строгое соблюдение API: длительность звонка рассчитывается по монотонному
-            // времени (elapsedRealtime), а не по настенным часам (System.currentTimeMillis).
-            // Это гарантирует, что перевод системных часов пользователем не повлияет на
-            // рассчитанную длительность. На AOSP SystemClock.elapsedRealtime() монотонен
-            // в пределах одной загрузки устройства. Если кастомная прошивка возвращает
-            // немонотонный elapsedRealtime — это проблема кастомной прошивки.
-            val savedBootTimeResult =
-                retryHelper.readWithRetry(
-                    label = "endCall:bootTimeForDuration",
-                    reader = { callSessionRepository.getBootTime(subId) },
-                )
-            val savedBootTime = savedBootTimeResult.getOrElse { 0L }
+            val durationSeconds =
+                ((data.currentBootTime - data.savedBootTimeResult.getOrElse { 0L }) / Constants.Time.MILLIS_IN_SECOND)
+                    .toInt()
+
+            if (!processCallDurationLocked(subId, durationSeconds, data, notify)) return
+
+            cleanupCounters(subId)
+        }
+
+        private suspend fun validateCallDuration(
+            subId: Int,
+            data: CallEndData,
+        ): Boolean {
+            val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
+            if (savedBootTime > data.currentBootTime ||
+                (savedBootTime > 0 && data.currentBootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS)
+            ) {
+                val message = "Call duration exceeded max limit for subId $subId"
+                AppLogger.w("CallTracker: $message, clearing session")
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+                cleanupCounters(subId)
+                return false
+            }
 
             if (savedBootTime == 0L) {
                 AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
                 cleanupCounters(subId)
-                return
+                return false
+            }
+            return true
+        }
+
+        private suspend fun processCallDurationLocked(
+            subId: Int,
+            durationSeconds: Int,
+            data: CallEndData,
+            notify: Boolean,
+        ): Boolean {
+            if (durationSeconds < 0) {
+                AppLogger.w("CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring")
+                cleanupCounters(subId)
+                return false
             }
 
-            val currentBootTime = timeProvider.elapsedRealtime()
-            val durationSeconds =
-                ((currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
-
-            if (validateDurationAndProcess(durationSeconds, subId, notify)) {
+            if (durationSeconds > Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) {
+                AppLogger.w("CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId")
                 cleanupCounters(subId)
+                return false
+            }
+
+            val savedUptime = data.savedUptimeResult.getOrElse { 0L }
+            if (savedUptime > 0 && data.currentUptime < savedUptime) {
+                AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
+                cleanupCounters(subId)
+                return false
+            }
+
+            val savedIdentity = data.savedIdentityResult.getOrNull()
+            val (targetIdentity, isFallbackUsed) = resolveTargetIdentity(subId, savedIdentity)
+
+            if (durationSeconds == 0) {
+                AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
+                cleanupCounters(subId)
+                return false
+            }
+
+            val durationMinutes = calculateDurationMinutes(durationSeconds)
+
+            return if (targetIdentity != null) {
+                writeCallDuration(targetIdentity, durationMinutes, isFallbackUsed, notify)
+                true
+            } else {
+                handleAttributionFailure(subId)
+                false
             }
         }
 
@@ -447,80 +517,6 @@ open class CallTracker
             cleanupCounters(subId)
         }
 
-        private suspend fun isSessionStaleInEndCall(subId: Int): Boolean {
-            try {
-                val savedBootTimeResult =
-                    retryHelper.readWithRetry(
-                        label = "endCall:bootTime",
-                        reader = { callSessionRepository.getBootTime(subId) },
-                    )
-                val savedBootTime = savedBootTimeResult.getOrElse { 0L }
-                if (savedBootTime > timeProvider.elapsedRealtime() ||
-                    (
-                        savedBootTime > 0 &&
-                            timeProvider.elapsedRealtime() - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS
-                    )
-                ) {
-                    val message = "Call duration exceeded max limit for subId $subId"
-                    AppLogger.w("CallTracker: $message, clearing session")
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
-                    cleanupCounters(subId)
-                    return true
-                }
-            } catch (e: Exception) {
-                AppLogger.e("Error checking stale session in endCall", e)
-            }
-            return false
-        }
-
-        @Suppress("ReturnCount")
-        private suspend fun validateDurationAndProcess(
-            durationSeconds: Int,
-            subId: Int,
-            notify: Boolean,
-        ): Boolean {
-            // Эвристика в пределах критерия надёжности: отрицательная длительность
-            // невозможна на AOSP (elapsedRealtime монотонен). Если кастомная прошивка
-            // возвращает немонотонный elapsedRealtime — это проблема кастомной прошивки.
-            // Защита: отрицательная длительность игнорируется, сессия очищается.
-            if (durationSeconds < 0) {
-                AppLogger.w("CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring")
-                return true
-            }
-
-            if (durationSeconds > Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) {
-                AppLogger.w("CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId")
-                cleanupCounters(subId)
-                return true
-            }
-
-            // Safety check for uptime consistency (not affected by wall clock jumps)
-            if (!validateUptime(subId)) return true
-
-            val savedIdentityResult =
-                retryHelper.readWithRetry(
-                    label = "endCall:identity",
-                    reader = { callSessionRepository.getCallIdentity(subId) },
-                )
-            val savedIdentity = savedIdentityResult.getOrNull()
-
-            return processCallDuration(durationSeconds, subId, savedIdentity, notify)
-        }
-
-        private suspend fun validateUptime(subId: Int): Boolean {
-            val currentUptime = timeProvider.uptimeMillis()
-            val savedUptimeResult =
-                retryHelper.readWithRetry(
-                    label = "endCall:uptime",
-                    reader = { callSessionRepository.getUptime(subId) },
-                )
-            val savedUptime = savedUptimeResult.getOrElse { 0L }
-            if (savedUptime > 0 && currentUptime < savedUptime) {
-                AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
-                return false
-            }
-            return true
-        }
 
         @Suppress("ReturnCount")
         private suspend fun resolveEffectiveSubId(subId: Int): Int {
@@ -588,28 +584,6 @@ open class CallTracker
             return true
         }
 
-        @Suppress("ReturnCount")
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        private suspend fun processCallDuration(
-            durationSeconds: Int,
-            subId: Int,
-            savedIdentity: String?,
-            notify: Boolean = true,
-        ): Boolean {
-            val (targetIdentity, isFallbackUsed) = resolveTargetIdentity(subId, savedIdentity)
-
-            if (durationSeconds == 0) {
-                AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
-                cleanupCounters(subId)
-                return true
-            }
-
-            val durationMinutes = calculateDurationMinutes(durationSeconds)
-
-            return targetIdentity?.let {
-                writeCallDuration(it, durationMinutes, isFallbackUsed, notify)
-            } ?: handleAttributionFailure(subId)
-        }
 
         private suspend fun handleAttributionFailure(subId: Int): Boolean {
             val failures = (attributionFailures[subId] ?: 0) + 1
@@ -690,31 +664,31 @@ open class CallTracker
          */
         fun onBoot() {
             scope.launch {
-                callMutex.withLock {
-                    try {
+                try {
+                    callMutex.withLock {
                         callSessionRepository.clearAllCallSessions()
                         attributionFailures.clear()
                         AppLogger.d("CallTracker: cleared all sessions on boot")
-                    } catch (e: Exception) {
-                        AppLogger.e("Error during boot cleanup", e)
-                    } finally {
-                        refreshStatus(force = true)
                     }
+                } catch (e: Exception) {
+                    AppLogger.e("Error during boot cleanup", e)
+                } finally {
+                    refreshStatus(force = true)
                 }
             }
         }
 
         override suspend fun recover() {
-            callMutex.withLock {
-                try {
+            try {
+                callMutex.withLock {
                     callSessionRepository.clearAllCallSessions()
                     attributionFailures.clear()
                     AppLogger.d("CallTracker: cleared all sessions during recovery")
-                } catch (e: Exception) {
-                    AppLogger.e("Error during recovery", e)
-                } finally {
-                    refreshStatus(force = true)
                 }
+            } catch (e: Exception) {
+                AppLogger.e("Error during recovery", e)
+            } finally {
+                refreshStatus(force = true)
             }
         }
 
@@ -722,3 +696,21 @@ open class CallTracker
             private const val MAX_ATTRIBUTION_FAILURES = 3
         }
     }
+
+private data class CallStartData(
+    val startTimeResult: Result<Long>,
+    val bootTimeResult: Result<Long>,
+    val identity: String?,
+    val now: Long,
+    val bootTime: Long,
+    val uptime: Long,
+)
+
+private data class CallEndData(
+    val startTimeResult: Result<Long>,
+    val savedBootTimeResult: Result<Long>,
+    val savedIdentityResult: Result<String?>,
+    val savedUptimeResult: Result<Long>,
+    val currentBootTime: Long,
+    val currentUptime: Long,
+)

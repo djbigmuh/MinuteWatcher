@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,7 +26,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetUpdaterImplTest {
-    private val context: Context = mock()
+    private lateinit var context: Context
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val renderer: WidgetRenderer = mock()
 
@@ -33,6 +34,7 @@ class WidgetUpdaterImplTest {
 
     @Before
     fun setup() {
+        context = ApplicationProvider.getApplicationContext()
         updater =
             WidgetUpdaterImpl(
                 context = context,
