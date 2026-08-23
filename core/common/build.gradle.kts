@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
     api(libs.kotlinxCoroutinesCore)
+    implementation(libs.androidxLifecycleViewmodelKtx)
     implementation(libs.javaxInject)
 
     testImplementation(libs.junit)

@@ -522,7 +522,7 @@ class UsageCheckWorkerTest {
         }
 
     @Test
-    fun `doWork proceeds with stale snapshot on refresh timeout`() =
+    fun `doWork skips notifications on refresh timeout but updates widget`() =
         runTest(testDispatcher) {
             val identity = "sim_0"
             val staleTimestamp = 500000L
@@ -575,8 +575,11 @@ class UsageCheckWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
 
-            // Verify it proceeded with notifications
-            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+            // Verify widget update was STILL called (using the stale data is okay for UI)
+            verify(dataChangeNotifier).notifyDataChanged(updateWidget = eq(true))
+
+            // Verify it SKIPPED notifications
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
     @Test

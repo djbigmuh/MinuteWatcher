@@ -51,7 +51,7 @@ class SimIdentityPersistence
                     identities.filter {
                         (it.source != IdentitySource.SLOT_FALLBACK) &&
                             (!it.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX))
-                    }
+                    }.distinctBy { it.stableId }
                 if (validIdentities.isEmpty()) return@withLock
 
                 var currentPrefs = fetchCurrentPrefs()
@@ -72,6 +72,13 @@ class SimIdentityPersistence
                         isIdentityUpdateRequired(identity, currentPrefs)
                     }
 
+                // Optimization: Mark already modern identities as migrated in the in-memory cache
+                validIdentities.forEach { identity ->
+                    if (currentPrefs[DataStoreKeys.slotIndexKey(identity.stableId)] != null) {
+                        migratedIdentities.add(identity.stableId)
+                    }
+                }
+
                 if (toUpdate.isEmpty()) return@withLock
 
                 toUpdate.forEach { identity ->
@@ -80,9 +87,15 @@ class SimIdentityPersistence
                     }
                 }
 
-                updatePrefsWithIdentities(toUpdate)
+                val failedIds = performMigrations(toMigrate)
+                val toActuallyUpdate = toUpdate.filter { it.stableId !in failedIds }
+                try {
+                    updatePrefsWithIdentities(toActuallyUpdate)
+                } catch (e: Exception) {
+                    AppLogger.e("SimIdentityPersistence: Failed to update DataStore after migration", e)
+                    if (e is CancellationException) throw e
+                }
             }
-            performMigrationsIfNeeded(toMigrate)
         }
 
         private suspend fun fetchCurrentPrefs(timeoutMs: Long = Constants.Flow.LONG_TIMEOUT_MS): Preferences? =
@@ -102,7 +115,7 @@ class SimIdentityPersistence
             prefs: Preferences,
         ): Boolean {
             val currentSlot = prefs[DataStoreKeys.slotIndexKey(identity.stableId)]
-            return (currentSlot == null) && migratedIdentities.add(identity.stableId)
+            return (currentSlot == null) && !migratedIdentities.contains(identity.stableId)
         }
 
         private suspend fun updatePrefsWithIdentities(toUpdate: List<SimIdentity>) {
@@ -119,21 +132,27 @@ class SimIdentityPersistence
             }
         }
 
-        private suspend fun performMigrationsIfNeeded(toMigrate: List<SimIdentity>) {
-            if (toMigrate.isEmpty()) return
-            try {
-                toMigrate.forEach { migrateSingle(it) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Migration failed in SimIdentityPersistence", e)
+        private suspend fun performMigrations(toMigrate: List<SimIdentity>): Set<String> {
+            if (toMigrate.isEmpty()) return emptySet()
+            val failed = mutableSetOf<String>()
+            toMigrate.forEach { identity ->
+                try {
+                    migrateSingle(identity)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Migration failed for ${identity.stableId} in SimIdentityPersistence", e)
+                    failed.add(identity.stableId)
+                }
             }
+            return failed
         }
 
         private suspend fun migrateSingle(identity: SimIdentity) {
             if (!migratingIdentities.add(identity.stableId)) return
             try {
                 migrationService.migrateLegacyData(identity)
+                migratedIdentities.add(identity.stableId)
             } finally {
                 migratingIdentities.remove(identity.stableId)
             }

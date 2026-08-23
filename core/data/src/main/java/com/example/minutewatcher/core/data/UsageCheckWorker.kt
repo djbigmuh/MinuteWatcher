@@ -96,7 +96,7 @@ class UsageCheckWorker
             return when (refreshResult) {
                 is RefreshResult.Timeout -> handleRefreshTimeout(refreshResult)
                 else -> {
-                    processSuccessfulRefresh(refreshResult.snapshot)
+                    processSnapshot(refreshResult.snapshot, shouldNotify = true)
                     Result.success()
                 }
             }
@@ -120,19 +120,24 @@ class UsageCheckWorker
                 Result.retry()
             } else {
                 AppLogger.w(
-                    "UsageCheckWorker: refresh timed out, proceeding with stale snapshot from ${snapshot.timestamp}",
+                    "UsageCheckWorker: refresh timed out, proceeding with stale snapshot from ${snapshot.timestamp} (notifications disabled)",
                 )
-                processSuccessfulRefresh(snapshot)
+                processSnapshot(snapshot, shouldNotify = false)
                 Result.success()
             }
         }
 
-        private suspend fun processSuccessfulRefresh(snapshot: GlobalSnapshot) {
+        private suspend fun processSnapshot(
+            snapshot: GlobalSnapshot,
+            shouldNotify: Boolean,
+        ) {
             deps.dataChangeNotifier.notifyDataChanged(updateWidget = true)
 
             // Cleanup orphaned widget settings for non-existent SIMs
             val activeIdentities = snapshot.simSnapshots.map { it.identity }
             deps.simWidgetVisibilityRepository.clearOrphanedSettings(activeIdentities)
+
+            if (!shouldNotify) return
 
             val appSettings = fetchAppSettingsWithRetry()
             for (simSnapshot in snapshot.simSnapshots) {

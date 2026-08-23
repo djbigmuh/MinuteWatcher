@@ -65,6 +65,7 @@ class ResetManager
                      * временем, которое для него является истинным календарным временем.
                      */
                     val now = timeProvider.now()
+                    val nowElapsed = timeProvider.elapsedRealtime()
                     val resetIdentities = mutableSetOf<String>()
 
                     // Use active SIMs from repository to ensure we don't skip SIMs on stale snapshots
@@ -75,7 +76,7 @@ class ResetManager
                     }
 
                     for (simInfo in activeSims) {
-                        if (checkAndPerformResetForSim(simInfo, now)) {
+                        if (checkAndPerformResetForSim(simInfo, now, nowElapsed)) {
                             resetIdentities.add(simInfo.identity.stableId)
                         }
                     }
@@ -103,16 +104,17 @@ class ResetManager
         private suspend fun checkAndPerformResetForSim(
             simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
             now: Long,
+            nowElapsed: Long,
         ): Boolean {
             val identity = simInfo.identity.stableId
 
             // Skip if we checked this identity recently (e.g. within the last hour)
-            // Using compute to make check-and-update atomic.
+            // Using elapsedRealtime for interval throttling to be independent of clock changes.
             var wasUpdated = false
             lastResetCheck.compute(identity) { _, lastCheck ->
-                if (lastCheck == null || now - lastCheck >= CHECK_INTERVAL_MS) {
+                if (lastCheck == null || nowElapsed - lastCheck >= CHECK_INTERVAL_MS) {
                     wasUpdated = true
-                    now
+                    nowElapsed
                 } else {
                     lastCheck
                 }

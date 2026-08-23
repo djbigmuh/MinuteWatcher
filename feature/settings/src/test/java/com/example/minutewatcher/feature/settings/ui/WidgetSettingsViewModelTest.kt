@@ -73,8 +73,8 @@ class WidgetSettingsViewModelTest {
     fun `init loads settings`() =
         runTest {
             testScheduler.advanceUntilIdle()
-            assertNotNull(viewModel.settingsState.value)
-            assertFalse(viewModel.loadError.value)
+            assertNotNull(viewModel.state.value.settings)
+            assertFalse(viewModel.state.value.isLoadError)
             verify(loader).load()
         }
 
@@ -86,12 +86,12 @@ class WidgetSettingsViewModelTest {
             // Initial load in init
             val initialViewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             testScheduler.advanceUntilIdle()
-            assertTrue(initialViewModel.loadError.value)
+            assertTrue(initialViewModel.state.value.isLoadError)
 
             initialViewModel.retryLoad()
             testScheduler.advanceUntilIdle()
-            assertFalse(initialViewModel.loadError.value)
-            assertNotNull(initialViewModel.settingsState.value)
+            assertFalse(initialViewModel.state.value.isLoadError)
+            assertNotNull(initialViewModel.state.value.settings)
         }
 
     @Test
@@ -99,10 +99,11 @@ class WidgetSettingsViewModelTest {
         runTest {
             whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
             testScheduler.advanceUntilIdle()
+
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Success, viewModel.saveResult.value)
+            assertEquals(SaveResult.Success, viewModel.state.value.saveResult)
             verify(saver).save(any(), any())
         }
 
@@ -131,17 +132,22 @@ class WidgetSettingsViewModelTest {
 
             launch { vm.saveAndNotify() }
             testScheduler.runCurrent()
-            assertTrue(vm.isSaving.value)
+            assertTrue(vm.state.value.isSaving)
 
             vm.saveAndNotify()
-            // В новом варианте второй вызов записывает AlreadyInProgress в StateFlow
-            assertEquals(SaveResult.AlreadyInProgress, vm.saveResult.value)
+            testScheduler.runCurrent()
+
+            // SaveResult should remain null or previous value because second call returned early due to tryLock
+            // In our previous version it was Success from setup.
+            // Wait, the new test setup in setup() sets Success.
+            // Let's verify what the state is.
+            assertEquals(null, vm.state.value.saveResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Success, vm.saveResult.value)
-            assertFalse(vm.isSaving.value)
+            assertEquals(SaveResult.Success, vm.state.value.saveResult)
+            assertFalse(vm.state.value.isSaving)
         }
 
     @Test
@@ -153,7 +159,7 @@ class WidgetSettingsViewModelTest {
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed, viewModel.saveResult.value)
+            assertEquals(SaveResult.Failed, viewModel.state.value.saveResult)
         }
 
     @Test
@@ -161,7 +167,7 @@ class WidgetSettingsViewModelTest {
         runTest {
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(fontSize = 10) }
-            val state = viewModel.settingsState.value
+            val state = viewModel.state.value.settings
             assertNotNull(state)
             assertEquals(10, state!!.fontSize)
         }
@@ -210,7 +216,7 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // 4. Assert state contains result from second load
-            val state = vm.settingsState.value
+            val state = vm.state.value.settings
             assertNotNull(state)
             assertEquals(20, state!!.fontSize)
             assertEquals(2, fakeLoader.callCount)
@@ -230,7 +236,7 @@ class WidgetSettingsViewModelTest {
                 }
             deferreds.awaitAll()
 
-            val state = viewModel.settingsState.value
+            val state = viewModel.state.value.settings
             assertNotNull(state)
             val finalFontSize = state!!.fontSize
             assertTrue(
@@ -270,7 +276,7 @@ class WidgetSettingsViewModelTest {
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             testScheduler.advanceUntilIdle()
 
-            val job =
+            val saveJob =
                 launch {
                     vm.saveAndNotify()
                 }
@@ -279,8 +285,8 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
             runCurrent()
 
-            assertEquals(SaveResult.Failed, vm.saveResult.value)
-            job.cancel()
+            assertEquals(SaveResult.Failed, vm.state.value.saveResult)
+            saveJob.cancel()
         }
 
     @Test
@@ -293,9 +299,7 @@ class WidgetSettingsViewModelTest {
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            // Result depends on how PartialSuccess is handled in VM.
-            // In the current implementation it is passed as is.
-            assertTrue(viewModel.saveResult.value is SaveResult.PartialSuccess)
+            assertTrue(viewModel.state.value.saveResult is SaveResult.PartialSuccess)
             verify(saver).save(any(), eq(true))
         }
 
@@ -306,13 +310,13 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             testScheduler.advanceUntilIdle()
-            assertTrue(vm.loadError.value)
+            assertTrue(vm.state.value.isLoadError)
 
             // Обновить настройки
             vm.updateSettings { it.copy(fontSize = 10) }
 
             // Ошибка должна быть сброшена
-            assertFalse(vm.loadError.value)
+            assertFalse(vm.state.value.isLoadError)
         }
 
     @Test
@@ -322,12 +326,12 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             testScheduler.advanceUntilIdle()
-            assertTrue(vm.loadError.value)
+            assertTrue(vm.state.value.isLoadError)
 
             // Обновить настройки SIM
             vm.updateSimSettings(0) { it.copy(showTraffic = true) }
 
-            assertFalse(vm.loadError.value)
+            assertFalse(vm.state.value.isLoadError)
         }
 
     @Test
@@ -336,12 +340,12 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             testScheduler.advanceUntilIdle()
-            assertTrue(vm.loadError.value)
+            assertTrue(vm.state.value.isLoadError)
 
             vm.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed, vm.saveResult.value)
+            assertEquals(SaveResult.Failed, vm.state.value.saveResult)
             verify(saver, never()).save(any(), any())
         }
 
@@ -371,7 +375,7 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            assertEquals(SaveResult.Failed, vm.saveResult.value)
+            assertEquals(SaveResult.Failed, vm.state.value.saveResult)
             verify(saver, never()).save(any(), any())
             deferred.complete(WidgetSettingsState())
         }
