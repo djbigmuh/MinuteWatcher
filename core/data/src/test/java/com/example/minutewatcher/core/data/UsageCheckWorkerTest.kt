@@ -576,7 +576,7 @@ class UsageCheckWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
 
             // Verify widget update was STILL called (using the stale data is okay for UI)
-            verify(dataChangeNotifier).notifyDataChanged(updateWidget = eq(true))
+            verify(dataChangeNotifier).notifyDataChanged(updateWidget = eq(true), force = any())
 
             // Verify it SKIPPED notifications
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())

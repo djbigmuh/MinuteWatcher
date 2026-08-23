@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.common.util
 import android.content.Context
 import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.FileWriter
 import java.time.Instant
@@ -12,7 +13,6 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionHandler
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CancellationException
 
 /**
  * Централизованное логирование.

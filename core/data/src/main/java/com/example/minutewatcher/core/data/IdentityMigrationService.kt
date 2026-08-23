@@ -160,7 +160,6 @@ class IdentityMigrationService
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("IdentityMigrationService: Fatal error during migration execution", e)
-                throw e
             }
         }
 

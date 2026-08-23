@@ -51,16 +51,10 @@ class WidgetSettingsScreenTest {
     fun setup() {
         viewModel = mock()
         // Provide default stubs to avoid NPE on collectAsStateWithLifecycle
-        whenever(viewModel.settingsState)
-            .doReturn(MutableStateFlow(null))
+        whenever(viewModel.state)
+            .doReturn(MutableStateFlow(WidgetSettingsUiState()))
         whenever(viewModel.snapshot)
             .doReturn(MutableStateFlow(createEmptySnapshot()))
-        whenever(viewModel.loadError)
-            .doReturn(MutableStateFlow(false))
-        whenever(viewModel.isSaving)
-            .doReturn(MutableStateFlow(false))
-        whenever(viewModel.saveResult)
-            .doReturn(MutableStateFlow(null))
     }
 
     private fun createEmptySnapshot() =
@@ -94,7 +88,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun errorState_isDisplayed() {
-        whenever(viewModel.loadError).doReturn(MutableStateFlow(true))
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(isLoadError = true)))
 
         composeTestRule.setContent {
             WidgetSettingsScreen(
@@ -110,7 +104,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun settingsContent_isDisplayed() {
-        whenever(viewModel.settingsState).doReturn(MutableStateFlow(testSettings))
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
 
         composeTestRule.setContent {
             WidgetSettingsScreen(
@@ -126,7 +120,7 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun saveButton_triggersCallback() {
-        whenever(viewModel.settingsState).doReturn(MutableStateFlow(testSettings))
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
 
         var saved = false
         composeTestRule.setContent {

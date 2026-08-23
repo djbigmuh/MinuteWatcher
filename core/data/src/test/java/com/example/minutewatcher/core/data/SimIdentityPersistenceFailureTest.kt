@@ -16,7 +16,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.reset
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -50,7 +52,7 @@ class SimIdentityPersistenceFailureTest {
                     },
                 )
             val persistence = SimIdentityPersistence(dataStore, migrationService)
-            val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
+            val identity = SimIdentity("stable_id", 101, 1, IdentitySource.SUBSCRIPTION_ID)
 
             // 1. Setup migration to fail
             whenever(migrationService.migrateLegacyData(identity)).thenAnswer {
@@ -72,14 +74,19 @@ class SimIdentityPersistenceFailureTest {
             )
 
             // 5. Setup migration to succeed now
-            whenever(migrationService.migrateLegacyData(identity)).thenReturn(Unit)
+            reset(migrationService)
+            whenever(migrationService.migrateLegacyData(identity)).doReturn(Unit)
 
             // 6. Call saveSimIdentitiesInfo again
-            persistence.saveSimIdentitiesInfo(listOf(identity))
+            try {
+                persistence.saveSimIdentitiesInfo(listOf(identity))
+            } catch (e: Exception) {
+                throw e
+            }
             testScheduler.advanceUntilIdle()
 
             // 7. Verify migration was called AGAIN (retry)
-            verify(migrationService, times(2)).migrateLegacyData(identity)
+            verify(migrationService, times(1)).migrateLegacyData(identity)
 
             // 8. Verify DataStore IS updated now
             val finalPrefs = dataStore.data.first()

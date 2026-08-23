@@ -229,7 +229,7 @@ open class CallTracker
                 } finally {
                     withContext(NonCancellable) {
                         try {
-                            if (operationCompleted || _status.value is TrackingStatus.Error) {
+                            if (operationCompleted && _status.value !is TrackingStatus.Error) {
                                 refreshStatus()
                             }
                         } catch (e: Exception) {
@@ -348,8 +348,8 @@ open class CallTracker
         @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
         internal open suspend fun refreshStatus(force: Boolean = false) {
             try {
+                val currentStatus = _status.value
                 if (!force) {
-                    val currentStatus = _status.value
                     if (currentStatus is TrackingStatus.Error &&
                         currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
                     ) {
@@ -570,7 +570,6 @@ open class CallTracker
             }
 
         private suspend fun writeCallDuration(
-            subId: Int,
             identity: String,
             durationMinutes: Int,
             isFallbackUsed: Boolean,
@@ -608,7 +607,7 @@ open class CallTracker
             val durationMinutes = calculateDurationMinutes(durationSeconds)
 
             return targetIdentity?.let {
-                writeCallDuration(subId, it, durationMinutes, isFallbackUsed, notify)
+                writeCallDuration(it, durationMinutes, isFallbackUsed, notify)
             } ?: handleAttributionFailure(subId)
         }
 

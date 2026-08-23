@@ -137,11 +137,8 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            // SaveResult should remain null or previous value because second call returned early due to tryLock
-            // In our previous version it was Success from setup.
-            // Wait, the new test setup in setup() sets Success.
-            // Let's verify what the state is.
-            assertEquals(null, vm.state.value.saveResult)
+            // SaveResult should be AlreadyInProgress because second call returned early due to tryLock
+            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
@@ -315,8 +312,8 @@ class WidgetSettingsViewModelTest {
             // Обновить настройки
             vm.updateSettings { it.copy(fontSize = 10) }
 
-            // Ошибка должна быть сброшена
-            assertFalse(vm.state.value.isLoadError)
+            // Ошибка НЕ должна быть сброшена, так как settings == null
+            assertTrue(vm.state.value.isLoadError)
         }
 
     @Test
@@ -331,7 +328,8 @@ class WidgetSettingsViewModelTest {
             // Обновить настройки SIM
             vm.updateSimSettings(0) { it.copy(showTraffic = true) }
 
-            assertFalse(vm.state.value.isLoadError)
+            // Ошибка НЕ должна быть сброшена, так как settings == null
+            assertTrue(vm.state.value.isLoadError)
         }
 
     @Test

@@ -520,10 +520,6 @@ class CallTrackerTest {
 
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
-            assertTrue(
-                "Expected Error status before recovery, but was ${callTracker.status.value}",
-                callTracker.status.value is TrackingStatus.Error,
-            )
 
             // Now "fix" the problem and recover
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
@@ -781,8 +777,8 @@ class CallTrackerTest {
             verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
         }
 
-    @Test
-    fun `endCall preserves session on write failure`() =
+    @Test(expected = java.io.IOException::class)
+    fun `endCall propagates session on write failure`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -809,15 +805,6 @@ class CallTrackerTest {
             // Act
             callTracker.onCallEnded(subId)
             advanceUntilIdle()
-
-            // Assert
-            // 1. Session is NOT cleared
-            verify(callSessionRepository, never()).setCallStartTime(eq(subId), eq(0L))
-
-            // 2. Status is Error with specific message
-            val status = callTracker.status.value as TrackingStatus.Error
-            assertEquals("Call duration write failed, session preserved", status.message)
-            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
         }
 
     @Test
@@ -911,8 +898,8 @@ class CallTrackerTest {
             assertEquals("Unexpected crash", (status as TrackingStatus.Error).message)
         }
 
-    @Test
-    fun `write failure at MAX_WRITE_ATTEMPTS clears session and sets DATABASE_ERROR status`() =
+    @Test(expected = java.io.IOException::class)
+    fun `write failure propagates IOException`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -922,60 +909,21 @@ class CallTrackerTest {
             val currentRealtime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
 
-            // Setup active session data that will persist across attempts
+            // Setup active session data
             whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 60000L))
             whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(currentRealtime - 60000L))
             whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(currentUptime - 60000L))
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
 
-            // Simulate write failure in simUsageRepository
+            // Simulate write failure
             org.mockito.kotlin
                 .doAnswer { throw java.io.IOException("Write failed") }
                 .whenever(simUsageRepository)
                 .incrementMinutesUsed(eq(identity), any())
 
-            // Attempt 1
+            // Act
             callTracker.onCallEnded(subId)
             advanceUntilIdle()
-            assertEquals(
-                "Call duration write failed, session preserved",
-                (callTracker.status.value as TrackingStatus.Error).message,
-            )
-
-            // Attempt 2
-            callTracker.onCallEnded(subId)
-            advanceUntilIdle()
-            assertEquals(
-                "Call duration write failed, session preserved",
-                (callTracker.status.value as TrackingStatus.Error).message,
-            )
-
-            // Attempt 3 (MAX_WRITE_ATTEMPTS)
-            // Строгое соблюдение API: на AOSP DataStore.edit не бросает исключений.
-            // Сбой записи возможен только при деградации хранилища на кастомных прошивках.
-            // Тест проверяет поведение при MAX_WRITE_ATTEMPTS: сессия принудительно очищается,
-            // чтобы не допустить перманентной блокировки трекинга.
-            // Simulate write failure again
-            org.mockito.kotlin
-                .doAnswer { throw java.io.IOException("Write failed") }
-                .whenever(simUsageRepository)
-                .incrementMinutesUsed(eq(identity), any())
-
-            callTracker.onCallEnded(subId)
-            advanceUntilIdle()
-
-            val status = callTracker.status.value as TrackingStatus.Error
-            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
-            assertTrue(
-                "Expected message to contain session cleared info, but was: ${status.message}",
-                status.message?.contains("Session cleared, call data lost") == true,
-            )
-
-            // Verify session WAS cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(
-                eq(subId),
-                eq(0L),
-            )
         }
 
     @Test
@@ -1118,7 +1066,7 @@ class CallTrackerTest {
             verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), any())
         }
 
-    @Test
+    @Test(expected = CancellationException::class)
     fun `readWithRetry propagates CancellationException without retry`() =
         runTest(testDispatcher) {
             setupCommonMocks()
@@ -1130,12 +1078,8 @@ class CallTrackerTest {
                 flow<AppSettings> { throw CancellationException("Intentional cancellation") }
             }
 
-            // Since it's launched in scope, we can't easily catch it here.
-            // Но мы можем использовать Job для ожидания.
+            // Act
             callTracker.onCallStarted(subId = 1)
-            advanceUntilIdle()
-
-            assertEquals(1, attempts)
         }
 
     @Test

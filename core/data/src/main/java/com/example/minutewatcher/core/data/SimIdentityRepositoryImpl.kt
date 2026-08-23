@@ -123,15 +123,16 @@ class SimIdentityRepositoryImpl
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
-            seedFlow.flatMapLatest { seed ->
-                discovery.observeSubscriptionChanges().map {
-                    fetchActiveSimsWithRetry(seed)
+            seedFlow
+                .flatMapLatest { seed ->
+                    discovery.observeSubscriptionChanges().map {
+                        fetchActiveSimsWithRetry(seed)
+                    }
+                }.catch { e ->
+                    // Пустой список в этом случае означает деградацию хранилища, а не физическое отсутствие SIM.
+                    AppLogger.e("SimIdentityRepository: Terminal error in physicalActiveSims stream", e)
+                    emit(emptyList())
                 }
-            }.catch { e ->
-                // Пустой список в этом случае означает деградацию хранилища, а не физическое отсутствие SIM.
-                AppLogger.e("SimIdentityRepository: Terminal error in physicalActiveSims stream", e)
-                emit(emptyList())
-            }
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
