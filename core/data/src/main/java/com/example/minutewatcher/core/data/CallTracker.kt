@@ -72,23 +72,8 @@ open class CallTracker
             )
 
         /**
-         * Счётчик попыток записи длительности звонка для каждого subId.
-         * Используется для ограничения числа повторных попыток при сбоях DataStore.
-         *
-         * **Очистка:** записи гарантированно удаляются в [cleanupCounters]
-         * при завершении или сбросе сессии через блок finally, что предотвращает
-         * утечки памяти и бесконечные циклы повторных попыток.
-         *
-         * **Строгое соблюдение API:** [ConcurrentHashMap] потокобезопасен.
-         * Записи создаются в [handleWriteDurationFailure] и удаляются
-         * в [writeCallDuration] (при успехе) или [cleanupCounters].
-         */
-        private val writeAttempts = ConcurrentHashMap<Int, Int>()
-
-        /**
          * Счётчик неудачных попыток атрибуции звонка для каждого subId.
-         * Аналогично [writeAttempts], очищается в [cleanupCounters].
-         * См. документацию [writeAttempts] для деталей.
+         * Очищается в [cleanupCounters].
          */
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
@@ -223,6 +208,8 @@ open class CallTracker
                     }
                     operationCompleted = true
                 } catch (e: CancellationException) {
+                    throw e
+                } catch (e: IOException) {
                     throw e
                 } catch (e: SecurityException) {
                     AppLogger.e("SecurityException in onCallEnded", e)
@@ -582,7 +569,6 @@ open class CallTracker
                     ?.stableId
             }
 
-        @Suppress("ReturnCount")
         private suspend fun writeCallDuration(
             subId: Int,
             identity: String,
@@ -590,47 +576,17 @@ open class CallTracker
             isFallbackUsed: Boolean,
             notify: Boolean,
         ): Boolean {
-            try {
-                simUsageRepository.incrementMinutesUsed(identity, durationMinutes)
-                if (isFallbackUsed) {
-                    appSettingsRepository.updateAppSettings {
-                        it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
-                    }
+            simUsageRepository.incrementMinutesUsed(identity, durationMinutes)
+            if (isFallbackUsed) {
+                appSettingsRepository.updateAppSettings {
+                    it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
                 }
-                if (notify) {
-                    dataChangeNotifier.notifyDataChanged()
-                }
-                AppLogger.d("Call recorded: $durationMinutes min for $identity (fallback=$isFallbackUsed)")
-                writeAttempts.remove(subId) // Success, clear attempts
-                return true
-            } catch (e: IOException) {
-                return handleWriteDurationFailure(subId, e)
             }
-        }
-
-        private fun handleWriteDurationFailure(
-            subId: Int,
-            e: IOException,
-        ): Boolean {
-            val newAttempts = (writeAttempts[subId] ?: 0) + 1
-            writeAttempts[subId] = newAttempts
-            AppLogger.e("CallTracker: failed to write duration, attempt $newAttempts", e)
-
-            if (newAttempts >= MAX_WRITE_ATTEMPTS) {
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Session cleared, call data lost after max write attempts",
-                    )
-                return true // Treat as success to clear session
-            } else {
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Call duration write failed, session preserved",
-                    )
-                return false
+            if (notify) {
+                dataChangeNotifier.notifyDataChanged()
             }
+            AppLogger.d("Call recorded: $durationMinutes min for $identity (fallback=$isFallbackUsed)")
+            return true
         }
 
         @Suppress("ReturnCount")
@@ -701,7 +657,7 @@ open class CallTracker
          * Очищает все данные сессии звонка для указанного subId.
          *
          * **Строгое соблюдение API:** все записи в DataStore обнуляются.
-         * [writeAttempts] и [attributionFailures] удаляются из мап.
+         * [attributionFailures] удаляются из мап.
          * Удаление из мап гарантировано через блок finally даже при сбоях DataStore.
          *
          * @throws CancellationException пробрасывается для корректной отмены.
@@ -724,7 +680,6 @@ open class CallTracker
                     )
                 throw e
             } finally {
-                writeAttempts.remove(subId)
                 attributionFailures.remove(subId)
             }
         }
@@ -739,7 +694,6 @@ open class CallTracker
                 callMutex.withLock {
                     try {
                         callSessionRepository.clearAllCallSessions()
-                        writeAttempts.clear()
                         attributionFailures.clear()
                         AppLogger.d("CallTracker: cleared all sessions on boot")
                     } catch (e: Exception) {
@@ -755,7 +709,6 @@ open class CallTracker
             callMutex.withLock {
                 try {
                     callSessionRepository.clearAllCallSessions()
-                    writeAttempts.clear()
                     attributionFailures.clear()
                     AppLogger.d("CallTracker: cleared all sessions during recovery")
                 } catch (e: Exception) {
@@ -767,7 +720,6 @@ open class CallTracker
         }
 
         companion object {
-            private const val MAX_WRITE_ATTEMPTS = 3
             private const val MAX_ATTRIBUTION_FAILURES = 3
         }
     }

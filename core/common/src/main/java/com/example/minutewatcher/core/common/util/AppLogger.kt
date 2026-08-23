@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionHandler
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 
 /**
  * Централизованное логирование.
@@ -115,6 +116,8 @@ object AppLogger {
     inline fun <T> remoteViewsSafe(action: () -> T): T? =
         try {
             action()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e("RemoteViews operation failed", e)
             null

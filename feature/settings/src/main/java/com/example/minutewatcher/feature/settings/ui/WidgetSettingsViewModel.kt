@@ -116,9 +116,10 @@ class WidgetSettingsViewModel
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
             reduce {
+                val currentSettings = settings ?: return@reduce this
                 copy(
                     isLoadError = false,
-                    settings = settings?.let(transform) ?: settings,
+                    settings = transform(currentSettings),
                 )
             }
         }
@@ -157,7 +158,10 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            if (!saveMutex.tryLock()) return
+            if (!saveMutex.tryLock()) {
+                reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
+                return
+            }
 
             try {
                 reduce { copy(isSaving = true) }

@@ -164,6 +164,8 @@ class MainViewModel
             viewModelScope.launch {
                 try {
                     refreshAndNotify(force = false)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("refreshSimCardsNow failed", e)
                 } finally {

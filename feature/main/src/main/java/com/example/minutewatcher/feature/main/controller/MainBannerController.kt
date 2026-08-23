@@ -170,17 +170,23 @@ class MainBannerController
 
         init {
             scope.launch {
-                trackingStatus.collect { status ->
-                    val appsearch = status["appsearch"]
-                    val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                    if (currentErrorType != lastAppSearchErrorType) {
-                        lastAppSearchErrorType = currentErrorType
-                        appSearchRetryCount.value = 0
-                        appSearchBannerDismissed.value = false
-                        if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                            AppLogger.w("AppSearch not supported on this device")
+                try {
+                    trackingStatus.collect { status ->
+                        val appsearch = status["appsearch"]
+                        val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                        if (currentErrorType != lastAppSearchErrorType) {
+                            lastAppSearchErrorType = currentErrorType
+                            appSearchRetryCount.value = 0
+                            appSearchBannerDismissed.value = false
+                            if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                                AppLogger.w("AppSearch not supported on this device")
+                            }
                         }
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainBannerController: tracking status observation failed", e)
                 }
             }
         }

@@ -148,6 +148,7 @@ private fun WidgetSettingsContent(
     val successMessage = stringResource(id = R.string.settings_saved_toast)
     val partialSuccessMessage = stringResource(id = R.string.settings_save_partial_success)
     val failedMessage = stringResource(id = R.string.settings_save_failed)
+    val alreadyInProgressMessage = stringResource(id = R.string.settings_save_already_in_progress)
 
     LaunchedEffect(saveResult) {
         saveResult?.let { result ->
@@ -157,6 +158,7 @@ private fun WidgetSettingsContent(
                     is SaveResult.PartialSuccess -> partialSuccessMessage
                     is SaveResult.PartialFailure -> result.message
                     SaveResult.Failed -> failedMessage
+                    SaveResult.AlreadyInProgress -> alreadyInProgressMessage
                 }
 
             snackbarHostState.showSnackbar(message)

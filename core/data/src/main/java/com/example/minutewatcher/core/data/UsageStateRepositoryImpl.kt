@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -201,6 +202,10 @@ class UsageStateRepositoryImpl
             if (refreshMutex.tryLock()) {
                 try {
                     deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
                 } finally {
                     refreshMutex.unlock()
                 }

@@ -42,7 +42,7 @@ class PinWidgetReceiver : BroadcastReceiver() {
                 val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
                 MinutesGlanceWidget().update(context, glanceId)
             } catch (e: CancellationException) {
-                AppLogger.d("Widget pin update cancelled: ${e.message}")
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to update widget after pinning", e)
             } finally {

@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -126,6 +127,10 @@ class SimIdentityRepositoryImpl
                 discovery.observeSubscriptionChanges().map {
                     fetchActiveSimsWithRetry(seed)
                 }
+            }.catch { e ->
+                // Пустой список в этом случае означает деградацию хранилища, а не физическое отсутствие SIM.
+                AppLogger.e("SimIdentityRepository: Terminal error in physicalActiveSims stream", e)
+                emit(emptyList())
             }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -160,7 +165,7 @@ class SimIdentityRepositoryImpl
                     return getActiveSimsInternal(seed)
                 } catch (e: IOException) {
                     if (attempt == (MAX_FETCH_RETRIES - 1)) {
-                        AppLogger.e("SimIdentityRepository: Terminal DataStore error", e)
+                        throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries", e)
                     } else {
                         AppLogger.e("SimIdentityRepository: DataStore error, retrying", e)
                         delay(retryDelay.milliseconds)
@@ -176,7 +181,7 @@ class SimIdentityRepositoryImpl
                     return emptyList()
                 }
             }
-            return emptyList()
+            throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries")
         }
 
         @Suppress("ReturnCount")
@@ -245,25 +250,27 @@ class SimIdentityRepositoryImpl
 
                     cache.getManual(slot)?.let { return@withLock it }
 
-                    val seed =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            seedFlow.firstOrNull()
-                        } ?: SeedResult.Fallback
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        val seed =
+                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                seedFlow.firstOrNull()
+                            } ?: SeedResult.Fallback
 
-                    val seedValue =
-                        when (seed) {
-                            is SeedResult.Real -> seed.value
-                            is SeedResult.Fallback -> throw SeedUnavailableException(slot)
-                        }
+                        val seedValue =
+                            when (seed) {
+                                is SeedResult.Real -> seed.value
+                                is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                            }
 
-                    val result =
-                        discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                            SimIdentityUtils.createIdentityFromInfo(it, seedValue)
-                        } ?: throw SimNotFoundException(slot)
+                        val result =
+                            discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                                SimIdentityUtils.createIdentityFromInfo(it, seedValue)
+                            } ?: throw SimNotFoundException(slot)
 
-                    cache.putManual(slot, result)
-                    persistence.saveSimIdentitiesInfo(listOf(result))
-                    result
+                        cache.putManual(slot, result)
+                        persistence.saveSimIdentitiesInfo(listOf(result))
+                        result
+                    } ?: throw IOException("Timeout resolving identity for slot $slot")
                 }
             return resolved
         }

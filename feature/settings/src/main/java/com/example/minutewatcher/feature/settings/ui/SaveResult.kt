@@ -45,4 +45,9 @@ sealed interface SaveResult {
      * **Важно:** это одноразовое событие для Snackbar.
      */
     data object Failed : SaveResult
+
+    /**
+     * Сохранение уже выполняется.
+     */
+    data object AlreadyInProgress : SaveResult
 }
