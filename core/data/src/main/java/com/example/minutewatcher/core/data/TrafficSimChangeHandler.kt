@@ -63,15 +63,18 @@ class TrafficSimChangeHandler
                 // Fetch stats before lock
                 val statsResult = baselineManager.getCurrentMobileBytes(0L)
 
-                simChangeMutex.withLock {
-                    handleSimChange(targetIdentity, target.dataSubId, savedLastDataSubId, retryCount, statsResult, status)
-                }
+                handleSimChange(
+                    targetIdentity,
+                    target.dataSubId,
+                    savedLastDataSubId,
+                    retryCount,
+                    statsResult,
+                    status,
+                )
                 handleSkipDelta(target, retryCount, status)
             } else {
                 val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                simChangeMutex.withLock {
-                    baselineManager.baselineNeedsRetry.entries.removeIf { it.key != targetIdentity }
-                }
+                baselineManager.baselineNeedsRetry.entries.removeIf { it.key != targetIdentity }
                 onNoChange(targetIdentity)
             }
         }

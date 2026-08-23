@@ -1,7 +1,6 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
@@ -10,6 +9,7 @@ import androidx.appsearch.exceptions.AppSearchException
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -709,6 +709,27 @@ class SemanticSearchManagerTest {
             jobs.joinAll()
 
             assertEquals(count, errorHandler.consecutiveIndexFailures)
+        }
+
+    @Test
+    fun `indexSnapshot concurrent calls with same data results in single indexing`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // Launch 5 concurrent indexing calls
+            val jobs =
+                List(5) {
+                    launch {
+                        manager.indexSnapshot(snapshot)
+                    }
+                }
+            jobs.joinAll()
+
+            // Verify that indexing was performed only once
+            val session = fakeWrapper.lastSession
+            assertNotNull("Session should have been created", session)
+            assertEquals("Should have only one put request", 1, session!!.putRequests.size)
         }
 
     private fun getErrorHandler(manager: SemanticSearchManager): AppSearchErrorHandler {

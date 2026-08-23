@@ -1184,4 +1184,31 @@ class CallTrackerTest {
 
             verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(2))
         }
+
+    @Test
+    fun `refreshStatus cleans up attributionFailures for inactive subIds`() =
+        runTest(testDispatcher) {
+            val tracker = createTracker()
+
+            // 1. Manually add entries to attributionFailures using reflection
+            val field = CallTracker::class.java.getDeclaredField("attributionFailures")
+            field.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val map = field.get(tracker) as java.util.concurrent.ConcurrentHashMap<Int, Int>
+
+            val inactiveSubId = 99
+            val activeSubId = 1
+            map[inactiveSubId] = 1
+            map[activeSubId] = 1
+
+            // 2. Mock active calls to only include activeSubId
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(activeSubId))
+
+            // 3. Call refreshStatus
+            tracker.refreshStatus(force = true)
+
+            // 4. Verify inactiveSubId is removed, activeSubId is kept
+            assertTrue("Active subId should be kept", map.containsKey(activeSubId))
+            org.junit.Assert.assertFalse("Inactive subId should be removed", map.containsKey(inactiveSubId))
+        }
 }

@@ -141,49 +141,34 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
-        private fun Preferences.toAppSettings(): AppSettings =
-            AppSettings()
-                .mapBasicSettings(this)
-                .mapWidgetSettings(this)
-                .mapSystemSettings(this)
-                .mapTrackingSettings(this)
-
-        private fun AppSettings.mapBasicSettings(prefs: Preferences): AppSettings =
-            copy(
-                theme = AppTheme.fromValue(prefs[DataStoreKeys.APP_THEME] ?: -1),
-                language = prefs[DataStoreKeys.APP_LANGUAGE],
-            )
-
-        private fun AppSettings.mapWidgetSettings(prefs: Preferences): AppSettings =
-            copy(
-                widgetLayoutMode = prefs[DataStoreKeys.WIDGET_LAYOUT_MODE] ?: widgetLayoutMode,
-                widgetSimArrangement = prefs[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] ?: widgetSimArrangement,
-                widgetTransparency = prefs[DataStoreKeys.WIDGET_TRANSPARENCY] ?: widgetTransparency,
-                widgetFontSize = prefs[DataStoreKeys.WIDGET_FONT_SIZE] ?: widgetFontSize,
-                widgetBackgroundColor = prefs[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: widgetBackgroundColor,
-                widgetLimitExceeded = prefs[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: widgetLimitExceeded,
-            )
-
-        private fun AppSettings.mapSystemSettings(prefs: Preferences): AppSettings =
-            copy(
-                migrationV1Completed = prefs[DataStoreKeys.MIGRATION_V1_COMPLETED] ?: migrationV1Completed,
-                onboardingCompleted = prefs[DataStoreKeys.ONBOARDING_COMPLETED] ?: onboardingCompleted,
+        private fun Preferences.toAppSettings(): AppSettings {
+            val default = AppSettings()
+            return default.copy(
+                theme = AppTheme.fromValue(this[DataStoreKeys.APP_THEME] ?: -1),
+                language = this[DataStoreKeys.APP_LANGUAGE],
+                migrationV1Completed = this[DataStoreKeys.MIGRATION_V1_COMPLETED] ?: default.migrationV1Completed,
+                onboardingCompleted = this[DataStoreKeys.ONBOARDING_COMPLETED] ?: default.onboardingCompleted,
                 notificationPermissionRequested =
-                    prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: notificationPermissionRequested,
+                    this[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: default.notificationPermissionRequested,
                 wasPhonePermissionRequestedBefore =
-                    prefs[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE] ?: wasPhonePermissionRequestedBefore,
-                phonePermissionRequested = prefs[DataStoreKeys.PHONE_PERMISSION_REQUESTED] ?: phonePermissionRequested,
-                benchmarkSimCount = prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: benchmarkSimCount,
-            )
-
-        private fun AppSettings.mapTrackingSettings(prefs: Preferences): AppSettings =
-            copy(
-                notifyLowMinutes = prefs[DataStoreKeys.NOTIFY_LOW_MINUTES] ?: notifyLowMinutes,
-                notifyLowTraffic = prefs[DataStoreKeys.NOTIFY_LOW_TRAFFIC] ?: notifyLowTraffic,
+                    this[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE]
+                        ?: default.wasPhonePermissionRequestedBefore,
+                phonePermissionRequested =
+                    this[DataStoreKeys.PHONE_PERMISSION_REQUESTED] ?: default.phonePermissionRequested,
+                benchmarkSimCount = this[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: default.benchmarkSimCount,
+                notifyLowMinutes = this[DataStoreKeys.NOTIFY_LOW_MINUTES] ?: default.notifyLowMinutes,
+                notifyLowTraffic = this[DataStoreKeys.NOTIFY_LOW_TRAFFIC] ?: default.notifyLowTraffic,
                 inaccurateCallAttributionsCount =
-                    prefs[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] ?: inaccurateCallAttributionsCount,
-                callTrackingEnabled = prefs[DataStoreKeys.CALL_TRACKING_ENABLED] ?: callTrackingEnabled,
+                    this[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] ?: default.inaccurateCallAttributionsCount,
+                callTrackingEnabled = this[DataStoreKeys.CALL_TRACKING_ENABLED] ?: default.callTrackingEnabled,
+                widgetLayoutMode = this[DataStoreKeys.WIDGET_LAYOUT_MODE] ?: default.widgetLayoutMode,
+                widgetSimArrangement = this[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] ?: default.widgetSimArrangement,
+                widgetTransparency = this[DataStoreKeys.WIDGET_TRANSPARENCY] ?: default.widgetTransparency,
+                widgetFontSize = this[DataStoreKeys.WIDGET_FONT_SIZE] ?: default.widgetFontSize,
+                widgetBackgroundColor = this[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: default.widgetBackgroundColor,
+                widgetLimitExceeded = this[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: default.widgetLimitExceeded,
             )
+        }
 
         companion object {
             // No-op

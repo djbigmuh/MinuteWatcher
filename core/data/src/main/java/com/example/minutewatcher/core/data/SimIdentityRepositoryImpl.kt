@@ -164,25 +164,37 @@ class SimIdentityRepositoryImpl
             repeat(MAX_FETCH_RETRIES) { attempt ->
                 try {
                     return getActiveSimsInternal(seed)
-                } catch (e: IOException) {
-                    if (attempt == (MAX_FETCH_RETRIES - 1)) {
-                        throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries", e)
-                    } else {
-                        AppLogger.e("SimIdentityRepository: DataStore error, retrying", e)
-                        delay(retryDelay.milliseconds)
-                        retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: SecurityException) {
-                    AppLogger.e("SimIdentityRepository: permission error fetching active SIMs", e)
-                    throw e
                 } catch (e: Exception) {
-                    AppLogger.e("Failed to fetch active SIMs", e)
-                    return emptyList()
+                    handleFetchRetryException(e, attempt, retryDelay)
+                    retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
                 }
             }
             throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries")
+        }
+
+        @Suppress("ThrowsCount")
+        private suspend fun handleFetchRetryException(
+            e: Exception,
+            attempt: Int,
+            delay: Long,
+        ) {
+            when (e) {
+                is IOException -> {
+                    if (attempt == (MAX_FETCH_RETRIES - 1)) {
+                        throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries", e)
+                    }
+                    AppLogger.e("SimIdentityRepository: DataStore error, retrying", e)
+                    delay(delay.milliseconds)
+                }
+                is CancellationException -> throw e
+                is SecurityException -> {
+                    AppLogger.e("SimIdentityRepository: permission error fetching active SIMs", e)
+                    throw e
+                }
+                else -> {
+                    AppLogger.e("Failed to fetch active SIMs", e)
+                }
+            }
         }
 
         @Suppress("ReturnCount")
@@ -240,40 +252,49 @@ class SimIdentityRepositoryImpl
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
         override suspend fun getSimIdentity(slot: Int): SimIdentity {
-            val resolved =
-                activeSimsMutex.withLock {
-                    require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+            require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
 
-                    activeSimsCache.value.find { it.slotIndex == slot }?.let {
-                        cache.removeManual(slot)
-                        return@withLock it.identity
-                    }
-
-                    cache.getManual(slot)?.let { return@withLock it }
-
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        val seed =
-                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                seedFlow.firstOrNull()
-                            } ?: SeedResult.Fallback
-
-                        val seedValue =
-                            when (seed) {
-                                is SeedResult.Real -> seed.value
-                                is SeedResult.Fallback -> throw SeedUnavailableException(slot)
-                            }
-
-                        val result =
-                            discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                                SimIdentityUtils.createIdentityFromInfo(it, seedValue)
-                            } ?: throw SimNotFoundException(slot)
-
-                        cache.putManual(slot, result)
-                        persistence.saveSimIdentitiesInfo(listOf(result))
-                        result
-                    } ?: throw IOException("Timeout resolving identity for slot $slot")
+            // 1. Initial fast check under lock
+            activeSimsMutex.withLock {
+                activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                    cache.removeManual(slot)
+                    return it.identity
                 }
-            return resolved
+                cache.getManual(slot)?.let { return it }
+            }
+
+            // 2. Perform slow operations outside the lock
+            val identity =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    val seed =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            seedFlow.firstOrNull()
+                        } ?: SeedResult.Fallback
+
+                    val seedValue =
+                        when (seed) {
+                            is SeedResult.Real -> seed.value
+                            is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                        }
+
+                    discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                        SimIdentityUtils.createIdentityFromInfo(it, seedValue)
+                    } ?: throw SimNotFoundException(slot)
+                } ?: throw IOException("Timeout resolving identity for slot $slot")
+
+            // 3. Update cache and persistence under lock
+            return activeSimsMutex.withLock {
+                // Re-check if someone else resolved it while we were busy
+                activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                    cache.removeManual(slot)
+                    return@withLock it.identity
+                }
+                cache.getManual(slot)?.let { return@withLock it }
+
+                cache.putManual(slot, identity)
+                persistence.saveSimIdentitiesInfo(listOf(identity))
+                identity
+            }
         }
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = activeSimsCache

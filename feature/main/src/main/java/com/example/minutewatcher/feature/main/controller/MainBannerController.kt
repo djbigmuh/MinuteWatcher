@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
@@ -27,7 +28,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
@@ -106,35 +106,20 @@ class MainBannerController
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
         /**
-         * Потокобезопасный счётчик последовательных сбоев наблюдения.
-         * Доступ из handleSuccess() (сброс в 0) и из retryWhen (инкремент).
-         * AtomicLong гарантирует корректность при конкурентном доступе.
+         * Счётчик последовательных сбоев наблюдения.
+         * Доступ осуществляется внутри [resetMutex.withLock].
          * Сбрасывается при успешной эмиссии и при перезапуске приложения.
          */
-        private val observationRetryCount = AtomicLong(0L)
+        private var observationRetryCount = 0L
 
         /**
          * Время последнего логирования ошибки наблюдения (elapsedRealtime).
-         *
-         * Потокобезопасность: доступ осуществляется внутри [resetMutex.withLock]
-         * в методах [handleSuccess] и лямбде [retryWhen], что исключает гонки
-         * данных при конкурентном доступе.
-         *
-         * Инициализирован 0L: при первой проверке после MAX_LOGGED_RETRIES
-         * условие (elapsedRealtime() - 0 > PERIODIC_LOG_INTERVAL_MS) будет истинным,
-         * если устройство работает более 5 минут (что почти всегда так).
-         * Это корректное поведение: первая ошибка после порога должна быть залогирована.
-         *
-         * Строгое соблюдение API: используется elapsedRealtime() (монотонное время),
-         * а не System.currentTimeMillis(). Это гарантирует, что перевод системных часов
-         * пользователем не повлияет на периодичность логирования.
-         * На кастомной прошивке, где elapsedRealtime не монотонен, возможна
-         * некорректная периодичность — это проблема кастомной прошивки.
+         * Доступ осуществляется внутри [resetMutex.withLock].
          */
-        private val lastLoggedTime = AtomicLong(0L)
+        private var lastLoggedTime = 0L
 
         /**
-         * Мьютекс сериализует обновление счётчика [observationRetryCount].
+         * Мьютекс сериализует обновление счётчиков сбоев.
          */
         private val resetMutex = Mutex()
 
@@ -143,14 +128,14 @@ class MainBannerController
 
         private suspend fun handleSuccess() {
             resetMutex.withLock {
-                if (observationRetryCount.get() > 0) {
+                if (observationRetryCount > 0) {
                     AppLogger.d(
                         "trackingBannerState: successfully recovered after " +
-                            "${observationRetryCount.get()} failed attempts",
+                            "$observationRetryCount failed attempts",
                     )
                 }
-                observationRetryCount.set(0L)
-                lastLoggedTime.set(0L)
+                observationRetryCount = 0L
+                lastLoggedTime = 0L
             }
         }
 
@@ -264,6 +249,38 @@ class MainBannerController
                     throw cause
                 }
 
+                val (currentRetry, shouldLog) =
+                    resetMutex.withLock {
+                        observationRetryCount++
+                        val now = timeProvider.elapsedRealtime()
+                        val log =
+                            if (observationRetryCount <= MAX_LOGGED_RETRIES) {
+                                true
+                            } else {
+                                if ((now - lastLoggedTime) > PERIODIC_LOG_INTERVAL_MS) {
+                                    lastLoggedTime = now
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                        observationRetryCount to log
+                    }
+
+                if (currentRetry > MAX_RETRY_ATTEMPTS) {
+                    AppLogger.e(
+                        "trackingBannerState: Наблюдение за баннерами остановлено после " +
+                            "$MAX_RETRY_ATTEMPTS неудачных попыток. Повторите перезапуск приложения.",
+                        cause,
+                    )
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Banner observation failed persistently: ${cause.message}",
+                        )
+                    return@retryWhen false
+                }
+
                 if (_status.value !is TrackingStatus.Error) {
                     _status.value =
                         TrackingStatus.Error(
@@ -271,24 +288,6 @@ class MainBannerController
                             "Banner observation failed: ${cause.message}",
                         )
                 }
-
-                val currentRetry =
-                    resetMutex.withLock {
-                        observationRetryCount.incrementAndGet()
-                    }
-
-                val now = timeProvider.elapsedRealtime()
-                val shouldLog =
-                    if (currentRetry <= MAX_LOGGED_RETRIES) {
-                        true
-                    } else {
-                        if (now - lastLoggedTime.get() > PERIODIC_LOG_INTERVAL_MS) {
-                            lastLoggedTime.set(now)
-                            true
-                        } else {
-                            false
-                        }
-                    }
 
                 if (shouldLog) {
                     val message =
@@ -307,6 +306,8 @@ class MainBannerController
                         .coerceAtMost(MAX_RETRY_DELAY_MS)
                 delay(delayMillis.milliseconds)
                 true
+            }.catch { e ->
+                AppLogger.e("MainBannerController: terminal error in banner flow", e)
             }.stateIn(
                 scope = scope,
                 started =
@@ -322,6 +323,9 @@ class MainBannerController
 
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val PERIODIC_LOG_INTERVAL_MS = 5 * 60 * 1000L
+
+            /** Максимальное количество попыток наблюдения до полной остановки (Circuit Breaker). */
+            private const val MAX_RETRY_ATTEMPTS = 20L
 
             /** Максимальное количество попыток, после которых логирование подавляется. */
             private const val MAX_LOGGED_RETRIES = 10L

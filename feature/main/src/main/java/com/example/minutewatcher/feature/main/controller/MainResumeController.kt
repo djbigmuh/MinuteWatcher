@@ -27,7 +27,7 @@ class MainResumeController
 
         fun onActivityResume(
             scope: CoroutineScope,
-            initializationState: StateFlow<Boolean>,
+            initializationState: StateFlow<InitializationState>,
             lastRefreshAt: Long,
             onRefreshNeeded: suspend () -> Unit,
         ) {
@@ -35,12 +35,12 @@ class MainResumeController
                 resumeRefreshJob?.cancelAndJoin()
                 resumeRefreshJob =
                     launch {
-                        val initialized =
+                        val isCompleted =
                             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                initializationState.first { it }
+                                initializationState.first { it is InitializationState.Completed }
                             }
 
-                        if (initialized == null) {
+                        if (isCompleted == null) {
                             AppLogger.w("onActivityResume: initialization not complete, skipping refresh")
                             return@launch
                         }

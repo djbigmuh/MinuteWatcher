@@ -62,7 +62,11 @@ class MainBannerControllerTest {
                 )
 
             // Start collecting to activate WhileSubscribed
-            backgroundScope.launch { controller.trackingBannerState.collect {} }
+            backgroundScope.launch {
+                kotlin.runCatching {
+                    controller.trackingBannerState.collect {}
+                }
+            }
 
             // With UnconfinedTestDispatcher and SharingStarted.Eagerly (now WhileSubscribed),
             // we might need a small advance or runCurrent to ensure collection started.
@@ -102,7 +106,11 @@ class MainBannerControllerTest {
                     timeProvider,
                 )
 
-            backgroundScope.launch { controller.trackingBannerState.collect {} }
+            backgroundScope.launch {
+                kotlin.runCatching {
+                    controller.trackingBannerState.collect {}
+                }
+            }
             testScheduler.runCurrent()
 
             testScheduler.advanceTimeBy(500)
@@ -120,5 +128,48 @@ class MainBannerControllerTest {
             assertEquals("Should have retried after ${expectedDelay}ms delay", 2, collectionCount)
 
             assertEquals(false, statusAfterRetry.showUsageAccessBanner)
+        }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `trackingBannerState stops retrying and sets DATABASE_ERROR after max attempts`() =
+        runTest {
+            // Flow that always fails
+            val failingFlow =
+                kotlinx.coroutines.flow.flow<Boolean> {
+                    throw IOException("Persistent failure")
+                }
+            whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(failingFlow)
+
+            val controller =
+                MainBannerController(
+                    trackingStatusRepository,
+                    permissionRepository,
+                    appSettingsRepository,
+                    backgroundScope,
+                    timeProvider,
+                )
+
+            backgroundScope.launch {
+                kotlin.runCatching {
+                    controller.trackingBannerState.collect {}
+                }
+            }
+
+            // Advance time attempt by attempt to reach 20
+            // Since it's exponential, it reaches 30s very quickly.
+            // 20 * 30s = 600,000 ms
+            testScheduler.advanceTimeBy(1000 * 60 * 15) // 15 mins
+            testScheduler.runCurrent()
+
+            val status = controller.status.value
+            assertTrue(
+                "Status should be Error, but was $status",
+                status is com.example.minutewatcher.core.model.TrackingStatus.Error,
+            )
+            assertEquals(
+                com.example.minutewatcher.core.model.TrackingStatus.ErrorType.DATABASE_ERROR,
+                (status as com.example.minutewatcher.core.model.TrackingStatus.Error).type,
+            )
         }
 }

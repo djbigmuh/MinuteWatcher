@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -42,67 +41,71 @@ class MainSimDataControllerTest {
     fun setup() {
         initTestLogger()
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(flowOf(emptyList()))
-        controller = MainSimDataController(
-            usageStateRepository,
-            trackingRecoveryController,
-            simIdentityRepository,
-            simLimitsRepository,
-            usageUseCase,
-            dataChangeNotifier,
-            testDispatcher,
-            testScope
-        )
+        controller =
+            MainSimDataController(
+                usageStateRepository,
+                trackingRecoveryController,
+                simIdentityRepository,
+                simLimitsRepository,
+                usageUseCase,
+                dataChangeNotifier,
+                testDispatcher,
+                testScope,
+            )
     }
 
     @Test
-    fun `highlightSlot sets and clears slot after delay`() = testScope.runTest {
-        controller.highlightSlot(1)
-        advanceUntilIdle()
-        assertEquals(1, controller.highlightedSlot.value)
+    fun `highlightSlot sets and clears slot after delay`() =
+        testScope.runTest {
+            controller.highlightSlot(1)
+            testScheduler.runCurrent()
+            assertEquals(1, controller.highlightedSlot.value)
 
-        advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS)
-        advanceUntilIdle()
-        assertNull(controller.highlightedSlot.value)
-    }
-
-    @Test
-    fun `highlightSlot concurrent calls do not get stuck`() = testScope.runTest {
-        // Rapidly call highlightSlot for different slots
-        repeat(10) { slot ->
-            launch {
-                controller.highlightSlot(slot)
-            }
+            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS)
+            testScheduler.runCurrent()
+            assertNull(controller.highlightedSlot.value)
         }
-        advanceUntilIdle()
-
-        // The last one should be active
-        assertEquals(9, controller.highlightedSlot.value)
-
-        // Wait for delay
-        advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS)
-        advanceUntilIdle()
-
-        // Should be cleared
-        assertNull("Highlight should be cleared after delay", controller.highlightedSlot.value)
-    }
 
     @Test
-    fun `highlightSlot repeated call for same slot does not restart timer`() = testScope.runTest {
-        controller.highlightSlot(1)
-        advanceUntilIdle()
-        advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS / 2)
-        advanceUntilIdle()
-        assertEquals(1, controller.highlightedSlot.value)
+    fun `highlightSlot concurrent calls do not get stuck`() =
+        testScope.runTest {
+            // Rapidly call highlightSlot for different slots
+            repeat(10) { slot ->
+                launch {
+                    controller.highlightSlot(slot)
+                }
+            }
+            testScheduler.runCurrent()
 
-        // Call again for same slot
-        controller.highlightSlot(1)
-        advanceUntilIdle()
+            // The last one should be active
+            assertEquals(9, controller.highlightedSlot.value)
 
-        // Advance remaining half of initial delay
-        advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS / 2 + 10)
-        advanceUntilIdle()
+            // Wait for delay
+            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS)
+            testScheduler.runCurrent()
 
-        // Should be cleared because timer was NOT restarted
-        assertNull("Highlight should be cleared based on first timer", controller.highlightedSlot.value)
-    }
+            // Should be cleared
+            assertNull("Highlight should be cleared after delay", controller.highlightedSlot.value)
+        }
+
+    @Test
+    fun `highlightSlot repeated call for same slot does not restart timer`() =
+        testScope.runTest {
+            controller.highlightSlot(1)
+            testScheduler.runCurrent()
+            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS / 2)
+            testScheduler.runCurrent()
+            assertEquals(1, controller.highlightedSlot.value)
+
+            // Call again for same slot
+            controller.highlightSlot(1)
+            testScheduler.runCurrent()
+
+            // Advance remaining half of initial delay
+            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS / 2 + 10)
+            testScheduler.runCurrent()
+
+            // Should be cleared because timer was NOT restarted
+            assertNull("Highlight should be cleared based on first timer", controller.highlightedSlot.value)
+        }
 }

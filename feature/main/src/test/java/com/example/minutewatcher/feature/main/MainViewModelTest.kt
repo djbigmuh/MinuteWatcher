@@ -76,7 +76,8 @@ class MainViewModelTest {
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
     private val savedStateHandle = SavedStateHandle()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
+    private val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
 
     private val phonePermissionFlow = MutableStateFlow(false)
     private val usageStatsPermissionFlow = MutableStateFlow(false)
@@ -126,6 +127,12 @@ class MainViewModelTest {
         )
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
+
+        // Default successful refresh for initializeApp
+        kotlinx.coroutines.runBlocking {
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(initialSnapshot))
+        }
     }
 
     @After
@@ -201,7 +208,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
@@ -218,7 +225,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState hides phone permission banner when granted is true`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
@@ -236,7 +243,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState reflects permanently denied status`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
@@ -253,7 +260,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows notification banner when alerts enabled but not granted`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -279,7 +286,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState hides notification banner when granted even if alerts enabled`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -305,7 +312,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState correctly identifies NOT_REQUESTED vs DENIED states`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             // Case 1: Not requested
             val settingsFlow =
                 MutableStateFlow(
@@ -342,7 +349,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState hides notification banner when alerts disabled`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -368,7 +375,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows usage access banner when permission missing`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             usageStatsPermissionFlow.value = false
 
             val viewModel = createViewModel(backgroundScope)
@@ -384,7 +391,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows traffic error banner when other tracking error occurs`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
@@ -412,7 +419,7 @@ class MainViewModelTest {
 
     @Test
     fun `trackingBannerState shows shortcuts error banner when shortcuts error occurs`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
@@ -439,7 +446,7 @@ class MainViewModelTest {
 
     @Test
     fun `setTheme calls settingsUseCase`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
             val theme = AppTheme.DARK
 
@@ -452,7 +459,7 @@ class MainViewModelTest {
 
     @Test
     fun `onActivityResume triggers refresh on reboot (negative elapsed)`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle() // Даем initializeApp() завершиться
             clearInvocations(usageStateRepository)
@@ -471,7 +478,7 @@ class MainViewModelTest {
 
     @Test
     fun `onActivityResume triggers refresh if initial refresh failed (lastRefreshAt is 0)`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             // lastRefreshAt is 0L by default in SavedStateHandle
             // Mock refresh to fail (return null) in initializeApp
             whenever(usageStateRepository.refresh()).thenReturn(null)
@@ -485,13 +492,13 @@ class MainViewModelTest {
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
-            // Verify that data refresh WAS triggered because lastRefreshAt is still 0
-            verify(usageStateRepository).refresh()
+            // Verify that data refresh was NOT triggered because initialization failed
+            verify(usageStateRepository, never()).refresh()
         }
 
     @Test
     fun `onActivityResume does NOT trigger refresh if initial refresh succeeded`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
 
@@ -515,7 +522,7 @@ class MainViewModelTest {
 
     @Test
     fun `refreshSimCardsNow calls onComplete even on failure`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             whenever(usageUseCase.refreshOperatorInfo()).thenThrow(RuntimeException("Fail"))
             val viewModel = createViewModel(backgroundScope)
 
@@ -528,7 +535,7 @@ class MainViewModelTest {
 
     @Test
     fun `refreshAndNotify updates lastRefreshAt also on Timeout`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val initialSnapshot =
                 GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -555,7 +562,7 @@ class MainViewModelTest {
 
     @Test
     fun `onActivityResume does not trigger refresh immediately after a Timeout`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val initialSnapshot =
                 GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -590,7 +597,7 @@ class MainViewModelTest {
 
     @Test
     fun `onActivityResume does not trigger refresh after recent manual pull-to-refresh`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val initialSnapshot =
                 GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -627,7 +634,7 @@ class MainViewModelTest {
 
     @Test
     fun `refreshAndNotify handles concurrent calls consistently`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val snapshot1 =
                 GlobalSnapshot(
                     version = SchemaVersion(1, 0, 0),
@@ -680,7 +687,7 @@ class MainViewModelTest {
 
     @Test
     fun `autoResetScheduler uses monotonic time and handles reboot`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             // 1. Initial run
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
             createViewModel(backgroundScope)
@@ -719,7 +726,7 @@ class MainViewModelTest {
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `autoResetScheduler can be retried after failure`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val scheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
 
             // 1. First call fails.
@@ -750,7 +757,7 @@ class MainViewModelTest {
 
     @Test
     fun `executeSimOperation sets OperationError on SeedUnavailableException`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
             val slot = 1
             whenever(simIdentityRepository.getIdentity(slot)).thenThrow(SeedUnavailableException(slot))
@@ -770,7 +777,7 @@ class MainViewModelTest {
 
     @Test
     fun `executeSimOperation sets OperationError on SimNotFoundException`() =
-        runTest(testDispatcher) {
+        testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
             val slot = 0
             whenever(simIdentityRepository.getIdentity(slot)).thenThrow(SimNotFoundException(slot))

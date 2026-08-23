@@ -147,14 +147,16 @@ open class CallTracker
         }
 
         private suspend fun fetchCallStartData(targetSubId: Int): CallStartData {
-            val startTimeResult = retryHelper.readWithRetry(
-                label = "getCallStartTime",
-                reader = { callSessionRepository.getCallStartTime(targetSubId) },
-            )
-            val bootTimeResult = retryHelper.readWithRetry(
-                label = "getBootTime",
-                reader = { callSessionRepository.getBootTime(targetSubId) },
-            )
+            val startTimeResult =
+                retryHelper.readWithRetry(
+                    label = "getCallStartTime",
+                    reader = { callSessionRepository.getCallStartTime(targetSubId) },
+                )
+            val bootTimeResult =
+                retryHelper.readWithRetry(
+                    label = "getBootTime",
+                    reader = { callSessionRepository.getBootTime(targetSubId) },
+                )
             val identity = resolveIdentity(targetSubId)
             return CallStartData(
                 startTimeResult = startTimeResult,
@@ -166,7 +168,10 @@ open class CallTracker
             )
         }
 
-        private suspend fun processCallStartLocked(targetSubId: Int, data: CallStartData) {
+        private suspend fun processCallStartLocked(
+            targetSubId: Int,
+            data: CallStartData,
+        ) {
             if (data.startTimeResult.isFailure) {
                 handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull())
                 return
@@ -175,8 +180,9 @@ open class CallTracker
             val startTime = data.startTimeResult.getOrThrow()
             if (startTime != 0L) {
                 val savedBootTime = data.bootTimeResult.getOrElse { 0L }
-                val isStale = savedBootTime > data.bootTime ||
-                    (savedBootTime > 0 && data.bootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS)
+                val isStale =
+                    savedBootTime > data.bootTime ||
+                        (savedBootTime > 0 && data.bootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS)
 
                 if (!isStale) {
                     AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
@@ -184,7 +190,13 @@ open class CallTracker
                 }
 
                 AppLogger.w("CallTracker: clearing stale session for subId $targetSubId")
-                cleanupCounters(targetSubId)
+                try {
+                    cleanupCounters(targetSubId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Non-fatal error clearing stale session", e)
+                }
             }
 
             callSessionRepository.setCallStartTime(targetSubId, data.now)
@@ -310,7 +322,6 @@ open class CallTracker
             return settings.callTrackingEnabled
         }
 
-
         private fun resolveTargetSubId(subId: Int): Int =
             if (subId == -1) {
                 val default = permissionManager.getDefaultVoiceSubscriptionId()
@@ -324,7 +335,6 @@ open class CallTracker
                 subId
             }
 
-
         private suspend fun handleStartTimeFailure(
             targetSubId: Int,
             error: Throwable?,
@@ -335,7 +345,6 @@ open class CallTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message)
             cleanupCounters(targetSubId)
         }
-
 
         @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
         internal open suspend fun refreshStatus(force: Boolean = false) {
@@ -355,6 +364,10 @@ open class CallTracker
 
                 val activeCalls = callSessionRepository.getActiveCallSubIds()
                 _status.value = if (activeCalls.isNotEmpty()) TrackingStatus.Active else TrackingStatus.Idle
+
+                // Cleanup attributionFailures for inactive subIds to prevent memory leak
+                val activeSubIdsSet = activeCalls.toSet()
+                attributionFailures.keys.retainAll { it in activeSubIdsSet }
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException refreshing status", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
@@ -391,22 +404,26 @@ open class CallTracker
 
         private suspend fun fetchCallEndData(subId: Int): CallEndData =
             CallEndData(
-                startTimeResult = retryHelper.readWithRetry(
-                    label = "endCall:startTime",
-                    reader = { callSessionRepository.getCallStartTime(subId) },
-                ),
-                savedBootTimeResult = retryHelper.readWithRetry(
-                    label = "endCall:bootTimeForDuration",
-                    reader = { callSessionRepository.getBootTime(subId) },
-                ),
-                savedIdentityResult = retryHelper.readWithRetry(
-                    label = "endCall:identity",
-                    reader = { callSessionRepository.getCallIdentity(subId) },
-                ),
-                savedUptimeResult = retryHelper.readWithRetry(
-                    label = "endCall:uptime",
-                    reader = { callSessionRepository.getUptime(subId) },
-                ),
+                startTimeResult =
+                    retryHelper.readWithRetry(
+                        label = "endCall:startTime",
+                        reader = { callSessionRepository.getCallStartTime(subId) },
+                    ),
+                savedBootTimeResult =
+                    retryHelper.readWithRetry(
+                        label = "endCall:bootTimeForDuration",
+                        reader = { callSessionRepository.getBootTime(subId) },
+                    ),
+                savedIdentityResult =
+                    retryHelper.readWithRetry(
+                        label = "endCall:identity",
+                        reader = { callSessionRepository.getCallIdentity(subId) },
+                    ),
+                savedUptimeResult =
+                    retryHelper.readWithRetry(
+                        label = "endCall:uptime",
+                        reader = { callSessionRepository.getUptime(subId) },
+                    ),
                 currentBootTime = timeProvider.elapsedRealtime(),
                 currentUptime = timeProvider.uptimeMillis(),
             )
@@ -418,24 +435,20 @@ open class CallTracker
         ) {
             if (data.startTimeResult.isFailure) {
                 handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull())
-                return
+            } else {
+                val startTime = data.startTimeResult.getOrThrow()
+                if (startTime == 0L) {
+                    AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
+                } else if (validateCallDuration(subId, data)) {
+                    val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
+                    val durationSeconds =
+                        ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
+
+                    if (processCallDurationLocked(subId, durationSeconds, data, notify)) {
+                        cleanupCounters(subId)
+                    }
+                }
             }
-            val startTime = data.startTimeResult.getOrThrow()
-
-            if (startTime == 0L) {
-                AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
-                return
-            }
-
-            if (!validateCallDuration(subId, data)) return
-
-            val durationSeconds =
-                ((data.currentBootTime - data.savedBootTimeResult.getOrElse { 0L }) / Constants.Time.MILLIS_IN_SECOND)
-                    .toInt()
-
-            if (!processCallDurationLocked(subId, durationSeconds, data, notify)) return
-
-            cleanupCounters(subId)
         }
 
         private suspend fun validateCallDuration(
@@ -443,22 +456,25 @@ open class CallTracker
             data: CallEndData,
         ): Boolean {
             val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
-            if (savedBootTime > data.currentBootTime ||
-                (savedBootTime > 0 && data.currentBootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS)
-            ) {
-                val message = "Call duration exceeded max limit for subId $subId"
-                AppLogger.w("CallTracker: $message, clearing session")
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
-                cleanupCounters(subId)
-                return false
+            return when {
+                savedBootTime > data.currentBootTime ||
+                    (
+                        savedBootTime > 0 &&
+                            data.currentBootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS
+                    ) -> {
+                    val message = "Call duration exceeded max limit for subId $subId"
+                    AppLogger.w("CallTracker: $message, clearing session")
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+                    cleanupCounters(subId)
+                    false
+                }
+                savedBootTime == 0L -> {
+                    AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
+                    cleanupCounters(subId)
+                    false
+                }
+                else -> true
             }
-
-            if (savedBootTime == 0L) {
-                AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
-                cleanupCounters(subId)
-                return false
-            }
-            return true
         }
 
         private suspend fun processCallDurationLocked(
@@ -466,45 +482,45 @@ open class CallTracker
             durationSeconds: Int,
             data: CallEndData,
             notify: Boolean,
-        ): Boolean {
-            if (durationSeconds < 0) {
-                AppLogger.w("CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring")
-                cleanupCounters(subId)
-                return false
+        ): Boolean =
+            when {
+                durationSeconds < 0 -> {
+                    AppLogger.w(
+                        "CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring",
+                    )
+                    cleanupCounters(subId)
+                    false
+                }
+                durationSeconds > Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND -> {
+                    AppLogger.w(
+                        "CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId",
+                    )
+                    cleanupCounters(subId)
+                    false
+                }
+                data.savedUptimeResult.getOrElse { 0L }.let { it > 0 && data.currentUptime < it } -> {
+                    AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
+                    cleanupCounters(subId)
+                    false
+                }
+                else -> {
+                    val savedIdentity = data.savedIdentityResult.getOrNull()
+                    val (targetIdentity, isFallbackUsed) = resolveTargetIdentity(subId, savedIdentity)
+
+                    if (durationSeconds == 0) {
+                        AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
+                        cleanupCounters(subId)
+                        false
+                    } else if (targetIdentity != null) {
+                        val durationMinutes = calculateDurationMinutes(durationSeconds)
+                        writeCallDuration(targetIdentity, durationMinutes, isFallbackUsed, notify)
+                        true
+                    } else {
+                        handleAttributionFailure(subId)
+                        false
+                    }
+                }
             }
-
-            if (durationSeconds > Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) {
-                AppLogger.w("CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId")
-                cleanupCounters(subId)
-                return false
-            }
-
-            val savedUptime = data.savedUptimeResult.getOrElse { 0L }
-            if (savedUptime > 0 && data.currentUptime < savedUptime) {
-                AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
-                cleanupCounters(subId)
-                return false
-            }
-
-            val savedIdentity = data.savedIdentityResult.getOrNull()
-            val (targetIdentity, isFallbackUsed) = resolveTargetIdentity(subId, savedIdentity)
-
-            if (durationSeconds == 0) {
-                AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
-                cleanupCounters(subId)
-                return false
-            }
-
-            val durationMinutes = calculateDurationMinutes(durationSeconds)
-
-            return if (targetIdentity != null) {
-                writeCallDuration(targetIdentity, durationMinutes, isFallbackUsed, notify)
-                true
-            } else {
-                handleAttributionFailure(subId)
-                false
-            }
-        }
 
         private suspend fun handleReadStartTimeFailure(
             subId: Int,
@@ -516,7 +532,6 @@ open class CallTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message)
             cleanupCounters(subId)
         }
-
 
         @Suppress("ReturnCount")
         private suspend fun resolveEffectiveSubId(subId: Int): Int {
@@ -583,7 +598,6 @@ open class CallTracker
             AppLogger.d("Call recorded: $durationMinutes min for $identity (fallback=$isFallbackUsed)")
             return true
         }
-
 
         private suspend fun handleAttributionFailure(subId: Int): Boolean {
             val failures = (attributionFailures[subId] ?: 0) + 1

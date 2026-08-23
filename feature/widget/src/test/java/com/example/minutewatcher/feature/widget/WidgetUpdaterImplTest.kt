@@ -131,6 +131,10 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll returns false when performWidgetUpdate throws unexpected exception`() =
         runTest {
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
             val failingUpdater =
                 WidgetUpdaterImpl(
                     context,

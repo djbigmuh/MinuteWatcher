@@ -78,11 +78,7 @@ class SimIdentityPersistenceFailureTest {
             whenever(migrationService.migrateLegacyData(identity)).doReturn(Unit)
 
             // 6. Call saveSimIdentitiesInfo again
-            try {
-                persistence.saveSimIdentitiesInfo(listOf(identity))
-            } catch (e: Exception) {
-                throw e
-            }
+            persistence.saveSimIdentitiesInfo(listOf(identity))
             testScheduler.advanceUntilIdle()
 
             // 7. Verify migration was called AGAIN (retry)

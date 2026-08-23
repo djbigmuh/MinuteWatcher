@@ -48,6 +48,12 @@ style:
     maxLineLength: 120
   UnusedImports:
     active: true
+  ForbiddenMethodCall:
+    active: true
+    methods:
+      - value: 'kotlinx.coroutines.Dispatchers.IO'
+      - value: 'kotlinx.coroutines.Dispatchers.Default'
+    excludes: ['**/*Test.kt', '**/DispatchersModule.kt']
   MagicNumber:
     active: true
     excludes: ['**/*Test.kt', '**/*Test*.kt']

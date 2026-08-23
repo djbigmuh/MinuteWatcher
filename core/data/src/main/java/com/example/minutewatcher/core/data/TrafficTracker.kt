@@ -55,13 +55,13 @@ class TrafficTracker
         }
 
         suspend fun resetBaseline(identity: String) {
-            trafficMutex.withLock {
-                if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
-                    AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
-                    return@withLock
-                }
-                simChangeHandler.withSimChangeLock {
-                    if (!checkPermissions()) return@withSimChangeLock
+            if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+                AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
+                return
+            }
+            simChangeHandler.withSimChangeLock {
+                trafficMutex.withLock {
+                    if (!checkPermissions()) return@withLock
                     baselineManager.resetBaseline(identity, _status) {
                         val currentDataSubId =
                             try {
@@ -199,7 +199,8 @@ class TrafficTracker
                 } ?: run {
                     trafficMutex.withLock {
                         AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+                        _status.value =
+                            TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
                     }
                     return
                 }

@@ -27,6 +27,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.WorkScheduler
@@ -40,8 +41,8 @@ import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -54,6 +55,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject @ApplicationScope
     lateinit var applicationScope: CoroutineScope
+
+    @Inject @IoDispatcher
+    lateinit var ioDispatcher: CoroutineDispatcher
 
     @Inject lateinit var permissionStateNotifier: PermissionStateNotifier
 
@@ -213,8 +217,8 @@ class MainActivity : AppCompatActivity() {
         private fun handlePhoneResult(granted: Boolean) {
             if (granted) {
                 // WorkManager.enqueue() performs disk I/O internally.
-                // Dispatchers.IO prevents potential ANR on slow storage.
-                lifecycleScope.launch(Dispatchers.IO) {
+                // Injected ioDispatcher prevents potential ANR on slow storage.
+                lifecycleScope.launch(ioDispatcher) {
                     try {
                         workScheduler.scheduleInitialSetup()
                         workScheduler.schedulePeriodicUsageCheck()
@@ -263,8 +267,8 @@ class MainActivity : AppCompatActivity() {
                 if (permissionManager.hasPhoneStatePermission()) {
                     viewModel.setPhonePermissionPermanentlyDenied(false)
                     // WorkManager.enqueue() performs disk I/O internally.
-                    // Dispatchers.IO prevents potential ANR on slow storage.
-                    launch(Dispatchers.IO) {
+                    // Injected ioDispatcher prevents potential ANR on slow storage.
+                    launch(ioDispatcher) {
                         try {
                             workScheduler.scheduleInitialSetup()
                             workScheduler.schedulePeriodicUsageCheck()

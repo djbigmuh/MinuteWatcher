@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -180,27 +179,35 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
 
-            // lastTotalBytes never emits
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(MutableSharedFlow())
+            // lastTotalBytes never emits - use a flow that never emits
+            // but doesn't block advanceUntilIdle forever if possible
+            // Actually, for testing timeout we NEED it to not emit.
+            whenever(
+                simUsageResetRepository.getLastTotalBytes(any()),
+            ).thenReturn(kotlinx.coroutines.flow.MutableSharedFlow())
 
             tracker.updateTrafficUsage()
+
+            // Advance by more than LONG_TIMEOUT_MS
+            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
+            testScheduler.runCurrent()
 
             val status = tracker.status.value
             assertTrue(status is TrackingStatus.Error)
             assertEquals("Timeout reading lastTotalBytes", (status as TrackingStatus.Error).message)
 
-            // Should NOT call setLastTotalBytes (which would happen if baseline was reset due to ?: -1L bug)
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
 
     @Test
     fun `processTrafficUpdate handles timeout reading simUsage`() =
         runTest(testDispatcher) {
-            // simUsage never emits
-            val neverFlow = MutableSharedFlow<SimUsage>()
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(neverFlow)
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(kotlinx.coroutines.flow.MutableSharedFlow())
 
             tracker.updateTrafficUsage()
+
+            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
+            testScheduler.runCurrent()
 
             val status = tracker.status.value
             assertTrue(status is TrackingStatus.Error)
@@ -475,7 +482,7 @@ class TrafficTrackerTest {
 
             // Act
             tracker.recover()
-            advanceUntilIdle()
+            testScheduler.runCurrent()
 
             // Assert
             assertEquals(TrackingStatus.Active, tracker.status.value)
@@ -628,12 +635,15 @@ class TrafficTrackerTest {
         runTest(testDispatcher) {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
             tracker.updateTrafficUsage()
+            testScheduler.runCurrent()
             @Suppress("UnusedFlow")
             verify(simIdentityRepository, never()).observeActiveSims()
+
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
             val emptySimsFlow = flowOf(emptyList<ActiveSimInfo>())
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySimsFlow)
             tracker.updateTrafficUsage()
+            testScheduler.runCurrent()
             @Suppress("UnusedFlow")
             verify(simIdentityRepository, times(1)).observeActiveSims()
         }
@@ -733,19 +743,21 @@ class TrafficTrackerTest {
                 StatsResult.Success(if (queryCount == 1) 5000L else 105000L)
             }
 
-            // Launch both. simChangeMutex ensures they don't race.
-            // resetBaseline will take the lock first and update baseline to 5000.
-            // updateTrafficUsage will wait, then read 5000 as baseline, and calculate delta (105000 - 5000 = 100000).
-            launch { tracker.resetBaseline("sim_0") }
-            launch { tracker.updateTrafficUsage() }
+            // Launch both.
+            val job1 = launch { tracker.resetBaseline("sim_0") }
+            val job2 = launch { tracker.updateTrafficUsage() }
 
-            advanceUntilIdle()
+            // Allow them to proceed. simChangeMutex ensures they don't race.
+            testScheduler.runCurrent()
 
             // Verify delta was calculated from 5000, not the initial 1000
             val expectedDeltaMb = (100000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
             verify(simUsageResetRepository)
                 .incrementTrafficAndSetBaseline(eq("sim_0"), eq(expectedDeltaMb), eq(105000L))
             assertEquals(105000L, currentStoredValue.value)
+
+            job1.join()
+            job2.join()
         }
 
     @Test
@@ -779,6 +791,8 @@ class TrafficTrackerTest {
 
             // Act
             tracker.updateTrafficUsage()
+            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS * 3) // Advance through initial and retry
+            testScheduler.runCurrent()
 
             // Assert
             val status = tracker.status.value
@@ -807,6 +821,8 @@ class TrafficTrackerTest {
 
             // Act
             tracker.updateTrafficUsage()
+            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS * 3)
+            testScheduler.runCurrent()
 
             // Assert
             assertTrue("baselineNeedsRetry should NOT be cleared on timeout", map.containsKey(identity))
@@ -911,7 +927,9 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage does not block concurrent calls during IO`() =
         runTest(testDispatcher) {
             val flow = MutableSharedFlow<List<ActiveSimInfo>>()
-            val callCount = java.util.concurrent.atomic.AtomicInteger(0)
+            val callCount =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
 
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
                 callCount.incrementAndGet()
@@ -919,18 +937,21 @@ class TrafficTrackerTest {
             }
 
             // Start two calls
-            launch { tracker.updateTrafficUsage() }
-            launch { tracker.updateTrafficUsage() }
+            val job1 = launch { tracker.updateTrafficUsage() }
+            val job2 = launch { tracker.updateTrafficUsage() }
 
             // Allow them to reach fetchActiveSims() -> observeActiveSims().first()
-            advanceUntilIdle()
+            testScheduler.runCurrent()
 
             // If not blocked by trafficMutex, both should have called observeActiveSims()
             assertEquals(2, callCount.get())
 
             // Clean up by emitting empty list to finish the calls
             flow.emit(emptyList())
-            advanceUntilIdle()
+            testScheduler.runCurrent()
+
+            job1.join()
+            job2.join()
         }
 }
 

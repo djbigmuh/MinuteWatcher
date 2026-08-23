@@ -39,42 +39,46 @@ class WidgetUpdaterImpl
             }
 
         @Suppress("TooGenericExceptionCaught")
-        private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome =
-            updateMutex.withLock {
-                val outcome =
-                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        val result =
-                            try {
-                                val settings = appSettingsRepository.observeAppSettings().value
-                                if (settings.widgetLimitExceeded) {
-                                    if (limitManager.shouldProbe()) {
-                                        limitManager.performProbeUpdate(context) { ctx, _ ->
-                                            safeUpdateInternal(ctx, isFullAttempt = true)
-                                        }
-                                    } else {
-                                        safeUpdateInternal(context, isFullAttempt = false)
-                                    }
-                                } else {
-                                    limitManager.resetCounter()
-                                    safeUpdateInternal(context, isFullAttempt = true)
-                                }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: SecurityException) {
-                                AppLogger.e("Security error updating widgets (attempt $attempt)", e)
-                                UpdateResult.GenericFailure(isRetryable = false)
-                            } catch (e: Error) {
-                                AppLogger.e("Fatal error updating widgets (attempt $attempt)", e)
-                                UpdateResult.GenericFailure(isRetryable = false)
-                            } catch (e: Exception) {
-                                AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
-                                UpdateResult.GenericFailure(isRetryable = true)
-                            }
+        private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
+            val settings = appSettingsRepository.observeAppSettings().value
 
-                        handleUpdateResult(result)
+            val mode =
+                updateMutex.withLock {
+                    if (settings.widgetLimitExceeded) {
+                        if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
+                    } else {
+                        limitManager.resetCounter()
+                        RenderMode.FULL
                     }
-                outcome ?: handleUpdateResult(UpdateResult.GenericFailure(isRetryable = true))
-            }
+                }
+
+            val result =
+                withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                    try {
+                        when (mode) {
+                            RenderMode.PROBE ->
+                                limitManager.performProbeUpdate(context) { ctx, _ ->
+                                    safeUpdateInternal(ctx, isFullAttempt = true)
+                                }
+                            RenderMode.SIMPLIFIED -> safeUpdateInternal(context, isFullAttempt = false)
+                            RenderMode.FULL -> safeUpdateInternal(context, isFullAttempt = true)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: SecurityException) {
+                        AppLogger.e("Security error updating widgets (attempt $attempt)", e)
+                        UpdateResult.GenericFailure(isRetryable = false)
+                    } catch (e: Error) {
+                        AppLogger.e("Fatal error updating widgets (attempt $attempt)", e)
+                        UpdateResult.GenericFailure(isRetryable = false)
+                    } catch (e: Exception) {
+                        AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
+                        UpdateResult.GenericFailure(isRetryable = true)
+                    }
+                } ?: UpdateResult.GenericFailure(isRetryable = true)
+
+            return handleUpdateResult(result)
+        }
 
         private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {
@@ -100,9 +104,18 @@ class WidgetUpdaterImpl
                 appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                     ?: return UpdateOutcome.Retry
 
-            if (settings.widgetLimitExceeded) return UpdateOutcome.Stop
+            val alreadyExceeded =
+                updateMutex.withLock {
+                    if (settings.widgetLimitExceeded) {
+                        true
+                    } else {
+                        limitManager.setWidgetLimitExceeded(value = true)
+                        false
+                    }
+                }
 
-            limitManager.setWidgetLimitExceeded(value = true)
+            if (alreadyExceeded) return UpdateOutcome.Stop
+
             AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
 
             val result = safeUpdateInternal(context, isFullAttempt = false)
@@ -135,4 +148,10 @@ class WidgetUpdaterImpl
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)
+
+        private enum class RenderMode {
+            FULL,
+            SIMPLIFIED,
+            PROBE,
+        }
     }

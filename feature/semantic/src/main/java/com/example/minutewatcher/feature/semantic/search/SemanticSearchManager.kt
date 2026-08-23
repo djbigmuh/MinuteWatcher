@@ -67,6 +67,7 @@ open class SemanticSearchManager
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private val initMutex = Mutex()
+        private val indexMutex = Mutex()
 
         @VisibleForTesting
         constructor(
@@ -152,20 +153,21 @@ open class SemanticSearchManager
         }
 
         @Suppress("ReturnCount")
-        suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
-            val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
-            val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
+        suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean =
+            indexMutex.withLock {
+                val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
+                val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
 
-            if (hasActiveSims && (currentHash == lastSnapshotHash) && (snapshot.version == lastSnapshotVersion)) {
-                return true
-            }
-            if (!hasActiveSims && (lastSnapshotHash == null)) return true
+                if (hasActiveSims && (currentHash == lastSnapshotHash) && (snapshot.version == lastSnapshotVersion)) {
+                    return@withLock true
+                }
+                if (!hasActiveSims && (lastSnapshotHash == null)) return@withLock true
 
-            if (sessionManager.ensureSession(_status)) {
-                return performIndexingWithRetry(snapshot, currentHash)
+                if (sessionManager.ensureSession(_status)) {
+                    return@withLock performIndexingWithRetry(snapshot, currentHash)
+                }
+                false
             }
-            return false
-        }
 
         private suspend fun performIndexingWithRetry(
             snapshot: GlobalSnapshot,
