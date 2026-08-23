@@ -113,6 +113,12 @@ class MainViewModel
 
         fun dismissOperationError() = controllers.simData.dismissOperationError()
 
+        fun retryBanners() {
+            viewModelScope.launch {
+                controllers.banner.recover()
+            }
+        }
+
         // Delegate Settings Actions
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
 

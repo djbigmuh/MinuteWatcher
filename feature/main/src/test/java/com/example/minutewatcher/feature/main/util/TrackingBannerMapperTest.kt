@@ -200,6 +200,23 @@ class TrackingBannerMapperTest {
         assertFalse(state.showAppSearchErrorBanner)
     }
 
+    @Test
+    fun `mapToBannerState reflects observationFailed state`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                phonePermanentlyDenied = false,
+                notificationPermanentlyDenied = false,
+                settings = AppSettings(onboardingCompleted = true),
+                observationFailed = true,
+            )
+
+        assertTrue(state.observationFailed)
+    }
+
     private fun mapToBannerStateWithAppSearch(
         statusMap: Map<String, TrackingStatus>,
         retryCount: Int = 0,

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- General UI -->
     <string name="sim_cards_title">SIM Cards</string>
     <string name="no_sim_found">SIM cards not found</string>
@@ -61,6 +61,7 @@
     <string name="tracking_banner_notification_permission">Notification permission is recommended to receive usage alerts.</string>
     <string name="tracking_banner_widget_error">Widget cannot be updated due to system limitations.</string>
     <string name="tracking_banner_inaccurate_calls">Multiple active calls detected. Minutes might be attributed inaccurately.</string>
+    <string name="tracking_banner_observation_failed" tools:ignore="MissingTranslation">Data tracking service has stopped after multiple errors. Please retry or restart the app.</string>
     <string name="settings_load_error">Settings load error</string>
     <string name="sim_list_unavailable_error">SIM list is unavailable. SIM settings will be available after reload.</string>
     <string name="refresh_error">Data refresh error</string>

@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -56,77 +55,100 @@ class ResetManager
          * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
          */
         override suspend fun performAutoReset(shouldNotify: Boolean) {
-            catchingCancellation(
-                block = {
-                    /**
-                     * Использование wall-clock (now) для расчёта даты сброса.
-                     * Авто-сброс лимитов — это календарная операция, привязанная к биллинговому
-                     * периоду оператора. Поэтому расчёт "наступил ли день сброса" должен
-                     * опираться на текущую системную дату.
-                     *
-                     * Ожидаемое поведение: при ручном переводе системных часов пользователем
-                     * календарный сброс сработает в соответствии с новой датой. Это не является
-                     * багом, так как приложение синхронизирует состояние с текущим системным
-                     * временем, которое для него является истинным календарным временем.
-                     */
-                    val now = timeProvider.now()
-                    val nowElapsed = timeProvider.elapsedRealtime()
-                    val resetIdentities = mutableSetOf<String>()
+            val now = timeProvider.now()
+            val nowElapsed = timeProvider.elapsedRealtime()
 
-                    // Use active SIMs from repository to ensure we don't skip SIMs on stale snapshots
-                    val activeSims =
-                        simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+            val activeSims =
+                simIdentityRepository.observeActiveSims().firstWithTimeout()
+                    ?: throw java.io.IOException("Timeout observing active SIMs during auto-reset check")
 
-                    if (activeSims.isEmpty()) {
-                        AppLogger.w("ResetManager: No active SIMs detected or timeout during auto-reset check.")
+            if (activeSims.isEmpty()) {
+                AppLogger.w("ResetManager: No active SIMs detected during auto-reset check.")
+            }
+
+            val resetIdentities = mutableSetOf<String>()
+            var ioException: java.io.IOException? = null
+            var successCount = 0
+
+            for (simInfo in activeSims) {
+                try {
+                    if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
+                        successCount++
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: java.io.IOException) {
+                    AppLogger.e("ResetManager: reset failed for SIM ${simInfo.identity.stableId}, continuing", e)
+                    ioException = e
+                } catch (e: Exception) {
+                    AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
+                }
+            }
 
-                    for (simInfo in activeSims) {
-                        val identity = simInfo.identity.stableId
+            cleanupStaleCheckTimestamps(activeSims)
 
-                        // Чтение getSimUsage() вынесено за пределы resetMutex.withLock.
-                        // Обернуто в таймаут для предотвращения зависания при деградации DataStore.
-                        val usage =
-                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                simUsageRepository.getSimUsage(identity).first()
-                            }
+            if (resetIdentities.isNotEmpty()) {
+                resetIdentities.forEach { identity -> trafficTracker.resetBaseline(identity) }
+                if (shouldNotify) dataChangeNotifier.notifyDataChanged()
+            }
 
-                        if (usage == null) {
-                            AppLogger.w(
-                                "ResetManager: Timeout reading usage for SIM $identity, skipping reset check.",
-                            )
-                            continue
-                        }
+            handleAutoResetResult(ioException, successCount, activeSims.size)
+        }
 
-                        val resetPerformed =
-                            resetMutex.withLock {
-                                checkAndPerformResetForSimInternal(simInfo, now, nowElapsed, usage)
-                            }
+        private suspend fun processSingleSimReset(
+            simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
+            now: Long,
+            nowElapsed: Long,
+            resetIdentities: MutableSet<String>,
+        ): Boolean {
+            val identity = simInfo.identity.stableId
+            // Чтение getSimUsage() вынесено за пределы resetMutex.withLock.
+            // Обернуто в таймаут для предотвращения зависания при деградации DataStore.
+            val usage =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    simUsageRepository.getSimUsage(identity).first()
+                }
 
-                        if (resetPerformed) {
-                            resetIdentities.add(identity)
-                        }
-                    }
+            if (usage == null) {
+                AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+                return false
+            }
 
-                    // Clear stale check timestamps for identities that are no longer active
-                    resetMutex.withLock {
-                        val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
-                        lastResetCheck.keys.removeAll { it !in activeIdentitySet }
-                    }
+            val resetPerformed =
+                resetMutex.withLock {
+                    checkAndPerformResetForSimInternal(simInfo, now, nowElapsed, usage)
+                }
 
-                    if (resetIdentities.isNotEmpty()) {
-                        resetIdentities.forEach { identity ->
-                            trafficTracker.resetBaseline(identity)
-                        }
-                        if (shouldNotify) {
-                            dataChangeNotifier.notifyDataChanged()
-                        }
-                    }
-                },
-                onError = { e ->
-                    AppLogger.e("Error in auto reset: ${e.message}")
-                },
-            )
+            if (resetPerformed) {
+                resetIdentities.add(identity)
+            }
+            return true
+        }
+
+        private suspend fun cleanupStaleCheckTimestamps(
+            activeSims: List<com.example.minutewatcher.core.model.ActiveSimInfo>,
+        ) {
+            resetMutex.withLock {
+                val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
+                lastResetCheck.keys.removeAll { it !in activeIdentitySet }
+            }
+        }
+
+        private fun handleAutoResetResult(
+            ioException: java.io.IOException?,
+            successCount: Int,
+            totalActiveSims: Int,
+        ) {
+            if (ioException != null) {
+                if (successCount == 0 && totalActiveSims > 0) {
+                    throw ioException
+                } else {
+                    AppLogger.w(
+                        "ResetManager: auto-reset partially failed, but at least one SIM " +
+                            "succeeded. Retrying via worker is skipped.",
+                    )
+                }
+            }
         }
 
         private suspend fun checkAndPerformResetForSimInternal(

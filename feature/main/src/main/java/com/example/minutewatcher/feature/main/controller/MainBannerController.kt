@@ -138,6 +138,7 @@ class MainBannerController
         private val initMutex = Mutex()
 
         private val recoveryTrigger = MutableStateFlow(0L)
+        private val observationFailedFlow = MutableStateFlow(false)
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
@@ -153,6 +154,7 @@ class MainBannerController
                 observationRetryCount = 0L
                 retryAttempt.set(0)
                 lastLoggedTime = 0L
+                observationFailedFlow.value = false
             }
         }
 
@@ -161,6 +163,7 @@ class MainBannerController
                 observationRetryCount = 0L
                 retryAttempt.set(0)
                 lastLoggedTime = 0L
+                observationFailedFlow.value = false
                 lastTrackingStatusFlow?.let { setupObservation(it) }
                 recoveryTrigger.value++
             }
@@ -249,6 +252,7 @@ class MainBannerController
                         appSearchRetryCount,
                         appSearchBannerDismissed,
                         bannerExtraData,
+                        observationFailedFlow,
                     ) { args ->
                         // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
                         // when using more than 5 flows.
@@ -264,6 +268,7 @@ class MainBannerController
                         // when using more than 5 flows.
                         @Suppress("UNCHECKED_CAST")
                         val extra = args[ARG_EXTRA] as Triple<Boolean, Boolean, AppSettings>
+                        val observationFailed = args[ARG_OBS_FAILED] as Boolean
 
                         TrackingBannerMapper.mapToBannerState(
                             statusMap = status,
@@ -275,6 +280,7 @@ class MainBannerController
                             settings = extra.third,
                             appSearchRetryCount = retry,
                             appSearchBannerDismissed = dismissed,
+                            observationFailed = observationFailed,
                         )
                     }.onEach {
                         handleSuccess()
@@ -317,6 +323,7 @@ class MainBannerController
                                     TrackingStatus.ErrorType.DATABASE_ERROR,
                                     "Banner observation failed persistently: ${cause.message}",
                                 )
+                            observationFailedFlow.value = true
                             return@retryWhen false
                         }
 
@@ -374,5 +381,6 @@ class MainBannerController
             private const val ARG_RETRY = 4
             private const val ARG_DISMISSED = 5
             private const val ARG_EXTRA = 6
+            private const val ARG_OBS_FAILED = 7
         }
     }

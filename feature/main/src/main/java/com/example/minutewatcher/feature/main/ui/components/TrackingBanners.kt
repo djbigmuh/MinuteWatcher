@@ -13,6 +13,10 @@ fun TrackingBanners(
     callbacks: TrackingBannerCallbacks,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        ObservationErrorBanner(
+            state = state,
+            onRetry = callbacks.onRetryBanners,
+        )
         PermissionBanners(state, callbacks)
         ErrorBanners(state, callbacks)
         StatusBanners(state, callbacks)

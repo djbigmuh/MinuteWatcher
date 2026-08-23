@@ -14,55 +14,55 @@ import javax.inject.Singleton
  */
 @Singleton
 class SimUsageResetLogic
-@Inject
-constructor() {
-    fun applyResetWithRollover(
-        prefs: MutablePreferences,
-        identity: String,
-        nowMillis: Long,
-    ) {
-        val rollover = prefs[DataStoreKeys.rolloverEnabledKey(identity)] ?: false
-        if (rollover) {
-            val minutesLimit = prefs[DataStoreKeys.monthlyLimitKey(identity)] ?: 0
-            val minutesUsed = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0
-            val manualAdj = prefs[DataStoreKeys.manualAdjustmentKey(identity)] ?: 0
-            val remainingMinutes =
-                maxOf(
-                    0L,
-                    (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong(),
-                ).toInt()
+    @Inject
+    constructor() {
+        fun applyResetWithRollover(
+            prefs: MutablePreferences,
+            identity: String,
+            nowMillis: Long,
+        ) {
+            val rollover = prefs[DataStoreKeys.rolloverEnabledKey(identity)] ?: false
+            if (rollover) {
+                val minutesLimit = prefs[DataStoreKeys.monthlyLimitKey(identity)] ?: 0
+                val minutesUsed = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0
+                val manualAdj = prefs[DataStoreKeys.manualAdjustmentKey(identity)] ?: 0
+                val remainingMinutes =
+                    maxOf(
+                        0L,
+                        (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong(),
+                    ).toInt()
 
-            val trafficLimitMb = prefs[DataStoreKeys.trafficLimitKey(identity)] ?: 0
-            val trafficUsedMb = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-            val trafficAdjGb = (prefs[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
-            val remainingMb =
-                maxOf(
-                    0.0,
-                    (trafficLimitMb.toDouble() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
-                )
-            val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
+                val trafficLimitMb = prefs[DataStoreKeys.trafficLimitKey(identity)] ?: 0
+                val trafficUsedMb = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                val trafficAdjGb = (prefs[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
+                val remainingMb =
+                    maxOf(
+                        0.0,
+                        (trafficLimitMb.toDouble() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
+                    )
+                val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
 
-            prefs[DataStoreKeys.manualAdjustmentKey(identity)] = remainingMinutes
-            prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb
-        } else {
-            prefs[DataStoreKeys.manualAdjustmentKey(identity)] = 0
-            prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = 0f
+                prefs[DataStoreKeys.manualAdjustmentKey(identity)] = remainingMinutes
+                prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb
+            } else {
+                prefs[DataStoreKeys.manualAdjustmentKey(identity)] = 0
+                prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = 0f
+            }
+
+            prefs[DataStoreKeys.minutesUsedKey(identity)] = 0
+            prefs[DataStoreKeys.trafficUsedKey(identity)] = 0f
+            prefs[DataStoreKeys.lastResetDateKey(identity)] = nowMillis
+
+            resetNotificationFlags(prefs, identity)
         }
 
-        prefs[DataStoreKeys.minutesUsedKey(identity)] = 0
-        prefs[DataStoreKeys.trafficUsedKey(identity)] = 0f
-        prefs[DataStoreKeys.lastResetDateKey(identity)] = nowMillis
-
-        resetNotificationFlags(prefs, identity)
+        fun resetNotificationFlags(
+            prefs: MutablePreferences,
+            identity: String,
+        ) {
+            prefs[DataStoreKeys.notifiedLowMinutesKey(identity)] = false
+            prefs[DataStoreKeys.notifiedLowTrafficKey(identity)] = false
+            prefs[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = false
+            prefs[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = false
+        }
     }
-
-    fun resetNotificationFlags(
-        prefs: MutablePreferences,
-        identity: String,
-    ) {
-        prefs[DataStoreKeys.notifiedLowMinutesKey(identity)] = false
-        prefs[DataStoreKeys.notifiedLowTrafficKey(identity)] = false
-        prefs[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = false
-        prefs[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = false
-    }
-}

@@ -32,7 +32,16 @@ class InitialSetupWorker
                 checkAndPerformMigrations()
 
                 // Perform auto-reset immediately after boot/migration. Skip internal notify as we do it at the end.
-                deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+                try {
+                    deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: java.io.IOException) {
+                    AppLogger.w("InitialSetupWorker: Auto-reset failed with IO error, retrying. ${e.message}")
+                    return Result.retry()
+                } catch (e: Exception) {
+                    AppLogger.w("InitialSetupWorker: Auto-reset failed with non-critical error, continuing.", e)
+                }
 
                 // Reset traffic baseline after reboot for the current default data SIM
                 val activeSimsForTraffic = getActiveSimsWithRetry()

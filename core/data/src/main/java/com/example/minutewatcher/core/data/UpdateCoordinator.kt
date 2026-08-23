@@ -92,9 +92,9 @@ class UpdateCoordinator
          */
         private val observationRetryCount = AtomicLong(0L)
 
-        @Volatile private var lastSuccessTime = 0L
+        @Volatile private var lastSuccessElapsed = 0L
 
-        @Volatile private var lastResetTime = 0L
+        @Volatile private var lastRetryResetElapsed = 0L
         private var observationJob: Job? = null
 
         init {
@@ -109,7 +109,7 @@ class UpdateCoordinator
             // Если кастомная прошивка эмитит значения вне порядка —
             // это проблема кастомной прошивки. Debounce гарантирует
             // отсутствие дублирующих обновлений виджета.
-            lastResetTime = timeProvider.now()
+            lastRetryResetElapsed = timeProvider.elapsedRealtime()
             startObservation()
         }
 
@@ -144,9 +144,12 @@ class UpdateCoordinator
          *
          * Safe to call from any coroutine context.
          */
-        fun restartObservation() {
+        suspend fun restartObservation() {
             observationJob?.cancel()
             observationRetryCount.set(0)
+            widgetUpdateMutex.withLock {
+                lastSnapshotHash = null
+            }
             startObservation()
         }
 
@@ -157,11 +160,11 @@ class UpdateCoordinator
             // в состоянии "много ошибок" и не влияет на логирование.
             observationRetryCount.set(0)
 
-            val now = timeProvider.now()
-            if ((now - lastSuccessTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+            val now = timeProvider.elapsedRealtime()
+            if ((now - lastSuccessElapsed) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                 retryAttempt.set(0)
             }
-            lastSuccessTime = now
+            lastSuccessElapsed = now
 
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
@@ -188,7 +191,7 @@ class UpdateCoordinator
                                 if (_status.value is TrackingStatus.Error) {
                                     _status.value = TrackingStatus.Active
                                 }
-                                lastResetTime = now
+                                lastRetryResetElapsed = now
                             } else {
                                 AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
                             }
@@ -220,11 +223,11 @@ class UpdateCoordinator
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
             if (cause is CancellationException) throw cause
 
-            val now = timeProvider.now()
-            if ((now - lastResetTime) > RESET_RETRY_COUNTER_INTERVAL_MS) {
+            val now = timeProvider.elapsedRealtime()
+            if ((now - lastRetryResetElapsed) > RESET_RETRY_COUNTER_INTERVAL_MS) {
                 retryAttempt.set(0)
                 observationRetryCount.set(0)
-                lastResetTime = now
+                lastRetryResetElapsed = now
             }
 
             /**

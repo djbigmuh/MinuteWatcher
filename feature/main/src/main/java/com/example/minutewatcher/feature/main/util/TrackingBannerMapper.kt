@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
 object TrackingBannerMapper {
+    @Suppress("LongParameterList")
     fun mapToBannerState(
         statusMap: Map<String, TrackingStatus>,
         phoneGranted: Boolean,
@@ -16,6 +17,7 @@ object TrackingBannerMapper {
         settings: AppSettings,
         appSearchRetryCount: Int = 0,
         appSearchBannerDismissed: Boolean = false,
+        observationFailed: Boolean = false,
     ): TrackingBannerState {
         val traffic = statusMap["traffic"]
         val appsearch = statusMap["appsearch"]
@@ -61,6 +63,7 @@ object TrackingBannerMapper {
                     notificationPermanentlyDenied,
                     settings,
                 ),
+            observationFailed = observationFailed,
         )
     }
 

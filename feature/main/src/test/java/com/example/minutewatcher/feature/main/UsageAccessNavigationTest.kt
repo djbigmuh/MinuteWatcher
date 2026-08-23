@@ -212,6 +212,7 @@ class UsageAccessNavigationTest {
                         onGrantNotificationPermission = {},
                         onDismissWidgetError = {},
                         onDismissInaccurateCalls = {},
+                        onRetryBanners = {},
                     ),
             )
         }

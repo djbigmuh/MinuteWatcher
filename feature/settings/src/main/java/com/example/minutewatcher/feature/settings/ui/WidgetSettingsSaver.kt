@@ -53,26 +53,30 @@ class WidgetSettingsSaver
                 saveGeneralSettings(validatedState)
                 val failedSlots = saveSimSettings(validatedState, skipSimSettings)
 
-                // После успешного сохранения уведомляем систему об изменениях.
-                // force = true гарантирует немедленное обновление виджета,
-                // даже если данные не изменились (например, пользователь изменил
-                // только настройки оформления).
-                //
-                // Строгое соблюдение API: на AOSP notifyDataChanged завершается
-                // за миллисекунды. Сбой указывает на деградацию DataStore
-                // на кастомной прошивке.
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-
-                if (failedSlots.isEmpty()) {
-                    if (skipSimSettings) {
-                        SaveResult.PartialSuccess(skippedSimSettings = true)
+                val result =
+                    if (failedSlots.isEmpty()) {
+                        if (skipSimSettings) {
+                            SaveResult.PartialSuccess(skippedSimSettings = true)
+                        } else {
+                            SaveResult.Success
+                        }
                     } else {
-                        SaveResult.Success
+                        val slotsString = failedSlots.joinToString(", ")
+                        SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
                     }
-                } else {
-                    val slotsString = failedSlots.joinToString(", ")
-                    SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
+
+                // После успешного сохранения уведомляем систему об изменениях.
+                // force = true гарантирует немедленное обновление виджета.
+                // Уведомление виджетов — отдельная операция, не влияющая на результат сохранения.
+                try {
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
                 }
+
+                return result
             } catch (e: CancellationException) {
                 // Пробрасываем для кооперативной отмены корутины.
                 throw e

@@ -94,6 +94,7 @@ private fun rememberTrackingBannerCallbacks(
             onGrantNotificationPermission = actions.onGrantNotificationPermission,
             onDismissWidgetError = viewModel::dismissWidgetError,
             onDismissInaccurateCalls = viewModel::dismissInaccurateCalls,
+            onRetryBanners = { viewModel.retryBanners() },
         )
     }
 

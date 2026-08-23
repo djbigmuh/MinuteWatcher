@@ -40,10 +40,9 @@ class WidgetUpdaterImpl
 
         @Suppress("TooGenericExceptionCaught")
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
-            val settings = appSettingsRepository.observeAppSettings().value
-
             val mode =
                 updateMutex.withLock {
+                    val settings = appSettingsRepository.observeAppSettings().value
                     if (settings.widgetLimitExceeded) {
                         if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
                     } else {

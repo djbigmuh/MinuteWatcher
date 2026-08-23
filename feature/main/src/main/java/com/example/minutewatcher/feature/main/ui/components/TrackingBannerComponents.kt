@@ -231,6 +231,22 @@ internal fun InaccurateCallsBanner(
 }
 
 @Composable
+internal fun ObservationErrorBanner(
+    state: TrackingBannerState,
+    onRetry: () -> Unit,
+) {
+    if (state.observationFailed) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_observation_failed),
+            actionText = stringResource(id = R.string.action_retry),
+            onAction = onRetry,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
 internal fun TrackingBanner(
     text: String,
     actionText: String?,
