@@ -95,20 +95,44 @@ class CallTrackerTest {
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
     }
 
-    private fun createTracker() =
-        CallTracker(
+    private fun createTracker(): CallTracker {
+        val attributionResolver =
+            CallAttributionResolver(
+                simIdentityRepository,
+                callSessionRepository,
+                permissionManager,
+                retryHelper,
+                dataChangeNotifier,
+            )
+        val startHandler =
+            CallStartHandler(
+                callSessionRepository,
+                timeProvider,
+                retryHelper,
+                attributionResolver,
+            )
+        val endHandler =
+            CallEndHandler(
+                callSessionRepository,
+                timeProvider,
+                retryHelper,
+                attributionResolver,
+            )
+        return CallTracker(
             context,
-            simIdentityRepository,
             simUsageRepository,
             appSettingsRepository,
             callSessionRepository,
             dataChangeNotifier,
             permissionManager,
             telephonyManager,
-            timeProvider,
             retryHelper,
             testScope,
+            attributionResolver,
+            startHandler,
+            endHandler,
         )
+    }
 
     private suspend fun setupCommonMocks() {
         whenever(simIdentityRepository.getIdentity(0)).thenReturn("id_0")
@@ -932,19 +956,42 @@ class CallTrackerTest {
             setupCommonMocks()
             // We use a custom subclass to intercept refreshStatus call
             var refreshStatusCalled = false
+            val attributionResolver =
+                CallAttributionResolver(
+                    simIdentityRepository,
+                    callSessionRepository,
+                    permissionManager,
+                    retryHelper,
+                    dataChangeNotifier,
+                )
+            val startHandler =
+                CallStartHandler(
+                    callSessionRepository,
+                    timeProvider,
+                    retryHelper,
+                    attributionResolver,
+                )
+            val endHandler =
+                CallEndHandler(
+                    callSessionRepository,
+                    timeProvider,
+                    retryHelper,
+                    attributionResolver,
+                )
             val tracker =
                 object : CallTracker(
                     context,
-                    simIdentityRepository,
                     simUsageRepository,
                     appSettingsRepository,
                     callSessionRepository,
                     dataChangeNotifier,
                     permissionManager,
                     telephonyManager,
-                    timeProvider,
                     retryHelper,
                     testScope,
+                    attributionResolver,
+                    startHandler,
+                    endHandler,
                 ) {
                     override suspend fun refreshStatus(force: Boolean) {
                         refreshStatusCalled = true
@@ -1191,10 +1238,11 @@ class CallTrackerTest {
             val tracker = createTracker()
 
             // 1. Manually add entries to attributionFailures using reflection
-            val field = CallTracker::class.java.getDeclaredField("attributionFailures")
-            field.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val map = field.get(tracker) as java.util.concurrent.ConcurrentHashMap<Int, Int>
+            val resolverField = CallTracker::class.java.getDeclaredField("attributionResolver")
+            resolverField.isAccessible = true
+            val resolver = resolverField.get(tracker) as CallAttributionResolver
+
+            val map = resolver.getAttributionFailures()
 
             val inactiveSubId = 99
             val activeSubId = 1

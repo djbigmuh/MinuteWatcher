@@ -94,7 +94,7 @@ class SimRepositoryImplTest {
     fun testUpdateSimLimitsAndGetUsage() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
-            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
 
             limitsRepo.updateSimLimits(identity, 100, 1024)
@@ -118,7 +118,7 @@ class SimRepositoryImplTest {
                     timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
-            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
 
             // Mock a SIM in Slot 1 (index 1)
             val mockInfo = mock<android.telephony.SubscriptionInfo>()
@@ -175,7 +175,7 @@ class SimRepositoryImplTest {
     fun testRolloverLogic_AccumulatesRemainingMinutes() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
-            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
 
             // 1. Setup limit and usage
@@ -196,7 +196,7 @@ class SimRepositoryImplTest {
     fun testRolloverLogic_AccumulatesRemainingTraffic() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
-            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
 
             // 1. Setup limit and usage (1GB limit = 1024MB)
@@ -217,7 +217,7 @@ class SimRepositoryImplTest {
     fun testManualReset_ClearsEverythingEvenWithRollover() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
-            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val usageRepo = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
 
             // 1. Setup limit, usage and rollover

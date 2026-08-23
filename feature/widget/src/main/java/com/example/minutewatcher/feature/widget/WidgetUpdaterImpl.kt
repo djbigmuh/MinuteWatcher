@@ -27,9 +27,9 @@ class WidgetUpdaterImpl
         @param:ApplicationContext private val context: Context,
         private val appSettingsRepository: AppSettingsRepository,
         private val renderer: WidgetRenderer,
-        private val retryManager: WidgetUpdateRetryManager = WidgetUpdateRetryManager(),
-        private val limitManager: WidgetLimitManager = WidgetLimitManager(appSettingsRepository),
-        private val errorClassifier: WidgetErrorClassifier = WidgetErrorClassifier(),
+        private val retryManager: WidgetUpdateRetryManager,
+        private val limitManager: WidgetLimitManager,
+        private val errorClassifier: WidgetErrorClassifier,
     ) : WidgetUpdater {
         private val updateMutex = Mutex()
 
@@ -99,37 +99,52 @@ class WidgetUpdaterImpl
             }
 
         @Suppress("ReturnCount")
-        private suspend fun handleLimitExceeded(): UpdateOutcome {
-            val settings =
-                appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                    ?: return UpdateOutcome.Retry
+        private suspend fun handleLimitExceeded(): UpdateOutcome =
+            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                var settings =
+                    appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
-            val alreadyExceeded =
-                updateMutex.withLock {
-                    if (settings.widgetLimitExceeded) {
-                        true
-                    } else {
-                        limitManager.setWidgetLimitExceeded(value = true)
-                        false
+                val settingsTimedOut = settings == null
+                if (settingsTimedOut) {
+                    AppLogger.e(
+                        "WidgetUpdater: Timeout fetching settings in handleLimitExceeded. Using default AppSettings.",
+                    )
+                    settings =
+                        com.example.minutewatcher.core.model
+                            .AppSettings()
+                }
+
+                val alreadyExceeded =
+                    updateMutex.withLock {
+                        if (settings.widgetLimitExceeded) {
+                            true
+                        } else {
+                            limitManager.setWidgetLimitExceeded(value = true)
+                            false
+                        }
+                    }
+
+                if (settingsTimedOut) return@withTimeoutOrNull UpdateOutcome.Stop
+
+                if (alreadyExceeded) return@withTimeoutOrNull UpdateOutcome.Stop
+
+                AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
+
+                val result = safeUpdateInternal(context, isFullAttempt = false)
+                return@withTimeoutOrNull when (result) {
+                    is UpdateResult.Success -> UpdateOutcome.Success()
+                    is UpdateResult.LimitExceeded -> {
+                        AppLogger.e("CRITICAL: Simplified layout also exceeds Binder limit.")
+                        UpdateOutcome.Stop
+                    }
+                    is UpdateResult.GenericFailure -> {
+                        if (result.isRetryable) UpdateOutcome.Retry else UpdateOutcome.Stop
                     }
                 }
-
-            if (alreadyExceeded) return UpdateOutcome.Stop
-
-            AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
-
-            val result = safeUpdateInternal(context, isFullAttempt = false)
-            return when (result) {
-                is UpdateResult.Success -> UpdateOutcome.Success()
-                is UpdateResult.LimitExceeded -> {
-                    AppLogger.e("CRITICAL: Simplified layout also exceeds Binder limit.")
-                    UpdateOutcome.Stop
-                }
-                is UpdateResult.GenericFailure -> {
-                    if (result.isRetryable) UpdateOutcome.Retry else UpdateOutcome.Stop
-                }
+            } ?: run {
+                AppLogger.e("WidgetUpdater: handleLimitExceeded timed out completely.")
+                UpdateOutcome.Stop
             }
-        }
 
         private suspend fun safeUpdateInternal(
             context: Context,

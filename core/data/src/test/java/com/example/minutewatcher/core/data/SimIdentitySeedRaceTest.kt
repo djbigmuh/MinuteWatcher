@@ -86,15 +86,18 @@ class SimIdentitySeedRaceTest {
                 "generated"
             }
 
+            val discovery = SimIdentityDiscovery(discoveryDeps)
+            val persistence = SimIdentityPersistence(dataStore, migrationService)
             val repository =
                 SimIdentityRepositoryImpl(
-                    discovery = SimIdentityDiscovery(discoveryDeps),
-                    persistence = SimIdentityPersistence(dataStore, migrationService),
+                    discovery = discovery,
+                    persistence = persistence,
                     cache = SimIdentityCache(timeProvider),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
                     mockSimProvider = mockSimProvider,
                     scope = backgroundScope,
+                    fetcher = ActiveSimsFetcher(discovery, persistence),
                 )
 
             val results = mutableListOf<List<String>>()
@@ -127,15 +130,18 @@ class SimIdentitySeedRaceTest {
             whenever(mockSubInfo.iccId).thenReturn("icc_1")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
+            val discovery = SimIdentityDiscovery(discoveryDeps)
+            val persistence = SimIdentityPersistence(dataStore, migrationService)
             val repository =
                 SimIdentityRepositoryImpl(
-                    discovery = SimIdentityDiscovery(discoveryDeps),
-                    persistence = SimIdentityPersistence(dataStore, migrationService),
+                    discovery = discovery,
+                    persistence = persistence,
                     cache = SimIdentityCache(timeProvider),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
                     mockSimProvider = mockSimProvider,
                     scope = backgroundScope,
+                    fetcher = ActiveSimsFetcher(discovery, persistence),
                 )
 
             // Let it initialize and generate seed

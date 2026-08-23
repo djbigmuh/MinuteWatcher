@@ -4,6 +4,7 @@ import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -177,31 +178,32 @@ class UpdateCoordinator
             // Обновление виджета при отсутствии активных SIM выполняется
             // намеренно — виджет должен корректно отобразить состояние
             // "No SIM" или "No Data".
-            try {
-                widgetUpdateMutex.withLock {
-                    if (newHash != lastSnapshotHash) {
-                        val success = widgetUpdater.updateAll()
-                        if (success) {
-                            lastSnapshotHash = newHash
+            catchingCancellation(
+                block = {
+                    widgetUpdateMutex.withLock {
+                        if (newHash != lastSnapshotHash) {
+                            val success = widgetUpdater.updateAll()
+                            if (success) {
+                                lastSnapshotHash = newHash
+                                if (_status.value is TrackingStatus.Error) {
+                                    _status.value = TrackingStatus.Active
+                                }
+                                lastResetTime = now
+                            } else {
+                                AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
+                            }
+                        } else {
+                            AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                             if (_status.value is TrackingStatus.Error) {
                                 _status.value = TrackingStatus.Active
                             }
-                            lastResetTime = now
-                        } else {
-                            AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
-                        }
-                    } else {
-                        AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                        if (_status.value is TrackingStatus.Error) {
-                            _status.value = TrackingStatus.Active
                         }
                     }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-            }
+                },
+                onError = { e ->
+                    AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+                },
+            )
         }
 
         /**

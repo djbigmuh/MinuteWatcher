@@ -2,20 +2,25 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
+import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.HashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages automatic resets of SIM usage stats based on billing cycles.
@@ -40,7 +45,7 @@ class ResetManager
          * atomicity for individual SIM reset operations.
          */
         private val resetMutex = Mutex()
-        private val lastResetCheck = ConcurrentHashMap<String, Long>()
+        private val lastResetCheck = HashMap<String, Long>()
 
         /**
          * Checks and performs automatic resets for all active SIMs.
@@ -51,8 +56,8 @@ class ResetManager
          * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
          */
         override suspend fun performAutoReset(shouldNotify: Boolean) {
-            resetMutex.withLock {
-                try {
+            catchingCancellation(
+                block = {
                     /**
                      * Использование wall-clock (now) для расчёта даты сброса.
                      * Авто-сброс лимитов — это календарная операция, привязанная к биллинговому
@@ -69,21 +74,45 @@ class ResetManager
                     val resetIdentities = mutableSetOf<String>()
 
                     // Use active SIMs from repository to ensure we don't skip SIMs on stale snapshots
-                    val activeSims = simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
+                    val activeSims =
+                        simIdentityRepository.observeActiveSims().firstWithTimeout() ?: emptyList()
 
                     if (activeSims.isEmpty()) {
                         AppLogger.w("ResetManager: No active SIMs detected or timeout during auto-reset check.")
                     }
 
                     for (simInfo in activeSims) {
-                        if (checkAndPerformResetForSim(simInfo, now, nowElapsed)) {
-                            resetIdentities.add(simInfo.identity.stableId)
+                        val identity = simInfo.identity.stableId
+
+                        // Чтение getSimUsage() вынесено за пределы resetMutex.withLock.
+                        // Обернуто в таймаут для предотвращения зависания при деградации DataStore.
+                        val usage =
+                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                simUsageRepository.getSimUsage(identity).first()
+                            }
+
+                        if (usage == null) {
+                            AppLogger.w(
+                                "ResetManager: Timeout reading usage for SIM $identity, skipping reset check.",
+                            )
+                            continue
+                        }
+
+                        val resetPerformed =
+                            resetMutex.withLock {
+                                checkAndPerformResetForSimInternal(simInfo, now, nowElapsed, usage)
+                            }
+
+                        if (resetPerformed) {
+                            resetIdentities.add(identity)
                         }
                     }
 
                     // Clear stale check timestamps for identities that are no longer active
-                    val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
-                    lastResetCheck.keys.removeAll { it !in activeIdentitySet }
+                    resetMutex.withLock {
+                        val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
+                        lastResetCheck.keys.removeAll { it !in activeIdentitySet }
+                    }
 
                     if (resetIdentities.isNotEmpty()) {
                         resetIdentities.forEach { identity ->
@@ -93,36 +122,29 @@ class ResetManager
                             dataChangeNotifier.notifyDataChanged()
                         }
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
+                },
+                onError = { e ->
                     AppLogger.e("Error in auto reset: ${e.message}")
-                }
-            }
+                },
+            )
         }
 
-        private suspend fun checkAndPerformResetForSim(
+        private suspend fun checkAndPerformResetForSimInternal(
             simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
             now: Long,
             nowElapsed: Long,
+            usage: SimUsage,
         ): Boolean {
             val identity = simInfo.identity.stableId
 
             // Skip if we checked this identity recently (e.g. within the last hour)
-            // Using elapsedRealtime for interval throttling to be independent of clock changes.
-            var wasUpdated = false
-            lastResetCheck.compute(identity) { _, lastCheck ->
-                if (lastCheck == null || nowElapsed - lastCheck >= CHECK_INTERVAL_MS) {
-                    wasUpdated = true
-                    nowElapsed
-                } else {
-                    lastCheck
-                }
+            // Access to lastResetCheck is protected by resetMutex in the caller.
+            val lastCheck = lastResetCheck[identity]
+            if (lastCheck != null && nowElapsed - lastCheck < CHECK_INTERVAL_MS) {
+                return false
             }
+            lastResetCheck[identity] = nowElapsed
 
-            if (!wasUpdated) return false
-
-            val usage = simUsageRepository.getSimUsage(identity).first()
             var result = false
             if (usage.autoReset) {
                 val reset =

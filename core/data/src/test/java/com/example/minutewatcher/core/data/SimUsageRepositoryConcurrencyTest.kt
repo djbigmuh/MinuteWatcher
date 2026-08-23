@@ -50,7 +50,7 @@ class SimUsageRepositoryConcurrencyTest {
                     scope = backgroundScope,
                     produceFile = { file },
                 )
-            val repository = SimUsageRepositoryImpl(dataStore, timeProvider)
+            val repository = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
 
             val identity = "test_sim"
             val autoResetDay = 1

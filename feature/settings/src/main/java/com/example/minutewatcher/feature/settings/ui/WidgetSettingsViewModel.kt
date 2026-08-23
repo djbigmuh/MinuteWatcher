@@ -77,6 +77,10 @@ class WidgetSettingsViewModel
             loadSettings()
         }
 
+        override fun onCleared() {
+            loadJob?.cancel()
+        }
+
         /**
          * Загружает настройки виджета, используя паттерн сериализации через мьютекс.
          */

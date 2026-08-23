@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -36,6 +35,8 @@ class SimUsageRepositoryImpl
     constructor(
         @SimDataStore dataStore: DataStore<Preferences>,
         private val timeProvider: TimeProvider,
+        private val mapper: SimUsageMapper,
+        private val resetLogic: SimUsageResetLogic,
     ) : BaseDataStoreRepository(dataStore),
         SimUsageRepository,
         SimUsageAdjustmentRepository,
@@ -53,51 +54,10 @@ class SimUsageRepositoryImpl
         override fun getSimUsage(identity: String): Flow<SimUsage> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimUsage called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(createEmptyUsage(identity))
+                return kotlinx.coroutines.flow.flowOf(mapper.createEmptyUsage(identity))
             }
-            return dataStore.data.map { prefs -> mapToSimUsage(identity, prefs) }
+            return dataStore.data.map { prefs -> mapper.mapToSimUsage(identity, prefs) }
         }
-
-        private fun createEmptyUsage(identity: String) =
-            SimUsage(
-                identity = identity,
-                slotIndex = -1,
-                subscriptionId = null,
-                operator = "",
-                minutesUsed = 0,
-                minutesLimit = 0,
-                trafficUsedMb = 0f,
-                trafficLimitMb = 0,
-                manualAdjustment = 0,
-                trafficAdjustmentGb = 0f,
-                autoReset = false,
-                autoResetDay = 1,
-                lastResetDate = 0L,
-                rolloverEnabled = false,
-            )
-
-        private fun mapToSimUsage(
-            identity: String,
-            prefs: Preferences,
-        ) = SimUsage(
-            identity = identity,
-            slotIndex = prefs[DataStoreKeys.slotIndexKey(identity)] ?: 0,
-            subscriptionId = prefs[DataStoreKeys.subscriptionIdKey(identity)],
-            operator =
-                prefs[DataStoreKeys.customSimOperatorKey(identity)]
-                    ?: prefs[DataStoreKeys.simOperatorKey(identity)]
-                    ?: "",
-            minutesUsed = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0,
-            minutesLimit = prefs[DataStoreKeys.monthlyLimitKey(identity)] ?: 0,
-            trafficUsedMb = prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f,
-            trafficLimitMb = prefs[DataStoreKeys.trafficLimitKey(identity)] ?: 0,
-            manualAdjustment = prefs[DataStoreKeys.manualAdjustmentKey(identity)] ?: 0,
-            trafficAdjustmentGb = prefs[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f,
-            autoReset = prefs[DataStoreKeys.autoResetKey(identity)] ?: false,
-            autoResetDay = prefs[DataStoreKeys.autoResetDayKey(identity)] ?: 1,
-            lastResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: 0L,
-            rolloverEnabled = prefs[DataStoreKeys.rolloverEnabledKey(identity)] ?: false,
-        )
 
         /**
          * Sets the absolute value of minutes used for the identity.
@@ -246,7 +206,7 @@ class SimUsageRepositoryImpl
             }
             resetMutex.withLock {
                 dataStore.edit { prefs ->
-                    prefs.applyResetWithRollover(identity, timeProvider.now())
+                    resetLogic.applyResetWithRollover(prefs, identity, timeProvider.now())
                 }
             }
         }
@@ -272,7 +232,7 @@ class SimUsageRepositoryImpl
                     prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = 0f
                     prefs[DataStoreKeys.lastResetDateKey(identity)] = timeProvider.now()
 
-                    prefs.resetNotificationFlags(identity)
+                    resetLogic.resetNotificationFlags(prefs, identity)
                 }
             }
         }
@@ -306,58 +266,12 @@ class SimUsageRepositoryImpl
                         prefs[DataStoreKeys.lastResetDateKey(identity)]
                             ?: Constants.Data.EMPTY_TIMESTAMP
                     if (innerLastResetDate < periodStart) {
-                        prefs.applyResetWithRollover(identity, nowMillis)
+                        resetLogic.applyResetWithRollover(prefs, identity, nowMillis)
                         actuallyReset = true
                     }
                 }
                 actuallyReset
             }
-        }
-
-        private fun MutablePreferences.applyResetWithRollover(
-            identity: String,
-            nowMillis: Long,
-        ) {
-            val rollover = this[DataStoreKeys.rolloverEnabledKey(identity)] ?: false
-            if (rollover) {
-                val minutesLimit = this[DataStoreKeys.monthlyLimitKey(identity)] ?: 0
-                val minutesUsed = this[DataStoreKeys.minutesUsedKey(identity)] ?: 0
-                val manualAdj = this[DataStoreKeys.manualAdjustmentKey(identity)] ?: 0
-                val remainingMinutes =
-                    maxOf(
-                        0L,
-                        (minutesLimit.toLong() + manualAdj.toLong()) - minutesUsed.toLong(),
-                    ).toInt()
-
-                val trafficLimitMb = this[DataStoreKeys.trafficLimitKey(identity)] ?: 0
-                val trafficUsedMb = (this[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val trafficAdjGb = (this[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
-                val remainingMb =
-                    maxOf(
-                        0.0,
-                        (trafficLimitMb.toDouble() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
-                    )
-                val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
-
-                this[DataStoreKeys.manualAdjustmentKey(identity)] = remainingMinutes
-                this[DataStoreKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb
-            } else {
-                this[DataStoreKeys.manualAdjustmentKey(identity)] = 0
-                this[DataStoreKeys.trafficAdjustmentKey(identity)] = 0f
-            }
-
-            this[DataStoreKeys.minutesUsedKey(identity)] = 0
-            this[DataStoreKeys.trafficUsedKey(identity)] = 0f
-            this[DataStoreKeys.lastResetDateKey(identity)] = nowMillis
-
-            resetNotificationFlags(identity)
-        }
-
-        private fun MutablePreferences.resetNotificationFlags(identity: String) {
-            this[DataStoreKeys.notifiedLowMinutesKey(identity)] = false
-            this[DataStoreKeys.notifiedLowTrafficKey(identity)] = false
-            this[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = false
-            this[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = false
         }
 
         override fun getLastResetDate(identity: String): Flow<Long> {

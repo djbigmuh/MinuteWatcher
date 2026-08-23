@@ -4,6 +4,7 @@ import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -56,7 +57,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainBannerController
     @Inject
     constructor(
-        trackingStatusRepository: TrackingStatusRepository,
+        private val trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
         permissionRepository: PermissionRepository,
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
@@ -156,8 +157,6 @@ class MainBannerController
         }
 
         override suspend fun recover() {
-            job?.cancel()
-            job?.join()
             initMutex.withLock {
                 observationRetryCount = 0L
                 retryAttempt.set(0)
@@ -174,6 +173,7 @@ class MainBannerController
         // На AOSP StateFlow эмитит начальное значение синхронно.
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
             trackingStatusRepository
+                .get()
                 .observeTrackingStatus()
                 .stateIn(
                     scope = scope,
@@ -187,26 +187,28 @@ class MainBannerController
 
         private fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
             lastTrackingStatusFlow = statusFlow
+            if (job?.isActive == true) return
             job =
                 scope.launch {
-                    try {
-                        statusFlow.collect { status ->
-                            val appsearch = status["appsearch"]
-                            val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                            if (currentErrorType != lastAppSearchErrorType) {
-                                lastAppSearchErrorType = currentErrorType
-                                appSearchRetryCount.value = 0
-                                appSearchBannerDismissed.value = false
-                                if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                                    AppLogger.w("AppSearch not supported on this device")
+                    catchingCancellation(
+                        block = {
+                            statusFlow.collect { status ->
+                                val appsearch = status["appsearch"]
+                                val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                                if (currentErrorType != lastAppSearchErrorType) {
+                                    lastAppSearchErrorType = currentErrorType
+                                    appSearchRetryCount.value = 0
+                                    appSearchBannerDismissed.value = false
+                                    if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                                        AppLogger.w("AppSearch not supported on this device")
+                                    }
                                 }
                             }
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("MainBannerController: tracking status observation failed", e)
-                    }
+                        },
+                        onError = { e ->
+                            AppLogger.e("MainBannerController: tracking status observation failed", e)
+                        },
+                    )
                 }
         }
 
@@ -348,10 +350,7 @@ class MainBannerController
                     }
                 }.stateIn(
                     scope = scope,
-                    started =
-                        SharingStarted.WhileSubscribed(
-                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
-                        ),
+                    started = SharingStarted.Eagerly,
                     initialValue = TrackingBannerState(),
                 )
 

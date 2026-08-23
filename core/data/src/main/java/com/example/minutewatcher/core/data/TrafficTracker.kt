@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
@@ -9,7 +10,6 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,35 +76,37 @@ class TrafficTracker
         }
 
         suspend fun updateTrafficUsage() {
-            try {
-                if (!checkPermissions()) return
+            catchingCancellation(
+                block = {
+                    if (!checkPermissions()) return@catchingCancellation
 
-                val activeSims = fetchActiveSims() ?: return
-                handleActiveSims(activeSims)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in TrafficTracker", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            } catch (e: Exception) {
-                AppLogger.e("Error updating traffic", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            }
+                    val activeSims = fetchActiveSims() ?: return@catchingCancellation
+                    handleActiveSims(activeSims)
+                },
+                onError = { e ->
+                    if (e is SecurityException) {
+                        AppLogger.e("SecurityException in TrafficTracker", e)
+                        _status.value =
+                            TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                    } else {
+                        AppLogger.e("Error updating traffic", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    }
+                },
+            )
         }
 
         private suspend fun fetchActiveSims(): List<ActiveSimInfo>? {
-            var activeSims =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    simIdentityRepository.observeActiveSims().first()
-                }
-
-            if (activeSims == null) {
-                AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
-                activeSims =
+            val activeSims =
+                withTimeoutOrNull((Constants.Flow.LONG_TIMEOUT_MS * 2).milliseconds) {
+                    val flow = simIdentityRepository.observeActiveSims()
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        simIdentityRepository.observeActiveSims().first()
+                        flow.first()
+                    } ?: run {
+                        AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
+                        flow.first()
                     }
-            }
+                }
 
             if (activeSims == null) {
                 AppLogger.e("TrafficTracker: observeActiveSims timed out after retry")

@@ -262,6 +262,7 @@ class SimIdentityRepositoryRaceTest {
                     appSettingsRepository = appSettingsRepository,
                     mockSimProvider = mockSimProvider,
                     scope = backgroundScope,
+                    fetcher = ActiveSimsFetcher(discovery, persistence),
                 )
 
             val jobs =

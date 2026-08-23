@@ -29,6 +29,9 @@ class WidgetUpdaterImplTest {
     private lateinit var context: Context
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val renderer: WidgetRenderer = mock()
+    private val retryManager = WidgetUpdateRetryManager()
+    private val limitManager = WidgetLimitManager(appSettingsRepository)
+    private val errorClassifier = WidgetErrorClassifier()
 
     private lateinit var updater: WidgetUpdaterImpl
 
@@ -40,6 +43,9 @@ class WidgetUpdaterImplTest {
                 context = context,
                 appSettingsRepository = appSettingsRepository,
                 renderer = renderer,
+                retryManager = retryManager,
+                limitManager = limitManager,
+                errorClassifier = errorClassifier,
             )
     }
 
@@ -145,6 +151,9 @@ class WidgetUpdaterImplTest {
                                 error("Unexpected crash")
                             }
                         },
+                    retryManager = retryManager,
+                    limitManager = limitManager,
+                    errorClassifier = errorClassifier,
                 )
 
             val result = failingUpdater.updateAll()
@@ -181,6 +190,9 @@ class WidgetUpdaterImplTest {
                                 }
                             }
                         },
+                    retryManager = retryManager,
+                    limitManager = limitManager,
+                    errorClassifier = errorClassifier,
                 )
 
             val result = updater.updateAll()
@@ -211,7 +223,9 @@ class WidgetUpdaterImplTest {
                     context = context,
                     appSettingsRepository = appSettingsRepository,
                     renderer = renderer,
+                    retryManager = retryManager,
                     limitManager = mockLimitManager,
+                    errorClassifier = errorClassifier,
                 )
 
             updaterWithMock.updateAll()

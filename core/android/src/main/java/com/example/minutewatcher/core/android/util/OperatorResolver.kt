@@ -149,11 +149,21 @@ object OperatorResolver {
             "2degrees" to "operator_2degrees",
         )
 
+    /**
+     * Возвращает кешированную базу MCC/MNC.
+     * Использует Double-Checked Locking для потокобезопасной инициализации.
+     */
     private fun loadDb(context: Context): Map<String, String> =
         db ?: synchronized(this) {
+            // Если loadDbInternal вернёт emptyMap (при ошибке), это значение будет закешировано
+            // в db, что предотвратит повторные попытки чтения повреждённых assets.
             db ?: loadDbInternal(context).also { db = it }
         }
 
+    /**
+     * Загружает базу MCC/MNC из assets.
+     * При любой ошибке возвращает emptyMap, которая кешируется вызывающим методом.
+     */
     private fun loadDbInternal(context: Context): Map<String, String> =
         try {
             val inputStream = context.assets.open("mcc_mnc_db.json")
@@ -174,6 +184,7 @@ object OperatorResolver {
             AppLogger.e("Malformed MCC/MNC database JSON", e)
             emptyMap()
         } catch (e: Exception) {
+            // Охватывает все остальные исключения для гарантии того, что db будет установлена в emptyMap
             AppLogger.e("Unexpected error loading MCC/MNC database", e)
             emptyMap()
         }

@@ -145,7 +145,7 @@ class MainViewModelTest {
         val dialogController = MainDialogController(savedStateHandle)
         val bannerController =
             MainBannerController(
-                trackingStatusRepository = trackingStatusRepository,
+                trackingStatusRepository = dagger.Lazy { trackingStatusRepository },
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 scope = scope,

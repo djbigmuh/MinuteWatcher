@@ -54,26 +54,51 @@ class CallTrackerRaceTest {
             .shadowOf(application)
             .grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
+        val retryHelper =
+            object : com.example.minutewatcher.core.data.util.DataStoreRetryHelper() {
+                override suspend fun <T> readWithRetry(
+                    label: String,
+                    attempts: Int,
+                    retryDelayMs: Long,
+                    reader: () -> kotlinx.coroutines.flow.Flow<T>,
+                ): Result<T> = Result.success(reader().first())
+            }
+        val attributionResolver =
+            CallAttributionResolver(
+                simIdentityRepository,
+                callSessionRepository,
+                permissionManager,
+                retryHelper,
+                dataChangeNotifier,
+            )
+        val startHandler =
+            CallStartHandler(
+                callSessionRepository,
+                timeProvider,
+                retryHelper,
+                attributionResolver,
+            )
+        val endHandler =
+            CallEndHandler(
+                callSessionRepository,
+                timeProvider,
+                retryHelper,
+                attributionResolver,
+            )
         tracker =
             CallTracker(
                 context,
-                simIdentityRepository,
                 simUsageRepository,
                 appSettingsRepository,
                 callSessionRepository,
                 dataChangeNotifier,
                 permissionManager,
                 telephonyManager,
-                timeProvider,
-                object : com.example.minutewatcher.core.data.util.DataStoreRetryHelper() {
-                    override suspend fun <T> readWithRetry(
-                        label: String,
-                        attempts: Int,
-                        retryDelayMs: Long,
-                        reader: () -> kotlinx.coroutines.flow.Flow<T>,
-                    ): Result<T> = Result.success(reader().first())
-                },
+                retryHelper,
                 testScope,
+                attributionResolver,
+                startHandler,
+                endHandler,
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)

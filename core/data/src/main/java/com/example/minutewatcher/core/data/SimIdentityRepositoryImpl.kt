@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.telephony.SubscriptionInfo
 import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -17,11 +16,9 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -63,7 +60,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Singleton
 class SimIdentityRepositoryImpl
     @Inject
-    constructor(
+    internal constructor(
         private val discovery: SimIdentityDiscovery,
         private val persistence: SimIdentityPersistence,
         private val cache: SimIdentityCache,
@@ -71,6 +68,7 @@ class SimIdentityRepositoryImpl
         appSettingsRepository: AppSettingsRepository,
         private val mockSimProvider: MockSimProvider,
         @ApplicationScope private val scope: CoroutineScope,
+        private val fetcher: ActiveSimsFetcher,
     ) : SimIdentityRepository {
         private val activeSimsMutex = Mutex()
 
@@ -92,15 +90,12 @@ class SimIdentityRepositoryImpl
             appSettingsRepository = appSettingsRepository,
             mockSimProvider = mockSimProvider,
             scope = scope,
+            fetcher =
+                ActiveSimsFetcher(
+                    discovery = SimIdentityDiscovery(discoveryDeps),
+                    persistence = SimIdentityPersistence(dataStore, migrationService),
+                ),
         )
-
-        private sealed interface SeedResult {
-            data class Real(
-                val value: String,
-            ) : SeedResult
-
-            object Fallback : SeedResult
-        }
 
         private val seedFlow: Flow<SeedResult> =
             seedRepository.seedFlow
@@ -126,7 +121,7 @@ class SimIdentityRepositoryImpl
             seedFlow
                 .flatMapLatest { seed ->
                     discovery.observeSubscriptionChanges().map {
-                        fetchActiveSimsWithRetry(seed)
+                        fetcher.fetchActiveSimsWithRetry(seed)
                     }
                 }.catch { e ->
                     // Пустой список в этом случае означает деградацию хранилища, а не физическое отсутствие SIM.
@@ -155,98 +150,6 @@ class SimIdentityRepositoryImpl
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     cache.cleanupManual(activeSlots)
                 }.launchIn(scope)
-        }
-
-        @Suppress("ReturnCount")
-        private suspend fun fetchActiveSimsWithRetry(seed: SeedResult): List<ActiveSimInfo> {
-            var retryDelay = Constants.Flow.RETRY_DELAY_MS
-            val maxDelay = Constants.Flow.LONG_TIMEOUT_MS * MAX_DELAY_MULTIPLIER
-            repeat(MAX_FETCH_RETRIES) { attempt ->
-                try {
-                    return getActiveSimsInternal(seed)
-                } catch (e: Exception) {
-                    handleFetchRetryException(e, attempt, retryDelay)
-                    retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
-                }
-            }
-            throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries")
-        }
-
-        @Suppress("ThrowsCount")
-        private suspend fun handleFetchRetryException(
-            e: Exception,
-            attempt: Int,
-            delay: Long,
-        ) {
-            when (e) {
-                is IOException -> {
-                    if (attempt == (MAX_FETCH_RETRIES - 1)) {
-                        throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries", e)
-                    }
-                    AppLogger.e("SimIdentityRepository: DataStore error, retrying", e)
-                    delay(delay.milliseconds)
-                }
-                is CancellationException -> throw e
-                is SecurityException -> {
-                    AppLogger.e("SimIdentityRepository: permission error fetching active SIMs", e)
-                    throw e
-                }
-                else -> {
-                    AppLogger.e("Failed to fetch active SIMs", e)
-                }
-            }
-        }
-
-        @Suppress("ReturnCount")
-        private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
-            val seedValue =
-                when (seed) {
-                    is SeedResult.Real -> seed.value
-                    is SeedResult.Fallback -> {
-                        AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
-                        return emptyList()
-                    }
-                }
-
-            val infoList = discovery.getActiveSubscriptions()
-            val identities = infoList.map { SimIdentityUtils.createIdentityFromInfo(it, seedValue) }
-
-            persistence.retainMigrated(identities.asSequence().map { it.stableId }.toSet())
-
-            if (infoList.isEmpty()) return emptyList()
-
-            try {
-                persistence.saveSimIdentitiesInfo(identities)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to save identity info for active SIMs", e)
-            }
-
-            return createActiveSimInfoList(infoList, identities)
-        }
-
-        private fun createActiveSimInfoList(
-            infoList: List<SubscriptionInfo>,
-            identities: List<SimIdentity>,
-        ): List<ActiveSimInfo> {
-            val defaultDataSubId = discovery.getDefaultDataSubscriptionId()
-            val defaultVoiceSubId = discovery.getDefaultVoiceSubscriptionId()
-
-            return infoList.zip(identities).map { (info, identity) ->
-                ActiveSimInfo(
-                    identity = identity,
-                    slotIndex = info.simSlotIndex,
-                    subscriptionId = info.subscriptionId,
-                    displayName = info.displayName?.toString(),
-                    carrierName = info.carrierName?.toString(),
-                    mccMnc = SimIdentityUtils.getMccMnc(info),
-                    isDefaultData = info.subscriptionId == defaultDataSubId,
-                    isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
-                )
-            }
         }
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
@@ -335,8 +238,5 @@ class SimIdentityRepositoryImpl
         companion object {
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
-            private const val MAX_DELAY_MULTIPLIER = 3
-            private const val MAX_FETCH_RETRIES = 5
-            private const val RETRY_DELAY_MULTIPLIER = 2
         }
     }

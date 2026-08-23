@@ -21,16 +21,22 @@ class SimIdentityCache
 
         /**
          * Returns cached identity if valid (TTL not expired).
+         * Uses atomic compute to prevent race conditions during TTL check and removal.
          */
         fun getManual(slot: Int): SimIdentity? {
-            val cachedManual = manualResolutionCache[slot] ?: return null
-            val (identity, timestamp) = cachedManual
-            return if ((timeProvider.elapsedRealtime() - timestamp) < MANUAL_RESOLUTION_CACHE_TTL_MS) {
-                identity
-            } else {
-                manualResolutionCache.remove(slot)
-                null
+            val now = timeProvider.elapsedRealtime()
+            var result: SimIdentity? = null
+            manualResolutionCache.compute(slot) { _, value ->
+                if (value == null) return@compute null
+                val (identity, timestamp) = value
+                if (now - timestamp < MANUAL_RESOLUTION_CACHE_TTL_MS) {
+                    result = identity
+                    value // Keep entry
+                } else {
+                    null // Remove entry
+                }
             }
+            return result
         }
 
         fun putManual(
