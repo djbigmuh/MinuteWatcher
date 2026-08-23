@@ -48,10 +48,14 @@ class SimIdentityPersistence
 
             saveMutex.withLock {
                 val validIdentities =
-                    identities.filter {
-                        (it.source != IdentitySource.SLOT_FALLBACK) &&
-                            (!it.stableId.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX))
-                    }.distinctBy { it.stableId }
+                    identities
+                        .filter {
+                            (it.source != IdentitySource.SLOT_FALLBACK) &&
+                                (
+                                    !it.stableId
+                                        .startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)
+                                )
+                        }.distinctBy { it.stableId }
                 if (validIdentities.isEmpty()) return@withLock
 
                 var currentPrefs = fetchCurrentPrefs()
@@ -91,9 +95,10 @@ class SimIdentityPersistence
                 val toActuallyUpdate = toUpdate.filter { it.stableId !in failedIds }
                 try {
                     updatePrefsWithIdentities(toActuallyUpdate)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("SimIdentityPersistence: Failed to update DataStore after migration", e)
-                    if (e is CancellationException) throw e
                 }
             }
         }

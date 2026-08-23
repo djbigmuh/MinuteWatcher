@@ -103,42 +103,44 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    fun `performProbeUpdate does not set limit exceeded on CancellationException`() = runTest {
-        settingsFlow.value = AppSettings(widgetLimitExceeded = true)
-        org.mockito.Mockito.clearInvocations(appSettingsRepository)
+    fun `performProbeUpdate does not set limit exceeded on CancellationException`() =
+        runTest {
+            settingsFlow.value = AppSettings(widgetLimitExceeded = true)
+            org.mockito.Mockito.clearInvocations(appSettingsRepository)
 
-        assertThrows(CancellationException::class.java) {
-            runBlocking {
-                manager.performProbeUpdate(mock()) { _, _ ->
-                    throw CancellationException("Cancelled")
+            assertThrows(CancellationException::class.java) {
+                runBlocking {
+                    manager.performProbeUpdate(mock()) { _, _ ->
+                        throw CancellationException("Cancelled")
+                    }
                 }
             }
-        }
 
-        // Check that setWidgetLimitExceeded(true) was NOT called in catch.
-        // We know setWidgetLimitExceeded(false) was called at the beginning of performProbeUpdate.
-        // If it was already true, it should have triggered one update.
-        // We verify that no OTHER update (with true) happened.
-        // This is tricky with verify(any()).
-        // Let's check that the FINAL state is false (from the initial clear).
-        // Wait, appSettingsRepository.updateAppSettings is a side effect.
-    }
+            // Check that setWidgetLimitExceeded(true) was NOT called in catch.
+            // We know setWidgetLimitExceeded(false) was called at the beginning of performProbeUpdate.
+            // If it was already true, it should have triggered one update.
+            // We verify that no OTHER update (with true) happened.
+            // This is tricky with verify(any()).
+            // Let's check that the FINAL state is false (from the initial clear).
+            // Wait, appSettingsRepository.updateAppSettings is a side effect.
+        }
 
     @Test
     @Suppress("TooGenericExceptionThrown")
-    fun `performProbeUpdate sets limit exceeded on regular Exception`() = runTest {
-        settingsFlow.value = AppSettings(widgetLimitExceeded = false)
-        org.mockito.Mockito.clearInvocations(appSettingsRepository)
+    fun `performProbeUpdate sets limit exceeded on regular Exception`() =
+        runTest {
+            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
+            org.mockito.Mockito.clearInvocations(appSettingsRepository)
 
-        assertThrows(RuntimeException::class.java) {
-            runBlocking {
-                manager.performProbeUpdate(mock()) { _, _ ->
-                    throw RuntimeException("Error")
+            assertThrows(RuntimeException::class.java) {
+                runBlocking {
+                    manager.performProbeUpdate(mock()) { _, _ ->
+                        throw RuntimeException("Error")
+                    }
                 }
             }
-        }
 
-        // Should call setWidgetLimitExceeded(true) in catch.
-        verify(appSettingsRepository).updateAppSettings(any())
-    }
+            // Should call setWidgetLimitExceeded(true) in catch.
+            verify(appSettingsRepository).updateAppSettings(any())
+        }
 }

@@ -169,7 +169,10 @@ class WidgetSettingsRepositoryTest {
                         ),
                 )
             whenever(simIdentityRepository.getIdentity(0))
-                .thenThrow(com.example.minutewatcher.core.domain.SeedUnavailableException(0))
+                .thenThrow(
+                    com.example.minutewatcher.core.domain
+                        .SeedUnavailableException(0),
+                )
             whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim1")
 
             val failedSlots = repository.saveSimSettings(state)

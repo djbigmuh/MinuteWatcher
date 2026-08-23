@@ -92,6 +92,7 @@ class UpdateCoordinator
         private val observationRetryCount = AtomicLong(0L)
 
         @Volatile private var lastSuccessTime = 0L
+
         @Volatile private var lastResetTime = 0L
         private var observationJob: Job? = null
 

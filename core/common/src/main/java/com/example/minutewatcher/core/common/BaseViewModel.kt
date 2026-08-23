@@ -18,8 +18,10 @@ import kotlinx.coroutines.flow.update
  *
  * @param initialState Начальное состояние. Может быть `null`.
  */
-abstract class BaseViewModel<S>(initialState: S) : ViewModel() {
-    protected val _state = MutableStateFlow(initialState)
+abstract class BaseViewModel<S>(
+    initialState: S,
+) : ViewModel() {
+    private val _state = MutableStateFlow(initialState)
 
     /**
      * Текущее состояние ViewModel как [StateFlow].

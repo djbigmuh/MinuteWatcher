@@ -26,6 +26,7 @@ object AppLogger {
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
 
     @Volatile private var logDir: File? = null
+
     @Volatile private var logger: Logger = AndroidLogger()
 
     private val executor: ThreadPoolExecutor by lazy {

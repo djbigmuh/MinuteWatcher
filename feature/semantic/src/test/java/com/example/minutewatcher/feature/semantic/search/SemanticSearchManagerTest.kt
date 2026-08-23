@@ -582,8 +582,9 @@ class SemanticSearchManagerTest {
             val failureStateField = AppSearchErrorHandler::class.java.getDeclaredField("failureState")
             failureStateField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val state = failureStateField.get(errorHandler)
-                as java.util.concurrent.atomic.AtomicReference<Pair<Int, Long>>
+            val state =
+                failureStateField.get(errorHandler)
+                    as java.util.concurrent.atomic.AtomicReference<Pair<Int, Long>>
             val (failures, lastTime) = state.get()
 
             assertEquals(0, failures)

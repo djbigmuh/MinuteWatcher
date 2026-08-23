@@ -40,40 +40,49 @@ class SimIdentityPersistenceFailureTest {
     }
 
     @Test
-    fun `migration failure allows retry and prevents DataStore update`() = runTest(testDispatcher) {
-        val dataStore = PreferenceDataStoreFactory.create(
-            scope = backgroundScope,
-            produceFile = { tmpFolder.newFile("test_ds_failure.preferences_pb") }
-        )
-        val persistence = SimIdentityPersistence(dataStore, migrationService)
-        val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
+    fun `migration failure allows retry and prevents DataStore update`() =
+        runTest(testDispatcher) {
+            val dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = {
+                        tmpFolder.newFile("test_ds_failure.preferences_pb")
+                    },
+                )
+            val persistence = SimIdentityPersistence(dataStore, migrationService)
+            val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
 
-        // 1. Setup migration to fail
-        whenever(migrationService.migrateLegacyData(identity)).thenAnswer { throw IOException("Mock failure") }
+            // 1. Setup migration to fail
+            whenever(migrationService.migrateLegacyData(identity)).thenAnswer {
+                throw IOException("Mock failure")
+            }
 
-        // 2. Call saveSimIdentitiesInfo - it should catch the exception internally but log it
-        persistence.saveSimIdentitiesInfo(listOf(identity))
-        testScheduler.advanceUntilIdle()
+            // 2. Call saveSimIdentitiesInfo - it should catch the exception internally but log it
+            persistence.saveSimIdentitiesInfo(listOf(identity))
+            testScheduler.advanceUntilIdle()
 
-        // 3. Verify migration was called
-        verify(migrationService, times(1)).migrateLegacyData(identity)
+            // 3. Verify migration was called
+            verify(migrationService, times(1)).migrateLegacyData(identity)
 
-        // 4. Verify DataStore was NOT updated for this identity (slotIndex should be null)
-        val prefs = dataStore.data.first()
-        assertNull("Slot index should not be saved if migration failed", prefs[DataStoreKeys.slotIndexKey(identity.stableId)])
+            // 4. Verify DataStore was NOT updated for this identity (slotIndex should be null)
+            val prefs = dataStore.data.first()
+            assertNull(
+                "Slot index should not be saved if migration failed",
+                prefs[DataStoreKeys.slotIndexKey(identity.stableId)],
+            )
 
-        // 5. Setup migration to succeed now
-        whenever(migrationService.migrateLegacyData(identity)).thenReturn(Unit)
+            // 5. Setup migration to succeed now
+            whenever(migrationService.migrateLegacyData(identity)).thenReturn(Unit)
 
-        // 6. Call saveSimIdentitiesInfo again
-        persistence.saveSimIdentitiesInfo(listOf(identity))
-        testScheduler.advanceUntilIdle()
+            // 6. Call saveSimIdentitiesInfo again
+            persistence.saveSimIdentitiesInfo(listOf(identity))
+            testScheduler.advanceUntilIdle()
 
-        // 7. Verify migration was called AGAIN (retry)
-        verify(migrationService, times(2)).migrateLegacyData(identity)
+            // 7. Verify migration was called AGAIN (retry)
+            verify(migrationService, times(2)).migrateLegacyData(identity)
 
-        // 8. Verify DataStore IS updated now
-        val finalPrefs = dataStore.data.first()
-        assertEquals(1, finalPrefs[DataStoreKeys.slotIndexKey(identity.stableId)])
-    }
+            // 8. Verify DataStore IS updated now
+            val finalPrefs = dataStore.data.first()
+            assertEquals(1, finalPrefs[DataStoreKeys.slotIndexKey(identity.stableId)])
+        }
 }

@@ -80,38 +80,8 @@ class TrafficTracker
                 try {
                     if (!checkPermissions()) return
 
-                    var activeSims =
-                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                            simIdentityRepository.observeActiveSims().first()
-                        }
-
-                    if (activeSims == null) {
-                        AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
-                        activeSims =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                simIdentityRepository.observeActiveSims().first()
-                            }
-                    }
-
-                    if (activeSims == null) {
-                        AppLogger.e("TrafficTracker: observeActiveSims timed out after retry")
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.UNKNOWN,
-                                "SIM list read timeout",
-                            )
-                        return
-                    }
-                    if (activeSims.isEmpty()) {
-                        baselineManager.cleanupRetries(emptySet())
-                        _status.value = TrackingStatus.Idle
-                        return
-                    }
-
-                    val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
-                    baselineManager.cleanupRetries(activeIdentities)
-
-                    processActiveSimsTraffic(activeSims)
+                    val activeSims = fetchActiveSims() ?: return
+                    handleActiveSims(activeSims)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: SecurityException) {
@@ -122,6 +92,44 @@ class TrafficTracker
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             }
+        }
+
+        private suspend fun fetchActiveSims(): List<ActiveSimInfo>? {
+            var activeSims =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    simIdentityRepository.observeActiveSims().first()
+                }
+
+            if (activeSims == null) {
+                AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
+                activeSims =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        simIdentityRepository.observeActiveSims().first()
+                    }
+            }
+
+            if (activeSims == null) {
+                AppLogger.e("TrafficTracker: observeActiveSims timed out after retry")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "SIM list read timeout",
+                    )
+            }
+            return activeSims
+        }
+
+        private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
+            if (activeSims.isEmpty()) {
+                baselineManager.cleanupRetries(emptySet())
+                _status.value = TrackingStatus.Idle
+                return
+            }
+
+            val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
+            baselineManager.cleanupRetries(activeIdentities)
+
+            processActiveSimsTraffic(activeSims)
         }
 
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
@@ -275,6 +283,4 @@ class TrafficTracker
             error?.let { _status.value = it }
             return error == null
         }
-
-
     }

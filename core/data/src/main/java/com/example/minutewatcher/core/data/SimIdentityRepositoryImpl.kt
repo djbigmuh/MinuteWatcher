@@ -136,8 +136,7 @@ class SimIdentityRepositoryImpl
             ) { physical, settings ->
                 val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
                 mocks ?: physical
-            }
-                .distinctUntilChanged()
+            }.distinctUntilChanged()
                 .stateIn(
                     scope,
                     SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),

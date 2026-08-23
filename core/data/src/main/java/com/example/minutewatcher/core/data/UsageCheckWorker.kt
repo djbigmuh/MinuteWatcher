@@ -120,7 +120,8 @@ class UsageCheckWorker
                 Result.retry()
             } else {
                 AppLogger.w(
-                    "UsageCheckWorker: refresh timed out, proceeding with stale snapshot from ${snapshot.timestamp} (notifications disabled)",
+                    "UsageCheckWorker: refresh timed out, proceeding with stale snapshot " +
+                        "from ${snapshot.timestamp} (notifications disabled)",
                 )
                 processSnapshot(snapshot, shouldNotify = false)
                 Result.success()

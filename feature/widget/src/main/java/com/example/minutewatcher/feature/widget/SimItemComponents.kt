@@ -8,7 +8,6 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.unit.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -22,6 +21,7 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.example.minutewatcher.core.android.ui.SimLayoutRenderV2
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
@@ -148,7 +148,9 @@ private fun resolveTextColor(
     } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
         GlanceTheme.colors.onSurfaceVariant
     } else {
-        val composeColor = androidx.compose.ui.graphics.Color(component.color)
+        val composeColor =
+            androidx.compose.ui.graphics
+                .Color(component.color)
         androidx.glance.color.ColorProvider(day = composeColor, night = composeColor)
     }
 

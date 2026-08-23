@@ -39,12 +39,16 @@ class SimIdentityRepositoryImplPersistenceTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val migrationService: IdentityMigrationService = mock()
-    private val timeProvider: TimeProvider = mock {
-        on { elapsedRealtime() } doReturn 1000L
-    }
+    private val timeProvider: TimeProvider =
+        mock {
+            on { elapsedRealtime() } doReturn 1000L
+        }
 
-    private class CountingDataStore(private val delegate: DataStore<Preferences>) : DataStore<Preferences> by delegate {
+    private class CountingDataStore(
+        private val delegate: DataStore<Preferences>,
+    ) : DataStore<Preferences> by delegate {
         var updateCount = 0
+
         override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
             updateCount++
             return delegate.updateData(transform)
@@ -52,84 +56,95 @@ class SimIdentityRepositoryImplPersistenceTest {
     }
 
     @Test
-    fun `saveSimIdentitiesInfo does not call edit when data is identical`() = runTest(testDispatcher) {
-        val realDataStore = PreferenceDataStoreFactory.create(
-            scope = backgroundScope,
-            produceFile = { tmpFolder.newFile("test_ds.preferences_pb") }
-        )
-        val countingDataStore = CountingDataStore(realDataStore)
-        val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
+    fun `saveSimIdentitiesInfo does not call edit when data is identical`() =
+        runTest(testDispatcher) {
+            val realDataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_ds.preferences_pb") },
+                )
+            val countingDataStore = CountingDataStore(realDataStore)
+            val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
 
-        // 1. Initial save to populate DataStore
-        val persistence = SimIdentityPersistence(countingDataStore, migrationService)
-        persistence.saveSimIdentitiesInfo(listOf(identity))
-        val initialCount = countingDataStore.updateCount
-        assert(initialCount > 0)
+            // 1. Initial save to populate DataStore
+            val persistence = SimIdentityPersistence(countingDataStore, migrationService)
+            persistence.saveSimIdentitiesInfo(listOf(identity))
+            val initialCount = countingDataStore.updateCount
+            assert(initialCount > 0)
 
-        // 2. Save identical data
-        persistence.saveSimIdentitiesInfo(listOf(identity))
+            // 2. Save identical data
+            persistence.saveSimIdentitiesInfo(listOf(identity))
 
-        // Verify updateCount didn't increase
-        assertEquals("Should not call edit for identical data", initialCount, countingDataStore.updateCount)
-    }
+            // Verify updateCount didn't increase
+            assertEquals("Should not call edit for identical data", initialCount, countingDataStore.updateCount)
+        }
 
     @Test
-    fun `activeSimsCache emits unique values only`() = runTest(testDispatcher) {
-        val appSettingsRepo = mock<AppSettingsRepository>()
-        val appSettingsFlow = MutableStateFlow(AppSettings())
-        whenever(appSettingsRepo.observeAppSettings()).thenReturn(appSettingsFlow)
+    fun `activeSimsCache emits unique values only`() =
+        runTest(testDispatcher) {
+            val appSettingsRepo = mock<AppSettingsRepository>()
+            val appSettingsFlow = MutableStateFlow(AppSettings())
+            whenever(appSettingsRepo.observeAppSettings()).thenReturn(appSettingsFlow)
 
-        val seedRepository = mock<SimIdentitySeedRepository> {
-            on { seedFlow } doReturn flowOf("test_seed")
-            on { getOrCreateSeed(any()) } doReturn "test_seed"
+            val seedRepository =
+                mock<SimIdentitySeedRepository> {
+                    on { seedFlow } doReturn flowOf("test_seed")
+                    on { getOrCreateSeed(any()) } doReturn "test_seed"
+                }
+
+            val permissionManager =
+                mock<PermissionManager> {
+                    on { hasPhoneStatePermission() } doReturn true
+                }
+            val permissionStateNotifier =
+                mock<PermissionStateNotifier> {
+                    on { changes } doReturn flowOf(Unit)
+                }
+
+            val discoveryDeps =
+                SimDiscoveryDependencies(
+                    context = mock(),
+                    subscriptionManager = mock(),
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                )
+
+            val mockSimProvider =
+                mock<MockSimProvider> {
+                    on { getMockSims(any()) } doReturn null
+                }
+
+            val repository =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore =
+                        mock<DataStore<Preferences>> {
+                            on { data } doReturn flowOf(mock<Preferences>())
+                        },
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepo,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
+                    scope = backgroundScope,
+                )
+
+            val results = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
+            val job =
+                launch {
+                    repository.observeActiveSims().toList(results)
+                }
+
+            // Trigger multiple setting updates with the SAME value
+            appSettingsFlow.emit(AppSettings(benchmarkSimCount = 0))
+            appSettingsFlow.emit(AppSettings(benchmarkSimCount = 0))
+
+            job.cancel()
+
+            // Check for duplicates
+            for (i in 0 until results.size - 1) {
+                val areEqual = results[i] == results[i + 1]
+                assert(!areEqual) { "Duplicate emission at index $i: ${results[i]}" }
+            }
         }
-
-        val permissionManager = mock<PermissionManager> {
-            on { hasPhoneStatePermission() } doReturn true
-        }
-        val permissionStateNotifier = mock<PermissionStateNotifier> {
-            on { changes } doReturn flowOf(Unit)
-        }
-
-        val discoveryDeps = SimDiscoveryDependencies(
-            context = mock(),
-            subscriptionManager = mock(),
-            permissionManager = permissionManager,
-            permissionStateNotifier = permissionStateNotifier
-        )
-
-        val mockSimProvider = mock<MockSimProvider> {
-            on { getMockSims(any()) } doReturn null
-        }
-
-        val repository = SimIdentityRepositoryImpl(
-            discoveryDeps = discoveryDeps,
-            dataStore = mock<DataStore<Preferences>> {
-                on { data } doReturn flowOf(mock<Preferences>())
-            },
-            seedRepository = seedRepository,
-            appSettingsRepository = appSettingsRepo,
-            migrationService = migrationService,
-            mockSimProvider = mockSimProvider,
-            timeProvider = timeProvider,
-            scope = backgroundScope
-        )
-
-        val results = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
-        val job = launch {
-            repository.observeActiveSims().toList(results)
-        }
-
-        // Trigger multiple setting updates with the SAME value
-        appSettingsFlow.emit(AppSettings(benchmarkSimCount = 0))
-        appSettingsFlow.emit(AppSettings(benchmarkSimCount = 0))
-
-        job.cancel()
-
-        // Check for duplicates
-        for (i in 0 until results.size - 1) {
-            val areEqual = results[i] == results[i+1]
-            assert(!areEqual) { "Duplicate emission at index $i: ${results[i]}" }
-        }
-    }
 }

@@ -14,7 +14,6 @@ import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
