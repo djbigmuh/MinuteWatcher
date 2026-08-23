@@ -61,6 +61,7 @@
     <string name="tracking_banner_notification_permission">Benachrichtigungsberechtigung wird empfohlen, um Nutzungswarnungen zu erhalten.</string>
     <string name="tracking_banner_widget_error">Widget kann aufgrund von Systembeschränkungen nicht aktualisiert werden.</string>
     <string name="tracking_banner_inaccurate_calls">Mehrere aktive Anrufe erkannt. Minuten werden möglicherweise ungenau zugeordnet.</string>
+    <string name="tracking_banner_observation_failed">Der Datenverfolgungsdienst wurde nach mehreren Fehlern gestoppt. Bitte versuchen Sie es erneut oder starten Sie die App neu.</string>
     <string name="settings_load_error">Fehler beim Laden der Einstellungen</string>
     <string name="sim_list_unavailable_error">SIM-Liste nicht verfügbar. SIM-Einstellungen sind nach dem Neuladen verfügbar.</string>
     <string name="refresh_error">Datenaktualisierungsfehler</string>

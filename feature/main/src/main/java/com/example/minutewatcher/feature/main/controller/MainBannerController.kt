@@ -138,7 +138,6 @@ class MainBannerController
         private val initMutex = Mutex()
 
         private val recoveryTrigger = MutableStateFlow(0L)
-        private val observationFailedFlow = MutableStateFlow(false)
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
@@ -154,7 +153,6 @@ class MainBannerController
                 observationRetryCount = 0L
                 retryAttempt.set(0)
                 lastLoggedTime = 0L
-                observationFailedFlow.value = false
             }
         }
 
@@ -163,7 +161,6 @@ class MainBannerController
                 observationRetryCount = 0L
                 retryAttempt.set(0)
                 lastLoggedTime = 0L
-                observationFailedFlow.value = false
                 lastTrackingStatusFlow?.let { setupObservation(it) }
                 recoveryTrigger.value++
             }
@@ -244,43 +241,32 @@ class MainBannerController
         val trackingBannerState: StateFlow<TrackingBannerState> =
             recoveryTrigger
                 .flatMapLatest {
+                    val permissionsFlow =
+                        combine(
+                            trackingStatus,
+                            permissionRepository.phoneStatePermissionGranted,
+                            permissionRepository.usageStatsPermissionGranted,
+                            permissionRepository.notificationPermissionGranted,
+                        ) { status, phone, usage, notif ->
+                            PermissionsSnapshot(status, phone, usage, notif)
+                        }
+
                     combine(
-                        trackingStatus,
-                        permissionRepository.phoneStatePermissionGranted,
-                        permissionRepository.usageStatsPermissionGranted,
-                        permissionRepository.notificationPermissionGranted,
+                        permissionsFlow,
                         appSearchRetryCount,
                         appSearchBannerDismissed,
                         bannerExtraData,
-                        observationFailedFlow,
-                    ) { args ->
-                        // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
-                        // when using more than 5 flows.
-                        @Suppress("UNCHECKED_CAST")
-                        val status = args[ARG_STATUS] as Map<String, TrackingStatus>
-                        val phone = args[ARG_PHONE] as Boolean
-                        val usage = args[ARG_USAGE] as Boolean
-                        val notif = args[ARG_NOTIF] as Boolean
-                        val retry = args[ARG_RETRY] as Int
-                        val dismissed = args[ARG_DISMISSED] as Boolean
-
-                        // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
-                        // when using more than 5 flows.
-                        @Suppress("UNCHECKED_CAST")
-                        val extra = args[ARG_EXTRA] as Triple<Boolean, Boolean, AppSettings>
-                        val observationFailed = args[ARG_OBS_FAILED] as Boolean
-
+                    ) { snapshot, retry, dismissed, extra ->
                         TrackingBannerMapper.mapToBannerState(
-                            statusMap = status,
-                            phoneGranted = phone,
-                            usageGranted = usage,
-                            notificationsGranted = notif,
+                            statusMap = snapshot.statusMap,
+                            phoneGranted = snapshot.phoneGranted,
+                            usageGranted = snapshot.usageGranted,
+                            notificationsGranted = snapshot.notificationsGranted,
                             phonePermanentlyDenied = extra.first,
                             notificationPermanentlyDenied = extra.second,
                             settings = extra.third,
                             appSearchRetryCount = retry,
                             appSearchBannerDismissed = dismissed,
-                            observationFailed = observationFailed,
                         )
                     }.onEach {
                         handleSuccess()
@@ -314,8 +300,8 @@ class MainBannerController
 
                         if (currentRetry > MAX_RETRY_ATTEMPTS) {
                             AppLogger.e(
-                                "trackingBannerState: Наблюдение за баннерами остановлено после " +
-                                    "$MAX_RETRY_ATTEMPTS неудачных попыток. Повторите перезапуск приложения.",
+                                "trackingBannerState: Persistent failure after $MAX_RETRY_ATTEMPTS attempts, " +
+                                    "entering quiet retry mode (300s delay).",
                                 cause,
                             )
                             _status.value =
@@ -323,8 +309,15 @@ class MainBannerController
                                     TrackingStatus.ErrorType.DATABASE_ERROR,
                                     "Banner observation failed persistently: ${cause.message}",
                                 )
-                            observationFailedFlow.value = true
-                            return@retryWhen false
+
+                            // Quiet mode: reset counters and wait for long interval
+                            resetMutex.withLock {
+                                observationRetryCount = 0L
+                                retryAttempt.set(0)
+                                lastLoggedTime = timeProvider.elapsedRealtime()
+                            }
+                            delay(300_000L.milliseconds) // 5 minutes quiet delay
+                            return@retryWhen true
                         }
 
                         if (_status.value !is TrackingStatus.Error) {
@@ -361,6 +354,13 @@ class MainBannerController
                     initialValue = TrackingBannerState(),
                 )
 
+        private data class PermissionsSnapshot(
+            val statusMap: Map<String, TrackingStatus>,
+            val phoneGranted: Boolean,
+            val usageGranted: Boolean,
+            val notificationsGranted: Boolean,
+        )
+
         companion object {
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val MAX_RETRY_DELAY_MS = Constants.Time.MAX_RETRY_DELAY_MS
@@ -373,14 +373,5 @@ class MainBannerController
 
             /** Максимальное количество попыток, после которых логирование подавляется. */
             private const val MAX_LOGGED_RETRIES = 10L
-
-            private const val ARG_STATUS = 0
-            private const val ARG_PHONE = 1
-            private const val ARG_USAGE = 2
-            private const val ARG_NOTIF = 3
-            private const val ARG_RETRY = 4
-            private const val ARG_DISMISSED = 5
-            private const val ARG_EXTRA = 6
-            private const val ARG_OBS_FAILED = 7
         }
     }

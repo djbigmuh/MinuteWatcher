@@ -24,16 +24,13 @@ object SimCardMapper {
      * одного и того же identity в одном слоте.
      *
      * **Потокобезопасность:** обёрнут в [Collections.synchronizedMap].
-     * Все составные операции (проверка + удаление) выполняются внутри
-     * единого `synchronized(negativeLogged)` блока с однократным чтением
-     * для исключения TOCTOU-гонок.
+     * Все операции (проверка, удаление устаревших данных, логирование)
+     * выполняются внутри единого `synchronized(negativeLogged)` блока
+     * для предотвращения TOCTOU-гонок и race conditions.
      *
      * **Эвикция:** при превышении [MAX_LOGGED_SIZE] удаляется самый старый
      * ключ (FIFO). [LinkedHashMap] сохраняет порядок вставки, поэтому
      * `keys.firstOrNull()` возвращает первый вставленный ключ.
-     * Это допустимая эвристика в пределах критерия надёжности:
-     * кэш ограничен 20 записями, что покрывает все реальные слоты
-     * (максимум [Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS] = 10).
      */
     private val negativeLogged = Collections.synchronizedMap(LinkedHashMap<Int, String>())
     private const val MAX_LOGGED_SIZE = 20
@@ -45,18 +42,19 @@ object SimCardMapper {
     ): SimCardUiModel {
         require(slot in Constants.SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
 
-        // Мапа negativeLogged подавляет повторное логирование отрицательных
-        // значений для одного и того же identity в слоте. При смене SIM
-        // в слоте (identity изменился) старая запись удаляется, чтобы
-        // логирование для нового identity не было подавлено.
-        synchronized(negativeLogged) {
-            val existing = negativeLogged[slot]
-            if (existing != null && existing != usage.identity) {
-                negativeLogged.remove(slot)
-            }
-        }
+        val hasNegativeValues =
+            usage.minutesUsed < 0 ||
+                usage.minutesLimit < 0 ||
+                usage.trafficUsedMb < 0f ||
+                usage.trafficLimitMb < 0
 
-        logNegativeValuesIfNeeded(slot, usage)
+        // Кэш negativeLogged подавляет повторное логирование отрицательных
+        // значений для одного и того же identity в слоте. При смене SIM
+        // в слоте (identity изменился) старая запись удаляется. Все операции
+        // объединены в один блок для исключения race conditions.
+        synchronized(negativeLogged) {
+            updateNegativeLoggedState(slot, usage, hasNegativeValues)
+        }
 
         val safeMinutesUsed = ClampingUtils.clamp(usage.minutesUsed, 0, Constants.MAX_MINUTES_LIMIT)
         val safeMinutesLimit = ClampingUtils.clamp(usage.minutesLimit, 0, Constants.MAX_MINUTES_LIMIT)
@@ -106,36 +104,27 @@ object SimCardMapper {
         )
     }
 
-    private fun logNegativeValuesIfNeeded(
+    private fun updateNegativeLoggedState(
         slot: Int,
         usage: SimUsage,
+        hasNegativeValues: Boolean,
     ) {
-        val hasNegativeValues =
-            usage.minutesUsed < 0 ||
-                usage.minutesLimit < 0 ||
-                usage.trafficUsedMb < 0f ||
-                usage.trafficLimitMb < 0
+        val lastLoggedIdentity = negativeLogged[slot]
 
-        if (!hasNegativeValues) return
+        if (lastLoggedIdentity == usage.identity) return
 
-        synchronized(negativeLogged) {
-            val lastLoggedIdentity = negativeLogged[slot]
-            if (lastLoggedIdentity == usage.identity) return
+        negativeLogged.remove(slot)
 
+        if (hasNegativeValues) {
             AppLogger.e(
                 "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
                     "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
                     "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
             )
             negativeLogged[slot] = usage.identity
-            // Clean up when overflowing to maintain cache size limit
+
             if (negativeLogged.size > MAX_LOGGED_SIZE) {
-                // LinkedHashMap сохраняет порядок вставки. firstOrNull() возвращает
-                // самый старый ключ (FIFO). Удаляем его для ограничения размера кэша.
-                val eldestKey = negativeLogged.keys.firstOrNull()
-                if (eldestKey != null) {
-                    negativeLogged.remove(eldestKey)
-                }
+                negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
             }
         }
     }

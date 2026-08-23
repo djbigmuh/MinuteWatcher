@@ -1237,17 +1237,15 @@ class CallTrackerTest {
         runTest(testDispatcher) {
             val tracker = createTracker()
 
-            // 1. Manually add entries to attributionFailures using reflection
+            // 1. Manually add entries to attributionFailures using public API
             val resolverField = CallTracker::class.java.getDeclaredField("attributionResolver")
             resolverField.isAccessible = true
             val resolver = resolverField.get(tracker) as CallAttributionResolver
 
-            val map = resolver.getAttributionFailures()
-
             val inactiveSubId = 99
             val activeSubId = 1
-            map[inactiveSubId] = 1
-            map[activeSubId] = 1
+            resolver.setFailureCountForTest(inactiveSubId, 1)
+            resolver.setFailureCountForTest(activeSubId, 1)
 
             // 2. Mock active calls to only include activeSubId
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(activeSubId))
@@ -1256,7 +1254,7 @@ class CallTrackerTest {
             tracker.refreshStatus(force = true)
 
             // 4. Verify inactiveSubId is removed, activeSubId is kept
-            assertTrue("Active subId should be kept", map.containsKey(activeSubId))
-            org.junit.Assert.assertFalse("Inactive subId should be removed", map.containsKey(inactiveSubId))
+            assertEquals("Active subId should be kept", 1, resolver.getFailureCount(activeSubId))
+            assertEquals("Inactive subId should be removed", 0, resolver.getFailureCount(inactiveSubId))
         }
 }

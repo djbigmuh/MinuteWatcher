@@ -17,6 +17,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
+@Suppress("TooManyFunctions")
 internal class CallAttributionResolver
     @Inject
     constructor(
@@ -28,7 +29,11 @@ internal class CallAttributionResolver
     ) {
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
-        fun getAttributionFailures(): ConcurrentHashMap<Int, Int> = attributionFailures
+        fun getFailureCount(subId: Int): Int = attributionFailures[subId] ?: 0
+
+        fun retainOnlyActiveSubIds(activeSubIds: Set<Int>) {
+            attributionFailures.keys.retainAll(activeSubIds)
+        }
 
         suspend fun resolveTargetIdentity(
             subId: Int,
@@ -140,6 +145,14 @@ internal class CallAttributionResolver
 
         fun clearAllFailures() {
             attributionFailures.clear()
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun setFailureCountForTest(
+            subId: Int,
+            count: Int,
+        ) {
+            attributionFailures[subId] = count
         }
 
         companion object {

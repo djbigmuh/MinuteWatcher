@@ -114,7 +114,7 @@ class SimIdentityRepositoryImpl
                         } ?: SeedResult.Fallback
                     emit(initial)
                 }.distinctUntilChanged()
-                .shareIn(scope, SharingStarted.Eagerly, replay = 1)
+                .shareIn(scope, SharingStarted.Lazily, replay = 1)
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =

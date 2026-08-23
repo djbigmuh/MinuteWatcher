@@ -97,13 +97,13 @@ class TrafficTracker
         }
 
         private suspend fun fetchActiveSims(): List<ActiveSimInfo>? {
+            val flow = simIdentityRepository.observeActiveSims()
             val activeSims =
-                withTimeoutOrNull((Constants.Flow.LONG_TIMEOUT_MS * 2).milliseconds) {
-                    val flow = simIdentityRepository.observeActiveSims()
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    flow.first()
+                } ?: run {
+                    AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        flow.first()
-                    } ?: run {
-                        AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
                         flow.first()
                     }
                 }

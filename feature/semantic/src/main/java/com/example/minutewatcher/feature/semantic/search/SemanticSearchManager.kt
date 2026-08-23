@@ -96,12 +96,8 @@ open class SemanticSearchManager
         )
 
         override suspend fun recover() {
-            job?.cancel()
-            job?.join()
-            initMutex.withLock {
-                errorHandler.resetFailures()
-                lastSnapshotFlow?.let { setupObservation(it) }
-            }
+            errorHandler.resetFailures()
+            lastSnapshotFlow?.let { initialize(it) }
         }
 
         @OptIn(FlowPreview::class)
@@ -110,6 +106,8 @@ open class SemanticSearchManager
             job?.join()
 
             initMutex.withLock {
+                lastSnapshotHash = null
+                lastSnapshotVersion = null
                 indexer.cleanupStalePackageTypes(sessionManager, _status)
                 setupObservation(snapshotFlow)
             }

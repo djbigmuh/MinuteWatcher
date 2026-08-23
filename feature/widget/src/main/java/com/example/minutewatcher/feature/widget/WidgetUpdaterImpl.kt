@@ -34,21 +34,21 @@ class WidgetUpdaterImpl
         private val updateMutex = Mutex()
 
         override suspend fun updateAll(): Boolean =
-            retryManager.updateWithRetry { attempt ->
-                performSingleUpdate(attempt)
+            updateMutex.withLock {
+                retryManager.updateWithRetry { attempt ->
+                    performSingleUpdate(attempt)
+                }
             }
 
         @Suppress("TooGenericExceptionCaught")
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
+            val settings = appSettingsRepository.observeAppSettings().value
             val mode =
-                updateMutex.withLock {
-                    val settings = appSettingsRepository.observeAppSettings().value
-                    if (settings.widgetLimitExceeded) {
-                        if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
-                    } else {
-                        limitManager.resetCounter()
-                        RenderMode.FULL
-                    }
+                if (settings.widgetLimitExceeded) {
+                    if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
+                } else {
+                    limitManager.resetCounter()
+                    RenderMode.FULL
                 }
 
             val result =
@@ -114,13 +114,11 @@ class WidgetUpdaterImpl
                 }
 
                 val alreadyExceeded =
-                    updateMutex.withLock {
-                        if (settings.widgetLimitExceeded) {
-                            true
-                        } else {
-                            limitManager.setWidgetLimitExceeded(value = true)
-                            false
-                        }
+                    if (settings.widgetLimitExceeded) {
+                        true
+                    } else {
+                        limitManager.setWidgetLimitExceeded(value = true)
+                        false
                     }
 
                 if (settingsTimedOut) return@withTimeoutOrNull UpdateOutcome.Stop

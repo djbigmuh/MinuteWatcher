@@ -4,8 +4,10 @@ import android.content.Context
 import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
 import kotlinx.coroutines.CancellationException
+import java.io.BufferedWriter
 import java.io.File
-import java.io.FileWriter
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -25,8 +27,10 @@ object AppLogger {
     private const val LOG_QUEUE_CAPACITY = 4096
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
+    private const val LOG_BUFFER_SIZE = 8192
 
     @Volatile private var logDir: File? = null
+    private var logWriter: BufferedWriter? = null
 
     @Volatile private var logger: Logger = AndroidLogger()
 
@@ -175,27 +179,38 @@ object AppLogger {
                 try {
                     val logFile = File(dir, LOG_FILE_NAME)
                     if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                        try {
+                            logWriter?.close()
+                        } catch (_: Exception) {
+                        }
+                        logWriter = null
+
                         val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                        if (oldFile.exists() && !oldFile.delete()) {
-                            // Не удалось удалить старый файл — пропускаем ротацию в этот раз
-                            return@LogTask
+                        val deleted = if (oldFile.exists()) oldFile.delete() else true
+                        if (deleted) {
+                            logFile.renameTo(oldFile)
                         }
-                        if (!logFile.renameTo(oldFile)) {
-                            // Не удалось переименовать — продолжаем писать в текущий файл
-                            return@LogTask
-                        }
+                    }
+
+                    if (logWriter == null) {
+                        logWriter =
+                            BufferedWriter(
+                                OutputStreamWriter(FileOutputStream(logFile, true)),
+                                LOG_BUFFER_SIZE,
+                            )
                     }
 
                     val timestamp = dateFormat.format(Instant.now())
                     val entry = "$timestamp $level/$TAG: $message\n"
-
-                    FileWriter(logFile, true).use { writer ->
-                        writer.write(entry)
-                    }
+                    logWriter?.write(entry)
+                    logWriter?.flush()
                 } catch (e: Exception) {
-                    // Намеренно игнорируется, чтобы избежать рекурсивных ошибок при записи в файл.
-                    // Fail silently for file logging to avoid recursive errors,
-                    // but at least log to system Log in debug.
+                    try {
+                        logWriter?.close()
+                    } catch (_: Exception) {
+                    }
+                    logWriter = null
+
                     if (BuildConfig.DEBUG) {
                         Log.w(TAG, "File logging failed", e)
                     }

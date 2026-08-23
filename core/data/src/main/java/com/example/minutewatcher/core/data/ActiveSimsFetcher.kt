@@ -119,6 +119,7 @@ internal class ActiveSimsFetcher
                 }
                 else -> {
                     AppLogger.e("Failed to fetch active SIMs", e)
+                    delay(delay.milliseconds)
                 }
             }
         }

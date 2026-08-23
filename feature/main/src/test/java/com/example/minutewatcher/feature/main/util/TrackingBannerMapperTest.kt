@@ -204,14 +204,17 @@ class TrackingBannerMapperTest {
     fun `mapToBannerState reflects observationFailed state`() {
         val state =
             TrackingBannerMapper.mapToBannerState(
-                statusMap = emptyMap(),
+                statusMap =
+                    mapOf(
+                        "widget_observation" to
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
                 phonePermanentlyDenied = false,
                 notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
-                observationFailed = true,
             )
 
         assertTrue(state.observationFailed)

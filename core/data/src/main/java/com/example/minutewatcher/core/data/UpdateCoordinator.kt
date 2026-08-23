@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,6 +64,9 @@ class UpdateCoordinator
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+        private val observationFailedFlow = MutableStateFlow(false)
+        val observationFailed: StateFlow<Boolean> = observationFailedFlow.asStateFlow()
+
 /**
          * Recovers widget observation state.
          *
@@ -81,9 +85,8 @@ class UpdateCoordinator
 
         /**
          * Потокобезопасный счётчик последовательных сбоев наблюдения.
-         * Ограничен [MAX_OBSERVATION_RETRY_COUNT] для предотвращения
-         * неограниченного роста при длительной деградации хранилища.
-         * Сбрасывается в 0 при успешной эмиссии ([processSnapshot]).
+         * Сбрасывается в 0 при успешной эмиссии ([processSnapshot])
+         * или при достижении [MAX_LOGGED_ATTEMPTS_BEFORE_QUIET_RETRY].
          *
          * **Строгое соблюдение API:** [AtomicLong] гарантирует потокобезопасность.
          * Доступ происходит из [processSnapshot] (сброс) и [handleObservationFailure]
@@ -145,7 +148,7 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         suspend fun restartObservation() {
-            observationJob?.cancel()
+            observationJob?.cancelAndJoin()
             observationRetryCount.set(0)
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
@@ -159,6 +162,7 @@ class UpdateCoordinator
             // Это гарантирует, что после восстановления счётчик не остаётся
             // в состоянии "много ошибок" и не влияет на логирование.
             observationRetryCount.set(0)
+            observationFailedFlow.value = false
 
             val now = timeProvider.elapsedRealtime()
             if ((now - lastSuccessElapsed) > RESET_RETRY_COUNTER_INTERVAL_MS) {
@@ -247,19 +251,27 @@ class UpdateCoordinator
                 )
 
             val currentRetry = retryAttempt.incrementAndGet()
-            observationRetryCount.updateAndGet { current ->
-                minOf(current + 1, MAX_OBSERVATION_RETRY_COUNT)
-            }
-            val consecutive = observationRetryCount.get()
+            val consecutive = observationRetryCount.incrementAndGet()
 
-            if (consecutive >= MAX_OBSERVATION_ATTEMPTS) {
-                AppLogger.e("UpdateCoordinator: observation stopped after $consecutive failures")
+            if (consecutive >= MAX_LOGGED_ATTEMPTS_BEFORE_QUIET_RETRY) {
+                AppLogger.e(
+                    "UpdateCoordinator: observation failed persistently after $consecutive attempts, " +
+                        "entering quiet mode",
+                    cause,
+                )
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Snapshot observation stopped after $consecutive failures",
+                        "Snapshot observation failing persistently",
                     )
-                return false
+                observationFailedFlow.value = true
+
+                // Quiet retry: reset counters and wait for long interval
+                retryAttempt.set(0)
+                observationRetryCount.set(0)
+                lastRetryResetElapsed = now
+                delay(MAX_RETRY_DELAY_SECONDS.seconds)
+                return true
             }
 
             AppLogger.e(
@@ -269,18 +281,6 @@ class UpdateCoordinator
             )
 
             delay(delaySeconds.seconds)
-
-            // Стратегия: бесконечные повторы с экспоненциальной задержкой (cap 300 с).
-            // UI сохраняет последнее успешное состояние во время повторов — нет мерцания.
-            // Бесконечные повторы — единственный способ обеспечить живучесть UI
-            // при системных сбоях без вмешательства пользователя.
-            // Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
-            // Сбой возможен только при деградации DataStore на кастомных прошивках,
-            // не соответствующих документации Google. Если кастомная прошивка не
-            // соответствует документации Google — это проблема кастомной прошивки.
-            // Утечка ресурсов предотвращена: scope = ApplicationScope (живёт пока
-            // живо приложение), Flow не создаёт новых объектов при повторе.
-            // Остановка возможна только через отмену ApplicationScope (завершение процесса).
             return true
         }
 
@@ -331,14 +331,7 @@ class UpdateCoordinator
         companion object {
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
-            private const val MAX_OBSERVATION_ATTEMPTS = 20L
-
-            /**
-             * Максимальное значение счётчика последовательных сбоев наблюдения.
-             * После достижения этого значения логирование подавляется
-             * (чтобы не спамить лог), но повторные попытки продолжаются.
-             */
-            private const val MAX_OBSERVATION_RETRY_COUNT = 100L
+            private const val MAX_LOGGED_ATTEMPTS_BEFORE_QUIET_RETRY = 20L
 
             @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
             internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L

@@ -17,12 +17,15 @@ object TrackingBannerMapper {
         settings: AppSettings,
         appSearchRetryCount: Int = 0,
         appSearchBannerDismissed: Boolean = false,
-        observationFailed: Boolean = false,
     ): TrackingBannerState {
         val traffic = statusMap["traffic"]
         val appsearch = statusMap["appsearch"]
         val shortcuts = statusMap["shortcuts"]
         val calls = statusMap["calls"]
+
+        val observationFailed =
+            (statusMap["widget_observation"] as? TrackingStatus.Error)?.type ==
+                TrackingStatus.ErrorType.DATABASE_ERROR
 
         val phonePermissionState =
             determinePhonePermissionState(

@@ -65,6 +65,7 @@
     <string name="tracking_banner_notification_permission">يوصى بإذن الإشعارات لتلقي تنبيهات الاستخدام.</string>
     <string name="tracking_banner_widget_error">لا يمكن تحديث الأداة بسبب قيود النظام.</string>
     <string name="tracking_banner_inaccurate_calls">تم اكتشاف مكالمات نشطة متعددة. قد يتم تخصيص الدقائق بشكل غير دقيق.</string>
+    <string name="tracking_banner_observation_failed">توقفت خدمة تتبع البيانات بعد عدة أخطاء. يرجى المحاولة مرة أخرى أو إعادة تشغيل التطبيق.</string>
     <string name="settings_load_error">خطأ في تحميل الإعدادات</string>
     <string name="sim_list_unavailable_error">قائمة SIM غير متاحة. ستكون إعدادات SIM متاحة بعد إعادة التحميل.</string>
     <string name="refresh_error">خطأ في تحديث البيانات</string>
