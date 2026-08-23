@@ -76,13 +76,9 @@ open class CallTracker
          * Счётчик попыток записи длительности звонка для каждого subId.
          * Используется для ограничения числа повторных попыток при сбоях DataStore.
          *
-         * **Очистка:** удаляется в [cleanupCounters] при успешном завершении
-         * или сбросе сессии. Если [cleanupCounters] не завершается из-за
-         * ошибки DataStore, запись остаётся в мапе. Это допустимая эвристика
-         * в пределах критерия надёжности: [ConcurrentHashMap] не ограничен
-         * по размеру, но количество активных subId не превышает
-         * [Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS] (10), поэтому утечка
-         * памяти практически невозможна.
+         * **Очистка:** записи гарантированно удаляются в [cleanupCounters]
+         * при завершении или сбросе сессии через блок finally, что предотвращает
+         * утечки памяти и бесконечные циклы повторных попыток.
          *
          * **Строгое соблюдение API:** [ConcurrentHashMap] потокобезопасен.
          * Записи создаются в [handleWriteDurationFailure] и удаляются
@@ -685,9 +681,7 @@ open class CallTracker
          *
          * **Строгое соблюдение API:** все записи в DataStore обнуляются.
          * [writeAttempts] и [attributionFailures] удаляются из мап.
-         * Если какая-либо запись в DataStore бросает исключение,
-         * метод прерывается и записи в мапах могут остаться.
-         * Это допустимо: см. документацию [writeAttempts].
+         * Удаление из мап гарантировано через блок finally даже при сбоях DataStore.
          *
          * @throws CancellationException пробрасывается для корректной отмены.
          * @throws Exception при ошибке записи в DataStore.
@@ -698,8 +692,6 @@ open class CallTracker
                 callSessionRepository.setCallIdentity(subId, null)
                 callSessionRepository.setBootTime(subId, 0L)
                 callSessionRepository.setUptime(subId, 0L)
-                writeAttempts.remove(subId)
-                attributionFailures.remove(subId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -710,6 +702,9 @@ open class CallTracker
                         "Session cleanup failed: ${e.message}",
                     )
                 throw e
+            } finally {
+                writeAttempts.remove(subId)
+                attributionFailures.remove(subId)
             }
         }
 

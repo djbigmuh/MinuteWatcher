@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -10,6 +11,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -32,6 +34,11 @@ class SimIdentityPersistenceFailureTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val migrationService: IdentityMigrationService = mock()
 
+    @Before
+    fun setUp() {
+        initTestLogger()
+    }
+
     @Test
     fun `migration failure allows retry and prevents DataStore update`() = runTest(testDispatcher) {
         val dataStore = PreferenceDataStoreFactory.create(
@@ -46,6 +53,7 @@ class SimIdentityPersistenceFailureTest {
 
         // 2. Call saveSimIdentitiesInfo - it should catch the exception internally but log it
         persistence.saveSimIdentitiesInfo(listOf(identity))
+        testScheduler.advanceUntilIdle()
 
         // 3. Verify migration was called
         verify(migrationService, times(1)).migrateLegacyData(identity)
@@ -59,6 +67,7 @@ class SimIdentityPersistenceFailureTest {
 
         // 6. Call saveSimIdentitiesInfo again
         persistence.saveSimIdentitiesInfo(listOf(identity))
+        testScheduler.advanceUntilIdle()
 
         // 7. Verify migration was called AGAIN (retry)
         verify(migrationService, times(2)).migrateLegacyData(identity)

@@ -21,7 +21,7 @@ object AppLogger {
     private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
-    private const val LOG_QUEUE_CAPACITY = 2048
+    private const val LOG_QUEUE_CAPACITY = 4096
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
 
