@@ -247,6 +247,15 @@ class UpdateCoordinator
             }
             val consecutive = observationRetryCount.get()
 
+            if (consecutive >= MAX_OBSERVATION_ATTEMPTS) {
+                AppLogger.e("UpdateCoordinator: observation stopped after $consecutive failures")
+                _status.value = TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Snapshot observation stopped after $consecutive failures"
+                )
+                return false
+            }
+
             AppLogger.e(
                 "UpdateCoordinator: observation failed (attempt $currentRetry, " +
                     "consecutive: $consecutive), retry in ${delaySeconds}s",
@@ -316,6 +325,7 @@ class UpdateCoordinator
         companion object {
             private const val MAX_RETRY_EXPONENT = 6
             private const val MAX_RETRY_DELAY_SECONDS = 300L
+            private const val MAX_OBSERVATION_ATTEMPTS = 20L
 
             /**
              * Максимальное значение счётчика последовательных сбоев наблюдения.

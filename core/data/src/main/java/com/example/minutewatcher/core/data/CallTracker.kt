@@ -631,10 +631,15 @@ open class CallTracker
 
             if (targetIdentity == null) {
                 val activeSims = simIdentityRepository.observeActiveSims().firstOrNull() ?: emptyList()
-                if (activeSims.isNotEmpty()) {
+                val matched = activeSims.find { it.subscriptionId == subId }
+                if (matched != null) {
+                    targetIdentity = matched.identity.stableId
+                } else if (activeSims.isNotEmpty()) {
+                    // Fallback допустим только когда слот не идентифицирован.
+                    // Берём первую активную, но фиксируем неточность.
                     targetIdentity = activeSims.first().identity.stableId
                     isFallbackUsed = true
-                    AppLogger.w("CallTracker: using fallback identity $targetIdentity for subId $subId")
+                    AppLogger.w("CallTracker: no SIM matched subId=$subId, using first active as fallback")
                 }
             }
             return targetIdentity to isFallbackUsed

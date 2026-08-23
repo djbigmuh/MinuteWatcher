@@ -166,6 +166,7 @@ open class SemanticSearchManager
                 if (sessionManager.ensureSession(_status)) {
                     return@withLock performIndexingWithRetry(snapshot, currentHash)
                 }
+                resetLastSnapshotState()
                 false
             }
 

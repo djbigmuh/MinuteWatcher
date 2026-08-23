@@ -84,6 +84,7 @@ class WidgetSettingsViewModel
             viewModelScope.launch {
                 loadMutex.withLock {
                     loadJob?.cancel()
+                    loadJob?.join()
                     reduce { copy(isLoadError = false) }
 
                     loadJob =

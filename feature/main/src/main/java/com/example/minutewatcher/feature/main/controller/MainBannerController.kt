@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
@@ -14,6 +15,7 @@ import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,9 +28,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -47,6 +52,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
  * Сбой наблюдения возможен только при деградации хранилища на кастомной прошивке.
  */
+@Singleton
 class MainBannerController
     @Inject
     constructor(
@@ -55,7 +61,8 @@ class MainBannerController
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
-    ) {
+    ) : TrackingStatusProvider {
+        override val key: String = "banners"
         private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
 
         /**
@@ -105,12 +112,17 @@ class MainBannerController
 
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
+        private var job: Job? = null
+        private var lastTrackingStatusFlow: StateFlow<Map<String, TrackingStatus>>? = null
+
         /**
          * Счётчик последовательных сбоев наблюдения.
          * Доступ осуществляется внутри [resetMutex.withLock].
          * Сбрасывается при успешной эмиссии и при перезапуске приложения.
          */
         private var observationRetryCount = 0L
+
+        private val retryAttempt = AtomicLong(0)
 
         /**
          * Время последнего логирования ошибки наблюдения (elapsedRealtime).
@@ -122,9 +134,12 @@ class MainBannerController
          * Мьютекс сериализует обновление счётчиков сбоев.
          */
         private val resetMutex = Mutex()
+        private val initMutex = Mutex()
+
+        private val recoveryTrigger = MutableStateFlow(0L)
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private suspend fun handleSuccess() {
             resetMutex.withLock {
@@ -135,7 +150,20 @@ class MainBannerController
                     )
                 }
                 observationRetryCount = 0L
+                retryAttempt.set(0)
                 lastLoggedTime = 0L
+            }
+        }
+
+        override suspend fun recover() {
+            job?.cancel()
+            job?.join()
+            initMutex.withLock {
+                observationRetryCount = 0L
+                retryAttempt.set(0)
+                lastLoggedTime = 0L
+                lastTrackingStatusFlow?.let { setupObservation(it) }
+                recoveryTrigger.value++
             }
         }
 
@@ -154,26 +182,32 @@ class MainBannerController
                 )
 
         init {
-            scope.launch {
-                try {
-                    trackingStatus.collect { status ->
-                        val appsearch = status["appsearch"]
-                        val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                        if (currentErrorType != lastAppSearchErrorType) {
-                            lastAppSearchErrorType = currentErrorType
-                            appSearchRetryCount.value = 0
-                            appSearchBannerDismissed.value = false
-                            if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                                AppLogger.w("AppSearch not supported on this device")
+            setupObservation(trackingStatus)
+        }
+
+        private fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
+            lastTrackingStatusFlow = statusFlow
+            job =
+                scope.launch {
+                    try {
+                        statusFlow.collect { status ->
+                            val appsearch = status["appsearch"]
+                            val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                            if (currentErrorType != lastAppSearchErrorType) {
+                                lastAppSearchErrorType = currentErrorType
+                                appSearchRetryCount.value = 0
+                                appSearchBannerDismissed.value = false
+                                if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                                    AppLogger.w("AppSearch not supported on this device")
+                                }
                             }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("MainBannerController: tracking status observation failed", e)
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainBannerController: tracking status observation failed", e)
                 }
-            }
         }
 
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
@@ -201,113 +235,116 @@ class MainBannerController
          *
          * При успешной эмиссии статус восстанавливается в Active.
          */
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
         val trackingBannerState: StateFlow<TrackingBannerState> =
-            combine(
-                trackingStatus,
-                permissionRepository.phoneStatePermissionGranted,
-                permissionRepository.usageStatsPermissionGranted,
-                permissionRepository.notificationPermissionGranted,
-                appSearchRetryCount,
-                appSearchBannerDismissed,
-                bannerExtraData,
-            ) { args ->
-                // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
-                // when using more than 5 flows.
-                @Suppress("UNCHECKED_CAST")
-                val status = args[ARG_STATUS] as Map<String, TrackingStatus>
-                val phone = args[ARG_PHONE] as Boolean
-                val usage = args[ARG_USAGE] as Boolean
-                val notif = args[ARG_NOTIF] as Boolean
-                val retry = args[ARG_RETRY] as Int
-                val dismissed = args[ARG_DISMISSED] as Boolean
+            recoveryTrigger.flatMapLatest {
+                combine(
+                    trackingStatus,
+                    permissionRepository.phoneStatePermissionGranted,
+                    permissionRepository.usageStatsPermissionGranted,
+                    permissionRepository.notificationPermissionGranted,
+                    appSearchRetryCount,
+                    appSearchBannerDismissed,
+                    bannerExtraData,
+                ) { args ->
+                    // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
+                    // when using more than 5 flows.
+                    @Suppress("UNCHECKED_CAST")
+                    val status = args[ARG_STATUS] as Map<String, TrackingStatus>
+                    val phone = args[ARG_PHONE] as Boolean
+                    val usage = args[ARG_USAGE] as Boolean
+                    val notif = args[ARG_NOTIF] as Boolean
+                    val retry = args[ARG_RETRY] as Int
+                    val dismissed = args[ARG_DISMISSED] as Boolean
 
-                // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
-                // when using more than 5 flows.
-                @Suppress("UNCHECKED_CAST")
-                val extra = args[ARG_EXTRA] as Triple<Boolean, Boolean, AppSettings>
+                    // @Suppress("UNCHECKED_CAST") is required because combine passes results as Any[]
+                    // when using more than 5 flows.
+                    @Suppress("UNCHECKED_CAST")
+                    val extra = args[ARG_EXTRA] as Triple<Boolean, Boolean, AppSettings>
 
-                TrackingBannerMapper.mapToBannerState(
-                    statusMap = status,
-                    phoneGranted = phone,
-                    usageGranted = usage,
-                    notificationsGranted = notif,
-                    phonePermanentlyDenied = extra.first,
-                    notificationPermanentlyDenied = extra.second,
-                    settings = extra.third,
-                    appSearchRetryCount = retry,
-                    appSearchBannerDismissed = dismissed,
-                )
-            }.onEach {
-                handleSuccess()
-                if (_status.value != TrackingStatus.Active) {
-                    _status.value = TrackingStatus.Active
-                }
-            }.retryWhen { cause, _ ->
-                // CancellationException пробрасывается для корректной отмены корутины.
-                // Это строгое соблюдение API kotlinx.coroutines.
-                if (cause is CancellationException) {
-                    throw cause
-                }
-
-                val (currentRetry, shouldLog) =
-                    resetMutex.withLock {
-                        observationRetryCount++
-                        val now = timeProvider.elapsedRealtime()
-                        val log =
-                            if (observationRetryCount <= MAX_LOGGED_RETRIES) {
-                                true
-                            } else {
-                                if ((now - lastLoggedTime) > PERIODIC_LOG_INTERVAL_MS) {
-                                    lastLoggedTime = now
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                        observationRetryCount to log
+                    TrackingBannerMapper.mapToBannerState(
+                        statusMap = status,
+                        phoneGranted = phone,
+                        usageGranted = usage,
+                        notificationsGranted = notif,
+                        phonePermanentlyDenied = extra.first,
+                        notificationPermanentlyDenied = extra.second,
+                        settings = extra.third,
+                        appSearchRetryCount = retry,
+                        appSearchBannerDismissed = dismissed,
+                    )
+                }.onEach {
+                    handleSuccess()
+                    if (_status.value != TrackingStatus.Active) {
+                        _status.value = TrackingStatus.Active
+                    }
+                }.retryWhen { cause, _ ->
+                    // CancellationException пробрасывается для корректной отмены корутины.
+                    // Это строгое соблюдение API kotlinx.coroutines.
+                    if (cause is CancellationException) {
+                        throw cause
                     }
 
-                if (currentRetry > MAX_RETRY_ATTEMPTS) {
-                    AppLogger.e(
-                        "trackingBannerState: Наблюдение за баннерами остановлено после " +
-                            "$MAX_RETRY_ATTEMPTS неудачных попыток. Повторите перезапуск приложения.",
-                        cause,
-                    )
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                            "Banner observation failed persistently: ${cause.message}",
-                        )
-                    return@retryWhen false
-                }
-
-                if (_status.value !is TrackingStatus.Error) {
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Banner observation failed: ${cause.message}",
-                        )
-                }
-
-                if (shouldLog) {
-                    val message =
-                        if (currentRetry > MAX_LOGGED_RETRIES) {
-                            "trackingBannerState: periodic log - observation still failing " +
-                                "(attempt $currentRetry), retrying with backoff"
-                        } else {
-                            "trackingBannerState: observation failed (attempt $currentRetry), " +
-                                "retrying with backoff"
+                    val (currentRetry, shouldLog) =
+                        resetMutex.withLock {
+                            observationRetryCount++
+                            val now = timeProvider.elapsedRealtime()
+                            val log =
+                                if (observationRetryCount <= MAX_LOGGED_RETRIES) {
+                                    true
+                                } else {
+                                    if ((now - lastLoggedTime) > PERIODIC_LOG_INTERVAL_MS) {
+                                        lastLoggedTime = now
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            observationRetryCount to log
                         }
-                    AppLogger.e(message, cause)
-                }
 
-                val delayMillis =
-                    (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.Time.MILLIS_IN_SECOND)
-                        .coerceAtMost(MAX_RETRY_DELAY_MS)
-                delay(delayMillis.milliseconds)
-                true
-            }.catch { e ->
-                AppLogger.e("MainBannerController: terminal error in banner flow", e)
+                    if (currentRetry > MAX_RETRY_ATTEMPTS) {
+                        AppLogger.e(
+                            "trackingBannerState: Наблюдение за баннерами остановлено после " +
+                                "$MAX_RETRY_ATTEMPTS неудачных попыток. Повторите перезапуск приложения.",
+                            cause,
+                        )
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Banner observation failed persistently: ${cause.message}",
+                            )
+                        return@retryWhen false
+                    }
+
+                    if (_status.value !is TrackingStatus.Error) {
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Banner observation failed: ${cause.message}",
+                            )
+                    }
+
+                    if (shouldLog) {
+                        val message =
+                            if (currentRetry > MAX_LOGGED_RETRIES) {
+                                "trackingBannerState: periodic log - observation still failing " +
+                                    "(attempt $currentRetry), retrying with backoff"
+                            } else {
+                                "trackingBannerState: observation failed (attempt $currentRetry), " +
+                                    "retrying with backoff"
+                            }
+                        AppLogger.e(message, cause)
+                    }
+
+                    val delayMillis =
+                        (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.Time.MILLIS_IN_SECOND)
+                            .coerceAtMost(MAX_RETRY_DELAY_MS)
+                    delay(delayMillis.milliseconds)
+                    true
+                }.catch { e ->
+                    AppLogger.e("MainBannerController: terminal error in banner flow", e)
+                }
             }.stateIn(
                 scope = scope,
                 started =
