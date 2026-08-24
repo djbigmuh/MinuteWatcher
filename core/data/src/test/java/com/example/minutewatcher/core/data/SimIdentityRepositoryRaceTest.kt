@@ -108,10 +108,13 @@ class SimIdentityRepositoryRaceTest {
                 )
 
             // Access seedFlow via reflection to test its emissions directly
-            val seedFlowField = SimIdentityRepositoryImpl::class.java.getDeclaredField("seedFlow")
+            val observerField = SimIdentityRepositoryImpl::class.java.getDeclaredField("observer")
+            observerField.isAccessible = true
+            val observer = observerField.get(identityRepo)
+            val seedFlowField = observer.javaClass.getDeclaredField("seedFlow")
             seedFlowField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val seedFlow = seedFlowField.get(identityRepo) as Flow<Any>
+            val seedFlow = seedFlowField.get(observer) as Flow<Any>
 
             val emissions = mutableListOf<Any>()
             val job =
@@ -192,10 +195,13 @@ class SimIdentityRepositoryRaceTest {
                     scope = backgroundScope,
                 )
 
-            val seedFlowField = SimIdentityRepositoryImpl::class.java.getDeclaredField("seedFlow")
+            val observerField = SimIdentityRepositoryImpl::class.java.getDeclaredField("observer")
+            observerField.isAccessible = true
+            val observer = observerField.get(identityRepo)
+            val seedFlowField = observer.javaClass.getDeclaredField("seedFlow")
             seedFlowField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
-            val seedFlow = seedFlowField.get(identityRepo) as Flow<Any>
+            val seedFlow = seedFlowField.get(observer) as Flow<Any>
 
             val emissions = mutableListOf<Any>()
             val job =

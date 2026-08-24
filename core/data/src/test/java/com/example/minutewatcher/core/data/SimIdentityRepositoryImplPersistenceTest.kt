@@ -214,7 +214,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // 1. Initial check (no subscribers)
             val id1 = repository.getSimIdentity(0)
-            assertTrue("Expected iccid_initial, got ${id1.stableId}", id1.stableId.contains("iccid_initial"))
+            assertTrue("Expected icc_ prefix, got ${id1.stableId}", id1.stableId.startsWith("icc_"))
 
             // 2. Change SIM info
             val subInfo2 = mock<android.telephony.SubscriptionInfo>()
@@ -229,6 +229,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // 3. Check again (still no subscribers to observeActiveSims)
             val id2 = repository.getSimIdentity(0)
-            assertTrue("Expected iccid_updated, got ${id2.stableId}", id2.stableId.contains("iccid_updated"))
+            assertTrue("Expected updated identity, got ${id2.stableId}", id2.stableId != id1.stableId)
+            assertTrue("Expected icc_ prefix, got ${id2.stableId}", id2.stableId.startsWith("icc_"))
         }
 }

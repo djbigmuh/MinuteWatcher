@@ -43,12 +43,12 @@ class MainBannerController
     @Inject
     constructor(
         trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
-        private val permissionRepository: PermissionRepository,
-        private val appSettingsRepository: AppSettingsRepository,
+        permissionRepository: PermissionRepository,
+        appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "banners"
-        private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
+        private val isPhonePermissionPermanentlyDenied = MutableStateFlow(value = false)
 
         /**
          * Sets whether the phone permission is permanently denied.
@@ -61,7 +61,7 @@ class MainBannerController
             isPhonePermissionPermanentlyDenied.value = denied
         }
 
-        private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(false)
+        private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(value = false)
 
         /**
          * Sets whether the notification permission is permanently denied.
@@ -74,8 +74,8 @@ class MainBannerController
             isNotificationPermissionPermanentlyDenied.value = denied
         }
 
-        private val appSearchRetryCount = MutableStateFlow(0)
-        private val appSearchBannerDismissed = MutableStateFlow(false)
+        private val appSearchRetryCount = MutableStateFlow(value = 0)
+        private val appSearchBannerDismissed = MutableStateFlow(value = false)
 
         /**
          * Increments the app search retry count.
@@ -153,10 +153,9 @@ class MainBannerController
                                 }
                             }
                         },
-                        onError = { e ->
-                            AppLogger.e("MainBannerController: tracking status observation failed", e)
-                        },
-                    )
+                    ) { e ->
+                        AppLogger.e("MainBannerController: tracking status observation failed", e)
+                    }
                 }
         }
 
@@ -226,7 +225,4 @@ class MainBannerController
             val usageGranted: Boolean,
             val notificationsGranted: Boolean,
         )
-
-        companion object {
-        }
     }
