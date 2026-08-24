@@ -8,8 +8,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.whenever
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -17,7 +17,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
-
     @Test
     fun `onBoot clears all call sessions`() =
         runTest(testDispatcher) {
@@ -66,7 +65,9 @@ class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(timeProvider.now() - 1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList<com.example.minutewatcher.core.model.ActiveSimInfo>()))
+            whenever(
+                simIdentityRepository.observeActiveSims(),
+            ).thenReturn(flowOf(emptyList<com.example.minutewatcher.core.model.ActiveSimInfo>()))
 
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()

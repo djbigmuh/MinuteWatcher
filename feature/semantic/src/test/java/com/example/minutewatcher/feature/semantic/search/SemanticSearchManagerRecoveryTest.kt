@@ -19,7 +19,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
-
     @Test
     fun `recover after error reinitializes session`() =
         runTest(testDispatcher) {

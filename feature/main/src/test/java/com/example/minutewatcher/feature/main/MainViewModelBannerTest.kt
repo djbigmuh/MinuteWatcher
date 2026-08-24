@@ -17,7 +17,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelBannerTest : MainViewModelTestFixtures() {
-
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =
         testScope.runTest {

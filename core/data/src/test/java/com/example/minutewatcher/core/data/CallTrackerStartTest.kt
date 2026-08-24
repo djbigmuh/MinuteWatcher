@@ -28,7 +28,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStartTest : CallTrackerTestFixtures() {
-
     @Test
     fun `test call start saves state for specific subId`() =
         runTest(testDispatcher) {

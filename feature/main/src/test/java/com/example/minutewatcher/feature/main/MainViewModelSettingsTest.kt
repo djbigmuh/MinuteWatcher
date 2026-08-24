@@ -13,7 +13,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelSettingsTest : MainViewModelTestFixtures() {
-
     @Test
     fun `setTheme calls settingsUseCase`() =
         testScope.runTest {

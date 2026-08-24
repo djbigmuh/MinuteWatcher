@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,13 +19,11 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import com.example.minutewatcher.core.model.Constants
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerAttributionTest : CallTrackerTestFixtures() {
-
     @Test
     fun `test dual SIM concurrent call tracking`() =
         runTest(testDispatcher) {
@@ -115,7 +114,9 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
             // Telephony state OFFHOOK to trigger handleAmbiguousIdle
             @Suppress("DEPRECATION")
-            whenever(telephonyManager.callStateForSubscription).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
+            whenever(
+                telephonyManager.callStateForSubscription,
+            ).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
 
             // Trigger timeout for all reads
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
@@ -185,7 +186,9 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
                 .thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(activeSubId)).thenReturn(flowOf("id_2"))
 
-            whenever(telephonyManager.callStateForSubscription).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
+            whenever(
+                telephonyManager.callStateForSubscription,
+            ).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
 
             // Act: End call with unknown subId
             callTracker.onCallEnded(-1)

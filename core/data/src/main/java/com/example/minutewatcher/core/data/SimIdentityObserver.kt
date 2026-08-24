@@ -30,76 +30,78 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-internal class SimIdentityObserver @Inject constructor(
-    private val discovery: SimIdentityDiscovery,
-    private val seedRepository: SimIdentitySeedRepository,
-    appSettingsRepository: AppSettingsRepository,
-    private val mockSimProvider: MockSimProvider,
-    private val fetcher: ActiveSimsFetcher,
-    @ApplicationScope private val scope: CoroutineScope,
-    private val cache: SimIdentityCache,
-) {
-    val seedFlow: Flow<SeedResult> =
-        seedRepository.seedFlow
-            .filter { it.isNotEmpty() }
-            .map { SeedResult.Real(it) as SeedResult }
-            .onStart {
-                val initial =
-                    withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
-                        val current = seedRepository.seedFlow.first()
-                        if (current.isNotEmpty()) {
-                            SeedResult.Real(current)
-                        } else {
-                            val generated = generateSeedWithRetry()
-                            if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
-                        }
-                    } ?: SeedResult.Fallback
-                emit(initial)
-            }.distinctUntilChanged()
-            .shareIn(scope, SharingStarted.Lazily, replay = 1)
+internal class SimIdentityObserver
+    @Inject
+    constructor(
+        private val discovery: SimIdentityDiscovery,
+        private val seedRepository: SimIdentitySeedRepository,
+        appSettingsRepository: AppSettingsRepository,
+        private val mockSimProvider: MockSimProvider,
+        private val fetcher: ActiveSimsFetcher,
+        @ApplicationScope private val scope: CoroutineScope,
+        private val cache: SimIdentityCache,
+    ) {
+        val seedFlow: Flow<SeedResult> =
+            seedRepository.seedFlow
+                .filter { it.isNotEmpty() }
+                .map { SeedResult.Real(it) as SeedResult }
+                .onStart {
+                    val initial =
+                        withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                            val current = seedRepository.seedFlow.first()
+                            if (current.isNotEmpty()) {
+                                SeedResult.Real(current)
+                            } else {
+                                val generated = generateSeedWithRetry()
+                                if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
+                            }
+                        } ?: SeedResult.Fallback
+                    emit(initial)
+                }.distinctUntilChanged()
+                .shareIn(scope, SharingStarted.Lazily, replay = 1)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
-        seedFlow
-            .flatMapLatest { seed ->
-                discovery.observeSubscriptionChanges().map {
-                    fetcher.fetchActiveSimsWithRetry(seed)
+        @OptIn(ExperimentalCoroutinesApi::class)
+        private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
+            seedFlow
+                .flatMapLatest { seed ->
+                    discovery.observeSubscriptionChanges().map {
+                        fetcher.fetchActiveSimsWithRetry(seed)
+                    }
+                }.catch { e ->
+                    AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims stream", e)
+                    emit(emptyList())
                 }
-            }.catch { e ->
-                AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims stream", e)
-                emit(emptyList())
-            }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
-        combine(
-            physicalActiveSims,
-            appSettingsRepository.observeAppSettings(),
-        ) { physical, settings ->
-            val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
-            mocks ?: physical
-        }.distinctUntilChanged()
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptyList(),
-            )
+        @OptIn(ExperimentalCoroutinesApi::class)
+        val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+            combine(
+                physicalActiveSims,
+                appSettingsRepository.observeAppSettings(),
+            ) { physical, settings ->
+                val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
+                mocks ?: physical
+            }.distinctUntilChanged()
+                .stateIn(
+                    scope,
+                    SharingStarted.Eagerly,
+                    emptyList(),
+                )
 
-    init {
-        activeSimsCache
-            .onEach { sims ->
-                val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
-                cache.cleanupManual(activeSlots)
-            }.launchIn(scope)
-    }
-
-    private suspend fun generateSeedWithRetry(): String? =
-        withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-            seedRepository.getOrCreateSeed { UUID.randomUUID().toString() }
+        init {
+            activeSimsCache
+                .onEach { sims ->
+                    val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
+                    cache.cleanupManual(activeSlots)
+                }.launchIn(scope)
         }
 
-    companion object {
-        private const val SEED_TOTAL_TIMEOUT_MS =
-            (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
+        private suspend fun generateSeedWithRetry(): String? =
+            withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                seedRepository.getOrCreateSeed { UUID.randomUUID().toString() }
+            }
+
+        companion object {
+            private const val SEED_TOTAL_TIMEOUT_MS =
+                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
+        }
     }
-}

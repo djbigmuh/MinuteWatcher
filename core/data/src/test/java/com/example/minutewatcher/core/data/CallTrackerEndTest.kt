@@ -28,7 +28,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerEndTest : CallTrackerTestFixtures() {
-
     @Test
     fun `test call end with same subId clears state`() =
         runTest(testDispatcher) {
@@ -83,7 +82,9 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 2000L))
             whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf("id_0"))
 
-            whenever(telephonyManager.callStateForSubscription).thenReturn(android.telephony.TelephonyManager.CALL_STATE_IDLE)
+            whenever(
+                telephonyManager.callStateForSubscription,
+            ).thenReturn(android.telephony.TelephonyManager.CALL_STATE_IDLE)
 
             callTracker.onCallEnded(-1)
             advanceUntilIdle()

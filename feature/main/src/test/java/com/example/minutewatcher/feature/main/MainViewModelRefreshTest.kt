@@ -5,6 +5,8 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,13 +19,10 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelRefreshTest : MainViewModelTestFixtures() {
-
     @Test
     fun `onActivityResume triggers refresh on reboot (negative elapsed)`() =
         testScope.runTest {
@@ -262,7 +261,12 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             // or reflectively access it. In MainViewModelTest, it was testing viaVM creation.
             // Let's reuse the logic from MainViewModelTest.
 
-            val scheduler = com.example.minutewatcher.feature.main.controller.AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
+            val scheduler =
+                com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
+                    savedStateHandle,
+                    autoResetUseCase,
+                    timeProvider,
+                )
 
             org.mockito.kotlin
                 .doThrow(RuntimeException("First failure"))

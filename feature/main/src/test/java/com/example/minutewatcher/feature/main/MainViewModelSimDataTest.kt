@@ -15,7 +15,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelSimDataTest : MainViewModelTestFixtures() {
-
     @Test
     fun `executeSimOperation sets OperationError on SeedUnavailableException`() =
         testScope.runTest {

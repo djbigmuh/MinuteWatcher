@@ -22,7 +22,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
-
     @Test
     fun `indexSnapshot hash check skips identical data`() =
         runTest(testDispatcher) {

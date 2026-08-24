@@ -159,7 +159,9 @@ class IdentityMigrationService
                 }
             }
 
-        private suspend fun performMigration(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): Boolean {
+        private suspend fun performMigration(
+            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
+        ): Boolean {
             val slot = activeIdentity.slotIndex ?: return false
             val identity = activeIdentity.stableId
 

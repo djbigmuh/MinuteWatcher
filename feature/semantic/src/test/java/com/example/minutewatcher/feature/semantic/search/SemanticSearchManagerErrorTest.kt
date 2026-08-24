@@ -22,7 +22,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
-
     @Test
     fun `putDocuments failure sets error status and does not update hash`() =
         runTest(testDispatcher) {

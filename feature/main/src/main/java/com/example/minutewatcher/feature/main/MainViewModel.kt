@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
@@ -35,7 +34,6 @@ class MainViewModel
         private val savedStateHandle: SavedStateHandle,
         private val timeProvider: TimeProvider,
     ) : ViewModel() {
-
         // Delegate UI States
         val showLimitDialog = controllers.dialog.showLimitDialog
         val showDayDialog = controllers.dialog.showDayDialog

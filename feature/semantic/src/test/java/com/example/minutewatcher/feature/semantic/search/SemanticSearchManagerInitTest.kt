@@ -21,7 +21,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
-
     @Test
     fun `successful initialization sets status to Active`() =
         runTest(testDispatcher) {

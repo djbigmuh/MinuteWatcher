@@ -26,7 +26,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerSettingsTest : CallTrackerTestFixtures() {
-
     @Test
     fun `call tracking sets error on settings timeout`() =
         runTest(testDispatcher) {

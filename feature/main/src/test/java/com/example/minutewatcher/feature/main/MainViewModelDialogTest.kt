@@ -10,7 +10,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelDialogTest : MainViewModelTestFixtures() {
-
     @Test
     fun `setLimitDialog updates showLimitDialog state`() =
         testScope.runTest {
