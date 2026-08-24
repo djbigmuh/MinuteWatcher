@@ -75,7 +75,7 @@ class SimIdentityPersistenceFailureTest {
 
             // 5. Setup migration to succeed now
             reset(migrationService)
-            whenever(migrationService.migrateLegacyData(identity)).doReturn(Unit)
+            whenever(migrationService.migrateLegacyData(identity)).doReturn(true)
 
             // 6. Call saveSimIdentitiesInfo again
             persistence.saveSimIdentitiesInfo(listOf(identity))

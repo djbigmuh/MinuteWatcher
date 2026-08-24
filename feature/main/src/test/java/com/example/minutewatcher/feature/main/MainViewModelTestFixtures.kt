@@ -1,0 +1,187 @@
+package com.example.minutewatcher.feature.main
+
+import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.PermissionRepository
+import com.example.minutewatcher.core.domain.RefreshResult
+import com.example.minutewatcher.core.domain.SettingsUseCase
+import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
+import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.feature.main.controller.AutoResetScheduler
+import com.example.minutewatcher.feature.main.controller.MainBannerController
+import com.example.minutewatcher.feature.main.controller.MainDialogController
+import com.example.minutewatcher.feature.main.controller.MainInitializationController
+import com.example.minutewatcher.feature.main.controller.MainResumeController
+import com.example.minutewatcher.feature.main.controller.MainSettingsController
+import com.example.minutewatcher.feature.main.controller.MainSimDataController
+import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
+import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
+import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+
+@OptIn(ExperimentalCoroutinesApi::class)
+abstract class MainViewModelTestFixtures {
+    protected val simIdentityRepository: SimIdentityRepository = mock()
+    protected val simLimitsRepository: SimLimitsRepository = mock()
+    protected val appSettingsRepository: AppSettingsRepository = mock()
+    protected val usageStateRepository: UsageStateRepository = mock()
+    protected val trackingStatusRepository: TrackingStatusRepository = mock()
+    protected val autoResetUseCase: AutoResetUseCase = mock()
+    protected val usageUseCase: UsageUseCase = mock()
+    protected val settingsUseCase: SettingsUseCase = mock()
+    protected val dataChangeNotifier: DataChangeNotifier = mock()
+    protected val permissionRepository: PermissionRepository = mock()
+    protected val trackingRecoveryController: TrackingRecoveryController = mock()
+    protected val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
+    protected val savedStateHandle = SavedStateHandle()
+
+    protected val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
+    protected val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
+
+    protected val phonePermissionFlow = MutableStateFlow(false)
+    protected val usageStatsPermissionFlow = MutableStateFlow(false)
+    protected val notificationPermissionFlow = MutableStateFlow(false)
+
+    @Before
+    open fun setup() {
+        Dispatchers.setMain(testDispatcher)
+
+        phonePermissionFlow.value = false
+        usageStatsPermissionFlow.value = false
+        notificationPermissionFlow.value = false
+
+        whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
+        whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
+        whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
+
+        whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
+        whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
+
+        val initialSnapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0L,
+                simSnapshots = emptyList(),
+                capabilities = emptyList(),
+            )
+        whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(initialSnapshot))
+
+        whenever(
+            appSettingsRepository.observeAppSettings(),
+        ).thenReturn(
+            MutableStateFlow(
+                AppSettings(
+                    onboardingCompleted = true,
+                ),
+            ),
+        )
+        whenever(
+            appSettingsRepository.getAppSettings(),
+        ).thenReturn(
+            flowOf(
+                AppSettings(
+                    onboardingCompleted = true,
+                ),
+            ),
+        )
+        whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
+        whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
+
+        // Default successful refresh for initializeApp
+        kotlinx.coroutines.runBlocking {
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(initialSnapshot))
+        }
+    }
+
+    @After
+    open fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    protected fun createViewModel(scope: CoroutineScope): MainViewModel {
+        val dialogController = MainDialogController(savedStateHandle)
+        val bannerController =
+            MainBannerController(
+                trackingStatusRepository = { trackingStatusRepository },
+                permissionRepository = permissionRepository,
+                appSettingsRepository = appSettingsRepository,
+                scope = scope,
+                timeProvider = timeProvider,
+            )
+        val refreshController =
+            MainSimRefreshController(
+                usageUseCase = usageUseCase,
+                usageStateRepository = usageStateRepository,
+                ioDispatcher = testDispatcher,
+                dataChangeNotifier = dataChangeNotifier,
+                timeProvider = timeProvider,
+            )
+        val settingsController =
+            MainSettingsController(
+                appSettingsRepository = appSettingsRepository,
+                settingsUseCase = settingsUseCase,
+                scope = scope,
+            )
+        val simDataController =
+            MainSimDataController(
+                usageStateRepository = usageStateRepository,
+                trackingRecoveryController = trackingRecoveryController,
+                simIdentityRepository = simIdentityRepository,
+                simLimitsRepository = simLimitsRepository,
+                usageUseCase = usageUseCase,
+                dataChangeNotifier = dataChangeNotifier,
+                ioDispatcher = testDispatcher,
+                scope = scope,
+            )
+
+        val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
+        val initController =
+            MainInitializationController(
+                appSettingsRepository = appSettingsRepository,
+                refreshController = refreshController,
+                dialogController = dialogController,
+                autoResetScheduler = autoResetScheduler,
+                timeProvider = timeProvider,
+                ioDispatcher = testDispatcher,
+            )
+        val resumeController = MainResumeController(timeProvider)
+
+        val controllers =
+            MainViewModelControllers(
+                dialog = dialogController,
+                banner = bannerController,
+                refresh = refreshController,
+                settings = settingsController,
+                simData = simDataController,
+                init = initController,
+                resume = resumeController,
+            )
+
+        return MainViewModel(
+            controllers = controllers,
+            savedStateHandle = savedStateHandle,
+            timeProvider = timeProvider,
+        )
+    }
+}

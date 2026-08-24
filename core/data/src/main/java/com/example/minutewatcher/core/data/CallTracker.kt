@@ -6,11 +6,8 @@ import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
-import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
-import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
-import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
@@ -34,17 +31,16 @@ open class CallTracker
     @Inject
     internal constructor(
         @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
-        private val simUsageRepository: SimUsageRepository,
-        private val appSettingsRepository: AppSettingsRepository,
         private val callSessionRepository: CallSessionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
         private val telephonyManager: TelephonyManager,
-        private val retryHelper: DataStoreRetryHelper,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
         private val attributionResolver: CallAttributionResolver,
         private val startHandler: CallStartHandler,
         private val endHandler: CallEndHandler,
+        private val sessionCleaner: CallSessionCleaner,
+        private val settingsHandler: CallTrackingSettingsHandler,
     ) : TrackingStatusProvider {
         override val key: String = "CallTracker"
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
@@ -69,41 +65,15 @@ open class CallTracker
          * Safe to call from any coroutine context.
          */
         suspend fun onCallStarted(subId: Int) {
-            val shouldProceed =
-                try {
-                    if (!isCallTrackingEnabled()) {
-                        AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $subId")
-                        false
-                    } else {
-                        true
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    handleStartTrackingCheckError(e)
-                    false
-                }
-
-            if (!shouldProceed) return
-
             startHandler.executeCallStart(
                 subId = subId,
                 callMutex = callMutex,
                 statusFlow = _status,
                 checkPermissions = ::checkPermissions,
-                cleanupCounters = ::cleanupCounters,
+                cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
                 refreshStatus = ::refreshStatus,
+                isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
             )
-        }
-
-        private fun handleStartTrackingCheckError(e: Exception) {
-            if (e is SecurityException) {
-                AppLogger.e("SecurityException checking if tracking enabled", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            } else {
-                AppLogger.e("Error checking if tracking enabled", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            }
         }
 
         /**
@@ -113,62 +83,18 @@ open class CallTracker
          * Safe to call from any coroutine context.
          */
         suspend fun onCallEnded(subId: Int) {
-            val shouldProceed =
-                try {
-                    !handleTrackingDisabled(subId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    handleEndTrackingCheckError(e)
-                    false
-                }
-
-            if (!shouldProceed) return
-
             endHandler.performCallEnd(
                 subId = subId,
                 callEndResolver = callEndResolver,
                 statusFlow = _status,
                 checkPermissions = ::checkPermissions,
-                cleanupCounters = ::cleanupCounters,
+                cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
                 refreshStatus = ::refreshStatus,
                 endCallAction = ::endCall,
+                isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
+                callMutex = callMutex,
+                clearAllCallSessions = { sessionCleaner.clearAllSessions() },
             )
-        }
-
-        private fun handleEndTrackingCheckError(e: Exception) {
-            if (e is SecurityException) {
-                AppLogger.e("SecurityException checking if tracking enabled", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            } else {
-                AppLogger.e("Error checking if tracking enabled in onCallEnded", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            }
-        }
-
-        private suspend fun handleTrackingDisabled(subId: Int): Boolean {
-            if (!isCallTrackingEnabled()) {
-                AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
-                callMutex.withLock {
-                    if (subId == -1) {
-                        callSessionRepository.clearAllCallSessions()
-                    } else {
-                        cleanupCounters(subId)
-                    }
-                }
-                return true
-            }
-            return false
-        }
-
-        private suspend fun isCallTrackingEnabled(): Boolean {
-            val settings =
-                retryHelper
-                    .readWithRetry(
-                        label = "isCallTrackingEnabled",
-                        reader = { appSettingsRepository.getAppSettings() },
-                    ).getOrThrow()
-            return settings.callTrackingEnabled
         }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
@@ -222,57 +148,19 @@ open class CallTracker
                 notify = notify,
                 callMutex = callMutex,
                 statusFlow = _status,
-                cleanupCounters = ::cleanupCounters,
-                writeCallDuration = ::writeCallDuration,
+                cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
+                writeCallDuration = { id, dur, fallback, notif ->
+                    settingsHandler.writeCallDuration(id, dur, fallback, notif)
+                },
+                isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
             )
-        }
-
-        private suspend fun writeCallDuration(
-            identity: String,
-            durationMinutes: Int,
-            isFallbackUsed: Boolean,
-            notify: Boolean,
-        ): Boolean {
-            simUsageRepository.incrementMinutesUsed(identity, durationMinutes)
-            if (isFallbackUsed) {
-                appSettingsRepository.updateAppSettings {
-                    it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
-                }
-            }
-            if (notify) {
-                dataChangeNotifier.notifyDataChanged()
-            }
-            AppLogger.d("Call recorded: $durationMinutes min for $identity (fallback=$isFallbackUsed)")
-            return true
-        }
-
-        private suspend fun cleanupCounters(subId: Int) {
-            try {
-                callSessionRepository.setCallStartTime(subId, 0L)
-                callSessionRepository.setCallIdentity(subId, null)
-                callSessionRepository.setBootTime(subId, 0L)
-                callSessionRepository.setUptime(subId, 0L)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Session cleanup failed for subId $subId", e)
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Session cleanup failed: ${e.message}",
-                    )
-                throw e
-            } finally {
-                attributionResolver.clearFailures(subId)
-            }
         }
 
         fun onBoot() {
             scope.launch {
                 try {
                     callMutex.withLock {
-                        callSessionRepository.clearAllCallSessions()
-                        attributionResolver.clearAllFailures()
+                        sessionCleaner.clearAllSessions()
                         AppLogger.d("CallTracker: cleared all sessions on boot")
                     }
                 } catch (e: Exception) {
@@ -286,8 +174,7 @@ open class CallTracker
         override suspend fun recover() {
             try {
                 callMutex.withLock {
-                    callSessionRepository.clearAllCallSessions()
-                    attributionResolver.clearAllFailures()
+                    sessionCleaner.clearAllSessions()
                     AppLogger.d("CallTracker: cleared all sessions during recovery")
                 }
             } catch (e: Exception) {

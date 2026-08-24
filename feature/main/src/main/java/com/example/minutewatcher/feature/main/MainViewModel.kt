@@ -3,13 +3,10 @@ package com.example.minutewatcher.feature.main
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.feature.main.controller.AutoResetScheduler
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -27,7 +24,6 @@ import javax.inject.Inject
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics for atomic updates and persistence.
  *
  * @param controllers Container for various controllers.
- * @param autoResetUseCase Use case for automatic limit reset.
  * @param savedStateHandle Handle for state preservation across process death.
  * @param timeProvider Provider for system time.
  */
@@ -36,11 +32,9 @@ class MainViewModel
     @Inject
     constructor(
         private val controllers: MainViewModelControllers,
-        autoResetUseCase: AutoResetUseCase,
         private val savedStateHandle: SavedStateHandle,
         private val timeProvider: TimeProvider,
     ) : ViewModel() {
-        private val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
 
         // Delegate UI States
         val showLimitDialog = controllers.dialog.showLimitDialog
@@ -58,7 +52,6 @@ class MainViewModel
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
 
         init {
-            autoResetScheduler.setup()
             controllers.init.initializeApp(
                 scope = viewModelScope,
                 lastRefreshAt = lastRefreshAt,
@@ -105,7 +98,7 @@ class MainViewModel
 
         fun retryShortcuts() = controllers.simData.retryShortcuts()
 
-        fun retryTraffic() = controllers.simData.retryTraffic { controllers.refresh.refreshSimCardsInternal() }
+        fun retryTraffic() = controllers.simData.retryTraffic { refreshAndNotify(force = true) }
 
         fun dismissWidgetError() = controllers.settings.dismissWidgetError()
 
@@ -167,25 +160,20 @@ class MainViewModel
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
-            viewModelScope.launch {
-                try {
-                    refreshAndNotify(force = false)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("refreshSimCardsNow failed", e)
-                } finally {
-                    onComplete()
-                }
-            }
+            controllers.refresh.refreshSimCardsNow(
+                scope = viewModelScope,
+                onUpdateLastRefresh = { lastRefreshAt = it },
+                onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
+                onComplete = onComplete,
+            )
         }
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
-            val result = controllers.refresh.refreshSimCardsInternal()
-            if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
-                lastRefreshAt = timeProvider.elapsedRealtime()
-            }
-            controllers.simData.notifyDataChanged(force = force)
+            controllers.refresh.refreshAndNotify(
+                onUpdateLastRefresh = { lastRefreshAt = it },
+                onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
+                force = force,
+            )
         }
 
         private var lastRefreshAt: Long

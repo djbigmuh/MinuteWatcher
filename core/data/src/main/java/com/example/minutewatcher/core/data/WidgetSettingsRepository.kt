@@ -14,7 +14,10 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,11 +35,18 @@ class WidgetSettingsRepository
         private val simIdentityRepository: SimIdentityRepository,
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
     ) : WidgetSettingsLoader {
+        private val saveMutex = Mutex()
+
         /**
          * Loads the current unified widget settings state.
          *
+         * Aggregates general app settings and SIM-specific visibility settings for currently active SIMs.
          * Uses [Constants.Flow.LONG_TIMEOUT_MS] for DataStore operations.
-         * Safe to call from any coroutine context.
+         *
+         * @return [WidgetSettingsState] containing the aggregated widget settings.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         override suspend fun load(): WidgetSettingsState =
             coroutineScope {
@@ -128,65 +138,65 @@ class WidgetSettingsRepository
         /**
          * Saves the widget settings state to DataStore.
          *
-         * Если общие настройки не были загружены (settingsLoadFailed), сохраняются только SIM-специфичные настройки.
-         * Это позволяет пользователю сохранить изменения для конкретных SIM даже при сбое загрузки общих настроек.
-         * На AOSP загрузка настроек не падает при исправном DataStore; сбой возможен только на кастомных прошивках.
-         *
-         * **Частичный успех (Partial Success):**
-         * Если при сохранении SIM-специфичных настроек происходит [SeedUnavailableException]
-         * или [SimNotFoundException], этот слот пропускается, и сохранение продолжается
-         * для остальных. Метод возвращает [WidgetSaveResult.PartialSuccess],
-         * если общие настройки сохранены, но хотя бы один слот SIM не удалось сохранить.
-         * Это поведение позволяет избежать блокировки сохранения всех настроек из-за деградации DataStore
-         * (seed unavailable) на некоторых кастомных прошивках.
+         * Обеспечивает атомарность на уровне репозитория с использованием [saveMutex].
+         * Операции выполняются в строгом порядке: сначала сохраняются SIM-настройки,
+         * затем общие настройки. Это гарантирует согласованность при сбоях в "хрупких"
+         * частях DataStore (связанных с SIM identity).
          *
          * @param state The state to save.
          * @param skipSimSettings Если true, SIM-специфичные настройки НЕ сохраняются.
-         *   Используется при simListLoadFailed = true, когда список SIM недоступен.
-         *   Общие настройки (layout, transparency, fontSize) сохраняются всегда.
-         *
-         *   Строгое соблюдение API: на AOSP список SIM доступен всегда.
-         *   simListLoadFailed = true возможен только при деградации DataStore
-         *   на кастомной прошивке. Это проблема кастомной прошивки.
          * @return [WidgetSaveResult] indicating full or partial success.
-         * @throws Exception if general settings fail to save.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context. Sequential execution is enforced via [saveMutex].
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         override suspend fun save(
             state: WidgetSettingsState,
             skipSimSettings: Boolean,
-        ): WidgetSaveResult {
-            var generalSaved = false
-            if (!state.settingsLoadFailed) {
-                saveGeneralSettings(state)
-                generalSaved = true
-            } else {
-                AppLogger.w("save: general settings were not loaded. Saving only SIM-specific settings.")
-            }
+        ): WidgetSaveResult =
+            saveMutex.withLock {
+                try {
+                    // 1. Сохраняем SIM-настройки (более хрупкая операция).
+                    // Если она выбросит исключение, общие настройки не будут затронуты.
+                    val failedSlots =
+                        if (state.simListLoadFailed || skipSimSettings) {
+                            emptyList()
+                        } else {
+                            saveSimSettings(state)
+                        }
 
-            if (state.simListLoadFailed || skipSimSettings) {
-                val label = if (state.settingsLoadFailed) "all saves" else "SIM-specific settings save"
-                val reason = if (skipSimSettings) "skipSimSettings=true" else "SIM list was not loaded successfully"
-                AppLogger.w("save: $reason. Skipping $label.")
-                return when {
-                    generalSaved && state.simListLoadFailed -> WidgetSaveResult.PartialSuccess
-                    generalSaved -> WidgetSaveResult.Success
-                    else -> WidgetSaveResult.Failed
-                }
-            } else {
-                val failedSlots = saveSimSettings(state)
-                return if (failedSlots.isEmpty()) {
-                    WidgetSaveResult.Success
-                } else {
-                    WidgetSaveResult.PartialSuccess
+                    // 2. Сохраняем общие настройки.
+                    var generalSaved = false
+                    if (!state.settingsLoadFailed) {
+                        saveGeneralSettings(state)
+                        generalSaved = true
+                    } else {
+                        AppLogger.w("save: general settings were not loaded. Skipping general settings save.")
+                    }
+
+                    // 3. Формируем результат на основе успеха обеих операций.
+                    return when {
+                        failedSlots.isNotEmpty() -> WidgetSaveResult.PartialSuccess
+                        generalSaved && state.simListLoadFailed -> WidgetSaveResult.PartialSuccess
+                        generalSaved -> WidgetSaveResult.Success
+                        else -> WidgetSaveResult.Failed
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetSettingsRepository: failed to save widget settings", e)
+                    WidgetSaveResult.Failed
                 }
             }
-        }
 
         /**
          * Saves general widget settings (layout, transparency, etc.) to DataStore.
          *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if write fails.
+         * @param state The state containing general widget settings to save.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore write fails.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
             appSettingsRepository.updateAppSettings { current ->
@@ -205,9 +215,14 @@ class WidgetSettingsRepository
         /**
          * Saves SIM-specific visibility settings to DataStore.
          *
-         * Safe to call from any coroutine context.
-         * @return List of slot indices that failed to save.
-         * @throws java.io.IOException if write fails.
+         * Resolves SIM identities for all provided SIM states and updates the visibility settings in batch.
+         *
+         * @param state The state containing SIM-specific settings to save.
+         * @return List of slot indices that failed to save due to identity resolution errors.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore write fails.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> {
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()

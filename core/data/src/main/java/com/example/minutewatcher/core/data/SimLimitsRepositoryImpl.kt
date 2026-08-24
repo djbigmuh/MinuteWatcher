@@ -41,7 +41,7 @@ class SimLimitsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getMonthlyLimit(identity: String): Flow<Int> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getMonthlyLimit called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(0)
             }

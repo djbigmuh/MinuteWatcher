@@ -31,6 +31,7 @@ internal class CallStartHandler
             checkPermissions: () -> Boolean,
             cleanupCounters: suspend (Int) -> Unit,
             refreshStatus: suspend (Boolean) -> Unit,
+            isCallTrackingEnabled: suspend () -> Boolean,
         ) {
             var operationCompleted = false
             try {
@@ -42,9 +43,14 @@ internal class CallStartHandler
                     return
                 }
 
-                val startData = fetchCallStartData(targetSubId)
-
                 callMutex.withLock {
+                    if (!isCallTrackingEnabled()) {
+                        AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $targetSubId")
+                        cleanupCounters(targetSubId)
+                        return@withLock
+                    }
+
+                    val startData = fetchCallStartData(targetSubId)
                     processCallStartLocked(targetSubId, startData, statusFlow, cleanupCounters)
                 }
                 operationCompleted = true

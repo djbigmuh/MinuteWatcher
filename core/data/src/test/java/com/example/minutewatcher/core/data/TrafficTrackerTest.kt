@@ -76,14 +76,16 @@ class TrafficTrackerTest {
 
         tracker =
             TrafficTracker(
-                simIdentityRepository,
-                simUsageRepository,
-                simUsageResetRepository,
-                permissionManager,
-                baselineManager,
-                deltaCalculator,
-                simChangeHandler,
-                targetResolver,
+                simIdentityRepository = simIdentityRepository,
+                simUsageRepository = simUsageRepository,
+                simUsageResetRepository = simUsageResetRepository,
+                permissionManager = permissionManager,
+                baselineManager = baselineManager,
+                deltaCalculator = deltaCalculator,
+                simChangeHandler = simChangeHandler,
+                targetResolver = targetResolver,
+                errorHandler = TrafficErrorHandler(),
+                permissionChecker = TrafficPermissionChecker(permissionManager),
             )
     }
 

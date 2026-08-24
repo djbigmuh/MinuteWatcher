@@ -46,6 +46,7 @@ class MainInitializationController
         ) {
             if (!isInitializationStarted.compareAndSet(false, true)) return
 
+            autoResetScheduler.setup()
             _initializationState.value = InitializationState.InProgress
 
             scope.launch(ioDispatcher) {

@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -33,6 +34,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicInteger
+
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -117,5 +120,100 @@ class UsageStateRepositoryStressTest {
 
             // Verify notifyRefresh was called, but likely fewer than 100 times due to tryLock
             verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(eq(true), any())
+        }
+
+    @Test
+    fun `concurrent refresh calls share the same update and only trigger notify once`() =
+        runTest {
+            val deps =
+                UsageRepositoryDependencies(
+                    simIdentityRepository = simIdentityRepository,
+                    simUsageRepository = simUsageRepository,
+                    semanticCapabilities = semanticCapabilities,
+                    semanticVersion = semanticVersion,
+                    dataRefreshNotifier = dataRefreshNotifier,
+                    timeProvider = timeProvider,
+                )
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps = deps,
+                    scope = backgroundScope,
+                )
+
+            // Setup a delay in notifyRefresh to ensure they all hit the lock
+            dataRefreshNotifier.stub {
+                onBlocking { notifyRefresh(any(), any()) } doAnswer {
+                    runBlocking {
+                        kotlinx.coroutines.delay(100.milliseconds)
+                        refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual = true))
+                    }
+                }
+            }
+
+            val results = mutableListOf<Deferred<RefreshResult>>()
+            repeat(10) {
+                results.add(async(Dispatchers.Default) { repository.refresh() })
+            }
+
+            val completedResults = results.awaitAll()
+
+            // All should be successful
+            assertTrue(completedResults.all { it is RefreshResult.Success })
+
+            // notifyRefresh should be called only ONCE because others will see the updated timestamp
+            verify(dataRefreshNotifier, org.mockito.kotlin.times(1)).notifyRefresh(eq(true), any())
+        }
+
+    @Test
+    fun `refresh returns success immediately if snapshot already updated while waiting for lock`() =
+        runTest {
+            val deps =
+                UsageRepositoryDependencies(
+                    simIdentityRepository = simIdentityRepository,
+                    simUsageRepository = simUsageRepository,
+                    semanticCapabilities = semanticCapabilities,
+                    semanticVersion = semanticVersion,
+                    dataRefreshNotifier = dataRefreshNotifier,
+                    timeProvider = timeProvider,
+                )
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps = deps,
+                    scope = backgroundScope,
+                )
+
+            // 1. Start a slow refresh
+            dataRefreshNotifier.stub {
+                onBlocking { notifyRefresh(any(), any()) } doAnswer {
+                    runBlocking {
+                        kotlinx.coroutines.delay(200.milliseconds)
+                        refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual = true))
+                    }
+                }
+            }
+
+            val job1 = async { repository.refresh() }
+
+            // Wait a bit to ensure job1 has the lock
+            kotlinx.coroutines.delay(50.milliseconds)
+
+            // 2. Trigger another refresh while job1 is still running
+            val job2 = async { repository.refresh() }
+
+            val result1 = job1.await()
+            val result2 = job2.await()
+
+            assertTrue(result1 is RefreshResult.Success)
+            assertTrue(result2 is RefreshResult.Success)
+
+            // They should have the same snapshot timestamp
+            assertEquals(result1.snapshot.timestamp, result2.snapshot.timestamp)
+
+            // notifyRefresh called only once
+            verify(dataRefreshNotifier, org.mockito.kotlin.times(1)).notifyRefresh(eq(true), any())
         }
 }

@@ -13,16 +13,21 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsRepositoryTest {
@@ -211,6 +216,51 @@ class WidgetSettingsRepositoryTest {
             // так как список SIM не был получен и загружать настройки не для чего.
             @Suppress("UnusedFlow")
             verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
+        }
+
+    @Test
+    fun `save should be sequential and protected by mutex`() =
+        runTest {
+            val state = WidgetSettingsState(simStates = mapOf(0 to SimSettingsState()))
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
+
+            val isRunning = AtomicBoolean(false)
+            val overlapDetected = AtomicBoolean(false)
+
+            whenever(simWidgetVisibilityRepository.setSimSettingsBatch(any())).doAnswer {
+                if (isRunning.getAndSet(true)) {
+                    overlapDetected.set(true)
+                }
+                // Simulate some work
+                Thread.sleep(20)
+                isRunning.set(false)
+            }
+
+            // Launch multiple concurrent saves
+            val jobs =
+                List(5) {
+                    launch {
+                        repository.save(state)
+                    }
+                }
+            jobs.joinAll()
+
+            assertFalse("Concurrent save operations detected", overlapDetected.get())
+        }
+
+    @Test
+    fun `save should skip general settings if sim settings fail with exception`() =
+        runTest {
+            val state = WidgetSettingsState(simStates = mapOf(0 to SimSettingsState()))
+            // saveSimSettings will fail because setSimSettingsBatch throws
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
+            whenever(simWidgetVisibilityRepository.setSimSettingsBatch(any()))
+                .thenThrow(RuntimeException("DataStore error"))
+
+            repository.save(state)
+
+            // General settings should NOT be updated because saveSimSettings failed first
+            verify(settingsRepository, never()).updateAppSettings(any())
         }
 
     private fun createAppSettings() =

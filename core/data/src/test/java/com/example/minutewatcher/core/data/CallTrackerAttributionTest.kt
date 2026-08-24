@@ -1,0 +1,224 @@
+package com.example.minutewatcher.core.data
+
+import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import com.example.minutewatcher.core.model.Constants
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
+class CallTrackerAttributionTest : CallTrackerTestFixtures() {
+
+    @Test
+    fun `test dual SIM concurrent call tracking`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            // Start call on subId 1
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), any())
+
+            // Start call on subId 2
+            callTracker.onCallStarted(subId = 2)
+            advanceUntilIdle()
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(2), any())
+        }
+
+    @Test
+    fun `onCallEnded with unknown subId and multiple calls uses default voice attribution`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
+            whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 2000L))
+            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 2000L))
+            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 2000L))
+            whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf("id_0"))
+
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(2)
+
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Heuristic attribution is removed, so NO sessions should be closed
+            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+        }
+
+    @Test
+    fun `attribution failure keeps error status`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            // Arrange: Force attribution failure by having TWO active calls and no way to distinguish
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+            val startTime = now - 1000L
+            val bootTime = realtime - 1000L
+            val uptime = timeProvider.uptimeMillis() - 1000L
+
+            // Multiple active calls make heuristic impossible
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
+            // No identity found in repository
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
+            // No active SIMs found (or more than one, making it ambiguous)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
+
+            timeProvider.advance(10000)
+
+            // Act
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            // Assert
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, (status as TrackingStatus.Error).type)
+            assertEquals("Could not attribute call to SIM identity", status.message)
+        }
+
+    @Test
+    fun `fallbackAttribution returns null when all reads time out`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            // Arrange: Two active calls
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+            // No default voice subId
+            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
+            // Telephony state OFFHOOK to trigger handleAmbiguousIdle
+            @Suppress("DEPRECATION")
+            whenever(telephonyManager.callStateForSubscription).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
+
+            // Trigger timeout for all reads
+            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
+
+            // Act
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: No minutes incremented
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            // No calls cleared
+            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+        }
+
+    @Test
+    fun `resolveUnknownSubIdEnd handles permission revocation gracefully`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            // Setup: Active call exists
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+
+            // Check permissions succeeds initially in onCallEnded -> executeCallEnded
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+
+            // BUT, when resolveUnknownSubIdEnd is called, we simulate SecurityException
+            whenever(callSessionRepository.getActiveCallSubIds()).thenThrow(SecurityException("Permission revoked"))
+
+            // Act
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: No crash, and status is PERMISSION_MISSING
+            val status = callTracker.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, status.type)
+        }
+
+    @Test
+    fun `stale session cleanup logs error and does nothing in handleAmbiguousIdle`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            // Arrange: Two active sessions, one is stale (> 12h)
+            val staleSubId = 1
+            val activeSubId = 2
+
+            val now = 500000000L
+            val realtime = 500000000L
+            timeProvider.setTime(now)
+            timeProvider.setRealtime(realtime)
+
+            // Stale session: started 13 hours ago (by bootTime)
+            val staleBootTime = realtime - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(staleSubId, activeSubId))
+
+            // staleSubId data
+            whenever(callSessionRepository.getCallStartTime(staleSubId)).thenReturn(flowOf(now - 13 * 3600000L))
+            whenever(callSessionRepository.getBootTime(staleSubId)).thenReturn(flowOf(staleBootTime))
+            whenever(callSessionRepository.getUptime(staleSubId)).thenReturn(flowOf(staleBootTime))
+            whenever(callSessionRepository.getCallIdentity(staleSubId)).thenReturn(flowOf("id_1"))
+
+            // activeSubId data
+            whenever(callSessionRepository.getCallStartTime(activeSubId)).thenReturn(flowOf(now - 1000L))
+            whenever(callSessionRepository.getBootTime(activeSubId)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getUptime(activeSubId))
+                .thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
+            whenever(callSessionRepository.getCallIdentity(activeSubId)).thenReturn(flowOf("id_2"))
+
+            whenever(telephonyManager.callStateForSubscription).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
+
+            // Act: End call with unknown subId
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: verify NO sessions were cleared and NO minutes were added
+            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+        }
+
+    @Test
+    fun `refreshStatus cleans up attributionFailures for inactive subIds`() =
+        runTest(testDispatcher) {
+            val tracker = createTracker()
+
+            // 1. Manually add entries to attributionFailures using public API
+            val resolverField = CallTracker::class.java.getDeclaredField("attributionResolver")
+            resolverField.isAccessible = true
+            val resolver = resolverField.get(tracker) as CallAttributionResolver
+
+            val inactiveSubId = 99
+            val activeSubId = 1
+            resolver.setFailureCountForTest(inactiveSubId, 1)
+            resolver.setFailureCountForTest(activeSubId, 1)
+
+            // 2. Mock active calls to only include activeSubId
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(activeSubId))
+
+            // 3. Call refreshStatus
+            tracker.refreshStatus(force = true)
+
+            // 4. Verify inactiveSubId is removed, activeSubId is kept
+            assertEquals("Active subId should be kept", 1, resolver.getFailureCount(activeSubId))
+            assertEquals("Inactive subId should be removed", 0, resolver.getFailureCount(inactiveSubId))
+        }
+}

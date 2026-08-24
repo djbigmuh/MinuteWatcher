@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -146,5 +148,86 @@ class SimIdentityRepositoryImplPersistenceTest {
                 val areEqual = results[i] == results[i + 1]
                 assert(!areEqual) { "Duplicate emission at index $i: ${results[i]}" }
             }
+        }
+
+    @Test
+    fun `getSimIdentity returns fresh data even without subscribers`() =
+        runTest(testDispatcher) {
+            val appSettingsRepo = mock<AppSettingsRepository>()
+            val appSettingsFlow = MutableStateFlow(AppSettings())
+            whenever(appSettingsRepo.observeAppSettings()).thenReturn(appSettingsFlow)
+
+            val seedRepository =
+                mock<SimIdentitySeedRepository> {
+                    on { seedFlow } doReturn flowOf("test_seed")
+                    on { getOrCreateSeed(any()) } doReturn "test_seed"
+                }
+
+            val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+            val permissionManager =
+                mock<PermissionManager> {
+                    on { hasPhoneStatePermission() } doReturn true
+                }
+            val permissionStateNotifier =
+                mock<PermissionStateNotifier> {
+                    on { changes } doReturn permissionChanges
+                }
+
+            val subscriptionManager = mock<android.telephony.SubscriptionManager>()
+
+            val discoveryDeps =
+                SimDiscoveryDependencies(
+                    context = mock(),
+                    subscriptionManager = subscriptionManager,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = permissionStateNotifier,
+                )
+
+            val mockSimProvider =
+                mock<MockSimProvider> {
+                    on { getMockSims(any()) } doReturn null
+                }
+
+            // SIM info for slot 0
+            val subInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(subInfo.subscriptionId).thenReturn(101)
+            whenever(subInfo.iccId).thenReturn("iccid_initial")
+
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+
+            val repository =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = discoveryDeps,
+                    dataStore =
+                        mock<DataStore<Preferences>> {
+                            on { data } doReturn flowOf(mock<Preferences>())
+                        },
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepo,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
+                    scope = backgroundScope,
+                )
+
+            // 1. Initial check (no subscribers)
+            val id1 = repository.getSimIdentity(0)
+            assertTrue("Expected iccid_initial, got ${id1.stableId}", id1.stableId.contains("iccid_initial"))
+
+            // 2. Change SIM info
+            val subInfo2 = mock<android.telephony.SubscriptionInfo>()
+            whenever(subInfo2.simSlotIndex).thenReturn(0)
+            whenever(subInfo2.subscriptionId).thenReturn(101)
+            whenever(subInfo2.iccId).thenReturn("iccid_updated")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo2))
+
+            // Trigger discovery update
+            permissionChanges.emit(Unit)
+            testScheduler.advanceUntilIdle()
+
+            // 3. Check again (still no subscribers to observeActiveSims)
+            val id2 = repository.getSimIdentity(0)
+            assertTrue("Expected iccid_updated, got ${id2.stableId}", id2.stableId.contains("iccid_updated"))
         }
 }

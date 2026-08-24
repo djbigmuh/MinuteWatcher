@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,7 +81,11 @@ class UsageStateRepositoryImpl
         /**
          * Returns a flow of all active SIM usages.
          *
-         * Safe to call from any coroutine context.
+         * Combines persistent usage data with real-time refresh events.
+         *
+         * @return [Flow] of [SimUsage] list.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         override fun observeSimUsages(): Flow<List<SimUsage>> =
             combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
@@ -88,7 +93,11 @@ class UsageStateRepositoryImpl
         /**
          * Returns a flow of UI models for all active SIM cards.
          *
-         * Safe to call from any coroutine context.
+         * Maps [SimUsage] data to [SimCardUiModel] using [SimCardMapper].
+         *
+         * @return [Flow] of [SimCardUiModel] list.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
             observeSimUsages()
@@ -185,37 +194,51 @@ class UsageStateRepositoryImpl
         /**
          * Returns a state flow of the latest [GlobalSnapshot].
          *
-         * Safe to call from any coroutine context.
+         * Aggregates usage data, semantic versions, and capabilities into a single snapshot.
+         *
+         * @return [StateFlow] of the latest [GlobalSnapshot].
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
          */
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 
         /**
          * Forcefully refreshes usage data and returns the resulting snapshot.
          *
+         * Обеспечивает последовательное выполнение через [refreshMutex]. Если несколько
+         * вызовов происходят одновременно, они ждут своей очереди. Если за время ожидания
+         * снимок уже обновился, повторный запрос не отправляется.
+         *
          * Uses [Constants.Data.SNAPSHOT_TIMEOUT_MS] for snapshot update detection.
-         * Safe to call from any coroutine context.
+         *
+         * @return [RefreshResult] containing the new snapshot on success, or the previous one on timeout.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context. Sequential execution is enforced via [refreshMutex].
          * @throws kotlinx.coroutines.CancellationException if the refresh is cancelled.
          */
         override suspend fun refresh(): RefreshResult {
-            val currentTimestamp = snapshotFlow.value.timestamp
-
-            if (refreshMutex.tryLock()) {
-                try {
-                    deps.dataRefreshNotifier.notifyRefresh(isManual = true)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
-                } finally {
-                    refreshMutex.unlock()
-                }
-            } else {
-                AppLogger.d("UsageStateRepository: refresh trigger already active, joining existing request.")
-            }
+            val startTimestamp = snapshotFlow.value.timestamp
+            val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
             val newSnapshot =
-                withTimeoutOrNull(Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds) {
-                    snapshotFlow.first { it.timestamp > currentTimestamp }
+                withTimeoutOrNull(timeout) {
+                    refreshMutex.withLock {
+                        // Если пока мы ждали мьютекс, кто-то другой уже обновил данные — используем их.
+                        if (snapshotFlow.value.timestamp > startTimestamp) {
+                            return@withLock snapshotFlow.value
+                        }
+
+                        try {
+                            deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+                        }
+
+                        // Ждем появления нового снимка в потоке данных.
+                        snapshotFlow.first { it.timestamp > startTimestamp }
+                    }
                 }
 
             return if (newSnapshot != null) {

@@ -52,7 +52,7 @@ class SimUsageRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getSimUsage(identity: String): Flow<SimUsage> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getSimUsage called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(mapper.createEmptyUsage(identity))
             }

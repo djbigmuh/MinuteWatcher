@@ -33,10 +33,25 @@ internal class CallEndHandler
             cleanupCounters: suspend (Int) -> Unit,
             refreshStatus: suspend (Boolean) -> Unit,
             endCallAction: suspend (Int) -> Unit,
+            isCallTrackingEnabled: suspend () -> Boolean,
+            callMutex: Mutex,
+            clearAllCallSessions: suspend () -> Unit,
         ) {
             var operationCompleted = false
             try {
                 if (!checkPermissions()) return
+
+                if (subId == -1) {
+                    callMutex.withLock {
+                        if (!isCallTrackingEnabled()) {
+                            AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
+                            clearAllCallSessions()
+                            operationCompleted = true
+                            return@withLock
+                        }
+                    }
+                    if (operationCompleted) return
+                }
 
                 val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
 
@@ -85,10 +100,16 @@ internal class CallEndHandler
             statusFlow: MutableStateFlow<TrackingStatus>,
             cleanupCounters: suspend (Int) -> Unit,
             writeCallDuration: suspend (String, Int, Boolean, Boolean) -> Boolean,
+            isCallTrackingEnabled: suspend () -> Boolean,
         ) {
             val endData = fetchCallEndData(subId)
 
             callMutex.withLock {
+                if (!isCallTrackingEnabled()) {
+                    AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
+                    cleanupCounters(subId)
+                    return@withLock
+                }
                 processCallEndLocked(subId, endData, notify, statusFlow, cleanupCounters, writeCallDuration)
             }
         }

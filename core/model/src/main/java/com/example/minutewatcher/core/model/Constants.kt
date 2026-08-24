@@ -215,6 +215,11 @@ object Constants {
         const val MOCK_SUB_ID_BASE = 1000
         val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
         const val INVALID_SLOT_IDENTITY_PREFIX = "invalid_slot_"
+
+        /**
+         * Проверяет, является ли identity невалидной (сгенерированной для пустого слота).
+         */
+        fun isInvalid(identity: String): Boolean = identity.startsWith(INVALID_SLOT_IDENTITY_PREFIX)
     }
 
     /**

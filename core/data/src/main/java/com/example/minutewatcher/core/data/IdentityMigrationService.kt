@@ -16,6 +16,8 @@ import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,6 +35,8 @@ class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
+        private val migrationMutex = Mutex()
+
         /**
          * Checks if there is any legacy data in the DataStore that needs migration to the new identity-based format.
          *
@@ -40,16 +44,11 @@ class IdentityMigrationService
          * and there are keys matching legacy suffix patterns (e.g., "_sim_0", "_sub_123").
          *
          * @param activeIdentities The set of currently active stable SIM identities to protect from being
-         * treated as legacy.
+         * treated as legacy. Defaults to an empty set.
          * @return `true` if legacy keys are found and migration is required, `false` otherwise.
          *
-         * **Example:**
-         * ```kotlin
-         * val needsMigration = migrationService.hasLegacyData(setOf("icc_abc123"))
-         * ```
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore reading fails.
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean =
             try {
@@ -120,13 +119,8 @@ class IdentityMigrationService
          * Should be called after successful completion of all required migrations to avoid
          * redundant checks on subsequent app launches.
          *
-         * **Example:**
-         * ```kotlin
-         * migrationService.markSchemaCurrent()
-         * ```
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore write fails.
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
          */
         suspend fun markSchemaCurrent() {
             try {
@@ -142,29 +136,31 @@ class IdentityMigrationService
          * Scans all DataStore keys for legacy suffixes matching the identity's slot, subscription ID,
          * or historical ICCID mappings, and re-maps them to the new stable identity format.
          *
+         * This operation is synchronized via an internal [Mutex] to prevent concurrent migrations
+         * of the same data stores.
+         *
          * @param activeIdentity The current active SIM identity to migrate data for.
+         * @return `true` if any legacy data was successfully migrated, `false` otherwise.
          *
-         * **Example:**
-         * ```kotlin
-         * migrationService.migrateLegacyData(activeSimIdentity)
-         * ```
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore migration fails.
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * @throws java.io.IOException if DataStore migration fails due to I/O error.
          * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
+         * @throws Exception if a fatal error occurs during migration execution.
          */
-        suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {
-            try {
-                performMigration(activeIdentity)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("IdentityMigrationService: Fatal error during migration execution", e)
+        suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): Boolean =
+            migrationMutex.withLock {
+                try {
+                    performMigration(activeIdentity)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("IdentityMigrationService: Fatal error during migration execution", e)
+                    throw e
+                }
             }
-        }
 
-        private suspend fun performMigration(activeIdentity: com.example.minutewatcher.core.model.SimIdentity) {
-            val slot = activeIdentity.slotIndex ?: return
+        private suspend fun performMigration(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): Boolean {
+            val slot = activeIdentity.slotIndex ?: return false
             val identity = activeIdentity.stableId
 
             val legacySuffixes = findLegacySuffixes(activeIdentity)
@@ -214,6 +210,8 @@ class IdentityMigrationService
                     }
                 }
             }
+
+            return results.any { it }
         }
 
         private suspend fun findLegacySuffixes(

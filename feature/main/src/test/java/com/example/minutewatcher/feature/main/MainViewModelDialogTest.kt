@@ -1,0 +1,82 @@
+package com.example.minutewatcher.feature.main
+
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class)
+class MainViewModelDialogTest : MainViewModelTestFixtures() {
+
+    @Test
+    fun `setLimitDialog updates showLimitDialog state`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+            val data = LimitDialogData(slot = 1, name = "Test", minutes = 100, traffic = 1000)
+
+            viewModel.setLimitDialog(data)
+
+            assertEquals(data, viewModel.showLimitDialog.value)
+        }
+
+    @Test
+    fun `setDayDialog updates showDayDialog state`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+            val data = DayDialogData(slot = 1, day = 5)
+
+            viewModel.setDayDialog(data)
+
+            assertEquals(data, viewModel.showDayDialog.value)
+        }
+
+    @Test
+    fun `setAdjustDialog updates showAdjustDialog state`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+            val data = AdjustDialogData(slot = 1, currentValue = 50f, isMinutes = true)
+
+            viewModel.setAdjustDialog(data)
+
+            assertEquals(data, viewModel.showAdjustDialog.value)
+        }
+
+    @Test
+    fun `setTrafficLimitationDialog updates showTrafficLimitationDialog state`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+
+            viewModel.setTrafficLimitationDialog(true)
+            assertEquals(true, viewModel.showTrafficLimitationDialog.value)
+
+            viewModel.setTrafficLimitationDialog(false)
+            assertEquals(false, viewModel.showTrafficLimitationDialog.value)
+        }
+
+    @Test
+    fun `setUsageAccessDialog updates showUsageAccessDialog state`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+
+            viewModel.setUsageAccessDialog(true)
+            assertEquals(true, viewModel.showUsageAccessDialog.value)
+
+            viewModel.setUsageAccessDialog(false)
+            assertEquals(false, viewModel.showUsageAccessDialog.value)
+        }
+
+    @Test
+    fun `completeOnboarding hides onboarding dialog`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+
+            // Initially it might be false or true depending on onboardingCompleted mock
+            // In setup we have onboardingCompleted = true, so it should be false
+
+            viewModel.completeOnboarding()
+            assertEquals(false, viewModel.showOnboardingDialog.value)
+        }
+}

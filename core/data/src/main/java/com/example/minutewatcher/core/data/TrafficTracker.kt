@@ -42,6 +42,8 @@ class TrafficTracker
         private val deltaCalculator: TrafficDeltaCalculator,
         private val simChangeHandler: TrafficSimChangeHandler,
         private val targetResolver: TrafficTargetResolver,
+        private val errorHandler: TrafficErrorHandler,
+        private val permissionChecker: TrafficPermissionChecker,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
 
@@ -61,7 +63,7 @@ class TrafficTracker
             }
             simChangeHandler.withSimChangeLock {
                 trafficMutex.withLock {
-                    if (!checkPermissions()) return@withLock
+                    if (!permissionChecker.checkPermissions(_status)) return@withLock
                     baselineManager.resetBaseline(identity, _status) {
                         val currentDataSubId =
                             try {
@@ -78,21 +80,12 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             catchingCancellation(
                 block = {
-                    if (!checkPermissions()) return@catchingCancellation
+                    if (!permissionChecker.checkPermissions(_status)) return@catchingCancellation
 
                     val activeSims = fetchActiveSims() ?: return@catchingCancellation
                     handleActiveSims(activeSims)
                 },
-                onError = { e ->
-                    if (e is SecurityException) {
-                        AppLogger.e("SecurityException in TrafficTracker", e)
-                        _status.value =
-                            TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                    } else {
-                        AppLogger.e("Error updating traffic", e)
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    }
-                },
+                onError = { e -> errorHandler.handleUpdateError(e, _status) },
             )
         }
 
@@ -109,12 +102,7 @@ class TrafficTracker
                 }
 
             if (activeSims == null) {
-                AppLogger.e("TrafficTracker: observeActiveSims timed out after retry")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "SIM list read timeout",
-                    )
+                errorHandler.handleSimListTimeout(_status)
             }
             return activeSims
         }
@@ -140,9 +128,8 @@ class TrafficTracker
             val result = targetResolver.resolve(activeSims)
 
             if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
-                AppLogger.w("TrafficTracker: inconsistent firmware state")
                 baselineManager.cleanupRetries(emptySet())
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
+                errorHandler.handleInconsistentFirmware(_status)
                 return
             }
 
@@ -164,13 +151,8 @@ class TrafficTracker
             if (pendingRetry != null) {
                 if (pendingRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                     trafficMutex.withLock {
-                        AppLogger.e("TrafficTracker: baseline reset for $targetIdentity failed after all retries")
                         baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.DATABASE_ERROR,
-                                "Baseline reset failed for $targetIdentity",
-                            )
+                        errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
                     }
                     return
                 }
@@ -200,9 +182,7 @@ class TrafficTracker
                     simUsageRepository.getSimUsage(targetIdentity).first()
                 } ?: run {
                     trafficMutex.withLock {
-                        AppLogger.e("TrafficTracker: getSimUsage timed out for $targetIdentity")
-                        _status.value =
-                            TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+                        errorHandler.handleUsageReadTimeout(targetIdentity, _status)
                     }
                     return
                 }
@@ -232,12 +212,7 @@ class TrafficTracker
                 }
 
                 if (lastTotalBytes == null) {
-                    AppLogger.e("TrafficTracker: getLastTotalBytes timed out for $targetIdentity")
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Timeout reading lastTotalBytes",
-                        )
+                    errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
                 } else {
                     executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes)
                 }
@@ -251,42 +226,12 @@ class TrafficTracker
             lastTotalBytes: Long,
         ) {
             if (statsResult !is StatsResult.Success) {
-                val message =
-                    if (statsResult is StatsResult.Error) {
-                        statsResult.exception.message
-                    } else {
-                        "Stats unavailable"
-                    }
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+                errorHandler.handleStatsFailure(statsResult, _status)
                 return
             }
 
             deltaCalculator.updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
             simChangeHandler.updateLastDataSubId(target.dataSubId)
             _status.value = TrackingStatus.Active
-        }
-
-        private fun checkPermissions(): Boolean {
-            val error =
-                when {
-                    !permissionManager.isTelephonySupported() ->
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "SubscriptionManager unavailable",
-                        )
-                    !permissionManager.hasUsageStatsPermission() ->
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.PERMISSION_MISSING,
-                            "Usage Access missing",
-                        )
-                    !permissionManager.hasPhoneStatePermission() ->
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.PERMISSION_MISSING,
-                            "Phone State missing",
-                        )
-                    else -> null
-                }
-            error?.let { _status.value = it }
-            return error == null
         }
     }

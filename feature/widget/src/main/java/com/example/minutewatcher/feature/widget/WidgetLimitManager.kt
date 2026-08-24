@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,15 +21,15 @@ class WidgetLimitManager
     constructor(
         private val appSettingsRepository: AppSettingsRepository,
     ) {
-        private var exceededUpdateCounter = 0L
+        private val exceededUpdateCounter = AtomicLong(0L)
 
         fun shouldProbe(): Boolean {
-            val count = ++exceededUpdateCounter
+            val count = exceededUpdateCounter.incrementAndGet()
             return count % PROBE_INTERVAL_UPDATES == 0L
         }
 
         fun resetCounter() {
-            exceededUpdateCounter = 0L
+            exceededUpdateCounter.set(0L)
         }
 
         suspend fun setWidgetLimitExceeded(value: Boolean) {
