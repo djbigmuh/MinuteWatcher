@@ -31,6 +31,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * - [TrafficSimChangeHandler] for handling SIM card changes.
  */
 @Singleton
+@Suppress("LongParameterList")
 class TrafficTracker
     @Inject
     constructor(

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- General UI -->
     <string name="sim_cards_title">Tarjetas SIM</string>
     <string name="no_sim_found">Tarjetas SIM no encontradas</string>
@@ -135,11 +135,11 @@
       Strict Android localization contract: Missing quantity causes Lint fatal error
       and runtime fallback to 'other'. All quantities must be defined for each locale.
     -->
-    <plurals name="minutes_plurals">
+    <plurals name="minutes_plurals" tools:ignore="MissingQuantity">
         <item quantity="one">%1$d minuto</item>
         <item quantity="other">%1$d minutos</item>
     </plurals>
-    <plurals name="days_plurals">
+    <plurals name="days_plurals" tools:ignore="MissingQuantity">
         <item quantity="one">%1$d día</item>
         <item quantity="other">%1$d días</item>
     </plurals>

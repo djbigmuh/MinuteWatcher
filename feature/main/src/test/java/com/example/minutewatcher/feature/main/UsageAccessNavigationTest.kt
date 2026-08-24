@@ -166,7 +166,6 @@ class UsageAccessNavigationTest {
         return MainViewModel(
             controllers = controllers,
             savedStateHandle = savedStateHandle,
-            timeProvider = timeProvider,
         )
     }
 

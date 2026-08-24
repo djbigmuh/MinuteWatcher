@@ -111,7 +111,6 @@ object AppLogger {
         logger = customLogger
     }
 
-
     fun d(message: String) {
         logger.d(TAG, message)
         logToFile("D", message)

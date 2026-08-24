@@ -1,9 +1,7 @@
 package com.example.minutewatcher.core.data
 
-import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
@@ -20,26 +18,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Единый механизм обновления.
@@ -56,14 +49,12 @@ class UpdateCoordinator
         private val widgetUpdater: WidgetUpdater,
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
-        private val timeProvider: TimeProvider,
     ) : DataChangeNotifier,
         TrackingStatusProvider {
         override val key: String = "widget_observation"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
-
 
 /**
          * Recovers widget observation state.
@@ -77,25 +68,6 @@ class UpdateCoordinator
         private var lastSnapshotHash: Int? = null
         private val widgetUpdateMutex = Mutex()
 
-        // AtomicLong гарантирует потокобезопасность при доступе из retryWhen
-        // и processSnapshot, даже если они выполняются в разных корутинах.
-        private val retryAttempt = AtomicLong(0L)
-
-        /**
-         * Потокобезопасный счётчик последовательных сбоев наблюдения.
-         * Сбрасывается в 0 при успешной эмиссии ([processSnapshot])
-         * или при достижении [MAX_LOGGED_ATTEMPTS_BEFORE_QUIET_RETRY].
-         *
-         * **Строгое соблюдение API:** [AtomicLong] гарантирует потокобезопасность.
-         * Доступ происходит из [processSnapshot] (сброс) и [handleObservationFailure]
-         * (инкремент), которые выполняются в рамках одного flow-pipeline
-         * и не конкурируют между собой.
-         */
-        private val observationRetryCount = AtomicLong(0L)
-
-        @Volatile private var lastSuccessElapsed = 0L
-
-        @Volatile private var lastRetryResetElapsed = 0L
         private var observationJob: Job? = null
 
         init {
@@ -110,7 +82,6 @@ class UpdateCoordinator
             // Если кастомная прошивка эмитит значения вне порядка —
             // это проблема кастомной прошивки. Debounce гарантирует
             // отсутствие дублирующих обновлений виджета.
-            lastRetryResetElapsed = timeProvider.elapsedRealtime()
             startObservation()
         }
 
@@ -126,10 +97,6 @@ class UpdateCoordinator
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
                         processSnapshot(snapshot)
-                    }.retryWhen { cause, _ ->
-                        handleObservationFailure(cause)
-                    }.catch { cause ->
-                        AppLogger.e("UpdateCoordinator: observation flow terminated", cause)
                     }
                     // Строгое соблюдение API: launchIn(scope + handler) создаёт дочернюю
                     // корутину scope, которая будет отменена при отмене scope. Это
@@ -147,7 +114,6 @@ class UpdateCoordinator
          */
         suspend fun restartObservation() {
             observationJob?.cancelAndJoin()
-            observationRetryCount.set(0)
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
             }
@@ -155,26 +121,11 @@ class UpdateCoordinator
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
-            // Наблюдение успешно — snapshot доставлен. Сбрасываем счётчик
-            // сбоев наблюдения независимо от результата обновления виджета.
-            // Это гарантирует, что после восстановления счётчик не остаётся
-            // в состоянии "много ошибок" и не влияет на логирование.
-            observationRetryCount.set(0)
-
-            val now = timeProvider.elapsedRealtime()
-            if ((now - lastSuccessElapsed) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                retryAttempt.set(0)
-            }
-            lastSuccessElapsed = now
-
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
             if (snapshot.suppressWidgetUpdate) {
                 widgetUpdateMutex.withLock {
                     lastSnapshotHash = newHash
-                }
-                if (_status.value is TrackingStatus.Error) {
-                    _status.value = TrackingStatus.Active
                 }
                 return
             }
@@ -189,97 +140,17 @@ class UpdateCoordinator
                             val success = widgetUpdater.updateAll()
                             if (success) {
                                 lastSnapshotHash = newHash
-                                if (_status.value is TrackingStatus.Error) {
-                                    _status.value = TrackingStatus.Active
-                                }
-                                lastRetryResetElapsed = now
                             } else {
                                 AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
                             }
                         } else {
                             AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                            if (_status.value is TrackingStatus.Error) {
-                                _status.value = TrackingStatus.Active
-                            }
                         }
                     }
                 },
-                onError = { e ->
-                    AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                },
-            )
-        }
-
-        /**
-         * Обработчик сбоев наблюдения за snapshot.
-         *
-         * **Контракт AOSP:** на AOSP combine из StateFlow не бросает исключений.
-         *
-         * **Отклонение кастомной прошивки:** Сбой возможен только при деградации DataStore на кастомных прошивках,
-         * не соответствующих документации Google. Это проблема кастомной прошивки.
-         *
-         * **Стратегия приложения:** Бесконечные повторные попытки с экспоненциальной задержкой
-         * гарантируют восстановление без вмешательства пользователя.
-         */
-        // Всегда возвращает true: стратегия бесконечных повторных попыток с экспоненциальной задержкой.
-        @Suppress("FunctionOnlyReturningConstant")
-        private suspend fun handleObservationFailure(cause: Throwable): Boolean {
-            if (cause is CancellationException) throw cause
-
-            val now = timeProvider.elapsedRealtime()
-            if ((now - lastRetryResetElapsed) > RESET_RETRY_COUNTER_INTERVAL_MS) {
-                retryAttempt.set(0)
-                observationRetryCount.set(0)
-                lastRetryResetElapsed = now
+            ) { e ->
+                AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
             }
-
-            /**
-             * Сбрасываем lastSnapshotHash в null при сбое, чтобы гарантировать
-             * полную переиндексацию и принудительное обновление виджетов
-             * при следующем успешном получении данных.
-             */
-            widgetUpdateMutex.withLock {
-                lastSnapshotHash = null
-            }
-
-            val delaySeconds =
-                minOf(
-                    (Constants.Flow.WIDGET_RETRY_DELAY_MS / Constants.Time.MILLIS_IN_SECOND) *
-                        (1L shl minOf(retryAttempt.get().toInt(), MAX_RETRY_EXPONENT)),
-                    MAX_RETRY_DELAY_SECONDS,
-                )
-
-            val currentRetry = retryAttempt.incrementAndGet()
-            val consecutive = observationRetryCount.incrementAndGet()
-
-            if (consecutive >= MAX_LOGGED_ATTEMPTS_BEFORE_QUIET_RETRY) {
-                AppLogger.e(
-                    "UpdateCoordinator: observation failed persistently after $consecutive attempts, " +
-                        "entering quiet mode",
-                    cause,
-                )
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Snapshot observation failing persistently",
-                    )
-
-                // Quiet retry: reset counters and wait for long interval
-                retryAttempt.set(0)
-                observationRetryCount.set(0)
-                lastRetryResetElapsed = now
-                delay(MAX_RETRY_DELAY_SECONDS.seconds)
-                return true
-            }
-
-            AppLogger.e(
-                "UpdateCoordinator: observation failed (attempt $currentRetry, " +
-                    "consecutive: $consecutive), retry in ${delaySeconds}s",
-                cause,
-            )
-
-            delay(delaySeconds.seconds)
-            return true
         }
 
         /**
@@ -324,14 +195,5 @@ class UpdateCoordinator
                     lastSnapshotHash = null
                 }
             }
-        }
-
-        companion object {
-            private const val MAX_RETRY_EXPONENT = 6
-            private const val MAX_RETRY_DELAY_SECONDS = 300L
-            private const val MAX_LOGGED_ATTEMPTS_BEFORE_QUIET_RETRY = 20L
-
-            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal const val RESET_RETRY_COUNTER_INTERVAL_MS = 10 * 60 * 1000L
         }
     }

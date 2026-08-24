@@ -253,6 +253,11 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
     @Test
     fun `autoResetScheduler can be retried after failure`() =
         testScope.runTest {
+            org.mockito.kotlin
+                .doThrow(RuntimeException("First failure"))
+                .whenever(autoResetUseCase)
+                .performAutoReset(eq(false))
+
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 
@@ -268,14 +273,10 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
                     timeProvider,
                 )
 
-            org.mockito.kotlin
-                .doThrow(RuntimeException("First failure"))
-                .whenever(autoResetUseCase)
-                .performAutoReset(eq(false))
-
             kotlin.runCatching { scheduler.checkOnStart() }
 
-            verify(autoResetUseCase, times(2)).performAutoReset(eq(false)) // One from VM init, one from scheduler.checkOnStart
+            verify(autoResetUseCase, times(2))
+                .performAutoReset(eq(false)) // One from VM init, one from scheduler.checkOnStart
 
             org.mockito.kotlin
                 .doReturn(Unit)

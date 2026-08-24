@@ -39,5 +39,4 @@ abstract class BaseViewModel<S>(
             current?.let(reducer) ?: current
         }
     }
-
 }

@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.main
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
@@ -24,7 +23,6 @@ import javax.inject.Inject
  *
  * @param controllers Container for various controllers.
  * @param savedStateHandle Handle for state preservation across process death.
- * @param timeProvider Provider for system time.
  */
 @HiltViewModel
 class MainViewModel
@@ -32,7 +30,6 @@ class MainViewModel
     constructor(
         private val controllers: MainViewModelControllers,
         private val savedStateHandle: SavedStateHandle,
-        private val timeProvider: TimeProvider,
     ) : ViewModel() {
         // Delegate UI States
         val showLimitDialog = controllers.dialog.showLimitDialog

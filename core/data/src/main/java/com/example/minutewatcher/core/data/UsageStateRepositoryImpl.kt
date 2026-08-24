@@ -213,7 +213,8 @@ class UsageStateRepositoryImpl
          *
          * @return [RefreshResult] containing the new snapshot on success, or the previous one on timeout.
          *
-         * **Thread Safety:** Safe to call from any coroutine context. Sequential execution is enforced via [refreshMutex].
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * Sequential execution is enforced via [refreshMutex].
          * @throws kotlinx.coroutines.CancellationException if the refresh is cancelled.
          */
         override suspend fun refresh(): RefreshResult {

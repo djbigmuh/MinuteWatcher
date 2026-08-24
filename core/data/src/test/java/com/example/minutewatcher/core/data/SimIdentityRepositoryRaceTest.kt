@@ -237,7 +237,6 @@ class SimIdentityRepositoryRaceTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-
             val localDiscoveryDeps =
                 SimDiscoveryDependencies(
                     context = mock(),

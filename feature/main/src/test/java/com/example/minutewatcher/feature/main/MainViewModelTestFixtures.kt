@@ -121,6 +121,22 @@ abstract class MainViewModelTestFixtures {
 
     protected fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = MainDialogController(savedStateHandle)
+        val controllers =
+            createControllers(
+                scope = scope,
+                dialogController = dialogController,
+            )
+
+        return MainViewModel(
+            controllers = controllers,
+            savedStateHandle = savedStateHandle,
+        )
+    }
+
+    private fun createControllers(
+        scope: CoroutineScope,
+        dialogController: MainDialogController,
+    ): MainViewModelControllers {
         val bannerController =
             MainBannerController(
                 trackingStatusRepository = { trackingStatusRepository },
@@ -166,21 +182,14 @@ abstract class MainViewModelTestFixtures {
             )
         val resumeController = MainResumeController(timeProvider)
 
-        val controllers =
-            MainViewModelControllers(
-                dialog = dialogController,
-                banner = bannerController,
-                refresh = refreshController,
-                settings = settingsController,
-                simData = simDataController,
-                init = initController,
-                resume = resumeController,
-            )
-
-        return MainViewModel(
-            controllers = controllers,
-            savedStateHandle = savedStateHandle,
-            timeProvider = timeProvider,
+        return MainViewModelControllers(
+            dialog = dialogController,
+            banner = bannerController,
+            refresh = refreshController,
+            settings = settingsController,
+            simData = simDataController,
+            init = initController,
+            resume = resumeController,
         )
     }
 }

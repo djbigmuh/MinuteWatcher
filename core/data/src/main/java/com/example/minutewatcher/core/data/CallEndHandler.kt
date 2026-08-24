@@ -17,6 +17,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("LongParameterList", "CyclomaticComplexMethod")
 internal class CallEndHandler
     @Inject
     constructor(

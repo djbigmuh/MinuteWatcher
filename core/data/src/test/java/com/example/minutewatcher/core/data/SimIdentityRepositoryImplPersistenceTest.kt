@@ -151,6 +151,7 @@ class SimIdentityRepositoryImplPersistenceTest {
         }
 
     @Test
+    @Suppress("LongMethod")
     fun `getSimIdentity returns fresh data even without subscribers`() =
         runTest(testDispatcher) {
             val appSettingsRepo = mock<AppSettingsRepository>()

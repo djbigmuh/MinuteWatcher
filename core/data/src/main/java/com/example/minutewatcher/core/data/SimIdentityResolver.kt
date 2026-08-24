@@ -19,6 +19,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
+@Suppress("ReturnCount", "ThrowsCount")
 internal class SimIdentityResolver
     @Inject
     constructor(
