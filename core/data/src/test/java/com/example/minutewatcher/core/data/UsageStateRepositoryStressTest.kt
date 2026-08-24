@@ -62,7 +62,7 @@ class UsageStateRepositoryStressTest {
 
         // Mock notifyRefresh to emit to the flow with a small delay to test concurrency
         dataRefreshNotifier.stub {
-            onBlocking { notifyRefresh(any(), any()) } doAnswer {
+            on { notifyRefresh(any(), any()) } doAnswer {
                 val isManual = it.getArguments()[0] as Boolean
                 runBlocking {
                     refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual = isManual))
@@ -143,7 +143,7 @@ class UsageStateRepositoryStressTest {
 
             // Setup a delay in notifyRefresh to ensure they all hit the lock
             dataRefreshNotifier.stub {
-                onBlocking { notifyRefresh(any(), any()) } doAnswer {
+                on { notifyRefresh(any(), any()) } doAnswer {
                     runBlocking {
                         kotlinx.coroutines.delay(100.milliseconds)
                         refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual = true))
@@ -187,7 +187,7 @@ class UsageStateRepositoryStressTest {
 
             // 1. Start a slow refresh
             dataRefreshNotifier.stub {
-                onBlocking { notifyRefresh(any(), any()) } doAnswer {
+                on { notifyRefresh(any(), any()) } doAnswer {
                     runBlocking {
                         kotlinx.coroutines.delay(200.milliseconds)
                         refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual = true))

@@ -134,7 +134,6 @@ abstract class MainViewModelTestFixtures {
                 usageUseCase = usageUseCase,
                 usageStateRepository = usageStateRepository,
                 ioDispatcher = testDispatcher,
-                dataChangeNotifier = dataChangeNotifier,
                 timeProvider = timeProvider,
             )
         val settingsController =

@@ -86,23 +86,21 @@ class SimIdentitySeedRaceTest {
                 "generated"
             }
 
-            val discovery = SimIdentityDiscovery(discoveryDeps)
-            val persistence = SimIdentityPersistence(dataStore, migrationService)
             val repository =
                 SimIdentityRepositoryImpl(
-                    discovery = discovery,
-                    persistence = persistence,
-                    cache = SimIdentityCache(timeProvider),
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
-                    fetcher = ActiveSimsFetcher(discovery, persistence),
                 )
 
             val results = mutableListOf<List<String>>()
             backgroundScope.launch {
-                repository.observeIdentities().collect { results.add(it) }
+                repository.getActiveIdentities().collect { results.add(it) }
             }
 
             // Initially seed is empty/not emitted
@@ -130,27 +128,25 @@ class SimIdentitySeedRaceTest {
             whenever(mockSubInfo.iccId).thenReturn("icc_1")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-            val discovery = SimIdentityDiscovery(discoveryDeps)
-            val persistence = SimIdentityPersistence(dataStore, migrationService)
             val repository =
                 SimIdentityRepositoryImpl(
-                    discovery = discovery,
-                    persistence = persistence,
-                    cache = SimIdentityCache(timeProvider),
+                    discoveryDeps = discoveryDeps,
+                    dataStore = dataStore,
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
                     scope = backgroundScope,
-                    fetcher = ActiveSimsFetcher(discovery, persistence),
                 )
 
             // Let it initialize and generate seed
             advanceTimeBy(10000.milliseconds)
 
-            val firstSeed = repository.getIdentity(0)
+            val firstSeed = repository.getSimIdentity(0).stableId
 
             // Second resolution attempt. It should still work and return same value.
-            val secondSeed = repository.getIdentity(0)
+            val secondSeed = repository.getSimIdentity(0).stableId
             assertEquals("Identity should be stable", firstSeed, secondSeed)
         }
 }

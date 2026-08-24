@@ -6,7 +6,6 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.feature.main.TrackingBannerState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -117,7 +116,6 @@ class MainBannerControllerTest {
             assertEquals("Should not have retried yet", 1, collectionCount)
 
             val statusBeforeRetry = controller.trackingBannerState.value
-            assertTrue(statusBeforeRetry is TrackingBannerState)
             assertEquals(false, statusBeforeRetry.showUsageAccessBanner)
 
             testScheduler.advanceTimeBy(500)

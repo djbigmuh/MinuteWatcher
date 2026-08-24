@@ -40,11 +40,4 @@ abstract class BaseViewModel<S>(
         }
     }
 
-    /**
-     * Устанавливает состояние напрямую.
-     * Используйте этот метод для установки `null` состояния.
-     */
-    protected fun setState(newState: S) {
-        _state.value = newState
-    }
 }

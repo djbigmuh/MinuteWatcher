@@ -168,6 +168,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
                 mockSettings.value = transform(mockSettings.value)
@@ -211,6 +212,7 @@ class WidgetUpdaterImplTest {
 
             val mockLimitManager: WidgetLimitManager = mock()
             whenever(mockLimitManager.shouldProbe()).thenReturn(true)
+            @Suppress("UNCHECKED_CAST")
             whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
                 runBlocking {
                     val updateBlock = it.arguments[1] as suspend (Context, Boolean) -> UpdateResult

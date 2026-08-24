@@ -11,6 +11,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
+@Suppress("unused") // Hilt discovers bindings via reflection
 abstract class MainBannerModule {
     @Binds
     @IntoSet

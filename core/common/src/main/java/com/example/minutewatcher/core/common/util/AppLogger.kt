@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.common.util
 import android.content.Context
 import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
-import kotlinx.coroutines.CancellationException
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -112,20 +111,6 @@ object AppLogger {
         logger = customLogger
     }
 
-    /**
-     * Безопасный логгер для использования внутри RemoteViewsService / AppWidgetProvider.
-     * Не использует AndroidX Lifecycle, т.к. эти компоненты живут вне lifecycle.
-     * Это строгое соответствие контракту App Widget API.
-     */
-    inline fun <T> remoteViewsSafe(action: () -> T): T? =
-        try {
-            action()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            e("RemoteViews operation failed", e)
-            null
-        }
 
     fun d(message: String) {
         logger.d(TAG, message)

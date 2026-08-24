@@ -28,6 +28,8 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.seconds
@@ -235,47 +237,37 @@ class SimIdentityRepositoryRaceTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-            val discovery =
-                SimIdentityDiscovery(
-                    SimDiscoveryDependencies(
-                        context = mock(),
-                        subscriptionManager = mock(),
-                        permissionManager = permissionManager,
-                        permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) },
-                    ),
+
+            val localDiscoveryDeps =
+                SimDiscoveryDependencies(
+                    context = mock(),
+                    subscriptionManager = mock(),
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) },
                 )
-
-            val persistence = mock<SimIdentityPersistence>()
-            // Track number of calls to saveSimIdentitiesInfo
-            var saveCalls = 0
-            whenever(persistence.saveSimIdentitiesInfo(any())).thenAnswer {
-                saveCalls++
-                Unit
-            }
-
             val repository =
                 SimIdentityRepositoryImpl(
-                    discovery = discovery,
-                    persistence = persistence,
-                    cache = SimIdentityCache(mock { on { elapsedRealtime() } doReturn 1000L }),
+                    discoveryDeps = localDiscoveryDeps,
+                    dataStore = dataStore,
                     seedRepository = seedRepo,
                     appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
+                    timeProvider = mock { on { elapsedRealtime() } doReturn 1000L },
                     scope = backgroundScope,
-                    fetcher = ActiveSimsFetcher(discovery, persistence),
                 )
 
             val jobs =
                 List(10) {
                     launch {
-                        repository.getSimIdentity(0)
+                        repository.getSimIdentity(0).stableId
                     }
                 }
             jobs.joinAll()
 
-            // Because of the mutex and caching, saveSimIdentitiesInfo should be called only once
-            // (or more precisely, it should be called only when cache is empty.
-            // The first call fills the cache, subsequent calls should return from cache).
-            assertEquals("Persistence should be called once due to synchronization and caching", 1, saveCalls)
+            // Because of the mutex and caching, resolution should be stable.
+            // Persistence.saveSimIdentitiesInfo should be called, which in turn calls migrationService if needed.
+            // Since all 10 calls happen concurrently for the SAME slot, the mutex ensures only one resolution occurs.
+            verify(migrationService, times(1)).migrateLegacyData(any())
         }
 }

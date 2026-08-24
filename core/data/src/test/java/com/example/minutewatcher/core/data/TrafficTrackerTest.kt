@@ -186,7 +186,7 @@ class TrafficTrackerTest {
             // Actually, for testing timeout we NEED it to not emit.
             whenever(
                 simUsageResetRepository.getLastTotalBytes(any()),
-            ).thenReturn(kotlinx.coroutines.flow.MutableSharedFlow())
+            ).thenReturn(MutableSharedFlow())
 
             tracker.updateTrafficUsage()
 
@@ -204,7 +204,7 @@ class TrafficTrackerTest {
     @Test
     fun `processTrafficUpdate handles timeout reading simUsage`() =
         runTest(testDispatcher) {
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(kotlinx.coroutines.flow.MutableSharedFlow())
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
 
             tracker.updateTrafficUsage()
 

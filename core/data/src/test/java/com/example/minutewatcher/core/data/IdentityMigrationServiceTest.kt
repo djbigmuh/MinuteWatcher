@@ -337,7 +337,7 @@ class IdentityMigrationServiceTest {
             // Should catch the internal exception and log it, not throw
             try {
                 service.migrateLegacyData(activeIdentity)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Expected now
             }
         }

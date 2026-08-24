@@ -22,6 +22,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -61,7 +62,7 @@ class MainSimDataControllerTest {
             testScheduler.runCurrent()
             assertEquals(1, controller.highlightedSlot.value)
 
-            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS)
+            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS.milliseconds)
             testScheduler.runCurrent()
             assertNull(controller.highlightedSlot.value)
         }
@@ -81,7 +82,7 @@ class MainSimDataControllerTest {
             assertEquals(9, controller.highlightedSlot.value)
 
             // Wait for delay
-            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS)
+            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS.milliseconds)
             testScheduler.runCurrent()
 
             // Should be cleared
@@ -93,7 +94,7 @@ class MainSimDataControllerTest {
         testScope.runTest {
             controller.highlightSlot(1)
             testScheduler.runCurrent()
-            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS / 2)
+            advanceTimeBy((Constants.UI.HIGHLIGHT_DELAY_MS / 2).milliseconds)
             testScheduler.runCurrent()
             assertEquals(1, controller.highlightedSlot.value)
 
@@ -102,7 +103,7 @@ class MainSimDataControllerTest {
             testScheduler.runCurrent()
 
             // Advance remaining half of initial delay
-            advanceTimeBy(Constants.UI.HIGHLIGHT_DELAY_MS / 2 + 10)
+            advanceTimeBy((Constants.UI.HIGHLIGHT_DELAY_MS / 2 + 10).milliseconds)
             testScheduler.runCurrent()
 
             // Should be cleared because timer was NOT restarted

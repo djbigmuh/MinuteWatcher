@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM Cards</string>
     <string name="no_sim_found">SIM cards not found</string>

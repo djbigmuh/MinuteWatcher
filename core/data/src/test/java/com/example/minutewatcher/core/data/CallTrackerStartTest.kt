@@ -12,12 +12,14 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -28,6 +30,17 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStartTest : CallTrackerTestFixtures() {
+    private val sessionCleaner: CallSessionCleaner = mock()
+    private val settingsHandler: CallTrackingSettingsHandler = mock()
+
+    @Before
+    override fun setup() {
+        super.setup()
+        kotlinx.coroutines.runBlocking {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+        }
+    }
+
     @Test
     fun `test call start saves state for specific subId`() =
         runTest(testDispatcher) {
@@ -173,42 +186,22 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             var refreshStatusCalled = false
-            val attributionResolver =
-                CallAttributionResolver(
-                    simIdentityRepository,
-                    callSessionRepository,
-                    permissionManager,
-                    retryHelper,
-                    dataChangeNotifier,
-                )
-            val startHandler =
-                CallStartHandler(
-                    callSessionRepository,
-                    timeProvider,
-                    retryHelper,
-                    attributionResolver,
-                )
-            val endHandler =
-                CallEndHandler(
-                    callSessionRepository,
-                    timeProvider,
-                    retryHelper,
-                    attributionResolver,
-                )
+            val attributionResolver = createAttributionResolver()
+            val startHandler = createStartHandler(attributionResolver)
+            val endHandler = createEndHandler(attributionResolver)
             val tracker =
                 object : CallTracker(
-                    context,
-                    simUsageRepository,
-                    appSettingsRepository,
-                    callSessionRepository,
-                    dataChangeNotifier,
-                    permissionManager,
-                    telephonyManager,
-                    retryHelper,
-                    testScope,
-                    attributionResolver,
-                    startHandler,
-                    endHandler,
+                    context = context,
+                    callSessionRepository = callSessionRepository,
+                    dataChangeNotifier = dataChangeNotifier,
+                    permissionManager = permissionManager,
+                    telephonyManager = telephonyManager,
+                    scope = testScope,
+                    attributionResolver = attributionResolver,
+                    startHandler = startHandler,
+                    endHandler = endHandler,
+                    sessionCleaner = sessionCleaner,
+                    settingsHandler = settingsHandler,
                 ) {
                     override suspend fun refreshStatus(force: Boolean) {
                         refreshStatusCalled = true

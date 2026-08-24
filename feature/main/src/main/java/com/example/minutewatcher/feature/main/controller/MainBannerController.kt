@@ -57,9 +57,9 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainBannerController
     @Inject
     constructor(
-        private val trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
-        permissionRepository: PermissionRepository,
-        appSettingsRepository: AppSettingsRepository,
+        trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
+        private val permissionRepository: PermissionRepository,
+        private val appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
         private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
@@ -118,7 +118,7 @@ class MainBannerController
 
         /**
          * Счётчик последовательных сбоев наблюдения.
-         * Доступ осуществляется внутри [resetMutex.withLock].
+         * Доступ осуществляется внутри resetMutex.withLock.
          * Сбрасывается при успешной эмиссии и при перезапуске приложения.
          */
         private var observationRetryCount = 0L
@@ -127,7 +127,7 @@ class MainBannerController
 
         /**
          * Время последнего логирования ошибки наблюдения (elapsedRealtime).
-         * Доступ осуществляется внутри [resetMutex.withLock].
+         * Доступ осуществляется внутри resetMutex.withLock.
          */
         private var lastLoggedTime = 0L
 

@@ -25,7 +25,6 @@ class AppSearchErrorHandler
     ) {
         private val failureState = AtomicReference(0 to 0L)
         val consecutiveIndexFailures: Int get() = failureState.get().first
-        val lastIndexFailureTime: Long get() = failureState.get().second
 
         fun resetFailures() {
             failureState.set(0 to 0L)

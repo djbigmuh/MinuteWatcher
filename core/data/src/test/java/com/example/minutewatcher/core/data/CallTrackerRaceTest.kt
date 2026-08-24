@@ -5,12 +5,9 @@ import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
-import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -35,13 +32,13 @@ import org.robolectric.RobolectricTestRunner
 class CallTrackerRaceTest {
     private val context: android.content.Context = ApplicationProvider.getApplicationContext()
     private val simIdentityRepository: SimIdentityRepository = mock()
-    private val simUsageRepository: SimUsageRepository = mock()
-    private val appSettingsRepository: AppSettingsRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val permissionManager: PermissionManager = mock()
     private val telephonyManager: TelephonyManager = mock()
     private val timeProvider: TimeProvider = mock()
+    private val sessionCleaner: CallSessionCleaner = mock()
+    private val settingsHandler: CallTrackingSettingsHandler = mock()
     private val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
     private val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
 
@@ -87,18 +84,17 @@ class CallTrackerRaceTest {
             )
         tracker =
             CallTracker(
-                context,
-                simUsageRepository,
-                appSettingsRepository,
-                callSessionRepository,
-                dataChangeNotifier,
-                permissionManager,
-                telephonyManager,
-                retryHelper,
-                testScope,
-                attributionResolver,
-                startHandler,
-                endHandler,
+                context = context,
+                callSessionRepository = callSessionRepository,
+                dataChangeNotifier = dataChangeNotifier,
+                permissionManager = permissionManager,
+                telephonyManager = telephonyManager,
+                scope = testScope,
+                attributionResolver = attributionResolver,
+                startHandler = startHandler,
+                endHandler = endHandler,
+                sessionCleaner = sessionCleaner,
+                settingsHandler = settingsHandler,
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -106,9 +102,9 @@ class CallTrackerRaceTest {
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
         whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(
-            flowOf(AppSettings()),
-        )
+        kotlinx.coroutines.runBlocking {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+        }
     }
 
     @Test

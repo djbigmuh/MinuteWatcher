@@ -102,7 +102,7 @@ class UsageAccessNavigationTest {
         val dialogController = MainDialogController(savedStateHandle)
         val bannerController =
             MainBannerController(
-                trackingStatusRepository = dagger.Lazy { trackingStatusRepository },
+                trackingStatusRepository = { trackingStatusRepository },
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 scope = scope,
@@ -113,6 +113,7 @@ class UsageAccessNavigationTest {
                 usageUseCase = usageUseCase,
                 usageStateRepository = usageStateRepository,
                 ioDispatcher = testDispatcher,
+                timeProvider = timeProvider,
             )
         val settingsController =
             MainSettingsController(
@@ -164,7 +165,6 @@ class UsageAccessNavigationTest {
 
         return MainViewModel(
             controllers = controllers,
-            autoResetUseCase = autoResetUseCase,
             savedStateHandle = savedStateHandle,
             timeProvider = timeProvider,
         )

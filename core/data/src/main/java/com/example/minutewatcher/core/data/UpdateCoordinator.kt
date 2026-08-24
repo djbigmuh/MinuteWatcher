@@ -64,8 +64,6 @@ class UpdateCoordinator
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        private val observationFailedFlow = MutableStateFlow(false)
-        val observationFailed: StateFlow<Boolean> = observationFailedFlow.asStateFlow()
 
 /**
          * Recovers widget observation state.
@@ -162,7 +160,6 @@ class UpdateCoordinator
             // Это гарантирует, что после восстановления счётчик не остаётся
             // в состоянии "много ошибок" и не влияет на логирование.
             observationRetryCount.set(0)
-            observationFailedFlow.value = false
 
             val now = timeProvider.elapsedRealtime()
             if ((now - lastSuccessElapsed) > RESET_RETRY_COUNTER_INTERVAL_MS) {
@@ -224,6 +221,8 @@ class UpdateCoordinator
          * **Стратегия приложения:** Бесконечные повторные попытки с экспоненциальной задержкой
          * гарантируют восстановление без вмешательства пользователя.
          */
+        // Всегда возвращает true: стратегия бесконечных повторных попыток с экспоненциальной задержкой.
+        @Suppress("FunctionOnlyReturningConstant")
         private suspend fun handleObservationFailure(cause: Throwable): Boolean {
             if (cause is CancellationException) throw cause
 
@@ -264,7 +263,6 @@ class UpdateCoordinator
                         TrackingStatus.ErrorType.DATABASE_ERROR,
                         "Snapshot observation failing persistently",
                     )
-                observationFailedFlow.value = true
 
                 // Quiet retry: reset counters and wait for long interval
                 retryAttempt.set(0)

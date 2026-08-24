@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.time.Duration.Companion.milliseconds
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -279,7 +280,7 @@ class WidgetSettingsViewModelTest {
                 }
 
             // Advance time just past the timeout
-            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
+            testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS + 1000).milliseconds)
             runCurrent()
 
             assertEquals(SaveResult.Failed, vm.state.value.saveResult)
@@ -358,7 +359,7 @@ class WidgetSettingsViewModelTest {
                     override suspend fun save(
                         state: WidgetSettingsState,
                         skipSimSettings: Boolean,
-                    ) = com.example.minutewatcher.core.domain.WidgetSaveResult.Success
+                    ) = WidgetSaveResult.Success
 
                     override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
                         // No-op for testing

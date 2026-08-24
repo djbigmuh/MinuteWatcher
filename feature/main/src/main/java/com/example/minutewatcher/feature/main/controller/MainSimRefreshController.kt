@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.main.controller
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -32,7 +31,6 @@ class MainSimRefreshController
         private val usageUseCase: UsageUseCase,
         private val usageStateRepository: UsageStateRepository,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-        private val dataChangeNotifier: DataChangeNotifier,
         private val timeProvider: TimeProvider,
     ) {
         private val simCheckMutex = Mutex()
