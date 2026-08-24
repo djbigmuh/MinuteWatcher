@@ -130,12 +130,17 @@ class MainBannerController
                 )
 
         init {
-            setupObservation(trackingStatus)
+            scope.launch {
+                initMutex.withLock {
+                    setupObservation(trackingStatus)
+                }
+            }
         }
 
-        private fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
+        private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
             lastTrackingStatusFlow = statusFlow
-            if (job?.isActive == true) return
+            job?.cancel()
+            job?.join()
             job =
                 scope.launch {
                     catchingCancellation(

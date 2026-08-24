@@ -86,13 +86,12 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             viewModelScope.launch {
-                // Отменяем и ждём предыдущую загрузку вне мьютекса
-                loadMutex.withLock { loadJob }?.let { prevJob ->
-                    prevJob.cancel()
-                    prevJob.join()
-                }
-
                 loadMutex.withLock {
+                    loadJob?.let { prevJob ->
+                        prevJob.cancel()
+                        prevJob.join()
+                    }
+
                     reduce { copy(isLoadError = false) }
 
                     loadJob =
@@ -173,8 +172,9 @@ class WidgetSettingsViewModel
             }
 
             try {
+                val currentState = state.value
                 reduce { copy(isSaving = true) }
-                val result = performSaveInternal()
+                val result = performSaveInternal(currentState)
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {
                 throw e
@@ -188,16 +188,15 @@ class WidgetSettingsViewModel
         }
 
         @Suppress("ReturnCount")
-        private fun determineSaveState(): SaveState {
-            val currentState = state.value
+        private fun determineSaveState(currentState: WidgetSettingsUiState): SaveState {
             if (currentState.isLoadError) return SaveState.LoadFailed
             val settings = currentState.settings ?: return SaveState.NotLoaded
             if (settings.settingsLoadFailed) return SaveState.LoadFailed
             return SaveState.Ready(settings)
         }
 
-        private suspend fun performSaveInternal(): SaveResult =
-            when (val saveState = determineSaveState()) {
+        private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult =
+            when (val saveState = determineSaveState(currentState)) {
                 is SaveState.LoadFailed -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
                     SaveResult.Failed

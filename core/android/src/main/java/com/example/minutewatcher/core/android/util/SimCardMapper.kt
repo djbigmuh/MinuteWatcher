@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.ClampingUtils
-import java.util.Collections
 import java.util.LinkedHashMap
 
 /**
@@ -23,16 +22,11 @@ object SimCardMapper {
      * об отрицательных значениях. Предотвращает повторное логирование
      * одного и того же identity в одном слоте.
      *
-     * **Потокобезопасность:** обёрнут в [Collections.synchronizedMap].
-     * Все операции (проверка, удаление устаревших данных, логирование)
-     * выполняются внутри единого `synchronized(negativeLogged)` блока
-     * для предотвращения TOCTOU-гонок и race conditions.
-     *
      * **Эвикция:** при превышении [MAX_LOGGED_SIZE] удаляется самый старый
      * ключ (FIFO). [LinkedHashMap] сохраняет порядок вставки, поэтому
      * `keys.firstOrNull()` возвращает первый вставленный ключ.
      */
-    private val negativeLogged = Collections.synchronizedMap(LinkedHashMap<Int, String>())
+    private val negativeLogged = LinkedHashMap<Int, String>()
     private const val MAX_LOGGED_SIZE = 20
 
     fun map(
@@ -52,9 +46,7 @@ object SimCardMapper {
         // значений для одного и того же identity в слоте. При смене SIM
         // в слоте (identity изменился) старая запись удаляется. Все операции
         // объединены в один блок для исключения race conditions.
-        synchronized(negativeLogged) {
-            updateNegativeLoggedState(slot, usage, hasNegativeValues)
-        }
+        updateNegativeLoggedState(slot, usage, hasNegativeValues)
 
         val safeMinutesUsed = ClampingUtils.clamp(usage.minutesUsed, 0, Constants.MAX_MINUTES_LIMIT)
         val safeMinutesLimit = ClampingUtils.clamp(usage.minutesLimit, 0, Constants.MAX_MINUTES_LIMIT)
@@ -109,22 +101,24 @@ object SimCardMapper {
         usage: SimUsage,
         hasNegativeValues: Boolean,
     ) {
-        val lastLoggedIdentity = negativeLogged[slot]
+        synchronized(negativeLogged) {
+            val lastLoggedIdentity = negativeLogged[slot]
 
-        if (lastLoggedIdentity == usage.identity) return
+            if (lastLoggedIdentity == usage.identity) return
 
-        negativeLogged.remove(slot)
+            negativeLogged.remove(slot)
 
-        if (hasNegativeValues) {
-            AppLogger.e(
-                "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
-                    "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
-                    "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
-            )
-            negativeLogged[slot] = usage.identity
+            if (hasNegativeValues) {
+                AppLogger.e(
+                    "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
+                        "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
+                        "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
+                )
+                negativeLogged[slot] = usage.identity
 
-            if (negativeLogged.size > MAX_LOGGED_SIZE) {
-                negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
+                if (negativeLogged.size > MAX_LOGGED_SIZE) {
+                    negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
+                }
             }
         }
     }

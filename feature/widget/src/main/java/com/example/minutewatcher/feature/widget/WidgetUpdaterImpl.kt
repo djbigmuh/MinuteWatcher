@@ -100,30 +100,21 @@ class WidgetUpdaterImpl
         @Suppress("ReturnCount")
         private suspend fun handleLimitExceeded(): UpdateOutcome =
             withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                var settings =
+                val settings =
                     appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
                 val settingsTimedOut = settings == null
                 if (settingsTimedOut) {
                     AppLogger.e(
-                        "WidgetUpdater: Timeout fetching settings in handleLimitExceeded. Using default AppSettings.",
+                        "WidgetUpdater: Timeout fetching settings in handleLimitExceeded. " +
+                            "Proceeding to simplified update.",
                     )
-                    settings =
-                        com.example.minutewatcher.core.model
-                            .AppSettings()
-                }
-
-                val alreadyExceeded =
+                } else {
                     if (settings.widgetLimitExceeded) {
-                        true
-                    } else {
-                        limitManager.setWidgetLimitExceeded(value = true)
-                        false
+                        return@withTimeoutOrNull UpdateOutcome.Stop
                     }
-
-                if (settingsTimedOut) return@withTimeoutOrNull UpdateOutcome.Stop
-
-                if (alreadyExceeded) return@withTimeoutOrNull UpdateOutcome.Stop
+                    limitManager.setWidgetLimitExceeded(value = true)
+                }
 
                 AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
 

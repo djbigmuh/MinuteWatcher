@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -46,7 +45,7 @@ class AppSettingsRepositoryImpl
                 .map { prefs -> prefs.toAppSettings() }
                 .stateIn(
                     scope,
-                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    SharingStarted.Eagerly,
                     AppSettings(),
                 )
 
@@ -61,7 +60,8 @@ class AppSettingsRepositoryImpl
         /**
          * Returns a state flow of application settings.
          *
-         * Initialized using [Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS] for efficient resource management.
+         * Initialized using [SharingStarted.Eagerly] to ensure that [.value] always returns
+         * the latest data, even when there are no active subscribers.
          * Safe to call from any coroutine context.
          */
         override fun observeAppSettings(): StateFlow<AppSettings> = appSettingsState

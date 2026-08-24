@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -264,5 +265,83 @@ class WidgetUpdaterImplTest {
 
             assertFalse("updateAll should return false on Error", result)
             verify(renderer).renderAll(any()) // Should be called only once
+        }
+
+    @Test
+    fun `handleLimitExceeded proceeds to simplified update on settings timeout`() =
+        runTest {
+            var callCount = 0
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(emptyFlow())
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            val updater =
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    renderer =
+                        object : WidgetRenderer {
+                            override suspend fun renderAll(context: Context) {
+                                callCount++
+                                if (callCount == 1) {
+                                    // Simulate LimitExceeded on first call
+                                    throw IllegalArgumentException(
+                                        "RemoteViews too large",
+                                        android.os.TransactionTooLargeException(),
+                                    )
+                                }
+                            }
+                        },
+                    retryManager = retryManager,
+                    limitManager = limitManager,
+                    errorClassifier = errorClassifier,
+                )
+
+            val result = updater.updateAll()
+
+            assertTrue("updateAll should return true even on LimitExceeded with timeout", result)
+            assertEquals("performWidgetUpdate should be called twice", 2, callCount)
+            assertFalse(
+                "widgetLimitExceeded flag should NOT be set due to timeout",
+                mockSettings.value.widgetLimitExceeded,
+            )
+        }
+
+    @Test
+    fun `handleLimitExceeded returns Stop if already exceeded and not timed out`() =
+        runTest {
+            var callCount = 0
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            val updater =
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    renderer =
+                        object : WidgetRenderer {
+                            override suspend fun renderAll(context: Context) {
+                                callCount++
+                                throw IllegalArgumentException(
+                                    "RemoteViews too large",
+                                    android.os.TransactionTooLargeException(),
+                                )
+                            }
+                        },
+                    retryManager = retryManager,
+                    limitManager = limitManager,
+                    errorClassifier = errorClassifier,
+                )
+
+            val result = updater.updateAll()
+
+            assertFalse("updateAll should return false if simplified update fails and already exceeded", result)
+            assertEquals("performWidgetUpdate should be called only once", 1, callCount)
         }
 }

@@ -66,6 +66,7 @@ class UpdateCoordinator
         }
 
         private var lastSnapshotHash: Int? = null
+        private var consecutiveUpdateFailures = 0
         private val widgetUpdateMutex = Mutex()
 
         private var observationJob: Job? = null
@@ -116,6 +117,7 @@ class UpdateCoordinator
             observationJob?.cancelAndJoin()
             widgetUpdateMutex.withLock {
                 lastSnapshotHash = null
+                consecutiveUpdateFailures = 0
             }
             startObservation()
         }
@@ -136,12 +138,35 @@ class UpdateCoordinator
             catchingCancellation(
                 block = {
                     widgetUpdateMutex.withLock {
+                        if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                            AppLogger.d(
+                                "UpdateCoordinator: widget update suppressed due to too many failures " +
+                                    "($consecutiveUpdateFailures)",
+                            )
+                            return@withLock
+                        }
+
                         if (newHash != lastSnapshotHash) {
                             val success = widgetUpdater.updateAll()
                             if (success) {
                                 lastSnapshotHash = newHash
+                                if (consecutiveUpdateFailures > 0) {
+                                    AppLogger.d(
+                                        "UpdateCoordinator: widget update recovered, resetting failure counter",
+                                    )
+                                    consecutiveUpdateFailures = 0
+                                }
                             } else {
-                                AppLogger.w("UpdateCoordinator: widget update failed, hash not updated")
+                                consecutiveUpdateFailures++
+                                AppLogger.w(
+                                    "UpdateCoordinator: widget update failed ($consecutiveUpdateFailures), " +
+                                        "hash not updated",
+                                )
+                                if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                                    AppLogger.e(
+                                        "UpdateCoordinator: reached max consecutive failures. Updates suppressed.",
+                                    )
+                                }
                             }
                         } else {
                             AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
@@ -183,10 +208,16 @@ class UpdateCoordinator
                 try {
                     val snapshot = usageStateRepository.observeSnapshot().value
                     val success = widgetUpdater.updateAll()
-                    if (success && (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP)) {
-                        lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
-                    } else if (!success) {
-                        AppLogger.w("Force widget update reported failure, hash not updated")
+                    if (success) {
+                        consecutiveUpdateFailures = 0
+                        if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                            lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
+                        }
+                    } else {
+                        consecutiveUpdateFailures++
+                        AppLogger.w(
+                            "Force widget update reported failure ($consecutiveUpdateFailures), hash not updated",
+                        )
                     }
                 } catch (e: CancellationException) {
                     throw e

@@ -77,6 +77,9 @@ object Constants {
         const val MAX_UPDATE_ATTEMPTS = 4
         // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
 
+        /** Максимальное количество последовательных неудач обновления виджета до блокировки. */
+        const val MAX_CONSECUTIVE_UPDATE_FAILURES = 5
+
         const val MIN_LAYOUT_MODE = 0
         const val MAX_LAYOUT_MODE = 4
         const val MIN_SIM_ARRANGEMENT = 0

@@ -156,6 +156,76 @@ class UpdateCoordinatorTest {
             verify(widgetUpdater, times(1)).updateAll()
         }
 
+    @Test
+    fun `reactive update is suppressed after 5 consecutive failures`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(false)
+
+            UpdateCoordinator(
+                dataRefreshNotifier,
+                widgetUpdater,
+                usageStateRepository,
+                backgroundScope,
+            )
+            testScheduler.advanceUntilIdle()
+
+            // Emit 6 different snapshots
+            for (i in 1..6) {
+                val s = createSnapshot(timestamp = i * 1000L, content = "Content $i")
+                snapshotFlow.tryEmit(s)
+                testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+                testScheduler.runCurrent()
+            }
+
+            // Should call updateAll only 5 times
+            verify(widgetUpdater, times(Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES)).updateAll()
+        }
+
+    @Test
+    fun `recover resets failure counter and allows updates`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(false)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Fail 5 times
+            for (i in 1..5) {
+                snapshotFlow.tryEmit(createSnapshot(timestamp = i * 1000L, content = "Fail $i"))
+                testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+                testScheduler.runCurrent()
+            }
+            verify(widgetUpdater, times(5)).updateAll()
+
+            // 2. 6th attempt should be suppressed
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 6000L, content = "Fail 6"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+            verify(widgetUpdater, times(5)).updateAll()
+
+            // 3. Recover
+            coordinator.recover()
+            testScheduler.runCurrent()
+
+            // 4. Now successful update
+            whenever(widgetUpdater.updateAll()).thenReturn(true)
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 7000L, content = "Success"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, times(6)).updateAll()
+        }
+
     private fun createEmptySnapshot() =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),

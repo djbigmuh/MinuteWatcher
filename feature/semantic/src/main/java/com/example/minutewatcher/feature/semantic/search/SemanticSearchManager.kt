@@ -102,10 +102,10 @@ open class SemanticSearchManager
 
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            job?.cancel()
-            job?.join()
-
             initMutex.withLock {
+                job?.cancel()
+                job?.join()
+
                 lastSnapshotHash = null
                 lastSnapshotVersion = null
                 indexer.cleanupStalePackageTypes(sessionManager, _status)
