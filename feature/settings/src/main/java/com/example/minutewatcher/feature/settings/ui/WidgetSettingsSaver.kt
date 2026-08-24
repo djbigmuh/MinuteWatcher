@@ -50,8 +50,27 @@ class WidgetSettingsSaver
                 // Единая точка валидации на границе записи.
                 val validatedState = WidgetSettingsState.validate(state)
 
-                saveGeneralSettings(validatedState)
-                val failedSlots = saveSimSettings(validatedState, skipSimSettings)
+                try {
+                    saveGeneralSettings(validatedState)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to save general settings", e)
+                    return SaveResult.Failed
+                }
+
+                val failedSlots =
+                    try {
+                        saveSimSettings(validatedState, skipSimSettings)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("General settings saved, but SIM settings failed", e)
+                        notifyDataChanged()
+                        return SaveResult.PartialFailure(
+                            "General settings saved, SIM settings failed: ${e.message}",
+                        )
+                    }
 
                 val result =
                     if (failedSlots.isEmpty()) {
@@ -65,17 +84,7 @@ class WidgetSettingsSaver
                         SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
                     }
 
-                // После успешного сохранения уведомляем систему об изменениях.
-                // force = true гарантирует немедленное обновление виджета.
-                // Уведомление виджетов — отдельная операция, не влияющая на результат сохранения.
-                try {
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
-                }
-
+                notifyDataChanged()
                 return result
             } catch (e: CancellationException) {
                 // Пробрасываем для кооперативной отмены корутины.
@@ -84,6 +93,19 @@ class WidgetSettingsSaver
                 AppLogger.e("Failed to save widget settings", e)
                 SaveResult.Failed
             }
+
+        private suspend fun notifyDataChanged() {
+            // После успешного сохранения уведомляем систему об изменениях.
+            // force = true гарантирует немедленное обновление виджета.
+            // Уведомление виджетов — отдельная операция, не влияющая на результат сохранения.
+            try {
+                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
+            }
+        }
 
         private suspend fun saveGeneralSettings(state: WidgetSettingsState) {
             loader.saveGeneralSettings(state)

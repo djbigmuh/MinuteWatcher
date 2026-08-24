@@ -1,57 +1,42 @@
 package com.example.minutewatcher.feature.main.controller
 
-import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.pow
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
  *
  * **Thread Safety:** Safe to call from any coroutine context.
- * **Error Handling:** Propagates [CancellationException]. Observes errors are handled with exponential backoff.
+ * **Error Handling:** Propagates [CancellationException].
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via observed flows.
  *
- * Стратегия повторных попыток наблюдения:
- * - Бесконечные повторные попытки с экспоненциальной задержкой (cap 30 сек).
- * - Максимальная частота — 1 раз в 30 секунд.
- * - Отсутствие верхнего предела попыток является осознанным решением.
- *
  * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
- * Сбой наблюдения возможен только при деградации хранилища на кастомной прошивке.
  */
 @Singleton
 class MainBannerController
@@ -61,7 +46,6 @@ class MainBannerController
         private val permissionRepository: PermissionRepository,
         private val appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
-        private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
         override val key: String = "banners"
         private val isPhonePermissionPermanentlyDenied = MutableStateFlow(false)
@@ -116,25 +100,6 @@ class MainBannerController
         private var job: Job? = null
         private var lastTrackingStatusFlow: StateFlow<Map<String, TrackingStatus>>? = null
 
-        /**
-         * Счётчик последовательных сбоев наблюдения.
-         * Доступ осуществляется внутри resetMutex.withLock.
-         * Сбрасывается при успешной эмиссии и при перезапуске приложения.
-         */
-        private var observationRetryCount = 0L
-
-        private val retryAttempt = AtomicLong(0)
-
-        /**
-         * Время последнего логирования ошибки наблюдения (elapsedRealtime).
-         * Доступ осуществляется внутри resetMutex.withLock.
-         */
-        private var lastLoggedTime = 0L
-
-        /**
-         * Мьютекс сериализует обновление счётчиков сбоев.
-         */
-        private val resetMutex = Mutex()
         private val initMutex = Mutex()
 
         private val recoveryTrigger = MutableStateFlow(0L)
@@ -142,25 +107,8 @@ class MainBannerController
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        private suspend fun handleSuccess() {
-            resetMutex.withLock {
-                if (observationRetryCount > 0) {
-                    AppLogger.d(
-                        "trackingBannerState: successfully recovered after " +
-                            "$observationRetryCount failed attempts",
-                    )
-                }
-                observationRetryCount = 0L
-                retryAttempt.set(0)
-                lastLoggedTime = 0L
-            }
-        }
-
         override suspend fun recover() {
             initMutex.withLock {
-                observationRetryCount = 0L
-                retryAttempt.set(0)
-                lastLoggedTime = 0L
                 lastTrackingStatusFlow?.let { setupObservation(it) }
                 recoveryTrigger.value++
             }
@@ -224,13 +172,6 @@ class MainBannerController
         /**
          * Состояние баннеров отслеживания.
          *
-         * Стратегия повторных попыток наблюдения:
-         * - Бесконечные повторные попытки с экспоненциальной задержкой (cap 30 сек).
-         * - Максимальная частота — 1 раз в 30 секунд.
-         * - Отсутствие верхнего предела попыток является осознанным решением:
-         *   UI должен продолжать попытки восстановления баннеров даже после
-         *   временных сбоев.
-         *
          * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
          * Сбой наблюдения возможен только при деградации хранилища на кастомной прошивке.
          * Это проблема кастомной прошивки.
@@ -269,84 +210,9 @@ class MainBannerController
                             appSearchBannerDismissed = dismissed,
                         )
                     }.onEach {
-                        handleSuccess()
                         if (_status.value != TrackingStatus.Active) {
                             _status.value = TrackingStatus.Active
                         }
-                    }.retryWhen { cause, _ ->
-                        // CancellationException пробрасывается для корректной отмены корутины.
-                        // Это строгое соблюдение API kotlinx.coroutines.
-                        if (cause is CancellationException) {
-                            throw cause
-                        }
-
-                        val (currentRetry, shouldLog) =
-                            resetMutex.withLock {
-                                observationRetryCount++
-                                val now = timeProvider.elapsedRealtime()
-                                val log =
-                                    if (observationRetryCount <= MAX_LOGGED_RETRIES) {
-                                        true
-                                    } else {
-                                        if ((now - lastLoggedTime) > PERIODIC_LOG_INTERVAL_MS) {
-                                            lastLoggedTime = now
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                observationRetryCount to log
-                            }
-
-                        if (currentRetry > MAX_RETRY_ATTEMPTS) {
-                            AppLogger.e(
-                                "trackingBannerState: Persistent failure after $MAX_RETRY_ATTEMPTS attempts, " +
-                                    "entering quiet retry mode (300s delay).",
-                                cause,
-                            )
-                            _status.value =
-                                TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                                    "Banner observation failed persistently: ${cause.message}",
-                                )
-
-                            // Quiet mode: reset counters and wait for long interval
-                            resetMutex.withLock {
-                                observationRetryCount = 0L
-                                retryAttempt.set(0)
-                                lastLoggedTime = timeProvider.elapsedRealtime()
-                            }
-                            delay(300_000L.milliseconds) // 5 minutes quiet delay
-                            return@retryWhen true
-                        }
-
-                        if (_status.value !is TrackingStatus.Error) {
-                            _status.value =
-                                TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.UNKNOWN,
-                                    "Banner observation failed: ${cause.message}",
-                                )
-                        }
-
-                        if (shouldLog) {
-                            val message =
-                                if (currentRetry > MAX_LOGGED_RETRIES) {
-                                    "trackingBannerState: periodic log - observation still failing " +
-                                        "(attempt $currentRetry), retrying with backoff"
-                                } else {
-                                    "trackingBannerState: observation failed (attempt $currentRetry), " +
-                                        "retrying with backoff"
-                                }
-                            AppLogger.e(message, cause)
-                        }
-
-                        val delayMillis =
-                            (2.0.pow((currentRetry - 1).toDouble()).toLong() * Constants.Time.MILLIS_IN_SECOND)
-                                .coerceAtMost(MAX_RETRY_DELAY_MS)
-                        delay(delayMillis.milliseconds)
-                        true
-                    }.catch { e ->
-                        AppLogger.e("MainBannerController: terminal error in banner flow", e)
                     }
                 }.stateIn(
                     scope = scope,
@@ -362,16 +228,5 @@ class MainBannerController
         )
 
         companion object {
-            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal const val MAX_RETRY_DELAY_MS = Constants.Time.MAX_RETRY_DELAY_MS
-
-            @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-            internal const val PERIODIC_LOG_INTERVAL_MS = 5 * 60 * 1000L
-
-            /** Максимальное количество попыток наблюдения до полной остановки (Circuit Breaker). */
-            private const val MAX_RETRY_ATTEMPTS = 20L
-
-            /** Максимальное количество попыток, после которых логирование подавляется. */
-            private const val MAX_LOGGED_RETRIES = 10L
         }
     }

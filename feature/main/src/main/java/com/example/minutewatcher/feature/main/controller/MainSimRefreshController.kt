@@ -71,6 +71,10 @@ class MainSimRefreshController
             force: Boolean = false,
         ) {
             val result = refreshSimCardsInternal()
+            if (result == null) {
+                // Обновление уже выполняется другим вызовом — не дублируем
+                return
+            }
             if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
                 onUpdateLastRefresh(timeProvider.elapsedRealtime())
             }

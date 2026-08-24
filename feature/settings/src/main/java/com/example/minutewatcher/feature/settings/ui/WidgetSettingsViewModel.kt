@@ -86,9 +86,13 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             viewModelScope.launch {
+                // Отменяем и ждём предыдущую загрузку вне мьютекса
+                loadMutex.withLock { loadJob }?.let { prevJob ->
+                    prevJob.cancel()
+                    prevJob.join()
+                }
+
                 loadMutex.withLock {
-                    loadJob?.cancel()
-                    loadJob?.join()
                     reduce { copy(isLoadError = false) }
 
                     loadJob =
