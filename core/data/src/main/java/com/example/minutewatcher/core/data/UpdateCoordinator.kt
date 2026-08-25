@@ -17,7 +17,6 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +26,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -68,6 +68,7 @@ class UpdateCoordinator
         private var lastSnapshotHash: Int? = null
         private var consecutiveUpdateFailures = 0
         private val widgetUpdateMutex = Mutex()
+        private val initMutex = Mutex()
 
         private var observationJob: Job? = null
 
@@ -78,16 +79,18 @@ class UpdateCoordinator
             // поэтому init выполняется ровно один раз за время жизни процесса.
             // Корутина привязана к [scope] (ApplicationScope), который живёт
             // до завершения процесса. При завершении процесса корутина отменяется.
-            //
-            // На AOSP StateFlow эмитит значения последовательно.
-            // Если кастомная прошивка эмитит значения вне порядка —
-            // это проблема кастомной прошивки. Debounce гарантирует
-            // отсутствие дублирующих обновлений виджета.
-            startObservation()
+            scope.launch {
+                initMutex.withLock {
+                    setupObservation()
+                }
+            }
         }
 
         @OptIn(FlowPreview::class)
-        private fun startObservation() {
+        private suspend fun setupObservation() {
+            observationJob?.cancel()
+            observationJob?.join()
+
             val handler =
                 CoroutineExceptionHandler { _, cause ->
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
@@ -114,12 +117,13 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         suspend fun restartObservation() {
-            observationJob?.cancelAndJoin()
-            widgetUpdateMutex.withLock {
-                lastSnapshotHash = null
-                consecutiveUpdateFailures = 0
+            initMutex.withLock {
+                widgetUpdateMutex.withLock {
+                    lastSnapshotHash = null
+                    consecutiveUpdateFailures = 0
+                }
+                setupObservation()
             }
-            startObservation()
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
@@ -175,6 +179,15 @@ class UpdateCoordinator
                 },
             ) { e ->
                 AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+                widgetUpdateMutex.withLock {
+                    consecutiveUpdateFailures++
+                    AppLogger.w(
+                        "UpdateCoordinator: widget update failed ($consecutiveUpdateFailures), hash not updated",
+                    )
+                    if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                        AppLogger.e("UpdateCoordinator: reached max consecutive failures. Updates suppressed.")
+                    }
+                }
             }
         }
 

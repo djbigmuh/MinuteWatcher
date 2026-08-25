@@ -138,13 +138,13 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            // SaveResult should be AlreadyInProgress because second call returned early due to tryLock
             assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Success, vm.state.value.saveResult)
+            // After first save completes, it does NOT overwrite AlreadyInProgress as per Instruction 6
+            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
             assertFalse(vm.state.value.isSaving)
         }
 
@@ -279,9 +279,9 @@ class WidgetSettingsViewModelTest {
                     vm.saveAndNotify()
                 }
 
-            // Advance time just past the timeout
-            testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS + 1000).milliseconds)
-            runCurrent()
+            // Advance time past BOTH the VM timeout and the hanging loader delay
+            testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS * 2 + 1000).milliseconds)
+            testScheduler.advanceUntilIdle()
 
             assertEquals(SaveResult.Failed, vm.state.value.saveResult)
             saveJob.cancel()

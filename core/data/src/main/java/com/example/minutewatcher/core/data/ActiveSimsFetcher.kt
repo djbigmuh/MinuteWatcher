@@ -13,6 +13,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+internal class SeedUnavailableException : IOException("Identity seed unavailable")
+
 /**
  * Handles fetching active SIMs with retry logic and DataStore persistence.
  *
@@ -46,14 +48,13 @@ internal class ActiveSimsFetcher
             throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries")
         }
 
-        @Suppress("ReturnCount")
+        @Suppress("ReturnCount", "ThrowsCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
             val seedValue =
                 when (seed) {
                     is SeedResult.Real -> seed.value
                     is SeedResult.Fallback -> {
-                        AppLogger.e("Cannot fetch active SIMs: identity seed unavailable", null)
-                        return emptyList()
+                        throw SeedUnavailableException()
                     }
                 }
 
@@ -105,6 +106,11 @@ internal class ActiveSimsFetcher
             delay: Long,
         ) {
             when (e) {
+                is SeedUnavailableException -> {
+                    if (attempt == (MAX_FETCH_RETRIES - 1)) throw e
+                    AppLogger.w("ActiveSimsFetcher: Seed unavailable, retrying fetch (attempt ${attempt + 1})")
+                    delay(delay.milliseconds)
+                }
                 is IOException -> {
                     if (attempt == (MAX_FETCH_RETRIES - 1)) {
                         throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries", e)

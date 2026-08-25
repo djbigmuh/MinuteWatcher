@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
@@ -64,9 +66,22 @@ internal class SimIdentityObserver
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
                 .flatMapLatest { seed ->
-                    discovery.observeSubscriptionChanges().map {
-                        fetcher.fetchActiveSimsWithRetry(seed)
-                    }
+                    discovery
+                        .observeSubscriptionChanges()
+                        .map {
+                            fetcher.fetchActiveSimsWithRetry(seed)
+                        }.retryWhen { cause, attempt ->
+                            if (cause is SeedUnavailableException) {
+                                AppLogger.w(
+                                    "SimIdentityObserver: Seed still unavailable after " +
+                                        "fetcher retries, waiting 5s (attempt $attempt)",
+                                )
+                                delay(5000.milliseconds)
+                                true
+                            } else {
+                                false
+                            }
+                        }
                 }.catch { e ->
                     AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims stream", e)
                     emit(emptyList())

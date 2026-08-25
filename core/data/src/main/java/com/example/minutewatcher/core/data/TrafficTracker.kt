@@ -148,24 +148,37 @@ class TrafficTracker
             target: TargetInfo,
             targetIdentity: String,
         ) {
-            val pendingRetry = baselineManager.baselineNeedsRetry[targetIdentity]
-            if (pendingRetry != null) {
-                if (pendingRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-                    trafficMutex.withLock {
+            var retryCount: Int? = null
+            var shouldAbort = false
+
+            trafficMutex.withLock {
+                val pending = baselineManager.baselineNeedsRetry[targetIdentity]
+                if (pending != null) {
+                    if (pending >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                         baselineManager.baselineNeedsRetry.remove(targetIdentity)
                         errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                        shouldAbort = true
+                    } else {
+                        retryCount = pending
                     }
-                    return
                 }
+            }
+
+            if (shouldAbort) return
+
+            if (retryCount != null) {
                 val statsResult = baselineManager.getCurrentMobileBytes(0L)
                 trafficMutex.withLock {
-                    if (statsResult is StatsResult.Success) {
-                        simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
-                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                        _status.value = TrackingStatus.Active
-                        return@withLock
+                    val currentPending = baselineManager.baselineNeedsRetry[targetIdentity]
+                    if (currentPending != null) {
+                        if (statsResult is StatsResult.Success) {
+                            simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                            baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                            _status.value = TrackingStatus.Active
+                            return@withLock
+                        }
+                        baselineManager.baselineNeedsRetry[targetIdentity] = currentPending + 1
                     }
-                    baselineManager.baselineNeedsRetry[targetIdentity] = pendingRetry + 1
                 }
                 return
             }

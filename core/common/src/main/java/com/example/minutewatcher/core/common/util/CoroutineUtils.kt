@@ -12,7 +12,7 @@ import kotlinx.coroutines.CancellationException
  */
 suspend inline fun <T> catchingCancellation(
     crossinline block: suspend () -> T,
-    crossinline onError: (Exception) -> Unit,
+    crossinline onError: suspend (Exception) -> Unit,
 ): T? =
     try {
         block()

@@ -13,10 +13,7 @@ import kotlinx.coroutines.flow.update
  * Текущий код использует StateFlow, который гарантирует доставку последнего значения.
  * Переход на SharedFlow может привести к потере событий.
  *
- * **Важно:** этот класс обрабатывает `null` состояние.
- * Текущий код использует `_settingsState.update { current -> current?.let(transform) ?: current }`.
- *
- * @param initialState Начальное состояние. Может быть `null`.
+ * @param initialState Начальное состояние.
  */
 abstract class BaseViewModel<S>(
     initialState: S,
@@ -30,13 +27,8 @@ abstract class BaseViewModel<S>(
 
     /**
      * Обновляет состояние.
-     *
-     * **Важно:** этот метод обрабатывает `null` состояние.
-     * Если текущее состояние `null`, оно остаётся `null`.
      */
     protected fun reduce(reducer: S.() -> S) {
-        _state.update { current ->
-            current?.let(reducer) ?: current
-        }
+        _state.update { it.reducer() }
     }
 }
