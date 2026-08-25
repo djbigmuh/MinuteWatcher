@@ -14,7 +14,7 @@ class WidgetErrorClassifier
     @Inject
     constructor() {
         fun classifyUpdateError(
-            e: Exception,
+            e: Throwable,
             isFullAttempt: Boolean,
         ): UpdateResult =
             when (e) {
@@ -33,6 +33,11 @@ class WidgetErrorClassifier
                     UpdateResult.GenericFailure(isRetryable = false)
                 }
 
+                is SecurityException -> {
+                    AppLogger.e("Security error updating widgets", e)
+                    UpdateResult.GenericFailure(isRetryable = false)
+                }
+
                 is RuntimeException -> {
                     if (isRemoteViewsLimitException(e)) {
                         logLimitExceeded(e, isFullAttempt)
@@ -41,6 +46,11 @@ class WidgetErrorClassifier
                         AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
                         UpdateResult.GenericFailure(isRetryable = true)
                     }
+                }
+
+                is Error -> {
+                    AppLogger.e("Fatal error updating widgets", e)
+                    UpdateResult.GenericFailure(isRetryable = false)
                 }
 
                 else -> {

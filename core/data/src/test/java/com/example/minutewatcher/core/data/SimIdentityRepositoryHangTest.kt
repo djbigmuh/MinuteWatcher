@@ -56,8 +56,8 @@ class SimIdentityRepositoryHangTest {
     private lateinit var timeProvider: TimeProvider
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var discoveryDeps: SimDiscoveryDependencies
+    private lateinit var testScope: TestScope
     private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -65,6 +65,7 @@ class SimIdentityRepositoryHangTest {
 
     @Before
     fun setup() {
+        testScope = TestScope(testDispatcher)
         context = mock()
         subscriptionManager = mock()
         permissionStateNotifier = mock()
@@ -86,7 +87,7 @@ class SimIdentityRepositoryHangTest {
         dataStore =
             PreferenceDataStoreFactory.create(
                 scope = testScope,
-                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
+                produceFile = { tmpFolder.newFile("test_sim_settings_${System.currentTimeMillis()}.preferences_pb") },
             )
 
         discoveryDeps =
@@ -100,7 +101,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test(expected = IllegalStateException::class)
     fun `getSimIdentity throws error when activeSimsCache hangs`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
@@ -127,7 +128,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test
     fun `getSimIdentity does not hang forever when seed generation fails`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
@@ -179,7 +180,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test
     fun `observeActiveSims emits when seed generation fails`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
@@ -193,7 +194,7 @@ class SimIdentityRepositoryHangTest {
                     }
 
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        delay(1000.seconds)
+                        kotlinx.coroutines.delay(1000.seconds)
                         return "seed"
                     }
                 }
@@ -222,7 +223,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test
     fun `observeActiveSims emits empty list when seedFlow timeouts`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 

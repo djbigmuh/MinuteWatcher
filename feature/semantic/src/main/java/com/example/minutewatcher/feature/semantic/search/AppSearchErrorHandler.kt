@@ -82,13 +82,15 @@ class AppSearchErrorHandler
         fun handleIndexFailure(status: MutableStateFlow<TrackingStatus>) {
             val suppressedMessage = "Indexing suppressed after $MAX_CONSECUTIVE_INDEX_FAILURES failures"
 
-            // Idempotency check: if status is already suppressed Error, do nothing.
+            // Idempotency check: if status is already suppressed Error or NOT_SUPPORTED, do nothing.
             val currentStatus = status.value
-            if (currentStatus is TrackingStatus.Error &&
-                currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
-                currentStatus.message == suppressedMessage
-            ) {
-                return
+            if (currentStatus is TrackingStatus.Error) {
+                if (currentStatus.type == TrackingStatus.ErrorType.NOT_SUPPORTED) return
+                if (currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
+                    currentStatus.message == suppressedMessage
+                ) {
+                    return
+                }
             }
 
             val newState =
@@ -105,6 +107,12 @@ class AppSearchErrorHandler
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
                         suppressedMessage,
+                    )
+            } else {
+                status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Indexing failed (attempt $failures/$MAX_CONSECUTIVE_INDEX_FAILURES)",
                     )
             }
         }

@@ -40,7 +40,6 @@ class WidgetUpdaterImpl
                 }
             }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
             val settings =
                 appSettingsRepository
@@ -57,26 +56,14 @@ class WidgetUpdaterImpl
 
             val result =
                 withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                    try {
-                        when (mode) {
-                            RenderMode.PROBE ->
-                                limitManager.performProbeUpdate(context) { ctx, _ ->
-                                    safeUpdateInternal(ctx, isFullAttempt = true)
-                                }
-                            RenderMode.SIMPLIFIED -> safeUpdateInternal(context, isFullAttempt = false)
-                            RenderMode.FULL -> safeUpdateInternal(context, isFullAttempt = true)
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: SecurityException) {
-                        AppLogger.e("Security error updating widgets (attempt $attempt)", e)
-                        UpdateResult.GenericFailure(isRetryable = false)
-                    } catch (e: Error) {
-                        AppLogger.e("Fatal error updating widgets (attempt $attempt)", e)
-                        UpdateResult.GenericFailure(isRetryable = false)
-                    } catch (e: Exception) {
-                        AppLogger.e("Unexpected error updating widgets (attempt $attempt)", e)
-                        UpdateResult.GenericFailure(isRetryable = true)
+                    AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
+                    when (mode) {
+                        RenderMode.PROBE ->
+                            limitManager.performProbeUpdate(context) { ctx, _ ->
+                                safeUpdateInternal(ctx, isFullAttempt = true)
+                            }
+                        RenderMode.SIMPLIFIED -> safeUpdateInternal(context, isFullAttempt = false)
+                        RenderMode.FULL -> safeUpdateInternal(context, isFullAttempt = true)
                     }
                 } ?: UpdateResult.GenericFailure(isRetryable = true)
 
@@ -138,6 +125,7 @@ class WidgetUpdaterImpl
                 UpdateOutcome.Stop
             }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun safeUpdateInternal(
             context: Context,
             isFullAttempt: Boolean,
@@ -147,9 +135,7 @@ class WidgetUpdaterImpl
                 UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: SecurityException) {
-                throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
 

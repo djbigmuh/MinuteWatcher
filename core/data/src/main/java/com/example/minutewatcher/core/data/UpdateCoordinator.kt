@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -89,7 +90,12 @@ class UpdateCoordinator
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
             observationJob?.cancel()
-            observationJob?.join()
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                observationJob?.join()
+            } ?: run {
+                AppLogger.w("UpdateCoordinator: previous observation job did not terminate in time")
+            }
+            observationJob = null
 
             val handler =
                 CoroutineExceptionHandler { _, cause ->

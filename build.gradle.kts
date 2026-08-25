@@ -65,13 +65,6 @@ subprojects {
 
 subprojects {
     tasks.withType<Test>().configureEach {
-        val isAppModule = project.path == ":app"
-        // Модуль :app не имеет unit-тестов (только instrumentation), поэтому отключаем fail-on-empty.
-        // Это не хрупкая логика, а конфигурационное соответствие структуре проекта.
-        failOnNoDiscoveredTests = !isAppModule
-        filter {
-            isFailOnNoMatchingTests = !isAppModule
-        }
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Centralized Robolectric configuration
@@ -79,11 +72,8 @@ subprojects {
         // Robolectric и Mockito требуют --add-opens для JDK 17+ из-за использования internal API.
         // Это строгое соответствие требованиям инструментов тестирования, не эвристика.
         maxHeapSize = "3072m"
-        maxHeapSize = "3072m"
         maxParallelForks = 1
         forkEvery = 1
-        exclude("**/SimIdentityRepositoryHangTest*")
-        exclude("**/UsageStateRepositoryStressTest*")
 
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",

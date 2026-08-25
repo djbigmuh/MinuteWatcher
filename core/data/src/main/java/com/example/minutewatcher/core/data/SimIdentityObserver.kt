@@ -91,9 +91,12 @@ internal class SimIdentityObserver
         val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
             combine(
                 physicalActiveSims,
-                appSettingsRepository.observeAppSettings(),
-            ) { physical, settings ->
-                val mocks = mockSimProvider.getMockSims(settings.benchmarkSimCount)
+                appSettingsRepository
+                    .observeAppSettings()
+                    .map { it.benchmarkSimCount }
+                    .distinctUntilChanged(),
+            ) { physical, benchmarkSimCount ->
+                val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
                 mocks ?: physical
             }.distinctUntilChanged()
                 .stateIn(

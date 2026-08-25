@@ -33,9 +33,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * ShortcutManager manages dynamic shortcuts for SIM card usage data.
@@ -89,7 +91,12 @@ open class ShortcutManager
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
-            job?.join()
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                job?.join()
+            } ?: run {
+                AppLogger.w("ShortcutManager: previous observation job did not terminate in time")
+            }
+            job = null
 
             initMutex.withLock {
                 setupObservation(snapshotFlow)
@@ -132,7 +139,13 @@ open class ShortcutManager
          */
         override suspend fun recover() {
             job?.cancel()
-            job?.join()
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                job?.join()
+            } ?: run {
+                AppLogger.w("ShortcutManager: previous observation job did not terminate in time")
+            }
+            job = null
+
             initMutex.withLock {
                 lastSnapshotFlow?.let { setupObservation(it) }
             }

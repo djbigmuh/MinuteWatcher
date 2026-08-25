@@ -10,7 +10,6 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -100,7 +99,7 @@ class UsageStateRepositoryStressTest {
             val results = mutableListOf<Deferred<RefreshResult>>()
             repeat(100) {
                 results.add(
-                    async(Dispatchers.Default) {
+                    async {
                         repository.refresh()
                     },
                 )
@@ -144,7 +143,7 @@ class UsageStateRepositoryStressTest {
 
             val results = mutableListOf<Deferred<RefreshResult>>()
             repeat(10) {
-                results.add(async(Dispatchers.Default) { repository.refresh() })
+                results.add(async { repository.refresh() })
             }
 
             val completedResults = results.awaitAll()

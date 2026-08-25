@@ -44,20 +44,21 @@ internal class SimIdentityResolver
                 cache.getManual(slot)?.let { return it }
             }
 
-            // 2. Perform slow operations outside the lock
+            // 2. Resolve seed outside the main timeout
+            val seed =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    seedFlow.firstOrNull()
+                } ?: SeedResult.Fallback
+
+            val seedValue =
+                when (seed) {
+                    is SeedResult.Real -> seed.value
+                    is SeedResult.Fallback -> throw SeedUnavailableException(slot)
+                }
+
+            // 3. Resolve identity with timeout
             val identity =
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    val seed =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            seedFlow.firstOrNull()
-                        } ?: SeedResult.Fallback
-
-                    val seedValue =
-                        when (seed) {
-                            is SeedResult.Real -> seed.value
-                            is SeedResult.Fallback -> throw SeedUnavailableException(slot)
-                        }
-
                     discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
                         SimIdentityUtils.createIdentityFromInfo(it, seedValue)
                     } ?: throw SimNotFoundException(slot)

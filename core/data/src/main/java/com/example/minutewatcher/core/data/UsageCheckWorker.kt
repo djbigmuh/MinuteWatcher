@@ -72,7 +72,11 @@ class UsageCheckWorker
             }
 
         private suspend fun executeWork(): Result {
-            deps.usageUseCase.refreshOperatorInfo()
+            withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
+                deps.usageUseCase.refreshOperatorInfo()
+            } ?: run {
+                AppLogger.w("UsageCheckWorker: refreshOperatorInfo timed out, continuing")
+            }
             return checkUsageAndNotify()
         }
 
