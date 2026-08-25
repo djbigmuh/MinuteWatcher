@@ -234,7 +234,10 @@ class UsageStateRepositoryImpl
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+                                AppLogger.w(
+                                    "UsageStateRepository: notifyRefresh failed, continuing with snapshot wait",
+                                    e,
+                                )
                                 // We still set it to avoid redundant retries for the same state
                                 lastNotifyTimestamp = startTimestamp
                             }
