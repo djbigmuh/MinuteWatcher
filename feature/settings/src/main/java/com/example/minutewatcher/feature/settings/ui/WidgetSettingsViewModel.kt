@@ -168,7 +168,6 @@ class WidgetSettingsViewModel
         suspend fun saveAndNotify() {
             if (!saveMutex.tryLock()) {
                 AppLogger.w("saveAndNotify: already in progress, skipping")
-                reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
                 return
             }
 
@@ -176,24 +175,12 @@ class WidgetSettingsViewModel
                 val currentState = state.value
                 reduce { copy(isSaving = true) }
                 val result = performSaveInternal(currentState)
-                reduce {
-                    if (saveResult == SaveResult.AlreadyInProgress) {
-                        this
-                    } else {
-                        copy(saveResult = result)
-                    }
-                }
+                reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)
-                reduce {
-                    if (saveResult == SaveResult.AlreadyInProgress) {
-                        this
-                    } else {
-                        copy(saveResult = SaveResult.Failed)
-                    }
-                }
+                reduce { copy(saveResult = SaveResult.Failed) }
             } finally {
                 reduce { copy(isSaving = false) }
                 saveMutex.unlock()

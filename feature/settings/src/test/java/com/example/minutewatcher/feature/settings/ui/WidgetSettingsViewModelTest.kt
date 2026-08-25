@@ -25,6 +25,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -138,13 +139,14 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
+            // Now AlreadyInProgress is NOT set in the state
+            assertNull(vm.state.value.saveResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
-            // After first save completes, it does NOT overwrite AlreadyInProgress as per Instruction 6
-            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
+            // After first save completes, it should be Success
+            assertEquals(SaveResult.Success, vm.state.value.saveResult)
             assertFalse(vm.state.value.isSaving)
         }
 

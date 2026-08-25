@@ -55,6 +55,7 @@ class UsageStateRepositoryImpl
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
         private val refreshMutex = Mutex()
+        private var lastNotifyTimestamp = -1L
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
             deps.simIdentityRepository
@@ -221,25 +222,34 @@ class UsageStateRepositoryImpl
             val startTimestamp = snapshotFlow.value.timestamp
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
+            val alreadyUpdated =
+                refreshMutex.withLock {
+                    if (snapshotFlow.value.timestamp > startTimestamp) {
+                        true
+                    } else {
+                        if (lastNotifyTimestamp < startTimestamp) {
+                            try {
+                                deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+                                lastNotifyTimestamp = startTimestamp
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+                                // We still set it to avoid redundant retries for the same state
+                                lastNotifyTimestamp = startTimestamp
+                            }
+                        }
+                        false
+                    }
+                }
+
+            if (alreadyUpdated) {
+                return RefreshResult.Success(snapshotFlow.value)
+            }
+
             val newSnapshot =
                 withTimeoutOrNull(timeout) {
-                    refreshMutex.withLock {
-                        // Если пока мы ждали мьютекс, кто-то другой уже обновил данные — используем их.
-                        if (snapshotFlow.value.timestamp > startTimestamp) {
-                            return@withLock snapshotFlow.value
-                        }
-
-                        try {
-                            deps.dataRefreshNotifier.notifyRefresh(isManual = true)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
-                        }
-
-                        // Ждем появления нового снимка в потоке данных.
-                        snapshotFlow.first { it.timestamp > startTimestamp }
-                    }
+                    snapshotFlow.first { it.timestamp > startTimestamp }
                 }
 
             return if (newSnapshot != null) {

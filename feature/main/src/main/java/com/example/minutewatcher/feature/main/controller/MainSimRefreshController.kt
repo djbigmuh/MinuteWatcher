@@ -50,7 +50,13 @@ class MainSimRefreshController
                     return@withContext null
                 }
                 try {
-                    usageUseCase.refreshOperatorInfo()
+                    try {
+                        usageUseCase.refreshOperatorInfo()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("refreshSimCardsInternal: refreshOperatorInfo failed, continuing", e)
+                    }
                     usageStateRepository.refresh()
                 } catch (e: CancellationException) {
                     throw e
