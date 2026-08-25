@@ -145,7 +145,6 @@ open class CallTracker
             endHandler.endCall(
                 subId = subId,
                 notify = notify,
-                callMutex = callMutex,
                 statusFlow = _status,
                 cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
                 writeCallDuration = { id, dur, fallback, notif ->

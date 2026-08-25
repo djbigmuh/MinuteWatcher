@@ -42,8 +42,8 @@ internal class CallEndHandler
             try {
                 if (!checkPermissions()) return
 
-                if (subId == -1) {
-                    callMutex.withLock {
+                callMutex.withLock {
+                    if (subId == -1) {
                         if (!isCallTrackingEnabled()) {
                             AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
                             clearAllCallSessions()
@@ -51,17 +51,16 @@ internal class CallEndHandler
                             return@withLock
                         }
                     }
-                    if (operationCompleted) return
-                }
 
-                val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
+                    val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
 
-                if (effectiveSubId == -1) {
-                    callEndResolver.resolveUnknownSubIdEnd()
-                } else {
-                    endCallAction(effectiveSubId)
+                    if (effectiveSubId == -1) {
+                        callEndResolver.resolveUnknownSubIdEnd()
+                    } else {
+                        endCallAction(effectiveSubId)
+                    }
+                    operationCompleted = true
                 }
-                operationCompleted = true
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
@@ -94,10 +93,13 @@ internal class CallEndHandler
             }
         }
 
+        /**
+         * Завершает звонок для указанного subId.
+         * Требует внешней блокировки.
+         */
         suspend fun endCall(
             subId: Int,
             notify: Boolean,
-            callMutex: Mutex,
             statusFlow: MutableStateFlow<TrackingStatus>,
             cleanupCounters: suspend (Int) -> Unit,
             writeCallDuration: suspend (String, Int, Boolean, Boolean) -> Boolean,
@@ -105,14 +107,12 @@ internal class CallEndHandler
         ) {
             val endData = fetchCallEndData(subId)
 
-            callMutex.withLock {
-                if (!isCallTrackingEnabled()) {
-                    AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
-                    cleanupCounters(subId)
-                    return@withLock
-                }
-                processCallEndLocked(subId, endData, notify, statusFlow, cleanupCounters, writeCallDuration)
+            if (!isCallTrackingEnabled()) {
+                AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
+                cleanupCounters(subId)
+                return
             }
+            processCallEndLocked(subId, endData, notify, statusFlow, cleanupCounters, writeCallDuration)
         }
 
         private suspend fun fetchCallEndData(subId: Int): CallEndData =

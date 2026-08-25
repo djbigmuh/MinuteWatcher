@@ -1,0 +1,37 @@
+package com.example.minutewatcher.core.data
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
+class CallSessionRepositoryTimeoutTest {
+    @Test
+    fun `getActiveCallSubIds returns empty list on DataStore timeout`() =
+        runTest {
+            // 1. Setup a DataStore that hangs (Flow that never emits)
+            val hangingFlow = MutableSharedFlow<Preferences>()
+            val dataStore = mock<DataStore<Preferences>>()
+            whenever(dataStore.data).thenReturn(hangingFlow)
+
+            val repository = CallSessionRepositoryImpl(dataStore)
+
+            // 2. Call the method. It should timeout after Constants.Flow.SHORT_TIMEOUT_MS
+            // In runTest, time is virtual, so it will trigger the timeout quickly.
+            val result = repository.getActiveCallSubIds()
+
+            // 3. Verify it returns empty list
+            assertEquals("Should return empty list on timeout", emptyList<Int>(), result)
+        }
+}

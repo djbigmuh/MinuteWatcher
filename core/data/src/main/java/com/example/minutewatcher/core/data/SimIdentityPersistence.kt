@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,61 +44,76 @@ class SimIdentityPersistence
          * Saves SIM identities to DataStore and performs migrations if needed.
          */
         suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) {
-            val toMigrate = mutableListOf<SimIdentity>()
-
             saveMutex.withLock {
-                val validIdentities =
-                    identities
-                        .filter {
-                            (it.source != IdentitySource.SLOT_FALLBACK) &&
-                                (
-                                    !it.stableId
-                                        .startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)
-                                )
-                        }.distinctBy { it.stableId }
+                val validIdentities = filterValidIdentities(identities)
                 if (validIdentities.isEmpty()) return@withLock
 
-                var currentPrefs = fetchCurrentPrefs()
-                if (currentPrefs == null) {
-                    currentPrefs =
-                        fetchCurrentPrefs(
-                            Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER,
-                        )
-                }
-
-                if (currentPrefs == null) {
-                    AppLogger.e("SimIdentityPersistence: DataStore read failed, could not save identities")
-                    throw IOException("DataStore read timed out after retry")
-                }
-
-                val toUpdate =
-                    validIdentities.filter { identity ->
-                        isIdentityUpdateRequired(identity, currentPrefs)
-                    }
-
-                // Optimization: Mark already modern identities as migrated in the in-memory cache
-                validIdentities.forEach { identity ->
-                    if (currentPrefs[DataStoreKeys.slotIndexKey(identity.stableId)] != null) {
-                        migratedIdentities.add(identity.stableId)
-                    }
-                }
-
-                if (toUpdate.isEmpty()) return@withLock
-
-                toUpdate.forEach { identity ->
-                    if (isMigrationRequired(identity, currentPrefs)) {
-                        toMigrate.add(identity)
-                    }
-                }
-
-                val failedIds = performMigrations(toMigrate)
-                val toActuallyUpdate = toUpdate.filter { it.stableId !in failedIds }
                 try {
-                    updatePrefsWithIdentities(toActuallyUpdate)
+                    val toUpdate = filterIdentitiesRequiringUpdate(validIdentities)
+                    if (toUpdate.isEmpty()) return@withLock
+
+                    kotlinx.coroutines.withTimeoutOrNull(
+                        Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER,
+                    ) {
+                        dataStore.edit { prefs ->
+                            val updatedToUpdate = applyOptimizationAndFilterUpdates(toUpdate, prefs)
+                            if (updatedToUpdate.isEmpty()) return@edit
+
+                            val toMigrate = filterIdentitiesRequiringMigration(updatedToUpdate, prefs)
+                            val failedIds = performMigrations(toMigrate)
+                            val toActuallyUpdate = updatedToUpdate.filter { it.stableId !in failedIds }
+
+                            updatePreferences(toActuallyUpdate, prefs)
+                        }
+                    } ?: run {
+                        AppLogger.e("SimIdentityPersistence: DataStore edit timed out, could not save identities")
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("SimIdentityPersistence: Failed to update DataStore after migration", e)
+                    AppLogger.e("SimIdentityPersistence: Failed to update DataStore", e)
+                }
+            }
+        }
+
+        private fun filterValidIdentities(identities: List<SimIdentity>): List<SimIdentity> =
+            identities
+                .filter {
+                    (it.source != IdentitySource.SLOT_FALLBACK) &&
+                        (!SimConstants.isInvalid(it.stableId))
+                }.distinctBy { it.stableId }
+
+        private suspend fun filterIdentitiesRequiringUpdate(identities: List<SimIdentity>): List<SimIdentity> {
+            val currentPrefs = fetchCurrentPrefs() ?: return identities
+            return identities.filter { isIdentityUpdateRequired(it, currentPrefs) }
+        }
+
+        private fun applyOptimizationAndFilterUpdates(
+            identities: List<SimIdentity>,
+            prefs: MutablePreferences,
+        ): List<SimIdentity> =
+            identities.filter { identity ->
+                if (prefs[DataStoreKeys.slotIndexKey(identity.stableId)] != null) {
+                    migratedIdentities.add(identity.stableId)
+                }
+                isIdentityUpdateRequired(identity, prefs)
+            }
+
+        private fun filterIdentitiesRequiringMigration(
+            identities: List<SimIdentity>,
+            prefs: MutablePreferences,
+        ): List<SimIdentity> = identities.filter { isMigrationRequired(it, prefs) }
+
+        private fun updatePreferences(
+            identities: List<SimIdentity>,
+            prefs: MutablePreferences,
+        ) {
+            identities.forEach { identity ->
+                identity.slotIndex?.let { slot ->
+                    prefs[DataStoreKeys.slotIndexKey(identity.stableId)] = slot
+                }
+                identity.subscriptionId?.let { subId ->
+                    prefs[DataStoreKeys.subscriptionIdKey(identity.stableId)] = subId
                 }
             }
         }
@@ -121,20 +136,6 @@ class SimIdentityPersistence
         ): Boolean {
             val currentSlot = prefs[DataStoreKeys.slotIndexKey(identity.stableId)]
             return (currentSlot == null) && !migratedIdentities.contains(identity.stableId)
-        }
-
-        private suspend fun updatePrefsWithIdentities(toUpdate: List<SimIdentity>) {
-            if (toUpdate.isEmpty()) return
-            dataStore.edit { prefs ->
-                toUpdate.forEach { identity ->
-                    identity.slotIndex?.let { slot ->
-                        prefs[DataStoreKeys.slotIndexKey(identity.stableId)] = slot
-                    }
-                    identity.subscriptionId?.let { subId ->
-                        prefs[DataStoreKeys.subscriptionIdKey(identity.stableId)] = subId
-                    }
-                }
-            }
         }
 
         private suspend fun performMigrations(toMigrate: List<SimIdentity>): Set<String> {

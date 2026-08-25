@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -54,16 +55,7 @@ class WidgetSettingsSaver
                 try {
                     saveGeneralSettings(validatedState)
 
-                    val failedSlots =
-                        try {
-                            saveSimSettings(validatedState, skipSimSettings)
-                        } catch (e: Exception) {
-                            AppLogger.e("General settings saved, but SIM settings failed", e)
-                            notifyDataChanged()
-                            return@withContext SaveResult.PartialFailure(
-                                "General settings saved, SIM settings failed: ${e.message}",
-                            )
-                        }
+                    val failedSlots = saveSimSettings(validatedState, skipSimSettings)
 
                     val result =
                         if (failedSlots.isEmpty()) {
@@ -79,6 +71,8 @@ class WidgetSettingsSaver
 
                     notifyDataChanged()
                     result
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to save widget settings", e)
                     SaveResult.Failed

@@ -3,11 +3,12 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -167,12 +168,14 @@ class CallSessionRepositoryImpl
          * Safe to call from any coroutine context.
          * @throws IOException if read fails.
          */
-        override suspend fun getActiveCallSubIds(): List<Int> =
-            dataStore.data.first().asMap().entries.mapNotNull { (key, value) ->
+        override suspend fun getActiveCallSubIds(): List<Int> {
+            val prefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: return emptyList()
+            return prefs.asMap().entries.mapNotNull { (key, value) ->
                 if (key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX) && (value as? Long ?: 0L) > 0L) {
                     key.name.removePrefix(DataStoreKeys.CALL_START_TIME_PREFIX).toIntOrNull()
                 } else {
                     null
                 }
             }
+        }
     }
