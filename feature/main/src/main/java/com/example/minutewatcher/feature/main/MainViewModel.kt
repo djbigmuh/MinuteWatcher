@@ -180,9 +180,10 @@ class MainViewModel
         fun onActivityResume() {
             controllers.resume.onActivityResume(
                 scope = viewModelScope,
-                initializationState = controllers.init.initializationState,
+                initController = controllers.init,
                 lastRefreshAt = lastRefreshAt,
                 onRefreshNeeded = { refreshAndNotify(force = false) },
+                onUpdateLastRefreshAt = { lastRefreshAt = it },
             )
         }
 

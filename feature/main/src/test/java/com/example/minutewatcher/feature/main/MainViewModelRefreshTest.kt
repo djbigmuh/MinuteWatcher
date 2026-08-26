@@ -39,7 +39,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
         }
 
     @Test
-    fun `onActivityResume triggers refresh if initial refresh failed (lastRefreshAt is 0)`() =
+    fun `onActivityResume triggers retry if initial refresh failed`() =
         testScope.runTest {
             whenever(usageStateRepository.refresh()).thenReturn(null)
 
@@ -51,7 +51,8 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
-            verify(usageStateRepository, never()).refresh()
+            // New behavior: retry on resume if failed. initialization controller does 3 internal retries.
+            verify(usageStateRepository, times(3)).refresh()
         }
 
     @Test
@@ -116,7 +117,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
         }
 
     @Test
-    fun `onActivityResume does not trigger refresh immediately after a Timeout`() =
+    fun `onActivityResume triggers retry after a Timeout in initial refresh`() =
         testScope.runTest {
             val initialSnapshot =
                 GlobalSnapshot(
@@ -144,7 +145,9 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
-            verify(usageStateRepository, never()).refresh()
+            // New behavior: even if lastRefreshAt was set after a Timeout, if state is Failed, we retry.
+            // initialization controller does 3 internal retries.
+            verify(usageStateRepository, times(3)).refresh()
         }
 
     @Test

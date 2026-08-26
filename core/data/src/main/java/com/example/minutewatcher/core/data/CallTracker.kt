@@ -29,11 +29,11 @@ import javax.inject.Singleton
 open class CallTracker
     @Inject
     internal constructor(
-        @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
+        @dagger.hilt.android.qualifiers.ApplicationContext context: Context,
         private val callSessionRepository: CallSessionRepository,
-        private val dataChangeNotifier: DataChangeNotifier,
+        dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
-        private val telephonyManager: TelephonyManager,
+        telephonyManager: TelephonyManager,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
         private val attributionResolver: CallAttributionResolver,
         private val startHandler: CallStartHandler,
@@ -54,8 +54,7 @@ open class CallTracker
                 telephonyManager,
                 dataChangeNotifier,
                 ::endCall,
-                { _status.value = it },
-            )
+            ) { _status.value = it }
 
         /**
          * Records call start time for a specific subscription ID.
@@ -71,8 +70,7 @@ open class CallTracker
                 checkPermissions = ::checkPermissions,
                 cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
                 refreshStatus = ::refreshStatus,
-                isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
-            )
+            ) { settingsHandler.isCallTrackingEnabled() }
         }
 
         /**
@@ -92,8 +90,7 @@ open class CallTracker
                 endCallAction = ::endCall,
                 isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
                 callMutex = callMutex,
-                clearAllCallSessions = { sessionCleaner.clearAllSessions() },
-            )
+            ) { sessionCleaner.clearAllSessions() }
         }
 
         @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
@@ -101,8 +98,8 @@ open class CallTracker
             try {
                 val currentStatus = _status.value
                 if (!force) {
-                    if (currentStatus is TrackingStatus.Error &&
-                        currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                    if ((currentStatus is TrackingStatus.Error) &&
+                        (currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING)
                     ) {
                         return
                     }

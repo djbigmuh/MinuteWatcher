@@ -44,32 +44,46 @@ class MainInitializationController
             lastRefreshAt: Long,
             onUpdateLastRefreshAt: (Long) -> Unit,
         ) {
-            if (!isInitializationStarted.compareAndSet(false, true)) return
+            // Guard: Allow if not started OR if failed (for retry from resume)
+            if (isInitializationStarted.get() && (_initializationState.value !is InitializationState.Failed)) return
+            isInitializationStarted.set(true)
 
             autoResetScheduler.setup()
             _initializationState.value = InitializationState.InProgress
 
             scope.launch(ioDispatcher) {
                 var isSuccess = false
-                try {
-                    performInitializationTasks()
+                var retryDelay = Constants.Flow.RETRY_DELAY_MS
 
-                    val result = refreshSimCardsWithRetry()
-                    if (result is RefreshResult.Success) {
-                        isSuccess = true
-                        if (lastRefreshAt == 0L) {
-                            onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                for (attempt in 0 until MAX_INIT_RETRIES) {
+                    try {
+                        performInitializationTasks()
+
+                        val result = refreshController.refreshSimCardsInternal()
+                        if (result is RefreshResult.Success) {
+                            isSuccess = true
+                            if (lastRefreshAt == 0L) {
+                                onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                            }
+                            break
+                        } else {
+                            AppLogger.w("initializeApp: attempt ${attempt + 1} failed with result: $result")
                         }
-                    } else {
-                        logRefreshFailure(result)
+                    } catch (e: CancellationException) {
+                        isInitializationStarted.set(false)
+                        _initializationState.value = InitializationState.Failed
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("initializeApp: attempt ${attempt + 1} failed with exception", e)
                     }
-                } catch (e: CancellationException) {
-                    handleInitCancellation(e)
-                } catch (e: Exception) {
-                    handleInitException(e)
-                } finally {
-                    finalizeInitialization(isSuccess)
+
+                    if (attempt < MAX_INIT_RETRIES - 1) {
+                        AppLogger.d("initializeApp: retrying in ${retryDelay}ms...")
+                        delay(retryDelay.milliseconds)
+                        retryDelay *= 2
+                    }
                 }
+                finalizeInitialization(isSuccess)
             }
         }
 
@@ -81,59 +95,10 @@ class MainInitializationController
             autoResetScheduler.checkOnStart()
         }
 
-        private suspend fun refreshSimCardsWithRetry(): RefreshResult? {
-            var result: RefreshResult? = null
-            var retryDelay = Constants.Flow.RETRY_DELAY_MS
-            for (attempt in 0..MAX_INIT_RETRIES) {
-                result = refreshController.refreshSimCardsInternal()
-                if (result is RefreshResult.Success) break
-
-                if (attempt < MAX_INIT_RETRIES) {
-                    logRetryAttempt(result, retryDelay, attempt)
-                    delay(retryDelay.milliseconds)
-                    retryDelay *= 2
-                }
-            }
-            return result
-        }
-
-        private fun logRetryAttempt(
-            result: RefreshResult?,
-            delay: Long,
-            attempt: Int,
-        ) {
-            val reason =
-                when (result) {
-                    is RefreshResult.Timeout -> "timeout"
-                    else -> "busy/error"
-                }
-            AppLogger.d(
-                "initializeApp: refresh failed ($reason), " +
-                    "retrying in ${delay}ms (attempt ${attempt + 1}/$MAX_INIT_RETRIES)",
-            )
-        }
-
-        private fun logRefreshFailure(result: RefreshResult?) {
-            val reason = if (result is RefreshResult.Timeout) "Timeout" else "Error/Busy"
-            AppLogger.e("initializeApp: refresh failed after all retries ($reason)")
-        }
-
-        private fun handleInitCancellation(e: CancellationException) {
-            isInitializationStarted.set(false)
-            _initializationState.value = InitializationState.Failed
-            throw e
-        }
-
-        private fun handleInitException(e: Exception) {
-            AppLogger.e("Failed to initialize app in Controller", e)
-            isInitializationStarted.set(false)
-        }
-
         private fun finalizeInitialization(isSuccess: Boolean) {
             if (isSuccess) {
                 _initializationState.value = InitializationState.Completed
             } else {
-                isInitializationStarted.set(false)
                 _initializationState.value = InitializationState.Failed
             }
         }

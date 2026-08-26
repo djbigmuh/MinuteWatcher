@@ -144,9 +144,6 @@ object Constants {
 
         /** Таймаут обновления виджета (мс). */
         const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
-
-        /** Максимальная задержка между повторными попытками (мс). */
-        const val MAX_RETRY_DELAY_MS = 30_000L
     }
 
     /**
@@ -167,7 +164,6 @@ object Constants {
      * SEED_GENERATION_TIMEOUT_MS — таймаут первичной генерации seed identity (мс).
      * SEED_TOTAL_TIMEOUT_EXTRA_MS — дополнительное время ожидания для завершения
      *   всех фоновых задач при генерации seed.
-     * WIDGET_RETRY_DELAY_MS — базовая задержка для повторных попыток наблюдения в UpdateCoordinator (мс).
      */
     object Flow {
         const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MS = 5_000L
@@ -178,7 +174,6 @@ object Constants {
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
         const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
-        const val WIDGET_RETRY_DELAY_MS = 5_000L
     }
 
     /**

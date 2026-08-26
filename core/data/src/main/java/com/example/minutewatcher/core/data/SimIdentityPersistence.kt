@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles persistence of SIM identities and operator info using [DataStore].
@@ -53,7 +54,7 @@ class SimIdentityPersistence
                     if (toUpdate.isEmpty()) return@withLock
 
                     kotlinx.coroutines.withTimeoutOrNull(
-                        Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER,
+                        (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
                     ) {
                         dataStore.edit { prefs ->
                             val updatedToUpdate = applyOptimizationAndFilterUpdates(toUpdate, prefs)

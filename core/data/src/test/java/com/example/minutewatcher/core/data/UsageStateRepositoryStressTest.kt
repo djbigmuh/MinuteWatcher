@@ -32,6 +32,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -63,8 +64,8 @@ class UsageStateRepositoryStressTest {
 
         // Mock notifyRefresh to emit to the flow. Use tryEmit to avoid suspension in mock.
         dataRefreshNotifier.stub {
-            onBlocking { notifyRefresh(any(), any()) } doAnswer {
-                val isManual = it.getArguments()[0] as Boolean
+            on { notifyRefresh(any(), any()) } doAnswer {
+                val isManual = it.arguments[0] as Boolean
                 refreshFlow.tryEmit(DataRefreshNotifier.RefreshEvent(isManual = isManual))
                 Unit
             }
@@ -118,7 +119,7 @@ class UsageStateRepositoryStressTest {
             assertTrue("All calls should complete without deadlock", (successCount + timeoutCount) == 100)
 
             // Verify notifyRefresh was called, but likely fewer than 100 times due to tryLock
-            verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(eq(true), any())
+            verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(isManual = eq(true), suppressWidgetUpdate = any())
         }
 
     @Test
@@ -152,7 +153,10 @@ class UsageStateRepositoryStressTest {
             assertTrue(completedResults.all { it is RefreshResult.Success })
 
             // notifyRefresh should be called only ONCE because others will see the updated timestamp
-            verify(dataRefreshNotifier, org.mockito.kotlin.times(1)).notifyRefresh(eq(true), any())
+            verify(
+                dataRefreshNotifier,
+                org.mockito.kotlin.times(1),
+            ).notifyRefresh(isManual = eq(true), suppressWidgetUpdate = any())
         }
 
     @Test
@@ -178,7 +182,7 @@ class UsageStateRepositoryStressTest {
             val job1 = async { repository.refresh() }
 
             // Wait a bit to ensure job1 has the lock
-            kotlinx.coroutines.delay(50)
+            kotlinx.coroutines.delay(50.milliseconds)
 
             // 2. Trigger another refresh while job1 is still running
             val job2 = async { repository.refresh() }
@@ -193,6 +197,9 @@ class UsageStateRepositoryStressTest {
             assertEquals(result1.snapshot.timestamp, result2.snapshot.timestamp)
 
             // notifyRefresh called only once
-            verify(dataRefreshNotifier, org.mockito.kotlin.times(1)).notifyRefresh(eq(true), any())
+            verify(
+                dataRefreshNotifier,
+                org.mockito.kotlin.times(1),
+            ).notifyRefresh(isManual = eq(true), suppressWidgetUpdate = any())
         }
 }

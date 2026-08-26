@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -45,7 +46,7 @@ class CallSessionRepositoryImpl
          * Updates the subId of the last used data SIM.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if write fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun setLastDataSubId(subId: Int) {
             dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
@@ -62,7 +63,7 @@ class CallSessionRepositoryImpl
          * Sets the call start time for the given subId.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if write fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun setCallStartTime(
             subId: Int,
@@ -82,7 +83,7 @@ class CallSessionRepositoryImpl
          * Records the device boot time for a call on the given subId.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if write fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun setBootTime(
             subId: Int,
@@ -102,7 +103,7 @@ class CallSessionRepositoryImpl
          * Records the device uptime for a call on the given subId.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if write fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun setUptime(
             subId: Int,
@@ -125,7 +126,7 @@ class CallSessionRepositoryImpl
          * Sets the stable SIM identity for an active call on the given subId.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if write fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun setCallIdentity(
             subId: Int,
@@ -144,7 +145,7 @@ class CallSessionRepositoryImpl
          * Clears all recorded call session data.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if write fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun clearAllCallSessions() {
             dataStore.edit { prefs ->
@@ -166,7 +167,7 @@ class CallSessionRepositoryImpl
          * Returns a list of subscription IDs that currently have active call sessions.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if read fails.
+         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
          */
         override suspend fun getActiveCallSubIds(): List<Int> {
             val prefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: return emptyList()

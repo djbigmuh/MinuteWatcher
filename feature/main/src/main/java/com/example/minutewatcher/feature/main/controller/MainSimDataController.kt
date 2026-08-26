@@ -38,7 +38,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * MainSimDataController manages SIM card data, including updates, resets, and adjustments.
  *
  * **Thread Safety:** Safe to call from any coroutine context.
- * **Error Handling:** Propagates [IOException] and [CancellationException].
+ * **Error Handling:** Propagates [CancellationException].
+ * [IOException] and other operation errors are captured in [lastOperationError] for UI display.
  * Handles specific exceptions like [SeedUnavailableException] and [SimNotFoundException].
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics for atomic updates and persistence.
  *
@@ -161,12 +162,12 @@ class MainSimDataController
          *   Операция прерывается, ошибка сохраняется в [lastOperationError].
          * - [CancellationException]: Пробрасывается для корректной отмены корутины
          *   согласно контракту kotlinx.coroutines. Не устанавливает ошибку в [lastOperationError].
-         * - [IOException]: Ошибка ввода-вывода при работе с DataStore. Сохраняется как общая ошибка.
+         * - [IOException]: Ошибка ввода-вывода при работе с DataStore. Сохраняется в [lastOperationError].
          * - [Exception]: Любая другая непредвиденная ошибка. Сохраняется в [lastOperationError]
          *   с сообщением из исключения.
          *
-         * После успешного выполнения [block] вызывается [onRefresh] для обновления UI.
-         * Ошибки в [onRefresh] не влияют на результат основной операции и логируются как warning.
+         * After success, [onRefresh] is called. Errors in [onRefresh] are logged and do not
+         * affect the operation result. [CancellationException] is always propagated.
          *
          * @param slot Индекс слота SIM.
          * @param operationName Название операции для логирования.
@@ -239,7 +240,7 @@ class MainSimDataController
          * @param onRefresh Callback to refresh data after successful update.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun updateLimits(
@@ -264,7 +265,7 @@ class MainSimDataController
          * @param onRefresh Callback to refresh data after successful reset.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun resetUsage(
@@ -288,7 +289,7 @@ class MainSimDataController
          * @param onRefresh Callback to refresh data after successful toggle.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun toggleAutoReset(
@@ -315,7 +316,7 @@ class MainSimDataController
          * @param onRefresh Callback to refresh data after successful update.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun updateAutoResetDay(
@@ -340,7 +341,7 @@ class MainSimDataController
          * @param onRefresh Callback to refresh data after successful adjustment.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun adjustRemainingMinutes(
@@ -363,7 +364,7 @@ class MainSimDataController
          * @param onRefresh Callback to refresh data after successful adjustment.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [IOException] and [CancellationException].
+         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun adjustRemainingTraffic(

@@ -6,7 +6,6 @@ import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -27,17 +26,23 @@ class MainResumeController
 
         fun onActivityResume(
             scope: CoroutineScope,
-            initializationState: StateFlow<InitializationState>,
+            initController: MainInitializationController,
             lastRefreshAt: Long,
             onRefreshNeeded: suspend () -> Unit,
+            onUpdateLastRefreshAt: (Long) -> Unit,
         ) {
             scope.launch {
                 resumeRefreshJob?.cancelAndJoin()
                 resumeRefreshJob =
                     launch {
+                        if (initController.initializationState.value is InitializationState.Failed) {
+                            AppLogger.d("onActivityResume: initialization failed previously, retrying...")
+                            initController.initializeApp(scope, lastRefreshAt, onUpdateLastRefreshAt)
+                        }
+
                         val isCompleted =
                             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                initializationState.first { it is InitializationState.Completed }
+                                initController.initializationState.first { it is InitializationState.Completed }
                             }
 
                         if (isCompleted == null) {
