@@ -17,6 +17,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,6 +32,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -98,6 +101,7 @@ class SimIdentityRepositorySeedTest {
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) {
                         storedSeed.emit(seed)
@@ -125,7 +129,7 @@ class SimIdentityRepositorySeedTest {
                 )
 
             // Ждём, пока seedFlow перейдет в Fallback естественным путем (2 попытки по 10с + задержка)
-            testScheduler.advanceTimeBy(25_000)
+            testScheduler.advanceTimeBy(25_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // Проверяем состояние ошибки через прямой вызов
@@ -139,7 +143,7 @@ class SimIdentityRepositorySeedTest {
             // Теперь предоставляем реальный сид
             storedSeed.emit("real_seed")
             // Даем время на распространение сигнала по цепочке Flow и обновление кэша (stateIn)
-            testScheduler.advanceTimeBy(1_000)
+            testScheduler.advanceTimeBy(1_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // Проверяем восстановление
@@ -163,6 +167,7 @@ class SimIdentityRepositorySeedTest {
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
@@ -185,7 +190,7 @@ class SimIdentityRepositorySeedTest {
                 )
 
             // 1. Advance to Fallback state
-            testScheduler.advanceTimeBy(25_000)
+            testScheduler.advanceTimeBy(25_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // 2. First call - must throw because no seed
@@ -200,7 +205,7 @@ class SimIdentityRepositorySeedTest {
 
             // 4. Transition to Real seed
             storedSeed.emit("real_seed")
-            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // 5. Cache should be cleared, call should return real identity (based on ICCID if we provide mock sub)
@@ -226,6 +231,7 @@ class SimIdentityRepositorySeedTest {
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
@@ -255,12 +261,12 @@ class SimIdentityRepositorySeedTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
             // 2. Advance to Fallback state
-            testScheduler.advanceTimeBy(25_000)
+            testScheduler.advanceTimeBy(25_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // 3. Transition to Real seed
             storedSeed.emit("real_seed")
-            testScheduler.advanceTimeBy(1000)
+            testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // 4. Trigger identity observation to initiate migration (if needed by implementation)

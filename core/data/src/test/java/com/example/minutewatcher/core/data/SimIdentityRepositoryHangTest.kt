@@ -17,12 +17,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
@@ -38,6 +39,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -48,7 +50,6 @@ class SimIdentityRepositoryHangTest {
 
     private lateinit var context: Context
     private lateinit var subscriptionManager: SubscriptionManager
-    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var seedRepository: SimIdentitySeedRepository
     private lateinit var permissionStateNotifier: PermissionStateNotifier
     private lateinit var appSettingsRepository: AppSettingsRepository
@@ -56,7 +57,6 @@ class SimIdentityRepositoryHangTest {
     private lateinit var timeProvider: TimeProvider
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var discoveryDeps: SimDiscoveryDependencies
-    private lateinit var testScope: TestScope
     private val testDispatcher = UnconfinedTestDispatcher()
     private val mockSimProvider: MockSimProvider =
         mock {
@@ -65,7 +65,6 @@ class SimIdentityRepositoryHangTest {
 
     @Before
     fun setup() {
-        testScope = TestScope(testDispatcher)
         context = mock()
         subscriptionManager = mock()
         permissionStateNotifier = mock()
@@ -84,12 +83,6 @@ class SimIdentityRepositoryHangTest {
             }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
 
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-                produceFile = { tmpFolder.newFile("test_sim_settings_${System.currentTimeMillis()}.preferences_pb") },
-            )
-
         discoveryDeps =
             SimDiscoveryDependencies(
                 context = context,
@@ -98,6 +91,15 @@ class SimIdentityRepositoryHangTest {
                 permissionStateNotifier = permissionStateNotifier,
             )
     }
+
+    private fun TestScope.createTestDataStore(name: String): DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(
+            scope = backgroundScope,
+            produceFile = {
+                val fileName = "test_sim_settings_${name}_${System.currentTimeMillis()}.preferences_pb"
+                tmpFolder.newFile(fileName)
+            },
+        )
 
     @Test(expected = IllegalStateException::class)
     fun `getSimIdentity throws error when activeSimsCache hangs`() =
@@ -108,13 +110,13 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds1"),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             // Mock seedRepository.seedFlow to return a flow that never emits,
@@ -139,6 +141,7 @@ class SimIdentityRepositoryHangTest {
             val hangingSeedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = flowOf("")
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) {
                         // No-op
@@ -153,13 +156,13 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds2"),
                     seedRepository = hangingSeedRepo,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             // Act: Try to get identity.
@@ -188,13 +191,14 @@ class SimIdentityRepositoryHangTest {
             val hangingSeedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = flowOf("")
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) {
                         // No-op
                     }
 
                     override suspend fun getOrCreateSeed(generator: () -> String): String {
-                        kotlinx.coroutines.delay(1000.seconds)
+                        delay(1000.seconds)
                         return "seed"
                     }
                 }
@@ -202,13 +206,13 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds3"),
                     seedRepository = hangingSeedRepo,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             // Act: observeActiveSims().first() should complete due to fallback seed
@@ -230,7 +234,7 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds4"),
                     seedRepository =
                         mock {
                             // Return flow that never emits
@@ -240,12 +244,12 @@ class SimIdentityRepositoryHangTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             // Act: wait for internal timeout (SEED_TOTAL_TIMEOUT_MS + 2000ms)
             // SEED_TOTAL_TIMEOUT_MS is 13000ms
-            testScheduler.advanceTimeBy(15_100)
+            testScheduler.advanceTimeBy(15_100.milliseconds)
             testScheduler.runCurrent()
 
             // We expect the flow to emit SeedResult.Fallback, which leads to
@@ -253,10 +257,13 @@ class SimIdentityRepositoryHangTest {
             // Since activeSimsCache is a StateFlow, it always has an initial value (emptyList).
             // We want to verify that it correctly processed the timeout and is still
             // functional (emitted the result of timeout logic).
-            val result = identityRepo.observeActiveSims().first { it.isEmpty() }
+            val result =
+                withTimeoutOrNull(5.seconds) {
+                    identityRepo.observeActiveSims().first { it.isEmpty() }
+                }
 
             // Assert: should be empty list, not hang
-            assertTrue("Result should be empty list after timeout", result.isEmpty())
+            assertTrue("Result should be empty list after timeout", result != null)
         }
 
     @Test
@@ -266,13 +273,13 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds5"),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             val subInfo = mock<android.telephony.SubscriptionInfo>()
@@ -291,7 +298,7 @@ class SimIdentityRepositoryHangTest {
 
             // Act: First call
             identityRepo.getSimIdentity(0)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertTrue("Migration should have started", migrationStarted.get())
 
             // Second call for a DIFFERENT slot.
@@ -314,13 +321,13 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds6"),
                     seedRepository = seedRepository,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             // Act & Assert: first() should return emptyList() immediately without blocking/timeout
@@ -348,7 +355,7 @@ class SimIdentityRepositoryHangTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -370,7 +377,7 @@ class SimIdentityRepositoryHangTest {
                 }
 
             // Constants.Flow.LONG_TIMEOUT_MS is 10_000L
-            testScheduler.advanceTimeBy(35_000)
+            testScheduler.advanceTimeBy(35_000.milliseconds)
             testScheduler.runCurrent()
 
             assertTrue("Identity resolution should complete even if DataStore hangs (via exception)", job.isCompleted)
@@ -383,6 +390,7 @@ class SimIdentityRepositoryHangTest {
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
@@ -392,13 +400,13 @@ class SimIdentityRepositoryHangTest {
             val identityRepo =
                 SimIdentityRepositoryImpl(
                     discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
+                    dataStore = createTestDataStore("ds7"),
                     seedRepository = seedRepo,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = testScope,
+                    scope = backgroundScope,
                 )
 
             // 1. Emit real seed

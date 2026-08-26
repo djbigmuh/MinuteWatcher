@@ -135,10 +135,11 @@ class WidgetSettingsViewModelTest {
             testScheduler.runCurrent()
             assertTrue(vm.state.value.isSaving)
 
+            // Второй вызов теперь не блокируется, а сразу возвращает AlreadyInProgress через tryLock()
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            // Now AlreadyInProgress IS set in the state
+            // Теперь AlreadyInProgress IS set in the state
             assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
 
             gate.complete(Unit)

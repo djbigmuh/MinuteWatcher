@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main.controller
 
-import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.catchingCancellation
@@ -172,20 +171,6 @@ class MainBannerController
                         AppLogger.e("MainBannerController: tracking status observation failed", e)
                     }
                 }
-        }
-
-        /**
-         * Cancels the current tracking status observation.
-         *
-         * Safe to call from any coroutine context.
-         */
-        @VisibleForTesting
-        suspend fun cancelObservation() {
-            initMutex.withLock {
-                job?.cancel()
-                job?.join()
-                job = null
-            }
         }
 
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =

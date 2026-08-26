@@ -1,7 +1,5 @@
 package com.example.minutewatcher.feature.semantic.search
 
-import androidx.appsearch.app.PutDocumentsRequest
-import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -144,12 +142,6 @@ open class SnapshotIndexer
             }
             return staleIds
         }
-
-        internal open fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
-            appSearchWrapper.createPutRequest(documents)
-
-        internal open fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-            appSearchWrapper.createRemoveRequest(ids)
 
         companion object {
             private val KEY_PACKAGE_TYPES = stringSetPreferencesKey("appsearch_package_types")

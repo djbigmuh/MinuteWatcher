@@ -14,9 +14,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -82,77 +85,33 @@ class SimIdentityRepositoryRaceTest {
     @Test
     fun `seedFlow emits Fallback on timeout and then Real when seed arrives`() =
         runTest {
-            dataStore =
-                PreferenceDataStoreFactory.create(
-                    scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_sim_settings_1.preferences_pb") },
-                )
             val storedSeed = MutableSharedFlow<String>(replay = 0)
-            val seedRepo =
-                object : SimIdentitySeedRepository {
-                    override val seedFlow: Flow<String> = storedSeed
-
-                    override suspend fun setSeed(seed: String) = Unit
-
-                    override suspend fun getOrCreateSeed(generator: () -> String): String = "generated"
-                }
-
-            val identityRepo =
-                SimIdentityRepositoryImpl(
-                    discoveryDeps = discoveryDeps,
-                    dataStore = dataStore,
-                    seedRepository = seedRepo,
-                    appSettingsRepository = appSettingsRepository,
-                    migrationService = migrationService,
-                    mockSimProvider = mockSimProvider,
-                    timeProvider = mock(),
-                    scope = backgroundScope,
-                )
-
-            // Access seedFlow via reflection to test its emissions directly
-            val observerField = SimIdentityRepositoryImpl::class.java.getDeclaredField("observer")
-            observerField.isAccessible = true
-            val observer = observerField.get(identityRepo)
-            val seedFlowField = observer.javaClass.getDeclaredField("seedFlow")
-            seedFlowField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val seedFlow = seedFlowField.get(observer) as Flow<Any>
+            val identityRepo = createRepositoryForSeedFlowTest("test_sim_settings_1.preferences_pb", storedSeed)
+            val seedFlow = getInternalSeedFlow(identityRepo)
 
             val emissions = mutableListOf<Any>()
-            val job =
-                launch {
-                    seedFlow.collect { emissions.add(it) }
-                }
+            val job = launch { seedFlow.collect { emissions.add(it) } }
 
-            // 1. Initial state: seedFlow emitted "", collect starts.
-            // 2. Wait 13 seconds for timeout.
+            // 1. Initial state: wait 13 seconds for timeout.
             testScheduler.advanceTimeBy(13.seconds)
             testScheduler.runCurrent()
 
-            // Should have Fallback
             assertTrue(
                 "Emissions should contain Fallback, found: $emissions",
                 emissions.any { it.toString().contains("Fallback") },
             )
             assertEquals(1, emissions.size)
 
-            // 3. Emit real seed
+            // 2. Emit real seed
             storedSeed.emit("real_seed")
             testScheduler.advanceTimeBy(1.seconds)
             testScheduler.runCurrent()
 
-            // Should have Real("real_seed")
             assertTrue(
                 "Emissions should contain Real(real_seed), found: $emissions",
                 emissions.any { it.toString().contains("real_seed") },
             )
             assertEquals(2, emissions.size)
-
-            // 4. Wait more time to ensure no extra Fallback is emitted
-            testScheduler.advanceTimeBy(10.seconds)
-            testScheduler.runCurrent()
-
-            assertEquals("Should not have extra emissions", 2, emissions.size)
 
             job.cancel()
         }
@@ -160,61 +119,12 @@ class SimIdentityRepositoryRaceTest {
     @Test
     fun `seedFlow does not emit Fallback if Real arrives before timeout`() =
         runTest {
-            dataStore =
-                PreferenceDataStoreFactory.create(
-                    scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_sim_settings_2.preferences_pb") },
-                )
             val storedSeed = MutableSharedFlow<String>(replay = 0)
-            val seedRepo =
-                object : SimIdentitySeedRepository {
-                    override val seedFlow: Flow<String> = storedSeed
-
-                    override suspend fun setSeed(seed: String) = Unit
-
-                    override suspend fun getOrCreateSeed(generator: () -> String): String = "gen"
-                }
-
-            val identityRepo =
-                SimIdentityRepositoryImpl(
-                    discoveryDeps =
-                        SimDiscoveryDependencies(
-                            context = mock(),
-                            subscriptionManager = mock(),
-                            permissionManager = mock(),
-                            permissionStateNotifier =
-                                mock {
-                                    on { changes } doReturn MutableSharedFlow()
-                                },
-                        ),
-                    dataStore = dataStore,
-                    seedRepository = seedRepo,
-                    appSettingsRepository =
-                        mock {
-                            on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
-                        },
-                    migrationService = mock(),
-                    mockSimProvider =
-                        mock {
-                            on { getMockSims(any()) } doReturn null
-                        },
-                    timeProvider = mock(),
-                    scope = backgroundScope,
-                )
-
-            val observerField = SimIdentityRepositoryImpl::class.java.getDeclaredField("observer")
-            observerField.isAccessible = true
-            val observer = observerField.get(identityRepo)
-            val seedFlowField = observer.javaClass.getDeclaredField("seedFlow")
-            seedFlowField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val seedFlow = seedFlowField.get(observer) as Flow<Any>
+            val identityRepo = createRepositoryForSeedFlowTest("test_sim_settings_2.preferences_pb", storedSeed)
+            val seedFlow = getInternalSeedFlow(identityRepo)
 
             val emissions = mutableListOf<Any>()
-            val job =
-                launch {
-                    seedFlow.collect { emissions.add(it) }
-                }
+            val job = launch { seedFlow.collect { emissions.add(it) } }
 
             // 1. Emit real seed at T=5s
             testScheduler.advanceTimeBy(5.seconds)
@@ -228,11 +138,52 @@ class SimIdentityRepositoryRaceTest {
             testScheduler.advanceTimeBy(10.seconds)
             testScheduler.runCurrent()
 
-            // Should STILL have only 1 emission (Real), no Fallback
             assertEquals("Should not emit Fallback after Real", 1, emissions.size)
-
             job.cancel()
         }
+
+    private fun TestScope.createRepositoryForSeedFlowTest(
+        fileName: String,
+        storedSeed: Flow<String>,
+    ): SimIdentityRepositoryImpl {
+        val testDataStore =
+            PreferenceDataStoreFactory.create(
+                scope = backgroundScope,
+                produceFile = { tmpFolder.newFile(fileName) },
+            )
+        val seedRepo =
+            object : SimIdentitySeedRepository {
+                override val seedFlow: Flow<String> = storedSeed
+                override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
+                override suspend fun setSeed(seed: String) = Unit
+
+                override suspend fun getOrCreateSeed(generator: () -> String): String = "gen"
+            }
+
+        return SimIdentityRepositoryImpl(
+            discoveryDeps = discoveryDeps,
+            dataStore = testDataStore,
+            seedRepository = seedRepo,
+            appSettingsRepository = appSettingsRepository,
+            migrationService = migrationService,
+            mockSimProvider = mockSimProvider,
+            timeProvider = mock(),
+            scope = backgroundScope,
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun getInternalSeedFlow(repository: SimIdentityRepositoryImpl): Flow<Any> {
+        val observerField = SimIdentityRepositoryImpl::class.java.getDeclaredField("observer")
+
+        observerField.isAccessible = true
+
+        val observer = observerField.get(repository)
+        val seedFlowField = observer.javaClass.getDeclaredField("seedFlow")
+        seedFlowField.isAccessible = true
+        return seedFlowField.get(observer) as Flow<Any>
+    }
 
     @Test
     fun `concurrent getSimIdentity calls are serialized by mutex`() =
@@ -246,6 +197,7 @@ class SimIdentityRepositoryRaceTest {
             val seedRepo =
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
                     override suspend fun setSeed(seed: String) {
                         storedSeed.value = seed

@@ -44,7 +44,6 @@ class SimIdentityRepositoryImpl
         private val activeSimsMutex = Mutex()
 
         @VisibleForTesting
-        @Suppress("unused") // Used in tests
         constructor(
             discoveryDeps: SimDiscoveryDependencies,
             dataStore: DataStore<Preferences>,

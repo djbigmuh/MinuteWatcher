@@ -12,6 +12,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +34,7 @@ fun BottomPreviewBar(
     onSave: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val isSavingLocal = remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -72,22 +75,29 @@ fun BottomPreviewBar(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Button "Сохранить" вызывает onSave в rememberCoroutineScope().
-        // enabled = !isSaving предотвращает повторные нажатия во время сохранения.
+        // enabled = !isSaving && !isSavingLocal.value предотвращает повторные нажатия во время сохранения.
         // modifier = Modifier.fillMaxWidth() обеспечивает полную ширину кнопки.
         Button(
             onClick = {
-                // onSave вызывается в rememberCoroutineScope(), привязанном к lifecycle
-                // композабла. Если пользователь уходит с экрана во время сохранения,
-                // корутина отменяется. Сохранение может не завершиться.
-                // saveMutex освобождается в finally-блоке, что гарантирует отсутствие deadlock.
-                // Это допустимое поведение: пользователь может вернуться и сохранить повторно.
-                scope.launch {
-                    onSave()
-                    // Результат обрабатывается через LaunchedEffect(saveResult)
-                    // для Success/Failed. AlreadyInProgress возвращается напрямую.
+                if (!isSavingLocal.value) {
+                    isSavingLocal.value = true
+                    // onSave вызывается в rememberCoroutineScope(), привязанном к lifecycle
+                    // композабла. Если пользователь уходит с экрана во время сохранения,
+                    // корутина отменяется. Сохранение может не завершиться.
+                    // saveMutex освобождается в finally-блоке, что гарантирует отсутствие deadlock.
+                    // Это допустимое поведение: пользователь может вернуться и сохранить повторно.
+                    scope.launch {
+                        try {
+                            onSave()
+                        } finally {
+                            isSavingLocal.value = false
+                        }
+                        // Результат обрабатывается через LaunchedEffect(saveResult)
+                        // для Success/Failed. AlreadyInProgress возвращается напрямую.
+                    }
                 }
             },
-            enabled = !isSaving,
+            enabled = !isSaving && !isSavingLocal.value,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(id = R.string.save_button))

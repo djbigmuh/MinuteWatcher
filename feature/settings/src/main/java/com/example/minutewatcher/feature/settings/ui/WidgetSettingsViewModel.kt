@@ -166,26 +166,25 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            if (state.value.isSaving) {
+            if (!saveMutex.tryLock()) {
                 AppLogger.w("saveAndNotify: already in progress, notifying UI")
                 reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
                 return
             }
 
-            saveMutex.withLock {
-                try {
-                    reduce { copy(isSaving = true) }
-                    val currentState = state.value
-                    val result = performSaveInternal(currentState)
-                    reduce { copy(saveResult = result) }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to save widget settings", e)
-                    reduce { copy(saveResult = SaveResult.Failed) }
-                } finally {
-                    reduce { copy(isSaving = false) }
-                }
+            try {
+                reduce { copy(isSaving = true) }
+                val currentState = state.value
+                val result = performSaveInternal(currentState)
+                reduce { copy(saveResult = result) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save widget settings", e)
+                reduce { copy(saveResult = SaveResult.Failed) }
+            } finally {
+                reduce { copy(isSaving = false) }
+                saveMutex.unlock()
             }
         }
 

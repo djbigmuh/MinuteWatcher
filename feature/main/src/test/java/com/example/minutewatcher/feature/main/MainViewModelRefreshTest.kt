@@ -5,7 +5,6 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -19,6 +18,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.minutes
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -238,7 +238,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             verify(autoResetUseCase).performAutoReset(eq(false))
             clearInvocations(autoResetUseCase)
 
-            testScheduler.advanceTimeBy(30 * 60 * 1000L)
+            testScheduler.advanceTimeBy(30.minutes)
 
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
