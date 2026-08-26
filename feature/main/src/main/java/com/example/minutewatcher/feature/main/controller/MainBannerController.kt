@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -106,6 +107,7 @@ class MainBannerController
         private var lastTrackingStatusFlow: StateFlow<Map<String, TrackingStatus>>? = null
 
         private val initMutex = Mutex()
+        private val isObservationStarted = AtomicBoolean(false)
 
         private val recoveryTrigger = MutableStateFlow(0L)
 
@@ -114,7 +116,11 @@ class MainBannerController
 
         override suspend fun recover() {
             initMutex.withLock {
-                lastTrackingStatusFlow?.let { setupObservation(it) }
+                if (!isObservationStarted.get()) {
+                    ensureObservationStarted()
+                } else {
+                    lastTrackingStatusFlow?.let { setupObservation(it) }
+                }
                 recoveryTrigger.value++
             }
         }
@@ -134,10 +140,13 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
-        init {
+        private fun ensureObservationStarted() {
+            if (isObservationStarted.get()) return
             scope.launch {
                 initMutex.withLock {
-                    setupObservation(trackingStatus)
+                    if (isObservationStarted.compareAndSet(false, true)) {
+                        setupObservation(trackingStatus)
+                    }
                 }
             }
         }
@@ -195,6 +204,7 @@ class MainBannerController
         val trackingBannerState: StateFlow<TrackingBannerState> =
             recoveryTrigger
                 .flatMapLatest {
+                    ensureObservationStarted()
                     val permissionsFlow =
                         combine(
                             trackingStatus,

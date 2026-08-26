@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -83,7 +82,7 @@ open class SnapshotIndexer
 
         suspend fun cleanupStalePackageTypes(
             sessionManager: AppSearchSessionManager,
-            status: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
         ) {
             val currentTypes =
                 PackageType.entries
@@ -99,7 +98,7 @@ open class SnapshotIndexer
             }
 
             AppLogger.d("SnapshotIndexer: cleaning up stale package types: $staleTypes")
-            if (!sessionManager.ensureSession(status)) {
+            if (!sessionManager.ensureSession(updateStatus)) {
                 updateSavedTypes(currentTypes, savedTypes)
                 return
             }

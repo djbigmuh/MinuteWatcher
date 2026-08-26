@@ -174,6 +174,7 @@ class MainSimDataController
          * @param onRefresh Callback для обновления данных после успешной операции.
          * @param block Блок операции для выполнения.
          */
+        @Suppress("ThrowsCount")
         private fun executeSimOperation(
             slot: Int,
             operationName: String,
@@ -182,7 +183,26 @@ class MainSimDataController
         ) {
             scope.launch(ioDispatcher) {
                 try {
-                    block()
+                    try {
+                        block()
+                    } catch (e: IOException) {
+                        // CancellationException не является IOException, поэтому здесь не перехватывается.
+                        AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
+                        delay(500.milliseconds)
+                        try {
+                            block()
+                        } catch (e2: CancellationException) {
+                            throw e2
+                        } catch (e2: IOException) {
+                            AppLogger.e("Terminal IOException during $operationName for slot $slot after retry", e2)
+                            _lastOperationError.value =
+                                OperationError(
+                                    "Operation failed after retry. Please check storage availability.",
+                                    slot,
+                                )
+                            return@launch
+                        }
+                    }
                 } catch (e: SeedUnavailableException) {
                     AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
                     _lastOperationError.value =
@@ -201,8 +221,6 @@ class MainSimDataController
                     return@launch
                 } catch (e: CancellationException) {
                     // CancellationException пробрасывается для кооперативной отмены корутины.
-                    // Это строгое соблюдение API kotlinx.coroutines: CancellationException
-                    // должен всегда пробрасываться для корректной отмены scope.
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
@@ -217,9 +235,6 @@ class MainSimDataController
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // На AOSP refresh() не бросает исключений.
-                    // Отклонение кастомной прошивки: если DataStore деградирует —
-                    // это проблема кастомной прошивки.
                     AppLogger.w("MainSimDataController: refresh after $operationName failed", e)
                 }
             }

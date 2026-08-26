@@ -82,6 +82,14 @@ class TrafficTracker
         suspend fun updateTrafficUsage() {
             catchingCancellation(
                 block = {
+                    val currentStatus = _status.value
+                    val isTimeoutError =
+                        currentStatus is TrackingStatus.Error &&
+                            currentStatus.type == TrackingStatus.ErrorType.UNKNOWN
+                    if (isTimeoutError) {
+                        _status.value = TrackingStatus.Idle
+                    }
+
                     if (!permissionChecker.checkPermissions(_status)) return@catchingCancellation
 
                     val activeSims = fetchActiveSims() ?: return@catchingCancellation
@@ -153,41 +161,39 @@ class TrafficTracker
             target: TargetInfo,
             targetIdentity: String,
         ) {
-            var retryCount: Int? = null
-            var shouldAbort = false
-
-            trafficMutex.withLock {
-                val pending = baselineManager.baselineNeedsRetry[targetIdentity]
-                if (pending != null) {
-                    if (pending >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                        errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                        shouldAbort = true
-                    } else {
-                        retryCount = pending
-                    }
-                }
-            }
-
-            if (shouldAbort) return
-
-            if (retryCount != null) {
-                val statsResult = baselineManager.getCurrentMobileBytes(0L)
+            val initialDecision =
                 trafficMutex.withLock {
-                    val currentPending = baselineManager.baselineNeedsRetry[targetIdentity]
-                    if (currentPending != null) {
-                        if (statsResult is StatsResult.Success) {
-                            simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
-                            baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                            _status.value = TrackingStatus.Active
-                            return@withLock
-                        }
-                        baselineManager.baselineNeedsRetry[targetIdentity] = currentPending + 1
-                    }
+                    determineInitialUpdateAction(targetIdentity)
                 }
-                return
-            }
 
+            when (initialDecision) {
+                is UpdateAction.Abort -> return
+                is UpdateAction.Retry -> {
+                    performRetryPath(target, targetIdentity, initialDecision.currentCount)
+                }
+                UpdateAction.Normal -> {
+                    performNormalPath(target, targetIdentity)
+                }
+            }
+        }
+
+        private fun determineInitialUpdateAction(targetIdentity: String): UpdateAction {
+            val pending = baselineManager.baselineNeedsRetry[targetIdentity]
+            return when {
+                pending == null -> UpdateAction.Normal
+                pending >= TrafficBaselineManager.MAX_BASELINE_RETRIES -> {
+                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                    errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                    UpdateAction.Abort
+                }
+                else -> UpdateAction.Retry(pending)
+            }
+        }
+
+        private suspend fun performNormalPath(
+            target: TargetInfo,
+            targetIdentity: String,
+        ) {
             val currentActiveIdentities =
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     simIdentityRepository.getActiveIdentities().first()
@@ -207,33 +213,101 @@ class TrafficTracker
                 }
 
             val statsResult = baselineManager.getCurrentMobileBytes(usage.lastResetDate)
+            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
 
-            val lastTotalBytes =
+            val finalAction =
+                trafficMutex.withLock {
+                    determineFinalUpdateAction(targetIdentity, statsResult, lastTotalBytes)
+                }
+
+            handleFinalAction(finalAction, target, targetIdentity, statsResult, lastTotalBytes)
+        }
+
+        private suspend fun fetchLastTotalBytes(
+            targetIdentity: String,
+            statsResult: StatsResult,
+        ): Long? {
+            if (statsResult !is StatsResult.Success) return -1L
+            return withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                simUsageResetRepository.getLastTotalBytes(targetIdentity).first()
+            }
+        }
+
+        private fun determineFinalUpdateAction(
+            targetIdentity: String,
+            statsResult: StatsResult,
+            lastTotalBytes: Long?,
+        ): UpdateAction =
+            if (baselineManager.baselineNeedsRetry.containsKey(targetIdentity)) {
                 if (statsResult is StatsResult.Success) {
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        simUsageResetRepository.getLastTotalBytes(targetIdentity).first()
-                    }
+                    UpdateAction.Retry(0)
                 } else {
-                    -1L
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Stats unavailable, retry pending",
+                        )
+                    UpdateAction.Abort
                 }
+            } else if (lastTotalBytes == null) {
+                errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                UpdateAction.Abort
+            } else {
+                UpdateAction.Normal
+            }
 
-            trafficMutex.withLock {
-                if (baselineManager.handleBaselineRetry(
-                        target,
+        private suspend fun handleFinalAction(
+            action: UpdateAction,
+            target: TargetInfo,
+            targetIdentity: String,
+            statsResult: StatsResult,
+            lastTotalBytes: Long?,
+        ) {
+            when (action) {
+                UpdateAction.Abort -> return
+                is UpdateAction.Retry -> {
+                    simUsageResetRepository.setLastTotalBytes(
                         targetIdentity,
-                        statsResult,
-                        _status,
-                    ) {
-                        simChangeHandler.updateLastDataSubId(it)
+                        (statsResult as StatsResult.Success).bytes,
+                    )
+                    simChangeHandler.updateLastDataSubId(target.dataSubId)
+                    trafficMutex.withLock {
+                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                        _status.value = TrackingStatus.Active
                     }
-                ) {
-                    return@withLock
                 }
+                UpdateAction.Normal -> {
+                    executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes!!)
+                }
+            }
+        }
 
-                if (lastTotalBytes == null) {
-                    errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                } else {
-                    executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes)
+        private suspend fun performRetryPath(
+            target: TargetInfo,
+            targetIdentity: String,
+            currentPending: Int,
+        ) {
+            val statsResult = baselineManager.getCurrentMobileBytes(0L)
+            if (statsResult is StatsResult.Success) {
+                // Phase 2: Write (вне мьютекса)
+                simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                simChangeHandler.updateLastDataSubId(target.dataSubId)
+
+                // Phase 3: Commit (под мьютексом)
+                trafficMutex.withLock {
+                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                    _status.value = TrackingStatus.Active
+                }
+            } else {
+                // Phase 3: Commit (под мьютексом)
+                trafficMutex.withLock {
+                    val current = baselineManager.baselineNeedsRetry[targetIdentity] ?: currentPending
+                    baselineManager.baselineNeedsRetry[targetIdentity] = current + 1
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Stats unavailable, retry pending",
+                        )
                 }
             }
         }
@@ -245,12 +319,29 @@ class TrafficTracker
             lastTotalBytes: Long,
         ) {
             if (statsResult !is StatsResult.Success) {
-                errorHandler.handleStatsFailure(statsResult, _status)
+                trafficMutex.withLock {
+                    errorHandler.handleStatsFailure(statsResult, _status)
+                }
                 return
             }
 
+            // Phase 2: Write (вне мьютекса)
             deltaCalculator.updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
             simChangeHandler.updateLastDataSubId(target.dataSubId)
-            _status.value = TrackingStatus.Active
+
+            // Phase 3: Commit (под мьютексом)
+            trafficMutex.withLock {
+                _status.value = TrackingStatus.Active
+            }
+        }
+
+        private sealed interface UpdateAction {
+            object Abort : UpdateAction
+
+            data class Retry(
+                val currentCount: Int,
+            ) : UpdateAction
+
+            object Normal : UpdateAction
         }
     }

@@ -40,6 +40,15 @@ import kotlinx.coroutines.CancellationException
  * стабильный рендер; отклонения возможны только на кастомных прошивках.
  */
 class MinutesGlanceWidget : GlanceAppWidget() {
+    companion object {
+        /**
+         * Flag to override the global limit exceeded setting during a probe update.
+         * Only valid within the same process.
+         */
+        @Volatile
+        var isProbeActive: Boolean = false
+    }
+
     /**
      * Hilt EntryPoint для виджета.
      * Позволяет получать зависимости в виджете через EntryPointAccessors.
@@ -151,7 +160,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
 
         val settingsState =
             try {
-                widgetSettingsLoader.load()
+                val loaded = widgetSettingsLoader.load()
+                if (isProbeActive) loaded.copy(widgetLimitExceeded = false) else loaded
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

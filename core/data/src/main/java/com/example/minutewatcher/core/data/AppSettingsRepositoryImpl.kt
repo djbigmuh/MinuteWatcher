@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -12,16 +13,20 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of [AppSettingsRepository] using [DataStore].
@@ -43,7 +48,18 @@ class AppSettingsRepositoryImpl
         private val appSettingsState =
             dataStore.data
                 .map { prefs -> prefs.toAppSettings() }
-                .stateIn(
+                .retryWhen { cause, attempt ->
+                    if (cause is IOException && attempt < 3) {
+                        AppLogger.w("DataStore error in appSettingsState, retrying ($attempt)...")
+                        delay(1000.milliseconds)
+                        true
+                    } else {
+                        false
+                    }
+                }.catch { e ->
+                    AppLogger.e("Critical DataStore error in appSettingsState, using defaults", e)
+                    emit(AppSettings())
+                }.stateIn(
                     scope,
                     SharingStarted.Eagerly,
                     AppSettings(),
@@ -55,7 +71,12 @@ class AppSettingsRepositoryImpl
          * Safe to call from any coroutine context.
          * @throws IOException if DataStore reading fails.
          */
-        override fun getAppSettings(): Flow<AppSettings> = dataStore.data.map { prefs -> prefs.toAppSettings() }
+        override fun getAppSettings(): Flow<AppSettings> = appSettingsState
+
+        /**
+         * Returns the current application settings once.
+         */
+        override suspend fun getAppSettingsOnce(): AppSettings = appSettingsState.value
 
         /**
          * Returns a state flow of application settings.

@@ -154,14 +154,14 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val status = MutableStateFlow<TrackingStatus>(TrackingStatus.Active)
 
             repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
-                errorHandler.handleIndexFailure(status)
+                status.value = errorHandler.handleIndexFailure(status.value)
             }
 
             val suppressedStatus = status.value
             assertTrue(suppressedStatus is TrackingStatus.Error)
             val initialFailures = errorHandler.consecutiveIndexFailures
 
-            errorHandler.handleIndexFailure(status)
+            status.value = errorHandler.handleIndexFailure(status.value)
 
             assertEquals("Status should not change", suppressedStatus, status.value)
             assertEquals("Counter should not increment further", initialFailures, errorHandler.consecutiveIndexFailures)
@@ -177,7 +177,8 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val jobs =
                 List(count) {
                     launch {
-                        errorHandler.handleIndexFailure(MutableStateFlow(TrackingStatus.Active))
+                        val flow = MutableStateFlow<TrackingStatus>(TrackingStatus.Active)
+                        flow.value = errorHandler.handleIndexFailure(flow.value)
                     }
                 }
             jobs.joinAll()

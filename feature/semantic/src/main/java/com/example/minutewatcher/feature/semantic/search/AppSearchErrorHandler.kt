@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,31 +32,27 @@ class AppSearchErrorHandler
         fun handleSchemaException(
             e: AppSearchException,
             forceOverride: Boolean,
-            status: MutableStateFlow<TrackingStatus>,
-        ) {
+            currentStatus: TrackingStatus,
+        ): TrackingStatus {
             if ((e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) && !forceOverride) {
-                return
+                return currentStatus
             }
 
             val isNotSupported = e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR
 
-            if (isNotSupported) {
+            return if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or encountered internal error (code=${e.resultCode}).", e)
-                status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.NOT_SUPPORTED,
-                        "AppSearch service not available or failed",
-                    )
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.NOT_SUPPORTED,
+                    "AppSearch service not available or failed",
+                )
             } else {
                 AppLogger.e("AppSearch schema setup failed (force=$forceOverride, code=${e.resultCode})", e)
-                status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
             }
         }
 
-        fun handleInitializationError(
-            e: Exception,
-            status: MutableStateFlow<TrackingStatus>,
-        ) {
+        fun handleInitializationError(e: Exception): TrackingStatus {
             if (e is CancellationException) throw e
 
             val isNotSupported =
@@ -66,30 +61,29 @@ class AppSearchErrorHandler
                     hasCause(e, SecurityException::class.java) ||
                     (e is AppSearchException && e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR)
 
-            if (isNotSupported) {
+            return if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)
-                status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.NOT_SUPPORTED,
-                        "AppSearch service not available on this device",
-                    )
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.NOT_SUPPORTED,
+                    "AppSearch service not available on this device",
+                )
             } else {
                 AppLogger.e("Fatal AppSearch initialization error", e)
-                status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
         }
 
-        fun handleIndexFailure(status: MutableStateFlow<TrackingStatus>) {
+        @Suppress("ReturnCount")
+        fun handleIndexFailure(currentStatus: TrackingStatus): TrackingStatus {
             val suppressedMessage = "Indexing suppressed after $MAX_CONSECUTIVE_INDEX_FAILURES failures"
 
             // Idempotency check: if status is already suppressed Error or NOT_SUPPORTED, do nothing.
-            val currentStatus = status.value
             if (currentStatus is TrackingStatus.Error) {
-                if (currentStatus.type == TrackingStatus.ErrorType.NOT_SUPPORTED) return
+                if (currentStatus.type == TrackingStatus.ErrorType.NOT_SUPPORTED) return currentStatus
                 if (currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
                     currentStatus.message == suppressedMessage
                 ) {
-                    return
+                    return currentStatus
                 }
             }
 
@@ -98,22 +92,20 @@ class AppSearchErrorHandler
                     (count + 1) to timeProvider.elapsedRealtime()
                 }
             val failures = newState.first
-            if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
+            return if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
                     "SemanticSearchManager: $failures consecutive indexing failures. " +
                         "Further attempts suppressed until next app restart.",
                 )
-                status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        suppressedMessage,
-                    )
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    suppressedMessage,
+                )
             } else {
-                status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Indexing failed (attempt $failures/$MAX_CONSECUTIVE_INDEX_FAILURES)",
-                    )
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Indexing failed (attempt $failures/$MAX_CONSECUTIVE_INDEX_FAILURES)",
+                )
             }
         }
 

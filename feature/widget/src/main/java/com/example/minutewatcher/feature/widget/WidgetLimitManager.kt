@@ -46,15 +46,31 @@ class WidgetLimitManager
             }
         }
 
+        /**
+         * Performs a probe update to check if the widget size limit is still exceeded.
+         *
+         * **Contract:** This method must be called under the updateMutex in WidgetUpdaterImpl
+         * to prevent concurrent persistent state changes.
+         *
+         * @param context The application context.
+         * @param updateBlock The suspend block that performs the actual update.
+         * @return The result of the update attempt.
+         */
         suspend fun performProbeUpdate(
             context: Context,
             updateBlock: suspend (Context, Boolean) -> UpdateResult,
         ): UpdateResult {
-            setWidgetLimitExceeded(value = false)
             try {
                 val probeResult = updateBlock(context, true)
-                if (probeResult is UpdateResult.GenericFailure || probeResult is UpdateResult.LimitExceeded) {
-                    setWidgetLimitExceeded(value = true)
+                when (probeResult) {
+                    is UpdateResult.Success -> {
+                        setWidgetLimitExceeded(value = false)
+                    }
+                    is UpdateResult.GenericFailure,
+                    is UpdateResult.LimitExceeded,
+                    -> {
+                        setWidgetLimitExceeded(value = true)
+                    }
                 }
                 return probeResult
             } catch (e: CancellationException) {

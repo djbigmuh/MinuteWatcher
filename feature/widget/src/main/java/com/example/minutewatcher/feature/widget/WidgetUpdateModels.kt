@@ -26,4 +26,6 @@ sealed class UpdateOutcome {
     object Retry : UpdateOutcome()
 
     object Stop : UpdateOutcome()
+
+    object LimitExceeded : UpdateOutcome()
 }

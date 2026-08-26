@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimNotFoundException
@@ -64,18 +65,29 @@ internal class SimIdentityResolver
                     } ?: throw SimNotFoundException(slot)
                 } ?: throw IOException("Timeout resolving identity for slot $slot")
 
-            // 3. Update cache and persistence under lock
-            return activeSimsMutex.withLock {
-                // Re-check if someone else resolved it while we were busy
-                activeSimsCache.value.find { it.slotIndex == slot }?.let {
-                    cache.removeManual(slot)
-                    return@withLock it.identity
-                }
-                cache.getManual(slot)?.let { return@withLock it }
+            // 3. Update cache and persistence outside the lock for performance
+            val finalIdentity =
+                activeSimsMutex.withLock {
+                    // Re-check if someone else resolved it while we were busy
+                    activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                        cache.removeManual(slot)
+                        return@withLock it.identity
+                    }
+                    cache.getManual(slot)?.let { return@withLock it }
 
-                cache.putManual(slot, identity)
-                persistence.saveSimIdentitiesInfo(listOf(identity))
-                identity
+                    cache.putManual(slot, identity)
+                    identity
+                }
+
+            // Persistence write outside the lock to keep mutex hold time minimal (<1ms)
+            if (finalIdentity === identity) {
+                try {
+                    persistence.saveSimIdentitiesInfo(listOf(identity))
+                } catch (e: Exception) {
+                    AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
+                }
             }
+
+            return finalIdentity
         }
     }

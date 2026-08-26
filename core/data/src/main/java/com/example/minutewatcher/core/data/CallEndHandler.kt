@@ -40,7 +40,12 @@ internal class CallEndHandler
         ) {
             var operationCompleted = false
             try {
-                if (!checkPermissions()) return
+                if (!checkPermissions()) {
+                    // Гарантируем вызов refreshStatus в finally, так как checkPermissions()
+                    // мог изменить статус (установить ошибку), который нужно отобразить.
+                    operationCompleted = true
+                    return
+                }
 
                 callMutex.withLock {
                     if (subId == -1) {

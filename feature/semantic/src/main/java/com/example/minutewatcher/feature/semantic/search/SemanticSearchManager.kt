@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -96,25 +97,29 @@ open class SemanticSearchManager
         )
 
         override suspend fun recover() {
-            errorHandler.resetFailures()
-            lastSnapshotFlow?.let { initialize(it) }
+            initMutex.withLock {
+                errorHandler.resetFailures()
+                val flow = lastSnapshotFlow ?: return
+                setupObservation(flow)
+            }
         }
 
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
-                job?.cancel()
-                job?.join()
-
                 lastSnapshotHash = null
                 lastSnapshotVersion = null
-                indexer.cleanupStalePackageTypes(sessionManager, _status)
+                indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
+                    _status.value = newStatus
+                }
                 setupObservation(snapshotFlow)
             }
         }
 
         @OptIn(FlowPreview::class)
-        private fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+        private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            job?.cancel()
+            job?.join()
             lastSnapshotFlow = snapshotFlow
             job =
                 scope.launch {
@@ -126,7 +131,9 @@ open class SemanticSearchManager
                             if (errorHandler.consecutiveIndexFailures >=
                                 AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES
                             ) {
-                                errorHandler.handleIndexFailure(_status)
+                                _status.update { currentState ->
+                                    errorHandler.handleIndexFailure(currentState)
+                                }
                                 return@collect
                             }
                             try {
@@ -134,13 +141,17 @@ open class SemanticSearchManager
                                 if (success) {
                                     errorHandler.resetFailures()
                                 } else {
-                                    errorHandler.handleIndexFailure(_status)
+                                    _status.update { currentState ->
+                                        errorHandler.handleIndexFailure(currentState)
+                                    }
                                 }
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
                                 AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                errorHandler.handleIndexFailure(_status)
+                                _status.update { currentState ->
+                                    errorHandler.handleIndexFailure(currentState)
+                                }
                             }
                         }
                 }
@@ -161,7 +172,7 @@ open class SemanticSearchManager
                 }
                 if (!hasActiveSims && (lastSnapshotHash == null)) return@withLock true
 
-                if (sessionManager.ensureSession(_status)) {
+                if (sessionManager.ensureSession({ _status.value = it })) {
                     return@withLock performIndexingWithRetry(snapshot, currentHash)
                 }
                 resetLastSnapshotState()
@@ -193,7 +204,7 @@ open class SemanticSearchManager
             if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
                 AppLogger.w("AppSearch schema mismatch, retrying with force override")
                 sessionManager.closeSession()
-                if (sessionManager.ensureSession(_status, forceOverride = true)) {
+                if (sessionManager.ensureSession({ _status.value = it }, forceOverride = true)) {
                     return try {
                         executeIndexing(snapshot, currentHash)
                     } catch (retryException: CancellationException) {

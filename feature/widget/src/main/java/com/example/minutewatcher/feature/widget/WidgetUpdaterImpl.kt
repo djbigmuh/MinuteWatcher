@@ -15,6 +15,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * WidgetUpdaterImpl updates all widget instances with an exponential backoff retry strategy.
@@ -34,10 +35,40 @@ class WidgetUpdaterImpl
         private val updateMutex = Mutex()
 
         override suspend fun updateAll(): Boolean =
-            updateMutex.withLock {
-                retryManager.updateWithRetry { attempt ->
-                    performSingleUpdate(attempt)
+            withTimeoutOrNull(30.seconds) {
+                updateMutex.withLock {
+                    var lastOutcome: UpdateOutcome? = null
+                    val success =
+                        retryManager.updateWithRetry { attempt ->
+                            performSingleUpdate(attempt).also { lastOutcome = it }
+                        }
+
+                    if (!success && lastOutcome is UpdateOutcome.LimitExceeded) {
+                        val settings =
+                            appSettingsRepository
+                                .getAppSettings()
+                                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+
+                        when {
+                            settings == null -> {
+                                AppLogger.e(
+                                    "WidgetUpdater: Timeout fetching settings after LimitExceeded. " +
+                                        "Proceeding to simplified update without persisting flag.",
+                                )
+                                val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
+                                result is UpdateResult.Success
+                            }
+
+                            settings.widgetLimitExceeded -> false
+                            else -> performSimplifiedFallback()
+                        }
+                    } else {
+                        success
+                    }
                 }
+            } ?: run {
+                AppLogger.e("WidgetUpdater: updateAll timed out completely after 30s")
+                false
             }
 
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
@@ -60,10 +91,10 @@ class WidgetUpdaterImpl
                     when (mode) {
                         RenderMode.PROBE ->
                             limitManager.performProbeUpdate(context) { ctx, _ ->
-                                safeUpdateInternal(ctx, isFullAttempt = true)
+                                safeUpdateInternal(ctx, isFullAttempt = true, isProbe = true)
                             }
-                        RenderMode.SIMPLIFIED -> safeUpdateInternal(context, isFullAttempt = false)
-                        RenderMode.FULL -> safeUpdateInternal(context, isFullAttempt = true)
+                        RenderMode.SIMPLIFIED -> safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
+                        RenderMode.FULL -> safeUpdateInternal(context, isFullAttempt = true, isProbe = false)
                     }
                 } ?: UpdateResult.GenericFailure(isRetryable = true)
 
@@ -80,7 +111,7 @@ class WidgetUpdaterImpl
                 }
 
                 is UpdateResult.LimitExceeded -> {
-                    handleLimitExceeded()
+                    UpdateOutcome.LimitExceeded
                 }
 
                 is UpdateResult.GenericFailure -> {
@@ -88,50 +119,21 @@ class WidgetUpdaterImpl
                 }
             }
 
-        @Suppress("ReturnCount")
-        private suspend fun handleLimitExceeded(): UpdateOutcome =
-            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                val settings =
-                    appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-
-                val settingsTimedOut = settings == null
-                if (settingsTimedOut) {
-                    AppLogger.e(
-                        "WidgetUpdater: Timeout fetching settings in handleLimitExceeded. " +
-                            "Proceeding to simplified update.",
-                    )
-                } else {
-                    if (settings.widgetLimitExceeded) {
-                        return@withTimeoutOrNull UpdateOutcome.Stop
-                    }
-                    limitManager.setWidgetLimitExceeded(value = true)
-                }
-
-                AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout.")
-
-                val result = safeUpdateInternal(context, isFullAttempt = false)
-                return@withTimeoutOrNull when (result) {
-                    is UpdateResult.Success -> UpdateOutcome.Success()
-                    is UpdateResult.LimitExceeded -> {
-                        AppLogger.e("CRITICAL: Simplified layout also exceeds Binder limit.")
-                        UpdateOutcome.Stop
-                    }
-                    is UpdateResult.GenericFailure -> {
-                        if (result.isRetryable) UpdateOutcome.Retry else UpdateOutcome.Stop
-                    }
-                }
-            } ?: run {
-                AppLogger.e("WidgetUpdater: handleLimitExceeded timed out completely.")
-                UpdateOutcome.Stop
-            }
+        private suspend fun performSimplifiedFallback(): Boolean {
+            AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout (fallback).")
+            limitManager.setWidgetLimitExceeded(value = true)
+            val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
+            return result is UpdateResult.Success
+        }
 
         @Suppress("TooGenericExceptionCaught")
         private suspend fun safeUpdateInternal(
             context: Context,
             isFullAttempt: Boolean,
+            isProbe: Boolean,
         ): UpdateResult =
             try {
-                renderer.renderAll(context)
+                renderer.renderAll(context, forceFull = isProbe)
                 UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 throw e

@@ -11,10 +11,10 @@ import java.io.OutputStreamWriter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.RejectedExecutionHandler
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.ArrayDeque
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * Централизованное логирование.
@@ -35,69 +35,20 @@ object AppLogger {
 
     @Volatile private var logger: Logger = AndroidLogger()
 
-    private val executor: ThreadPoolExecutor by lazy {
-        ThreadPoolExecutor(
-            1,
-            1,
-            0L,
-            TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue(LOG_QUEUE_CAPACITY),
-            PriorityLogRejectionHandler(),
-        )
-    }
+    private val criticalQueue = ArrayDeque<LogEntry>()
+    private val normalQueue = ArrayDeque<LogEntry>()
+    private val lock = ReentrantLock()
+    private val condition = lock.newCondition()
+    private val droppedCount = AtomicLong(0)
 
-    private class LogTask(
-        level: String,
-        private val action: Runnable,
-    ) : Runnable {
+    @Volatile private var isWorkerStarted = false
+
+    private class LogEntry(
+        val level: String,
+        val message: String,
+        val timestamp: Instant = Instant.now(),
+    ) {
         val isCritical: Boolean = (level == "E") || (level == "W")
-
-        override fun run() = action.run()
-    }
-
-    private class PriorityLogRejectionHandler : RejectedExecutionHandler {
-        private val droppedCount =
-            java.util.concurrent.atomic
-                .AtomicLong(0)
-
-        override fun rejectedExecution(
-            r: Runnable?,
-            executor: ThreadPoolExecutor?,
-        ) {
-            if ((r == null) || (executor == null) || executor.isShutdown) return
-
-            val queue = executor.queue
-            val isCritical = (r as? LogTask)?.isCritical == true
-
-            if (isCritical) {
-                // Critical log must be recorded. Try to drop a non-critical one from the queue.
-                val iterator = queue.iterator()
-                var removed = false
-                while (iterator.hasNext()) {
-                    val task = iterator.next()
-                    if ((task is LogTask) && !task.isCritical) {
-                        iterator.remove()
-                        removed = true
-                        break
-                    }
-                }
-
-                if (!removed) {
-                    // If no non-critical logs to drop, drop the oldest one anyway to avoid blocking.
-                    queue.poll()
-                }
-
-                droppedCount.incrementAndGet()
-                executor.execute(r)
-            } else {
-                // New log is not critical, just drop it.
-                droppedCount.incrementAndGet()
-            }
-
-            if (droppedCount.get() % DROPPED_LOGS_REPORT_INTERVAL == 1L) {
-                Log.w(TAG, "Log queue full! Total dropped/displaced non-critical logs: ${droppedCount.get()}")
-            }
-        }
     }
 
     private val dateFormat =
@@ -159,49 +110,101 @@ object AppLogger {
         message: String,
     ) {
         if (!IS_FILE_LOGGING_ENABLED) return
-        val dir = logDir ?: return
-        executor.execute(
-            LogTask(level) {
-                try {
-                    val logFile = File(dir, LOG_FILE_NAME)
-                    if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
-                        try {
-                            logWriter?.close()
-                        } catch (_: Exception) {
-                        }
-                        logWriter = null
+        if (logDir == null) return
 
-                        val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                        val deleted = if (oldFile.exists()) oldFile.delete() else true
-                        if (deleted) {
-                            logFile.renameTo(oldFile)
-                        }
+        val entry = LogEntry(level, message)
+        lock.withLock {
+            val totalSize = criticalQueue.size + normalQueue.size
+            if (entry.isCritical) {
+                if (totalSize >= LOG_QUEUE_CAPACITY) {
+                    // Вытесняем сначала обычные логи, если их нет — старые критические.
+                    if (normalQueue.pollFirst() == null) {
+                        criticalQueue.pollFirst()
                     }
-
-                    if (logWriter == null) {
-                        logWriter =
-                            BufferedWriter(
-                                OutputStreamWriter(FileOutputStream(logFile, true)),
-                                LOG_BUFFER_SIZE,
-                            )
-                    }
-
-                    val timestamp = dateFormat.format(Instant.now())
-                    val entry = "$timestamp $level/$TAG: $message\n"
-                    logWriter?.write(entry)
-                    logWriter?.flush()
-                } catch (e: Exception) {
-                    try {
-                        logWriter?.close()
-                    } catch (_: Exception) {
-                    }
-                    logWriter = null
-
-                    if (BuildConfig.DEBUG) {
-                        Log.w(TAG, "File logging failed", e)
-                    }
+                    reportDropped()
                 }
-            },
-        )
+                criticalQueue.addLast(entry)
+            } else {
+                if (totalSize < LOG_QUEUE_CAPACITY) {
+                    normalQueue.addLast(entry)
+                } else {
+                    reportDropped()
+                }
+            }
+            condition.signalAll()
+        }
+        ensureWorkerStarted()
+    }
+
+    private fun ensureWorkerStarted() {
+        if (isWorkerStarted) return
+        lock.withLock {
+            if (isWorkerStarted) return
+            isWorkerStarted = true
+            val thread = Thread({ workerLoop() }, "AppLogger-Worker")
+            thread.isDaemon = true
+            thread.start()
+        }
+    }
+
+    private fun reportDropped() {
+        val count = droppedCount.incrementAndGet()
+        if (count % DROPPED_LOGS_REPORT_INTERVAL == 1L) {
+            Log.w(TAG, "Log queue full! Total dropped/displaced non-critical logs: $count")
+        }
+    }
+
+    private fun workerLoop() {
+        while (true) {
+            val entry =
+                lock.withLock {
+                    while (criticalQueue.isEmpty() && normalQueue.isEmpty()) {
+                        condition.await()
+                    }
+                    criticalQueue.pollFirst() ?: normalQueue.pollFirst()
+                } ?: continue
+
+            writeEntryToFile(entry)
+        }
+    }
+
+    private fun writeEntryToFile(entry: LogEntry) {
+        val dir = logDir ?: return
+        try {
+            val logFile = File(dir, LOG_FILE_NAME)
+            if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                closeWriter()
+
+                val oldFile = File(dir, LOG_FILE_OLD_NAME)
+                if (oldFile.exists()) oldFile.delete()
+                logFile.renameTo(oldFile)
+            }
+
+            if (logWriter == null) {
+                logWriter =
+                    BufferedWriter(
+                        OutputStreamWriter(FileOutputStream(logFile, true)),
+                        LOG_BUFFER_SIZE,
+                    )
+            }
+
+            val timestamp = dateFormat.format(entry.timestamp)
+            val line = "$timestamp ${entry.level}/$TAG: ${entry.message}\n"
+            logWriter?.write(line)
+            logWriter?.flush()
+        } catch (e: Exception) {
+            closeWriter()
+            if (BuildConfig.DEBUG) {
+                Log.w(TAG, "File logging failed", e)
+            }
+        }
+    }
+
+    private fun closeWriter() {
+        try {
+            logWriter?.close()
+        } catch (_: Exception) {
+        }
+        logWriter = null
     }
 }

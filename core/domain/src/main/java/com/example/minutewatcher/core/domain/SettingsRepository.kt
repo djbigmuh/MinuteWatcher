@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -18,6 +19,11 @@ interface AppSettingsRepository {
      * Returns a flow of application settings.
      */
     fun getAppSettings(): Flow<AppSettings>
+
+    /**
+     * Returns the current application settings once.
+     */
+    suspend fun getAppSettingsOnce(): AppSettings = getAppSettings().first()
 
     /**
      * Observes application settings as a StateFlow.

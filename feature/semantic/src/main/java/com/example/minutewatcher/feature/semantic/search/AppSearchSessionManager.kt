@@ -6,7 +6,6 @@ import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -32,7 +31,7 @@ class AppSearchSessionManager
             private set
 
         suspend fun ensureSession(
-            status: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
             forceOverride: Boolean = false,
         ): Boolean =
             sessionMutex.withLock {
@@ -42,20 +41,20 @@ class AppSearchSessionManager
                 session?.close()
                 session = null
 
-                if (forceOverride) return tryOpenSession(status, forceOverride = true).isSuccess
+                if (forceOverride) return tryOpenSession(updateStatus, forceOverride = true).isSuccess
 
-                val firstTry = tryOpenSession(status, forceOverride = false)
+                val firstTry = tryOpenSession(updateStatus, forceOverride = false)
                 if (firstTry.isSuccess) return true
 
                 val error = firstTry.exceptionOrNull()
                 if ((error is AppSearchException) && (error.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA)) {
-                    return tryOpenSession(status, forceOverride = true).isSuccess
+                    return tryOpenSession(updateStatus, forceOverride = true).isSuccess
                 }
                 false
             }
 
         private suspend fun tryOpenSession(
-            status: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
             forceOverride: Boolean,
         ): Result<Unit> {
             var newSession: AppSearchSessionWrapper? = null
@@ -63,18 +62,18 @@ class AppSearchSessionManager
                 newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
                 newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
                 session = newSession
-                status.value = TrackingStatus.Active
+                updateStatus(TrackingStatus.Active)
                 Result.success(Unit)
             } catch (e: CancellationException) {
                 newSession?.close()
                 throw e
             } catch (e: AppSearchException) {
                 newSession?.close()
-                errorHandler.handleSchemaException(e, forceOverride, status)
+                updateStatus(errorHandler.handleSchemaException(e, forceOverride, TrackingStatus.Idle))
                 Result.failure(e)
             } catch (e: Exception) {
                 newSession?.close()
-                errorHandler.handleInitializationError(e, status)
+                updateStatus(errorHandler.handleInitializationError(e))
                 Result.failure(e)
             }
         }

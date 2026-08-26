@@ -61,6 +61,7 @@ class WidgetUpdaterImplTest {
 
             verify(renderer).renderAll(
                 context = eq(context),
+                forceFull = any(),
             )
         }
 
@@ -148,7 +149,10 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(context: Context) {
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceFull: Boolean,
+                            ) {
                                 error("Unexpected crash")
                             }
                         },
@@ -181,7 +185,10 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(context: Context) {
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceFull: Boolean,
+                            ) {
                                 callCount++
                                 if (callCount == 1) {
                                     // Simulate LimitExceeded on first call
@@ -244,12 +251,12 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
-            whenever(renderer.renderAll(any())).thenThrow(SecurityException("No permission"))
+            whenever(renderer.renderAll(any(), any())).thenThrow(SecurityException("No permission"))
 
             val result = updater.updateAll()
 
             assertFalse("updateAll should return false on SecurityException", result)
-            verify(renderer).renderAll(any()) // Should be called only once
+            verify(renderer).renderAll(any(), any()) // Should be called only once
         }
 
     @Test
@@ -259,12 +266,12 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
-            whenever(renderer.renderAll(any())).thenThrow(OutOfMemoryError("Out of memory"))
+            whenever(renderer.renderAll(any(), any())).thenThrow(OutOfMemoryError("Out of memory"))
 
             val result = updater.updateAll()
 
             assertFalse("updateAll should return false on Error", result)
-            verify(renderer).renderAll(any()) // Should be called only once
+            verify(renderer).renderAll(any(), any()) // Should be called only once
         }
 
     @Test
@@ -286,7 +293,10 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(context: Context) {
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceFull: Boolean,
+                            ) {
                                 callCount++
                                 if (callCount == 1) {
                                     // Simulate LimitExceeded on first call
@@ -326,7 +336,10 @@ class WidgetUpdaterImplTest {
                     appSettingsRepository,
                     renderer =
                         object : WidgetRenderer {
-                            override suspend fun renderAll(context: Context) {
+                            override suspend fun renderAll(
+                                context: Context,
+                                forceFull: Boolean,
+                            ) {
                                 callCount++
                                 throw IllegalArgumentException(
                                     "RemoteViews too large",

@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -71,20 +73,41 @@ internal class SimIdentityObserver
                         .map {
                             fetcher.fetchActiveSimsWithRetry(seed)
                         }.retryWhen { cause, attempt ->
-                            if (cause is SeedUnavailableException) {
-                                AppLogger.w(
-                                    "SimIdentityObserver: Seed still unavailable after " +
-                                        "fetcher retries, waiting 5s (attempt $attempt)",
-                                )
-                                delay(5000.milliseconds)
-                                true
-                            } else {
-                                false
+                            if (cause is CancellationException) return@retryWhen false
+
+                            when {
+                                cause is SeedUnavailableException -> {
+                                    AppLogger.w(
+                                        "SimIdentityObserver: Seed still unavailable after " +
+                                            "fetcher retries, waiting 5s (attempt $attempt)",
+                                    )
+                                    delay(5000.milliseconds)
+                                    true
+                                }
+
+                                (cause is IOException || cause is Exception) && attempt < 3 -> {
+                                    val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
+                                    AppLogger.w(
+                                        "SimIdentityObserver: Error fetching sims, " +
+                                            "retrying in ${backoff}ms (attempt $attempt)",
+                                        cause,
+                                    )
+                                    delay(backoff.milliseconds)
+                                    true
+                                }
+
+                                else -> false
                             }
                         }
                 }.catch { e ->
-                    AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims stream", e)
+                    if (e is CancellationException) throw e
+                    AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims, retrying in 10s", e)
                     emit(emptyList())
+                    throw e
+                }.retryWhen { cause, _ ->
+                    if (cause is CancellationException) return@retryWhen false
+                    delay(10000.milliseconds)
+                    true
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -119,6 +142,7 @@ internal class SimIdentityObserver
             }
 
         companion object {
+            private const val INITIAL_BACKOFF_MS = 1000L
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
         }

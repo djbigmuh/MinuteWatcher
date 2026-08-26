@@ -11,10 +11,12 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -78,7 +80,16 @@ class WidgetSettingsViewModel
         }
 
         override fun onCleared() {
-            loadJob?.cancel()
+            // viewModelScope уже отменён, поэтому используем runBlocking(Dispatchers.Unconfined)
+            // с таймаутом, чтобы гарантированно не блокировать главный поток более 100мс.
+            runBlocking(Dispatchers.Unconfined) {
+                withTimeoutOrNull(100.milliseconds) {
+                    loadMutex.withLock {
+                        loadJob?.cancel()
+                        loadJob = null
+                    }
+                }
+            }
         }
 
         /**

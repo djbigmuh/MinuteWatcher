@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -32,7 +34,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -128,8 +129,7 @@ class SimIdentityRepositorySeedTest {
                     scope = backgroundScope,
                 )
 
-            // Ждём, пока seedFlow перейдет в Fallback естественным путем (2 попытки по 10с + задержка)
-            testScheduler.advanceTimeBy(25_000.milliseconds)
+            // Ждём, пока seedFlow перейдет в Fallback естественным путем (таймаут 13с)
             testScheduler.advanceUntilIdle()
 
             // Проверяем состояние ошибки через прямой вызов
@@ -142,8 +142,12 @@ class SimIdentityRepositorySeedTest {
 
             // Теперь предоставляем реальный сид
             storedSeed.emit("real_seed")
-            // Даем время на распространение сигнала по цепочке Flow и обновление кэша (stateIn)
-            testScheduler.advanceTimeBy(1_000.milliseconds)
+            // Ждем, пока изменение прорастет в seedFlow наблюдателя
+            backgroundScope.launch {
+                identityRepo.observeActiveSims().collect { }
+            }
+            // Явно ждем появления реального сида в потоке
+            identityRepo.getActiveIdentities().first { it.isNotEmpty() }
             testScheduler.advanceUntilIdle()
 
             // Проверяем восстановление
@@ -190,7 +194,6 @@ class SimIdentityRepositorySeedTest {
                 )
 
             // 1. Advance to Fallback state
-            testScheduler.advanceTimeBy(25_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // 2. First call - must throw because no seed
@@ -204,17 +207,18 @@ class SimIdentityRepositorySeedTest {
             // 3. (Deleted stale cache verification as cache is no longer populated with fallbacks)
 
             // 4. Transition to Real seed
-            storedSeed.emit("real_seed")
-            testScheduler.advanceTimeBy(1000.milliseconds)
-            testScheduler.advanceUntilIdle()
-
-            // 5. Cache should be cleared, call should return real identity (based on ICCID if we provide mock sub)
             val mockSubInfo = mock<SubscriptionInfo>()
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
             whenever(mockSubInfo.simSlotIndex).thenReturn(0)
             whenever(mockSubInfo.iccId).thenReturn("icc_1")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
+            storedSeed.emit("real_seed")
+            // Wait for propagation
+            identityRepo.getActiveIdentities().first { it.isNotEmpty() }
+            testScheduler.advanceUntilIdle()
+
+            // 5. Cache should be cleared, call should return real identity
             val id3 = identityRepo.getSimIdentity(0)
             assertTrue("Should return real ID now, got ${id3.stableId}", id3.stableId.startsWith("icc_"))
         }
@@ -261,12 +265,12 @@ class SimIdentityRepositorySeedTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
             // 2. Advance to Fallback state
-            testScheduler.advanceTimeBy(25_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // 3. Transition to Real seed
             storedSeed.emit("real_seed")
-            testScheduler.advanceTimeBy(1000.milliseconds)
+            // Wait for propagation
+            identityRepo.getActiveIdentities().first { it.isNotEmpty() }
             testScheduler.advanceUntilIdle()
 
             // 4. Trigger identity observation to initiate migration (if needed by implementation)

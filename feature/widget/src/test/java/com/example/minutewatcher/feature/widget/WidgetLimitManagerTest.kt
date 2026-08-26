@@ -75,9 +75,9 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    fun `performProbeUpdate clears flag before update and sets it if probe fails`() =
+    fun `performProbeUpdate sets flag to true if probe fails`() =
         runTest {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = true)
+            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
 
             val result =
                 manager.performProbeUpdate(mock()) { _, _ ->
@@ -85,12 +85,11 @@ class WidgetLimitManagerTest {
                 }
 
             assertEquals(UpdateResult.LimitExceeded, result)
-            // Verify setWidgetLimitExceeded(false) then setWidgetLimitExceeded(true)
             verify(appSettingsRepository).updateAppSettings(any())
         }
 
     @Test
-    fun `performProbeUpdate keeps flag cleared if probe succeeds`() =
+    fun `performProbeUpdate sets flag to false if probe succeeds`() =
         runTest {
             settingsFlow.value = AppSettings(widgetLimitExceeded = true)
 
@@ -100,12 +99,13 @@ class WidgetLimitManagerTest {
                 }
 
             assertEquals(UpdateResult.Success(wasFull = true), result)
+            verify(appSettingsRepository).updateAppSettings(any())
         }
 
     @Test
     fun `performProbeUpdate does not set limit exceeded on CancellationException`() =
         runTest {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = true)
+            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
             org.mockito.Mockito.clearInvocations(appSettingsRepository)
 
             assertThrows(CancellationException::class.java) {
@@ -116,13 +116,7 @@ class WidgetLimitManagerTest {
                 }
             }
 
-            // Check that setWidgetLimitExceeded(true) was NOT called in catch.
-            // We know setWidgetLimitExceeded(false) was called at the beginning of performProbeUpdate.
-            // If it was already true, it should have triggered one update.
-            // We verify that no OTHER update (with true) happened.
-            // This is tricky with verify(any()).
-            // Let's check that the FINAL state is false (from the initial clear).
-            // Wait, appSettingsRepository.updateAppSettings is a side effect.
+            verify(appSettingsRepository, never()).updateAppSettings(any())
         }
 
     @Test

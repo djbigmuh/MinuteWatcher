@@ -33,6 +33,9 @@ class WidgetUpdateRetryManager
                     is UpdateOutcome.Stop -> {
                         keepGoing = false
                     }
+                    is UpdateOutcome.LimitExceeded -> {
+                        keepGoing = false
+                    }
                     is UpdateOutcome.Retry -> {
                         if (attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) {
                             AppLogger.e("Widget update exhausted all retry attempts.")

@@ -10,7 +10,15 @@ import javax.inject.Inject
 class GlanceWidgetRenderer
     @Inject
     constructor() : WidgetRenderer {
-        override suspend fun renderAll(context: Context) {
-            MinutesGlanceWidget().updateAll(context)
+        override suspend fun renderAll(
+            context: Context,
+            forceFull: Boolean,
+        ) {
+            MinutesGlanceWidget.isProbeActive = forceFull
+            try {
+                MinutesGlanceWidget().updateAll(context)
+            } finally {
+                MinutesGlanceWidget.isProbeActive = false
+            }
         }
     }

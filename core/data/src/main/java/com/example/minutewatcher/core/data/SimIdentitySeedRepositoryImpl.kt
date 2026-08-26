@@ -77,6 +77,35 @@ class SimIdentitySeedRepositoryImpl
         }
 
         /**
+         * Попытка восстановиться после использования эфемерного seed.
+         *
+         * @return true, если эфемерный seed больше не активен (успешно восстановлен основной или не был активен).
+         */
+        private suspend fun tryRecoverFromEphemeral(): Boolean {
+            if (!_isEphemeralSeedActive.value) return true
+
+            var recovered = false
+            try {
+                val existingSeed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED]
+                    } ?: ""
+
+                if (existingSeed.isNotEmpty()) {
+                    AppLogger.d("SimIdentitySeedRepository: successfully recovered persistent seed from DataStore")
+                    cachedEphemeralSeed = null
+                    _isEphemeralSeedActive.value = false
+                    recovered = true
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("SimIdentitySeedRepository: recovery attempt failed", e)
+            }
+            return recovered
+        }
+
+        /**
          * Возвращает существующий seed или генерирует и сохраняет новый.
          *
          * **Штатный путь:** seed читается/создаётся один раз и сохраняется в DataStore. Это обеспечивает стабильность
@@ -102,6 +131,8 @@ class SimIdentitySeedRepositoryImpl
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String =
             seedMutex.withLock {
+                tryRecoverFromEphemeral()
+
                 var generatedSeed: String? = null
                 try {
                     val existingSeed =

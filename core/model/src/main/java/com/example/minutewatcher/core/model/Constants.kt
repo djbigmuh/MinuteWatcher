@@ -73,8 +73,8 @@ object Constants {
         const val SEPARATOR_THICKNESS = 1
         const val ALPHA_FULL = 1f
         const val RETRY_BACKOFF_MS = 500L
-        const val MAX_RETRY_DELAY_MS = 5000L
-        const val MAX_UPDATE_ATTEMPTS = 4
+        const val MAX_RETRY_DELAY_MS = 3000L
+        const val MAX_UPDATE_ATTEMPTS = 3
         // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
 
         /** Максимальное количество последовательных неудач обновления виджета до блокировки. */

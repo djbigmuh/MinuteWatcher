@@ -140,8 +140,8 @@ class SimIdentitySeedRaceTest {
                     scope = backgroundScope,
                 )
 
-            // Let it initialize and generate seed
-            advanceTimeBy(10000.milliseconds)
+            // Wait for the initialization to complete deterministically
+            testScheduler.advanceUntilIdle()
 
             val firstSeed = repository.getSimIdentity(0).stableId
 

@@ -18,6 +18,10 @@ interface WidgetRenderer {
      * Triggers the rendering of all widgets.
      *
      * @param context The application context.
+     * @param forceFull If true, forces the full layout rendering regardless of global limit settings.
      */
-    suspend fun renderAll(context: Context)
+    suspend fun renderAll(
+        context: Context,
+        forceFull: Boolean = false,
+    )
 }

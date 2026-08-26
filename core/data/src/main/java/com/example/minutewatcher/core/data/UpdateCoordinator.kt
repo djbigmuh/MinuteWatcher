@@ -31,6 +31,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -55,15 +56,23 @@ class UpdateCoordinator
         override val key: String = "widget_observation"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        override val status: StateFlow<TrackingStatus>
+            get() {
+                ensureObservationStarted()
+                return _status.asStateFlow()
+            }
 
-/**
+        /**
          * Recovers widget observation state.
          *
          * Safe to call from any coroutine context.
          */
         override suspend fun recover() {
-            restartObservation()
+            if (!isObservationStarted.get()) {
+                ensureObservationStarted()
+            } else {
+                restartObservation()
+            }
         }
 
         private var lastSnapshotHash: Int? = null
@@ -71,29 +80,38 @@ class UpdateCoordinator
         private val widgetUpdateMutex = Mutex()
         private val initMutex = Mutex()
 
+        private val isObservationStarted = AtomicBoolean(false)
+
         private var observationJob: Job? = null
 
-        init {
-            // Запуск наблюдения за snapshot-потоком.
-            //
-            // Строгое соблюдение API: UpdateCoordinator создаётся через Hilt как @Singleton,
-            // поэтому init выполняется ровно один раз за время жизни процесса.
-            // Корутина привязана к [scope] (ApplicationScope), который живёт
-            // до завершения процесса. При завершении процесса корутина отменяется.
+        private fun ensureObservationStarted() {
+            if (isObservationStarted.get()) return
             scope.launch {
                 initMutex.withLock {
-                    setupObservation()
+                    if (isObservationStarted.compareAndSet(false, true)) {
+                        setupObservation()
+                    }
                 }
             }
         }
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
-            observationJob?.cancel()
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                observationJob?.join()
-            } ?: run {
-                AppLogger.w("UpdateCoordinator: previous observation job did not terminate in time")
+            observationJob?.let { oldJob ->
+                oldJob.cancel()
+                val completed =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        oldJob.join()
+                    }
+                if (completed == null) {
+                    AppLogger.e(
+                        "UpdateCoordinator: previous observation job did not terminate in time, " +
+                            "forcing cancellation",
+                    )
+                    // Принудительная отмена без ожидания join, так как корутина может висеть
+                    // на не-прерываемой операции или деградировавшем API.
+                    oldJob.cancel()
+                }
             }
             observationJob = null
 
@@ -143,35 +161,42 @@ class UpdateCoordinator
                 return
             }
 
+            val shouldUpdate =
+                widgetUpdateMutex.withLock {
+                    if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                        AppLogger.d(
+                            "UpdateCoordinator: widget update suppressed due to too many failures " +
+                                "($consecutiveUpdateFailures)",
+                        )
+                        return@withLock false
+                    }
+
+                    if (newHash == lastSnapshotHash) {
+                        AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
+                        return@withLock false
+                    }
+                    true
+                }
+
+            if (!shouldUpdate) return
+
             // Обновление виджета при отсутствии активных SIM выполняется
             // намеренно — виджет должен корректно отобразить состояние
             // "No SIM" или "No Data".
-            catchingCancellation(
-                block = {
-                    widgetUpdateMutex.withLock {
-                        if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                            AppLogger.d(
-                                "UpdateCoordinator: widget update suppressed due to too many failures " +
-                                    "($consecutiveUpdateFailures)",
-                            )
-                            return@withLock
-                        }
+            val success =
+                catchingCancellation(
+                    block = {
+                        widgetUpdater.updateAll()
+                    },
+                    onError = { e ->
+                        AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+                    },
+                ) ?: false
 
-                        if (newHash != lastSnapshotHash) {
-                            val success = widgetUpdater.updateAll()
-                            if (success) {
-                                handleUpdateSuccess(newHash)
-                            } else {
-                                handleUpdateFailure()
-                            }
-                        } else {
-                            AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                        }
-                    }
-                },
-            ) { e ->
-                AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                widgetUpdateMutex.withLock {
+            widgetUpdateMutex.withLock {
+                if (success) {
+                    handleUpdateSuccess(newHash)
+                } else {
                     handleUpdateFailure()
                 }
             }

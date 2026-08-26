@@ -54,17 +54,25 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `snapshot change triggers widget update with debounce`() =
+    fun `snapshot change triggers widget update with debounce`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
-            UpdateCoordinator(
-                dataRefreshNotifier,
-                widgetUpdater,
-                usageStateRepository,
-                backgroundScope,
-            )
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             // Emit new snapshot
@@ -75,13 +83,18 @@ class UpdateCoordinatorTest {
 
             verify(widgetUpdater, times(1)).updateAll()
         }
+    }
 
     @Test
-    fun `observation ignores duplicate snapshot content`() =
+    fun `observation ignores duplicate snapshot content`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -90,6 +103,8 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             // 1. Emit snapshot s1 and let reactive update finish
@@ -120,13 +135,18 @@ class UpdateCoordinatorTest {
             // Should NOT call updateAll again (count should remain 2)
             verify(widgetUpdater, times(2)).updateAll()
         }
+    }
 
     @Test
-    fun `forced update and subsequent reactive update with same content trigger only one update`() =
+    fun `forced update and subsequent reactive update with same content trigger only one update`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-            whenever(usageStateRepository.observeSnapshot())
-                .thenReturn(stateFlow)
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             val coordinator =
                 UpdateCoordinator(
@@ -135,6 +155,8 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             // 1. Trigger forced update for snapshot s1
@@ -158,20 +180,29 @@ class UpdateCoordinatorTest {
             // Should NOT call updateAll again because forced update already updated the hash
             verify(widgetUpdater, times(1)).updateAll()
         }
+    }
 
     @Test
-    fun `reactive update is suppressed after 5 consecutive failures`() =
+    fun `reactive update is suppressed after 5 consecutive failures`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
             whenever(widgetUpdater.updateAll()).thenReturn(false)
 
-            UpdateCoordinator(
-                dataRefreshNotifier,
-                widgetUpdater,
-                usageStateRepository,
-                backgroundScope,
-            )
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             // Emit 6 different snapshots
@@ -185,11 +216,17 @@ class UpdateCoordinatorTest {
             // Should call updateAll only 5 times
             verify(widgetUpdater, times(Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES)).updateAll()
         }
+    }
 
     @Test
-    fun `recover resets failure counter and allows updates`() =
+    fun `recover resets failure counter and allows updates`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
             whenever(widgetUpdater.updateAll()).thenReturn(false)
 
@@ -200,6 +237,8 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             // 1. Fail 5 times
@@ -228,11 +267,17 @@ class UpdateCoordinatorTest {
 
             verify(widgetUpdater, times(6)).updateAll()
         }
+    }
 
     @Test
-    fun `status transitions to Active on successful reactive update`() =
+    fun `status transitions to Active on successful reactive update`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             val coordinator =
@@ -242,6 +287,8 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             assertEquals(TrackingStatus.Idle, coordinator.status.value)
@@ -255,11 +302,17 @@ class UpdateCoordinatorTest {
             verify(widgetUpdater, times(1)).updateAll()
             assertEquals(TrackingStatus.Active, coordinator.status.value)
         }
+    }
 
     @Test
-    fun `status transitions to Error after max failures and back to Idle on recover`() =
+    fun `status transitions to Error after max failures and back to Idle on recover`() {
         runTest {
-            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
             whenever(widgetUpdater.updateAll()).thenReturn(false)
 
@@ -270,6 +323,8 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            // Trigger observation
+            coordinator.status
             testScheduler.advanceUntilIdle()
 
             // 1. Fail 5 times
@@ -289,6 +344,7 @@ class UpdateCoordinatorTest {
 
             assertEquals(TrackingStatus.Idle, coordinator.status.value)
         }
+    }
 
     private fun createEmptySnapshot() =
         GlobalSnapshot(
