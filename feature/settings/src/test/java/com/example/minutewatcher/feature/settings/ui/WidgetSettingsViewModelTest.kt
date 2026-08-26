@@ -25,7 +25,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -139,13 +138,14 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            // Now AlreadyInProgress is NOT set in the state
-            assertNull(vm.state.value.saveResult)
+            // Now AlreadyInProgress IS set in the state
+            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
 
             gate.complete(Unit)
             testScheduler.advanceUntilIdle()
 
             // After first save completes, it should be Success
+            // (Note: AlreadyInProgress was replaced by Success when it finished)
             assertEquals(SaveResult.Success, vm.state.value.saveResult)
             assertFalse(vm.state.value.isSaving)
         }

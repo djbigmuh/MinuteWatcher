@@ -62,6 +62,7 @@
     <string name="tracking_banner_widget_error">Le widget ne peut pas être mis à jour en raison des limitations du système.</string>
     <string name="tracking_banner_inaccurate_calls">Plusieurs appels actifs détectés. Les minutes peuvent être attribuées de manière inexacte.</string>
     <string name="tracking_banner_observation_failed">Le service de suivi des données s\'est arrêté après plusieurs erreurs. Veuillez réessayer ou redémarrer l\'application.</string>
+    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">Erreur de chargement des paramètres</string>
     <string name="sim_list_unavailable_error">Liste des SIM non disponible. Les paramètres SIM seront disponibles après rechargement.</string>
     <string name="refresh_error">Erreur de rafraîchissement des données</string>

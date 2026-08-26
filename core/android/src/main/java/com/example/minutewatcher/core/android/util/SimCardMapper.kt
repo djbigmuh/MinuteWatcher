@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
+import com.example.minutewatcher.core.android.util.SimCardMapper.negativeLogged
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MinutesModel
@@ -8,7 +9,7 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.ClampingUtils
-import java.util.LinkedHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Mappers for converting domain models (SimUsage) to UI models (SimCardUiModel).
@@ -22,11 +23,9 @@ object SimCardMapper {
      * об отрицательных значениях. Предотвращает повторное логирование
      * одного и того же identity в одном слоте.
      *
-     * **Эвикция:** при превышении [MAX_LOGGED_SIZE] удаляется самый старый
-     * ключ (FIFO). [LinkedHashMap] сохраняет порядок вставки, поэтому
-     * `keys.firstOrNull()` возвращает первый вставленный ключ.
+     * Использует [ConcurrentHashMap] для потокобезопасности без явной синхронизации.
      */
-    private val negativeLogged = LinkedHashMap<Int, String>()
+    private val negativeLogged = ConcurrentHashMap<Int, String>()
     private const val MAX_LOGGED_SIZE = 20
 
     fun map(
@@ -101,24 +100,18 @@ object SimCardMapper {
         usage: SimUsage,
         hasNegativeValues: Boolean,
     ) {
-        synchronized(negativeLogged) {
-            val lastLoggedIdentity = negativeLogged[slot]
+        negativeLogged.compute(slot) { _, currentIdentity ->
+            if (currentIdentity == usage.identity) return@compute currentIdentity
 
-            if (lastLoggedIdentity == usage.identity) return
-
-            negativeLogged.remove(slot)
-
-            if (hasNegativeValues) {
+            if (hasNegativeValues && (currentIdentity != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
                 AppLogger.e(
                     "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
                         "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
                         "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
                 )
-                negativeLogged[slot] = usage.identity
-
-                if (negativeLogged.size > MAX_LOGGED_SIZE) {
-                    negativeLogged.keys.firstOrNull()?.let { negativeLogged.remove(it) }
-                }
+                usage.identity
+            } else {
+                null
             }
         }
     }

@@ -33,21 +33,45 @@ class MainSimRefreshController
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val timeProvider: TimeProvider,
     ) {
+        /**
+         * The outcome of a SIM card data refresh operation.
+         */
+        sealed interface RefreshOutcome {
+            /**
+             * The refresh operation was completed.
+             */
+            data class Completed(
+                val result: RefreshResult,
+            ) : RefreshOutcome
+
+            /**
+             * The refresh operation was skipped because another one is already in progress.
+             */
+            data object SkippedAlreadyInProgress : RefreshOutcome
+
+            /**
+             * The refresh operation failed with an exception.
+             */
+            data class Failed(
+                val exception: Exception,
+            ) : RefreshOutcome
+        }
+
         private val simCheckMutex = Mutex()
 
         /**
          * Refreshes SIM card data internally.
          *
-         * @return [RefreshResult] if update was performed, null if a refresh is already in progress.
+         * @return [RefreshOutcome] indicating whether the refresh was performed, skipped, or failed.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException].
          */
-        suspend fun refreshSimCardsInternal(): RefreshResult? =
+        suspend fun refreshSimCardsInternal(): RefreshOutcome =
             withContext(ioDispatcher) {
                 if (!simCheckMutex.tryLock()) {
                     AppLogger.d("Refresh already in progress, skipping")
-                    return@withContext null
+                    return@withContext RefreshOutcome.SkippedAlreadyInProgress
                 }
                 try {
                     try {
@@ -57,12 +81,13 @@ class MainSimRefreshController
                     } catch (e: Exception) {
                         AppLogger.e("refreshSimCardsInternal: refreshOperatorInfo failed, continuing", e)
                     }
-                    usageStateRepository.refresh()
+                    val result = usageStateRepository.refresh()
+                    RefreshOutcome.Completed(result)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error refreshing SIM cards", e)
-                    null
+                    RefreshOutcome.Failed(e)
                 } finally {
                     simCheckMutex.unlock()
                 }
@@ -76,13 +101,16 @@ class MainSimRefreshController
             onNotifyChanged: (Boolean) -> Unit,
             force: Boolean = false,
         ) {
-            val result = refreshSimCardsInternal()
-            if (result == null) {
+            val outcome = refreshSimCardsInternal()
+            if (outcome is RefreshOutcome.SkippedAlreadyInProgress) {
                 // Обновление уже выполняется другим вызовом — не дублируем
                 return
             }
-            if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
-                onUpdateLastRefresh(timeProvider.elapsedRealtime())
+            if (outcome is RefreshOutcome.Completed) {
+                val result = outcome.result
+                if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
+                    onUpdateLastRefresh(timeProvider.elapsedRealtime())
+                }
             }
             onNotifyChanged(force)
         }

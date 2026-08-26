@@ -62,6 +62,7 @@
     <string name="tracking_banner_widget_error">Виджет не может быть обновлён из-за ограничений системы.</string>
     <string name="tracking_banner_inaccurate_calls">Обнаружено несколько активных вызовов. Минуты могут быть распределены неточно.</string>
     <string name="tracking_banner_observation_failed">Служба отслеживания данных остановлена после серии ошибок. Попробуйте повторить или перезапустите приложение.</string>
+    <string name="tracking_banner_storage_degraded">Хранилище деградировало: статистика может быть сброшена после перезапуска приложения. Пожалуйста, проверьте настройки системы.</string>
     <string name="settings_load_error">Ошибка загрузки настроек</string>
     <string name="sim_list_unavailable_error">Список SIM недоступен. Настройки SIM будут доступны после повторной загрузки.</string>
     <string name="refresh_error">Ошибка обновления данных</string>

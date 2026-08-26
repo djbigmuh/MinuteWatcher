@@ -127,6 +127,7 @@ class UpdateCoordinator
                 widgetUpdateMutex.withLock {
                     lastSnapshotHash = null
                     consecutiveUpdateFailures = 0
+                    _status.value = TrackingStatus.Idle
                 }
                 setupObservation()
             }
@@ -159,24 +160,9 @@ class UpdateCoordinator
                         if (newHash != lastSnapshotHash) {
                             val success = widgetUpdater.updateAll()
                             if (success) {
-                                lastSnapshotHash = newHash
-                                if (consecutiveUpdateFailures > 0) {
-                                    AppLogger.d(
-                                        "UpdateCoordinator: widget update recovered, resetting failure counter",
-                                    )
-                                    consecutiveUpdateFailures = 0
-                                }
+                                handleUpdateSuccess(newHash)
                             } else {
-                                consecutiveUpdateFailures++
-                                AppLogger.w(
-                                    "UpdateCoordinator: widget update failed ($consecutiveUpdateFailures), " +
-                                        "hash not updated",
-                                )
-                                if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                                    AppLogger.e(
-                                        "UpdateCoordinator: reached max consecutive failures. Updates suppressed.",
-                                    )
-                                }
+                                handleUpdateFailure()
                             }
                         } else {
                             AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
@@ -186,14 +172,33 @@ class UpdateCoordinator
             ) { e ->
                 AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
                 widgetUpdateMutex.withLock {
-                    consecutiveUpdateFailures++
-                    AppLogger.w(
-                        "UpdateCoordinator: widget update failed ($consecutiveUpdateFailures), hash not updated",
-                    )
-                    if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                        AppLogger.e("UpdateCoordinator: reached max consecutive failures. Updates suppressed.")
-                    }
+                    handleUpdateFailure()
                 }
+            }
+        }
+
+        private fun handleUpdateSuccess(newHash: Int) {
+            lastSnapshotHash = newHash
+            _status.value = TrackingStatus.Active
+            if (consecutiveUpdateFailures > 0) {
+                AppLogger.d("UpdateCoordinator: widget update recovered, resetting failure counter")
+                consecutiveUpdateFailures = 0
+            }
+        }
+
+        private fun handleUpdateFailure() {
+            consecutiveUpdateFailures++
+            AppLogger.w(
+                "UpdateCoordinator: widget update failed ($consecutiveUpdateFailures), " +
+                    "hash not updated",
+            )
+            if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                AppLogger.e("UpdateCoordinator: reached max consecutive failures. Updates suppressed.")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Widget observation failed after $consecutiveUpdateFailures consecutive errors",
+                    )
             }
         }
 

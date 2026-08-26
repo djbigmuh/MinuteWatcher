@@ -247,6 +247,22 @@ internal fun ObservationErrorBanner(
 }
 
 @Composable
+internal fun StorageDegradedBanner(
+    state: TrackingBannerState,
+    onRetry: () -> Unit,
+) {
+    if (state.isStorageDegraded) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_storage_degraded),
+            actionText = stringResource(id = R.string.action_retry),
+            onAction = onRetry,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
 internal fun TrackingBanner(
     text: String,
     actionText: String?,

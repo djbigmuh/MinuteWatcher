@@ -17,6 +17,7 @@ object TrackingBannerMapper {
         settings: AppSettings,
         appSearchRetryCount: Int = 0,
         appSearchBannerDismissed: Boolean = false,
+        isStorageDegraded: Boolean = false,
     ): TrackingBannerState {
         val traffic = statusMap["traffic"]
         val appsearch = statusMap["appsearch"]
@@ -24,8 +25,14 @@ object TrackingBannerMapper {
         val calls = statusMap["calls"]
 
         val observationFailed =
-            (statusMap["widget_observation"] as? TrackingStatus.Error)?.type ==
-                TrackingStatus.ErrorType.DATABASE_ERROR
+            (
+                (statusMap["widget_observation"] as? TrackingStatus.Error)?.type ==
+                    TrackingStatus.ErrorType.DATABASE_ERROR
+            ) ||
+                (
+                    (statusMap["banners"] as? TrackingStatus.Error)?.type ==
+                        TrackingStatus.ErrorType.DATABASE_ERROR
+                )
 
         val phonePermissionState =
             determinePhonePermissionState(
@@ -67,6 +74,7 @@ object TrackingBannerMapper {
                     settings,
                 ),
             observationFailed = observationFailed,
+            isStorageDegraded = isStorageDegraded,
         )
     }
 
@@ -97,9 +105,9 @@ object TrackingBannerMapper {
     }
 
     private fun isTrafficError(status: TrackingStatus?): Boolean =
-        status is TrackingStatus.Error &&
-            status.type != TrackingStatus.ErrorType.PERMISSION_MISSING &&
-            status.type != TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
+        (status is TrackingStatus.Error) &&
+            (status.type != TrackingStatus.ErrorType.PERMISSION_MISSING) &&
+            (status.type != TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
 
     private fun isTrafficFallback(status: TrackingStatus?): Boolean =
         status is TrackingStatus.Error &&

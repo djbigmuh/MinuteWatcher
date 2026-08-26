@@ -20,6 +20,7 @@ data class TrackingBannerState(
     val showInaccurateCallsBanner: Boolean = false,
     val notificationPermissionState: PermissionUiState = PermissionUiState.NOT_REQUESTED,
     val observationFailed: Boolean = false,
+    val isStorageDegraded: Boolean = false,
 )
 
 @Stable

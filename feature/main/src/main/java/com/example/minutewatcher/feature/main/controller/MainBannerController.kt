@@ -1,13 +1,16 @@
 package com.example.minutewatcher.feature.main.controller
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
+import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
@@ -26,8 +29,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
@@ -45,6 +50,7 @@ class MainBannerController
         trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
         permissionRepository: PermissionRepository,
         appSettingsRepository: AppSettingsRepository,
+        private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "banners"
@@ -140,7 +146,11 @@ class MainBannerController
         private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
             lastTrackingStatusFlow = statusFlow
             job?.cancel()
-            job?.join()
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                job?.join()
+            } ?: run {
+                AppLogger.w("MainBannerController: previous observation job did not terminate in time")
+            }
             job =
                 scope.launch {
                     catchingCancellation(
@@ -162,6 +172,20 @@ class MainBannerController
                         AppLogger.e("MainBannerController: tracking status observation failed", e)
                     }
                 }
+        }
+
+        /**
+         * Cancels the current tracking status observation.
+         *
+         * Safe to call from any coroutine context.
+         */
+        @VisibleForTesting
+        suspend fun cancelObservation() {
+            initMutex.withLock {
+                job?.cancel()
+                job?.join()
+                job = null
+            }
         }
 
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
@@ -201,7 +225,8 @@ class MainBannerController
                         appSearchRetryCount,
                         appSearchBannerDismissed,
                         bannerExtraData,
-                    ) { snapshot, retry, dismissed, extra ->
+                        seedRepository.isEphemeralSeedActive,
+                    ) { snapshot, retry, dismissed, extra, ephemeralActive ->
                         TrackingBannerMapper.mapToBannerState(
                             statusMap = snapshot.statusMap,
                             phoneGranted = snapshot.phoneGranted,
@@ -212,9 +237,16 @@ class MainBannerController
                             settings = extra.third,
                             appSearchRetryCount = retry,
                             appSearchBannerDismissed = dismissed,
+                            isStorageDegraded = ephemeralActive,
                         )
-                    }.onEach {
-                        if (_status.value != TrackingStatus.Active) {
+                    }.onEach { bannerState ->
+                        if (bannerState.isStorageDegraded) {
+                            _status.value =
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                                    "Storage degraded: statistics may be reset",
+                                )
+                        } else if (_status.value != TrackingStatus.Active) {
                             _status.value = TrackingStatus.Active
                         }
                     }

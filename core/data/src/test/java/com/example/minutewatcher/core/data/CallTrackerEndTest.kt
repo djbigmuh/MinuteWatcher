@@ -592,4 +592,41 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Verify session was cleared
             verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
         }
+
+    @Test
+    fun `onCallEnded sets Error status and refreshes on IOException`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+
+            // Setup active session data
+            val subId = 1
+            val identity = "id_1"
+            val now = timeProvider.now()
+            val currentRealtime = timeProvider.elapsedRealtime()
+            val currentUptime = timeProvider.uptimeMillis()
+
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 60000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(currentRealtime - 60000L))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(currentUptime - 60000L))
+            whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
+
+            // Simulate write failure
+            org.mockito.kotlin
+                .doAnswer { throw java.io.IOException("DataStore failure") }
+                .whenever(simUsageRepository)
+                .incrementMinutesUsed(eq(identity), any())
+
+            try {
+                callTracker.onCallEnded(subId)
+                advanceUntilIdle()
+            } catch (e: java.io.IOException) {
+                assertEquals("DataStore failure", e.message)
+            }
+
+            // Verify status is Error
+            val status = callTracker.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+        }
 }

@@ -62,6 +62,7 @@
     <string name="tracking_banner_widget_error">सिस्टम की सीमाओं के कारण विजेट अपडेट नहीं किया जा सकता है।</string>
     <string name="tracking_banner_inaccurate_calls">एकाधिक सक्रिय कॉल पाए गए। मिनट गलत तरीके से बताए जा सकते हैं।</string>
     <string name="tracking_banner_observation_failed">कई त्रुटियों के बाद डेटा ट्रैकिंग सेवा रुक गई है। कृपया पुन: प्रयास करें या ऐप को पुनरारंभ करें।</string>
+    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">सेटिंग्स लोड करने में त्रुटि</string>
     <string name="sim_list_unavailable_error">SIM सूची उपलब्ध नहीं है। पुनः लोड करने के बाद SIM सेटिंग्स उपलब्ध होंगी।</string>
     <string name="refresh_error">डेटा ताज़ा करने में त्रुटि</string>

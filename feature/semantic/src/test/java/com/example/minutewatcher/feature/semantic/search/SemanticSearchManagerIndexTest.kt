@@ -116,7 +116,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `indexSnapshot puts new documents before removing stale ones`() =
+    fun `indexSnapshot performs both remove and put operations`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val snapshot = createSnapshotWithOneSim()
@@ -127,7 +127,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
             // Act: try indexing
             manager.indexSnapshot(snapshot)
 
-            // Assert: verify put was attempted but failed, and remove WAS called now
+            // Assert: verify put was attempted but failed, and remove WAS called (it's called first now)
             val session = fakeWrapper.lastSession!!
             assertTrue(
                 "putDocuments should have failed (no successful requests recorded)",

@@ -7,12 +7,15 @@ import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -224,6 +227,67 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             verify(widgetUpdater, times(6)).updateAll()
+        }
+
+    @Test
+    fun `status transitions to Active on successful reactive update`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Idle, coordinator.status.value)
+
+            // Emit new snapshot
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, times(1)).updateAll()
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+        }
+
+    @Test
+    fun `status transitions to Error after max failures and back to Idle on recover`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(false)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Fail 5 times
+            for (i in 1..5) {
+                snapshotFlow.tryEmit(createSnapshot(timestamp = i * 1000L, content = "Fail $i"))
+                testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+                testScheduler.runCurrent()
+            }
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+
+            // 2. Recover
+            coordinator.recover()
+            testScheduler.runCurrent()
+
+            assertEquals(TrackingStatus.Idle, coordinator.status.value)
         }
 
     private fun createEmptySnapshot() =

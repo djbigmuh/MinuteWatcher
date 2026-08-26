@@ -62,6 +62,7 @@
     <string name="tracking_banner_widget_error">由于系统限制，无法更新小部件。</string>
     <string name="tracking_banner_inaccurate_calls">检测到多个活动通话。分钟数归属可能不准确。</string>
     <string name="tracking_banner_observation_failed">数据跟踪服务在多次错误后已停止。请重试或重启应用。</string>
+    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">设置加载错误</string>
     <string name="sim_list_unavailable_error">SIM列表不可用。重新加载后SIM设置将可用。</string>
     <string name="refresh_error">数据刷新错误</string>

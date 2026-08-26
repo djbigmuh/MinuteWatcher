@@ -11,6 +11,9 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -39,6 +42,9 @@ class SimIdentitySeedRepositoryImpl
 
         private val seedMutex = Mutex()
 
+        private val _isEphemeralSeedActive = MutableStateFlow(false)
+        override val isEphemeralSeedActive: StateFlow<Boolean> = _isEphemeralSeedActive.asStateFlow()
+
         @Volatile private var cachedEphemeralSeed: String? = null
 
         /**
@@ -66,6 +72,7 @@ class SimIdentitySeedRepositoryImpl
             seedMutex.withLock {
                 dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = seed }
                 cachedEphemeralSeed = null
+                _isEphemeralSeedActive.value = false
             }
         }
 
@@ -104,6 +111,7 @@ class SimIdentitySeedRepositoryImpl
 
                     if (existingSeed.isNotEmpty()) {
                         cachedEphemeralSeed = null
+                        _isEphemeralSeedActive.value = false
                         return@withLock existingSeed
                     }
 
@@ -120,6 +128,7 @@ class SimIdentitySeedRepositoryImpl
                     }
 
                     cachedEphemeralSeed = if (saveSuccess) null else seed
+                    _isEphemeralSeedActive.value = !saveSuccess
                     seed
                 } catch (e: CancellationException) {
                     throw e
@@ -129,6 +138,7 @@ class SimIdentitySeedRepositoryImpl
                     // либо ранее закэшированный эфемерный, либо создаем новый.
                     val fallback = generatedSeed ?: cachedEphemeralSeed ?: generator()
                     cachedEphemeralSeed = fallback
+                    _isEphemeralSeedActive.value = true
                     fallback
                 }
             }

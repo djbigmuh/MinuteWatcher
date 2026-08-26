@@ -64,6 +64,7 @@ internal class CallEndHandler
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
+                statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
                 throw e
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException in onCallEnded", e)
@@ -83,7 +84,7 @@ internal class CallEndHandler
             } finally {
                 withContext(NonCancellable) {
                     try {
-                        if (operationCompleted && statusFlow.value !is TrackingStatus.Error) {
+                        if (operationCompleted || (statusFlow.value is TrackingStatus.Error)) {
                             refreshStatus(false)
                         }
                     } catch (e: Exception) {

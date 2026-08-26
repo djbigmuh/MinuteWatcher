@@ -39,18 +39,6 @@ open class SnapshotIndexer
             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
             val currentIds = documents.asSequence().map { it.id }.toSet()
 
-            var putException: Exception? = null
-            if (documents.isNotEmpty()) {
-                try {
-                    session.putDocuments(appSearchWrapper.createPutRequest(documents))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Partial failure during putDocuments", e)
-                    putException = e
-                }
-            }
-
             val staleIds = mutableSetOf<String>()
             SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
                 val possibleIds =
@@ -68,9 +56,28 @@ open class SnapshotIndexer
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("Failure during removeByDocumentId", e)
+                    AppLogger.w("SnapshotIndexer: failure during removeByDocumentId (idempotent)", e)
                     removeException = e
                 }
+            }
+
+            var putException: Exception? = null
+            if (documents.isNotEmpty()) {
+                try {
+                    session.putDocuments(appSearchWrapper.createPutRequest(documents))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("SnapshotIndexer: failure during putDocuments", e)
+                    putException = e
+                }
+            }
+
+            // Если put успешен, а remove упал — не блокируем обновление.
+            // Старые документы — мусор, который будет удален при следующем обновлении.
+            if ((putException == null) && (removeException != null)) {
+                AppLogger.w("SnapshotIndexer: putDocuments succeeded but removeByDocumentId failed. Continuing.")
+                return
             }
 
             errorHandler.throwIfErrors(putException, removeException)
@@ -80,7 +87,11 @@ open class SnapshotIndexer
             sessionManager: AppSearchSessionManager,
             status: MutableStateFlow<TrackingStatus>,
         ) {
-            val currentTypes = PackageType.entries.map { it.name }.toSet()
+            val currentTypes =
+                PackageType.entries
+                    .asSequence()
+                    .map { it.name }
+                    .toSet()
             val savedTypes = dataStore.data.first()[KEY_PACKAGE_TYPES] ?: emptySet()
 
             val staleTypes = savedTypes - currentTypes

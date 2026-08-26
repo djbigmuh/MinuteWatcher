@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.domain
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -16,6 +17,11 @@ interface SimIdentitySeedRepository {
      * Flow of the current seed string.
      */
     val seedFlow: Flow<String>
+
+    /**
+     * Whether an ephemeral (non-persistent) seed is currently active due to storage degradation.
+     */
+    val isEphemeralSeedActive: StateFlow<Boolean>
 
     /**
      * Sets the seed string.

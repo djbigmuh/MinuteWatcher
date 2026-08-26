@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.common.util
 import android.content.Context
 import android.util.Log
 import com.example.minutewatcher.core.common.BuildConfig
+import com.example.minutewatcher.core.common.util.AppLogger.MAX_FILE_SIZE
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -29,7 +30,8 @@ object AppLogger {
     private const val LOG_BUFFER_SIZE = 8192
 
     @Volatile private var logDir: File? = null
-    private var logWriter: BufferedWriter? = null
+
+    @Volatile private var logWriter: BufferedWriter? = null
 
     @Volatile private var logger: Logger = AndroidLogger()
 
@@ -39,7 +41,7 @@ object AppLogger {
             1,
             0L,
             TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue<Runnable>(LOG_QUEUE_CAPACITY),
+            LinkedBlockingQueue(LOG_QUEUE_CAPACITY),
             PriorityLogRejectionHandler(),
         )
     }
@@ -73,7 +75,7 @@ object AppLogger {
                 var removed = false
                 while (iterator.hasNext()) {
                     val task = iterator.next()
-                    if (task is LogTask && !task.isCritical) {
+                    if ((task is LogTask) && !task.isCritical) {
                         iterator.remove()
                         removed = true
                         break

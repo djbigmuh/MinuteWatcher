@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,15 +93,19 @@ class TrafficTracker
 
         private suspend fun fetchActiveSims(): List<ActiveSimInfo>? {
             val flow = simIdentityRepository.observeActiveSims()
-            val activeSims =
+            var activeSims =
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     flow.first()
-                } ?: run {
-                    AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once...")
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                }
+
+            if (activeSims == null) {
+                AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once after 1s...")
+                delay(1000.milliseconds)
+                activeSims =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds * 2) {
                         flow.first()
                     }
-                }
+            }
 
             if (activeSims == null) {
                 errorHandler.handleSimListTimeout(_status)

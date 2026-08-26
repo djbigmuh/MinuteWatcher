@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -51,6 +52,7 @@ abstract class MainViewModelTestFixtures {
     protected val settingsUseCase: SettingsUseCase = mock()
     protected val dataChangeNotifier: DataChangeNotifier = mock()
     protected val permissionRepository: PermissionRepository = mock()
+    protected val seedRepository: SimIdentitySeedRepository = mock()
     protected val trackingRecoveryController: TrackingRecoveryController = mock()
     protected val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
     protected val savedStateHandle = SavedStateHandle()
@@ -73,6 +75,7 @@ abstract class MainViewModelTestFixtures {
         whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
+        whenever(seedRepository.isEphemeralSeedActive).thenReturn(MutableStateFlow(false))
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
@@ -142,6 +145,7 @@ abstract class MainViewModelTestFixtures {
                 trackingStatusRepository = { trackingStatusRepository },
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
+                seedRepository = seedRepository,
                 scope = scope,
             )
         val refreshController =

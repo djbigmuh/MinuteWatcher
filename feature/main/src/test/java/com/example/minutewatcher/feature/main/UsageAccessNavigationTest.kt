@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -57,6 +58,7 @@ class UsageAccessNavigationTest {
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val usageStateRepository: UsageStateRepository = mock()
     private val trackingStatusRepository: TrackingStatusRepository = mock()
+    private val seedRepository: SimIdentitySeedRepository = mock()
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
@@ -80,6 +82,7 @@ class UsageAccessNavigationTest {
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
+        whenever(seedRepository.isEphemeralSeedActive).thenReturn(MutableStateFlow(false))
         whenever(
             usageStateRepository.observeSimCardUiModels(),
         ).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
@@ -105,6 +108,7 @@ class UsageAccessNavigationTest {
                 trackingStatusRepository = { trackingStatusRepository },
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
+                seedRepository = seedRepository,
                 scope = scope,
             )
         val refreshController =

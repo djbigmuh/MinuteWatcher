@@ -59,15 +59,26 @@ class MainInitializationController
                     try {
                         performInitializationTasks()
 
-                        val result = refreshController.refreshSimCardsInternal()
-                        if (result is RefreshResult.Success) {
+                        val outcome = refreshController.refreshSimCardsInternal()
+                        val refreshSuccessful =
+                            (
+                                outcome is MainSimRefreshController.RefreshOutcome.Completed &&
+                                    outcome.result is RefreshResult.Success
+                            )
+                        val alreadyInProgress =
+                            outcome is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress
+
+                        if (refreshSuccessful || alreadyInProgress) {
                             isSuccess = true
-                            if (lastRefreshAt == 0L) {
+                            if (refreshSuccessful && lastRefreshAt == 0L) {
                                 onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                            }
+                            if (alreadyInProgress) {
+                                AppLogger.d("initializeApp: refresh already in progress, treating as success for loop")
                             }
                             break
                         } else {
-                            AppLogger.w("initializeApp: attempt ${attempt + 1} failed with result: $result")
+                            AppLogger.w("initializeApp: attempt ${attempt + 1} failed with outcome: $outcome")
                         }
                     } catch (e: CancellationException) {
                         isInitializationStarted.set(false)
