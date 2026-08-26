@@ -25,257 +25,190 @@ object WidgetLayoutSpecBuilder {
 
     private fun createSimpleRow(sim: SimUiState): SimLayoutRow {
         val components = mutableListOf<SimLayoutComponent>()
-        // Simple row: No icons, no names, just values
         if (sim.showMinutes) {
-            components.add(
-                SimLayoutComponent.Text(
-                    sim.minutesText,
-                    sim.minutesColor,
-                    WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
+            addValueWithLimit(
+                components,
+                sim.minutesText,
+                sim.minutesColor,
+                sim.showMinutesLimit,
+                sim.minutesLimitText,
+                sim.secondaryTextColor,
+                WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
+                sim.fontMultiplier,
             )
-            if (sim.showMinutesLimit) {
-                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                components.add(
-                    SimLayoutComponent.Text(
-                        sim.minutesLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
         }
         if (sim.showTraffic) {
             if (components.isNotEmpty()) {
-                components.add(
-                    SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT),
-                )
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
             }
-            components.add(
-                SimLayoutComponent.Text(
-                    sim.trafficText,
-                    sim.trafficColor,
-                    WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
+            addValueWithLimit(
+                components,
+                sim.trafficText,
+                sim.trafficColor,
+                sim.showTrafficLimit,
+                sim.trafficLimitText,
+                sim.secondaryTextColor,
+                WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
+                sim.fontMultiplier,
             )
-            if (sim.showTrafficLimit) {
-                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                components.add(
-                    SimLayoutComponent.Text(
-                        sim.trafficLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
         }
         return SimLayoutRow(components)
     }
 
     private fun createSingleLineRow(sim: SimUiState): SimLayoutRow {
         val components = mutableListOf<SimLayoutComponent>()
-        if (sim.showIcon) {
-            components.add(
-                SimLayoutComponent.Icon(
-                    sim.operatorIconRes,
-                    (
-                        WidgetDimens.SIZE_ICON_SINGLE *
-                            sim.fontMultiplier
-                    ).toInt(),
-                ),
-            )
-            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
-        }
-        if (sim.showName) {
-            components.add(
-                SimLayoutComponent.Text(
-                    sim.operatorName,
-                    sim.textColor,
-                    WidgetDimens.FONT_SINGLE_NAME * sim.fontMultiplier,
-                ),
-            )
-            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
-        }
-        if (sim.showMinutes) {
-            components.add(
-                SimLayoutComponent.Text(
-                    sim.minutesText,
-                    sim.minutesColor,
-                    WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
-            )
-            if (sim.showMinutesLimit) {
-                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                components.add(
-                    SimLayoutComponent.Text(
-                        sim.minutesLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
-        }
-        if (sim.showTraffic) {
-            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
-            components.add(
-                SimLayoutComponent.Text(
-                    sim.trafficText,
-                    sim.trafficColor,
-                    WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
-            )
-            if (sim.showTrafficLimit) {
-                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                components.add(
-                    SimLayoutComponent.Text(
-                        sim.trafficLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
-        }
+        addIconAndName(components, sim, WidgetDimens.SIZE_ICON_SINGLE, WidgetDimens.FONT_SINGLE_NAME)
+        addUsageInfo(
+            components,
+            sim,
+            WidgetDimens.FONT_SINGLE_VALUE,
+            addInitialSpacer = true,
+        )
         return SimLayoutRow(components)
     }
 
     private fun createTwoLinesRows(sim: SimUiState): List<SimLayoutRow> {
         val rows = mutableListOf<SimLayoutRow>()
         val row1 = mutableListOf<SimLayoutComponent>()
-        if (sim.showIcon) {
-            row1.add(
-                SimLayoutComponent.Icon(
-                    sim.operatorIconRes,
-                    (WidgetDimens.SIZE_ICON_MULTI * sim.fontMultiplier).toInt(),
-                ),
-            )
-            row1.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
-        }
-        if (sim.showName) {
-            row1.add(
-                SimLayoutComponent.Text(
-                    sim.operatorName,
-                    sim.textColor,
-                    WidgetDimens.FONT_MULTI_NAME * sim.fontMultiplier,
-                ),
-            )
-        }
+        addIconAndName(row1, sim, WidgetDimens.SIZE_ICON_MULTI, WidgetDimens.FONT_MULTI_NAME)
         if (row1.isNotEmpty()) rows.add(SimLayoutRow(row1))
 
         val row2 = mutableListOf<SimLayoutComponent>()
-        if (sim.showMinutes) {
-            row2.add(
-                SimLayoutComponent.Text(
-                    sim.minutesText,
-                    sim.minutesColor,
-                    WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
-            )
-            if (sim.showMinutesLimit) {
-                row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                row2.add(
-                    SimLayoutComponent.Text(
-                        sim.minutesLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
-            row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
-        }
-        if (sim.showTraffic) {
-            row2.add(
-                SimLayoutComponent.Text(
-                    sim.trafficText,
-                    sim.trafficColor,
-                    WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
-            )
-            if (sim.showTrafficLimit) {
-                row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                row2.add(
-                    SimLayoutComponent.Text(
-                        sim.trafficLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
-        }
+        addUsageInfo(
+            row2,
+            sim,
+            WidgetDimens.FONT_MULTI_VALUE,
+            addInitialSpacer = false,
+        )
         if (row2.isNotEmpty()) rows.add(SimLayoutRow(row2))
         return rows
+    }
+
+    private fun addIconAndName(
+        components: MutableList<SimLayoutComponent>,
+        sim: SimUiState,
+        iconSizeBase: Int,
+        fontSizeBase: Float,
+    ) {
+        if (sim.showIcon) {
+            val size = (iconSizeBase * sim.fontMultiplier).toInt()
+            components.add(SimLayoutComponent.Icon(sim.operatorIconRes, size))
+            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
+        }
+        if (sim.showName) {
+            val nameText =
+                SimLayoutComponent.Text(
+                    text = sim.operatorName,
+                    color = sim.textColor,
+                    fontSizeSp = fontSizeBase * sim.fontMultiplier,
+                )
+            components.add(nameText)
+            if (iconSizeBase == WidgetDimens.SIZE_ICON_SINGLE) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
+            }
+        }
+    }
+
+    private fun addUsageInfo(
+        components: MutableList<SimLayoutComponent>,
+        sim: SimUiState,
+        fontSizeBase: Float,
+        addInitialSpacer: Boolean,
+    ) {
+        if (sim.showMinutes) {
+            if (addInitialSpacer && components.isNotEmpty()) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
+            }
+            addValueWithLimit(
+                components,
+                sim.minutesText,
+                sim.minutesColor,
+                sim.showMinutesLimit,
+                sim.minutesLimitText,
+                sim.secondaryTextColor,
+                fontSizeBase * sim.fontMultiplier,
+                sim.fontMultiplier,
+            )
+        }
+        if (sim.showTraffic) {
+            if (components.isNotEmpty()) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
+            }
+            addValueWithLimit(
+                components,
+                sim.trafficText,
+                sim.trafficColor,
+                sim.showTrafficLimit,
+                sim.trafficLimitText,
+                sim.secondaryTextColor,
+                fontSizeBase * sim.fontMultiplier,
+                sim.fontMultiplier,
+            )
+        }
+    }
+
+    private fun addValueWithLimit(
+        components: MutableList<SimLayoutComponent>,
+        valueText: String,
+        valueColor: Int,
+        showLimit: Boolean,
+        limitText: String,
+        limitColor: Int,
+        valueSize: Float,
+        fontMultiplier: Float,
+    ) {
+        components.add(
+            SimLayoutComponent.Text(
+                text = valueText,
+                color = valueColor,
+                fontSizeSp = valueSize,
+                isBold = true,
+            ),
+        )
+        if (showLimit) {
+            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+            components.add(
+                SimLayoutComponent.Text(
+                    text = limitText,
+                    color = limitColor,
+                    fontSizeSp = WidgetDimens.FONT_LIMIT * fontMultiplier,
+                ),
+            )
+        }
     }
 
     private fun createThreeLinesRows(sim: SimUiState): List<SimLayoutRow> {
         val rows = mutableListOf<SimLayoutRow>()
         val row1 = mutableListOf<SimLayoutComponent>()
-        if (sim.showIcon) {
-            row1.add(
-                SimLayoutComponent.Icon(
-                    sim.operatorIconRes,
-                    (WidgetDimens.SIZE_ICON_MULTI * sim.fontMultiplier).toInt(),
-                ),
-            )
-            row1.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
-        }
-        if (sim.showName) {
-            row1.add(
-                SimLayoutComponent.Text(
-                    sim.operatorName,
-                    sim.textColor,
-                    WidgetDimens.FONT_MULTI_NAME * sim.fontMultiplier,
-                ),
-            )
-        }
+        addIconAndName(row1, sim, WidgetDimens.SIZE_ICON_MULTI, WidgetDimens.FONT_MULTI_NAME)
         if (row1.isNotEmpty()) rows.add(SimLayoutRow(row1))
 
         if (sim.showMinutes) {
             val row2 = mutableListOf<SimLayoutComponent>()
-            row2.add(
-                SimLayoutComponent.Text(
-                    sim.minutesText,
-                    sim.minutesColor,
-                    WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
+            addValueWithLimit(
+                row2,
+                sim.minutesText,
+                sim.minutesColor,
+                sim.showMinutesLimit,
+                sim.minutesLimitText,
+                sim.secondaryTextColor,
+                WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
+                sim.fontMultiplier,
             )
-            if (sim.showMinutesLimit) {
-                row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                row2.add(
-                    SimLayoutComponent.Text(
-                        sim.minutesLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
             rows.add(SimLayoutRow(row2))
         }
         if (sim.showTraffic) {
             val row3 = mutableListOf<SimLayoutComponent>()
-            row3.add(
-                SimLayoutComponent.Text(
-                    sim.trafficText,
-                    sim.trafficColor,
-                    WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
-                    isBold = true,
-                ),
+            addValueWithLimit(
+                row3,
+                sim.trafficText,
+                sim.trafficColor,
+                sim.showTrafficLimit,
+                sim.trafficLimitText,
+                sim.secondaryTextColor,
+                WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
+                sim.fontMultiplier,
             )
-            if (sim.showTrafficLimit) {
-                row3.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
-                row3.add(
-                    SimLayoutComponent.Text(
-                        sim.trafficLimitText,
-                        sim.secondaryTextColor,
-                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
-                    ),
-                )
-            }
             rows.add(SimLayoutRow(row3))
         }
         return rows
@@ -283,114 +216,46 @@ object WidgetLayoutSpecBuilder {
 
     private fun createSixLinesRows(sim: SimUiState): List<SimLayoutRow> {
         val rows = mutableListOf<SimLayoutRow>()
-        addNameRow(rows, sim)
-        addIconRow(rows, sim)
-        addMinutesRows(rows, sim)
-        addTrafficRows(rows, sim)
+        if (sim.showName) {
+            val nameText =
+                SimLayoutComponent.Text(
+                    text = sim.operatorName,
+                    color = sim.textColor,
+                    fontSizeSp = WidgetDimens.FONT_MULTI_NAME * sim.fontMultiplier,
+                )
+            rows.add(SimLayoutRow(listOf(nameText)))
+        }
+        if (sim.showIcon) {
+            val size = (WidgetDimens.SIZE_ICON_MULTI * sim.fontMultiplier).toInt()
+            rows.add(SimLayoutRow(listOf(SimLayoutComponent.Icon(sim.operatorIconRes, size))))
+        }
+        if (sim.showMinutes) {
+            addSixLinesUsageRow(rows, sim.minutesUsedFullText, sim.textColor, sim.fontMultiplier)
+            if (sim.showMinutesLimit) {
+                addSixLinesUsageRow(rows, sim.minutesLimitFullText, sim.secondaryTextColor, sim.fontMultiplier)
+            }
+        }
+        if (sim.showTraffic) {
+            addSixLinesUsageRow(rows, sim.trafficUsedFullText, sim.textColor, sim.fontMultiplier)
+            if (sim.showTrafficLimit) {
+                addSixLinesUsageRow(rows, sim.trafficLimitFullText, sim.secondaryTextColor, sim.fontMultiplier)
+            }
+        }
         return rows
     }
 
-    private fun addNameRow(
+    private fun addSixLinesUsageRow(
         rows: MutableList<SimLayoutRow>,
-        sim: SimUiState,
+        text: String,
+        color: Int,
+        fontMultiplier: Float,
     ) {
-        if (sim.showName) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Text(
-                            sim.operatorName,
-                            sim.textColor,
-                            WidgetDimens.FONT_MULTI_NAME * sim.fontMultiplier,
-                        ),
-                    ),
-                ),
+        val textComp =
+            SimLayoutComponent.Text(
+                text = text,
+                color = color,
+                fontSizeSp = WidgetDimens.FONT_FULL * fontMultiplier,
             )
-        }
-    }
-
-    private fun addIconRow(
-        rows: MutableList<SimLayoutRow>,
-        sim: SimUiState,
-    ) {
-        if (sim.showIcon) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Icon(
-                            sim.operatorIconRes,
-                            (
-                                WidgetDimens.SIZE_ICON_MULTI *
-                                    sim.fontMultiplier
-                            ).toInt(),
-                        ),
-                    ),
-                ),
-            )
-        }
-    }
-
-    private fun addMinutesRows(
-        rows: MutableList<SimLayoutRow>,
-        sim: SimUiState,
-    ) {
-        if (sim.showMinutes) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Text(
-                            sim.minutesUsedFullText,
-                            sim.textColor,
-                            WidgetDimens.FONT_FULL * sim.fontMultiplier,
-                        ),
-                    ),
-                ),
-            )
-            if (sim.showMinutesLimit) {
-                rows.add(
-                    SimLayoutRow(
-                        listOf(
-                            SimLayoutComponent.Text(
-                                sim.minutesLimitFullText,
-                                sim.secondaryTextColor,
-                                WidgetDimens.FONT_FULL * sim.fontMultiplier,
-                            ),
-                        ),
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun addTrafficRows(
-        rows: MutableList<SimLayoutRow>,
-        sim: SimUiState,
-    ) {
-        if (sim.showTraffic) {
-            rows.add(
-                SimLayoutRow(
-                    listOf(
-                        SimLayoutComponent.Text(
-                            sim.trafficUsedFullText,
-                            sim.textColor,
-                            WidgetDimens.FONT_FULL * sim.fontMultiplier,
-                        ),
-                    ),
-                ),
-            )
-            if (sim.showTrafficLimit) {
-                rows.add(
-                    SimLayoutRow(
-                        listOf(
-                            SimLayoutComponent.Text(
-                                sim.trafficLimitFullText,
-                                sim.secondaryTextColor,
-                                WidgetDimens.FONT_FULL * sim.fontMultiplier,
-                            ),
-                        ),
-                    ),
-                )
-            }
-        }
+        rows.add(SimLayoutRow(listOf(textComp)))
     }
 }

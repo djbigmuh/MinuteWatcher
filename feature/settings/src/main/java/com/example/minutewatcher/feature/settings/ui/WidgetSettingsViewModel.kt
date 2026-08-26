@@ -161,10 +161,11 @@ class WidgetSettingsViewModel
                 currentSims[slot] = update(simState)
                 copy(
                     isLoadError = false,
-                    settings = currentSettings.copy(
-                        simStates = currentSims,
-                        widgetLimitExceeded = false
-                    ),
+                    settings =
+                        currentSettings.copy(
+                            simStates = currentSims,
+                            widgetLimitExceeded = false,
+                        ),
                 )
             }
         }
