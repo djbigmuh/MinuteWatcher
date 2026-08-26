@@ -109,6 +109,11 @@ class WidgetUiMapperTest {
         assertTrue(sim0.showMinutesLimit)
         assertEquals(Color.WHITE, sim0.textColor)
 
+        // Verify limit is in layout spec for TWO_LINES mode
+        val limitComponent = sim0.layoutSpec.rows.flatMap { it.components }
+            .find { it is SimLayoutComponent.Text && it.text == "/200" }
+        assertTrue("Limit should be present in layout spec", limitComponent != null)
+
         // Verify full text fields
         assertTrue(sim0.minutesUsedFullText.contains("100"))
         assertTrue(sim0.minutesLimitFullText.contains("200"))

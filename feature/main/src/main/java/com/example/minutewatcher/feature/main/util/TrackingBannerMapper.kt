@@ -28,11 +28,7 @@ object TrackingBannerMapper {
             (
                 (statusMap["widget_observation"] as? TrackingStatus.Error)?.type ==
                     TrackingStatus.ErrorType.DATABASE_ERROR
-            ) ||
-                (
-                    (statusMap["banners"] as? TrackingStatus.Error)?.type ==
-                        TrackingStatus.ErrorType.DATABASE_ERROR
-                )
+            ) || isStorageDegraded
 
         val phonePermissionState =
             determinePhonePermissionState(

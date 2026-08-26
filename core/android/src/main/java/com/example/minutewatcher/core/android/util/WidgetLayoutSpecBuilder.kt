@@ -35,6 +35,16 @@ object WidgetLayoutSpecBuilder {
                     isBold = true,
                 ),
             )
+            if (sim.showMinutesLimit) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+                components.add(
+                    SimLayoutComponent.Text(
+                        sim.minutesLimitText,
+                        sim.secondaryTextColor,
+                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
+                    ),
+                )
+            }
         }
         if (sim.showTraffic) {
             if (components.isNotEmpty()) {
@@ -50,6 +60,16 @@ object WidgetLayoutSpecBuilder {
                     isBold = true,
                 ),
             )
+            if (sim.showTrafficLimit) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+                components.add(
+                    SimLayoutComponent.Text(
+                        sim.trafficLimitText,
+                        sim.secondaryTextColor,
+                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
+                    ),
+                )
+            }
         }
         return SimLayoutRow(components)
     }
@@ -87,6 +107,16 @@ object WidgetLayoutSpecBuilder {
                     isBold = true,
                 ),
             )
+            if (sim.showMinutesLimit) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+                components.add(
+                    SimLayoutComponent.Text(
+                        sim.minutesLimitText,
+                        sim.secondaryTextColor,
+                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
+                    ),
+                )
+            }
         }
         if (sim.showTraffic) {
             components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
@@ -98,6 +128,16 @@ object WidgetLayoutSpecBuilder {
                     isBold = true,
                 ),
             )
+            if (sim.showTrafficLimit) {
+                components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+                components.add(
+                    SimLayoutComponent.Text(
+                        sim.trafficLimitText,
+                        sim.secondaryTextColor,
+                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
+                    ),
+                )
+            }
         }
         return SimLayoutRow(components)
     }
@@ -135,6 +175,16 @@ object WidgetLayoutSpecBuilder {
                     isBold = true,
                 ),
             )
+            if (sim.showMinutesLimit) {
+                row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+                row2.add(
+                    SimLayoutComponent.Text(
+                        sim.minutesLimitText,
+                        sim.secondaryTextColor,
+                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
+                    ),
+                )
+            }
             row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
         }
         if (sim.showTraffic) {
@@ -146,6 +196,16 @@ object WidgetLayoutSpecBuilder {
                     isBold = true,
                 ),
             )
+            if (sim.showTrafficLimit) {
+                row2.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+                row2.add(
+                    SimLayoutComponent.Text(
+                        sim.trafficLimitText,
+                        sim.secondaryTextColor,
+                        WidgetDimens.FONT_LIMIT * sim.fontMultiplier,
+                    ),
+                )
+            }
         }
         if (row2.isNotEmpty()) rows.add(SimLayoutRow(row2))
         return rows

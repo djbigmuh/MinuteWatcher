@@ -6,7 +6,6 @@ import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
-import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
@@ -20,10 +19,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -52,8 +49,7 @@ class MainBannerController
         appSettingsRepository: AppSettingsRepository,
         private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : TrackingStatusProvider {
-        override val key: String = "banners"
+    ) {
         private val isPhonePermissionPermanentlyDenied = MutableStateFlow(value = false)
 
         /**
@@ -111,10 +107,12 @@ class MainBannerController
 
         private val recoveryTrigger = MutableStateFlow(0L)
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
-
-        override suspend fun recover() {
+        /**
+         * Attempts to recover tracking observation.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun recover() {
             initMutex.withLock {
                 if (!isObservationStarted.get()) {
                     ensureObservationStarted()
@@ -234,16 +232,6 @@ class MainBannerController
                             appSearchBannerDismissed = dismissed,
                             isStorageDegraded = ephemeralActive,
                         )
-                    }.onEach { bannerState ->
-                        if (bannerState.isStorageDegraded) {
-                            _status.value =
-                                TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                                    "Storage degraded: statistics may be reset",
-                                )
-                        } else if (_status.value != TrackingStatus.Active) {
-                            _status.value = TrackingStatus.Active
-                        }
                     }
                 }.stateIn(
                     scope = scope,

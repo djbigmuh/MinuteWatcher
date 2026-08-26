@@ -249,7 +249,9 @@ class MainActivity : AppCompatActivity() {
             // API 33+ required for POST_NOTIFICATIONS runtime permission.
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
-            if (!granted && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)) {
+            if (granted) {
+                viewModel.setNotificationPermissionPermanentlyDenied(false)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val permanentlyDenied =
                     !ActivityCompat.shouldShowRequestPermissionRationale(
                         this@MainActivity,
@@ -318,6 +320,8 @@ class MainActivity : AppCompatActivity() {
                             )
                         viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
                     }
+                } else {
+                    viewModel.setNotificationPermissionPermanentlyDenied(false)
                 }
             }
         }
@@ -394,9 +398,14 @@ class MainActivity : AppCompatActivity() {
 
         if (permissionManager.hasPhoneStatePermission()) {
             viewModel.setPhonePermissionPermanentlyDenied(false)
-            if (permissionManager.hasUsageStatsPermission()) {
-                permissionHandler.checkNotifications(autoRequest = false)
-            }
+        }
+
+        if (permissionManager.hasNotificationPermission()) {
+            viewModel.setNotificationPermissionPermanentlyDenied(false)
+        }
+
+        if (permissionManager.hasPhoneStatePermission() && permissionManager.hasUsageStatsPermission()) {
+            permissionHandler.checkNotifications(autoRequest = false)
         }
     }
 

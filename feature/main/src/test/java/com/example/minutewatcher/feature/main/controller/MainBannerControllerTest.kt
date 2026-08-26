@@ -132,15 +132,13 @@ class MainBannerControllerTest {
             testScheduler.runCurrent()
 
             assertEquals(true, controller.trackingBannerState.value.isStorageDegraded)
-            val status = controller.status.value
-            assertTrue("Status should be Error", status is TrackingStatus.Error)
-            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+            assertTrue("observationFailed should be true", controller.trackingBannerState.value.observationFailed)
 
             // Restore seed
             isEphemeralSeedActiveFlow.value = false
             testScheduler.runCurrent()
 
             assertEquals(false, controller.trackingBannerState.value.isStorageDegraded)
-            assertEquals(TrackingStatus.Active, controller.status.value)
+            assertTrue("observationFailed should be false", !controller.trackingBannerState.value.observationFailed)
         }
 }

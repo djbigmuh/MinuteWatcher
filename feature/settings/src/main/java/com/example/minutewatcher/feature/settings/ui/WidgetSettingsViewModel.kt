@@ -138,7 +138,7 @@ class WidgetSettingsViewModel
                 val currentSettings = settings ?: return@reduce this
                 copy(
                     isLoadError = false,
-                    settings = transform(currentSettings),
+                    settings = transform(currentSettings).copy(widgetLimitExceeded = false),
                 )
             }
         }
@@ -161,7 +161,10 @@ class WidgetSettingsViewModel
                 currentSims[slot] = update(simState)
                 copy(
                     isLoadError = false,
-                    settings = currentSettings.copy(simStates = currentSims),
+                    settings = currentSettings.copy(
+                        simStates = currentSims,
+                        widgetLimitExceeded = false
+                    ),
                 )
             }
         }
