@@ -91,27 +91,27 @@ class WidgetUpdaterImpl
                         },
                     )
 
-                RenderMode.SIMPLIFIED -> handleUpdateResult(
-                    safeUpdateInternal(
-                        context,
-                        isFullAttempt = false,
-                        isProbe = false
+                RenderMode.SIMPLIFIED ->
+                    handleUpdateResult(
+                        safeUpdateInternal(
+                            context,
+                            isFullAttempt = false,
+                            isProbe = false,
+                        ),
                     )
-                )
 
-                RenderMode.FULL -> handleUpdateResult(
-                    safeUpdateInternal(
-                        context,
-                        isFullAttempt = true,
-                        isProbe = false
+                RenderMode.FULL ->
+                    handleUpdateResult(
+                        safeUpdateInternal(
+                            context,
+                            isFullAttempt = true,
+                            isProbe = false,
+                        ),
                     )
-                )
             }
         }
 
-    private suspend fun performSimplifiedUpdate(
-        isFallback: Boolean = false,
-    ): Boolean {
+    private suspend fun performSimplifiedUpdate(isFallback: Boolean = false): Boolean {
         if (isFallback) {
             AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout (fallback).")
             limitManager.setWidgetLimitExceeded(value = true)

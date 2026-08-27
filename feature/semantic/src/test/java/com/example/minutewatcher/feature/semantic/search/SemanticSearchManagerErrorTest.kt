@@ -124,7 +124,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             assertTrue("Message should contain 'Put failed': $errorMessage", errorMessage.contains("Put failed"))
             assertTrue(
                 "Message should NOT contain 'Remove failed': $errorMessage",
-                !errorMessage.contains("Remove failed")
+                !errorMessage.contains("Remove failed"),
             )
 
             // Verify remove was NOT called

@@ -133,7 +133,9 @@ class TrafficBaselineManager
                             "Baseline reset failed for $targetIdentity",
                         )
                 } else {
-                    AppLogger.w("Stats still unavailable for $targetIdentity (attempt $nextRetryCount), will retry later")
+                    AppLogger.w(
+                        "Stats still unavailable for $targetIdentity (attempt $nextRetryCount), will retry later",
+                    )
                     baselineNeedsRetry[targetIdentity] = nextRetryCount
                     status.value =
                         TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable, retry pending")

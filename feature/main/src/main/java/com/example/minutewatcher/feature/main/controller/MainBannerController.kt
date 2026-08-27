@@ -242,10 +242,11 @@ class MainBannerController
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,
-                initialValue = TrackingBannerState(
-                    notificationPermissionState = PermissionUiState.GRANTED,
-                    phonePermissionState = PermissionUiState.GRANTED,
-                ),
+                initialValue =
+                    TrackingBannerState(
+                        notificationPermissionState = PermissionUiState.GRANTED,
+                        phonePermissionState = PermissionUiState.GRANTED,
+                    ),
             )
 
         private data class PermissionsSnapshot(

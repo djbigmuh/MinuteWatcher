@@ -152,21 +152,6 @@ class MainSimDataController
         }
 
         /**
-         * Выполняет операцию над SIM-картой с единой обработкой ошибок.
-         *
-         * Стратегия обработки исключений:
-         * - [SeedUnavailableException]: Означает критическую деградацию хранилища seed
-         *   на кастомной прошивке. Операция прерывается, ошибка сохраняется в [lastOperationError].
-         *   UI должен отобразить сообщение о недоступности хранилища.
-         * - [SimNotFoundException]: Штатная ситуация (Race Condition). SIM была извлечена
-         *   пользователем после загрузки списка, но до вызова операции.
-         *   Операция прерывается, ошибка сохраняется в [lastOperationError].
-         * - [CancellationException]: Пробрасывается для корректной отмены корутины
-         *   согласно контракту kotlinx.coroutines. Не устанавливает ошибку в [lastOperationError].
-         * - [IOException]: Ошибка ввода-вывода при работе с DataStore. Сохраняется в [lastOperationError].
-         * - [Exception]: Любая другая непредвиденная ошибка. Сохраняется в [lastOperationError]
-         *   с сообщением из исключения.
-         *
          * After success, [onRefresh] is called. Errors in [onRefresh] are logged and do not
          * affect the operation result. [CancellationException] is always propagated.
          *
@@ -175,7 +160,6 @@ class MainSimDataController
          * @param onRefresh Callback для обновления данных после успешной операции.
          * @param block Блок операции для выполнения.
          */
-        @Suppress("ThrowsCount")
         private fun executeSimOperation(
             slot: Int,
             operationName: String,
@@ -184,72 +168,18 @@ class MainSimDataController
         ) {
             scope.launch(ioDispatcher) {
                 try {
+                    performBlockWithRetry(slot, operationName, block)
                     try {
-                        block()
-                    } catch (e: IOException) {
-                        // CancellationException не является IOException, поэтому здесь не перехватывается.
-                        AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
-                        delay(500.milliseconds)
-                        try {
-                            val success =
-                                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                    block()
-                                    true
-                                } ?: false
-                            if (!success) {
-                                AppLogger.e("Timeout during $operationName retry for slot $slot")
-                                _lastOperationError.value =
-                                    OperationError(
-                                        "Operation timed out after retry. Please check storage availability.",
-                                        slot,
-                                    )
-                                return@launch
-                            }
-                        } catch (e2: CancellationException) {
-                            throw e2
-                        } catch (e2: IOException) {
-                            AppLogger.e("Terminal IOException during $operationName for slot $slot after retry", e2)
-                            _lastOperationError.value =
-                                OperationError(
-                                    "Operation failed after retry. Please check storage availability.",
-                                    slot,
-                                )
-                            return@launch
-                        }
+                        onRefresh()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
                     }
-                } catch (e: SeedUnavailableException) {
-                    AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
-                    _lastOperationError.value =
-                        OperationError(
-                            "Storage unavailable for slot ${e.slot}. Retry later.",
-                            e.slot,
-                        )
-                    return@launch
-                } catch (e: SimNotFoundException) {
-                    AppLogger.w("SimNotFoundException during $operationName for slot $slot", e)
-                    _lastOperationError.value =
-                        OperationError(
-                            "SIM was removed from slot ${e.slot}",
-                            e.slot,
-                        )
-                    return@launch
-                } catch (e: CancellationException) {
-                    // CancellationException пробрасывается для кооперативной отмены корутины.
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
-                    _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
-                    return@launch
-                }
-
-                // Операция успешна. Refresh — отдельная операция, его ошибка
-                // не должна маскировать успех основной операции.
-                try {
-                    onRefresh()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
+                    handleOperationException(e, slot, operationName)
                 }
             }
         }
@@ -451,6 +381,54 @@ class MainSimDataController
         fun retryTraffic(onRefresh: suspend () -> Unit) {
             scope.launch { trackingRecoveryController.retryTraffic(onRefresh) }
         }
+
+    private suspend fun performBlockWithRetry(
+        slot: Int,
+        operationName: String,
+        block: suspend () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: IOException) {
+            AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
+            delay(500.milliseconds)
+            val success =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    block()
+                    true
+                } ?: false
+            if (!success) throw IOException("Operation timed out after retry. Please check storage availability.")
+        }
+    }
+
+    private fun handleOperationException(
+        e: Exception,
+        slot: Int,
+        operationName: String,
+    ) {
+        when (e) {
+            is SeedUnavailableException -> {
+                AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
+                _lastOperationError.value =
+                    OperationError("Storage unavailable for slot ${e.slot}. Retry later.", e.slot)
+            }
+
+            is SimNotFoundException -> {
+                AppLogger.w("SimNotFoundException during $operationName for slot $slot", e)
+                _lastOperationError.value = OperationError("SIM was removed from slot ${e.slot}", e.slot)
+            }
+
+            is IOException -> {
+                AppLogger.e("Terminal IOException during $operationName for slot $slot after retry", e)
+                _lastOperationError.value = OperationError(e.message ?: "Operation failed after retry.", slot)
+            }
+
+            else -> {
+                AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
+                _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
+            }
+        }
+    }
 
         /**
          * Уведомляет систему об изменении данных для обновления виджетов и UI.

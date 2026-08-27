@@ -184,12 +184,12 @@ open class CallTracker
     }
 
     override suspend fun recover() {
-        try {
-            clearSessionsAndRefresh("recovery")
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("CallTracker: recovery failed", e)
-        }
+            try {
+                clearSessionsAndRefresh("recovery")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("CallTracker: recovery failed", e)
+            }
         }
     }

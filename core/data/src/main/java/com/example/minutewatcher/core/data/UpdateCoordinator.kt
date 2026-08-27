@@ -115,7 +115,8 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
             val newJob =
-                usageStateRepository.observeSnapshot()
+                usageStateRepository
+                    .observeSnapshot()
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
@@ -194,22 +195,16 @@ class UpdateCoordinator
             // намеренно — виджет должен корректно отобразить состояние
             // "No SIM" или "No Data".
             val success =
-                try {
-                    catchingCancellation(
-                        block = {
-                            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                                widgetUpdater.updateAll()
-                            } ?: false
-                        },
-                        onError = { e ->
-                            AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                        },
-                    ) ?: false
-                } catch (e: CancellationException) {
-                    // If the operation was cancelled, we stop processing this snapshot
-                    // immediately without updating the failure counter or the success hash.
-                    throw e
-                }
+                catchingCancellation(
+                    block = {
+                        withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                            widgetUpdater.updateAll()
+                        } ?: false
+                    },
+                    onError = { e ->
+                        AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+                    },
+                ) ?: false
 
             widgetUpdateMutex.withLock {
                 if (success) {
