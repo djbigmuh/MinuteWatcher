@@ -62,7 +62,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
                 viewModel.trackingBannerState.collect {}
             }
 
-            viewModel.setPhonePermissionPermanentlyDenied(true)
+            viewModel.updatePermissionDeniedState(phone = true)
             testScheduler.advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value

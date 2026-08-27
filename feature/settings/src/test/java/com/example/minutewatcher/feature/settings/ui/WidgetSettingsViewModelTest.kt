@@ -154,13 +154,13 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify sets Failed on exception`() =
         runTest {
-            whenever(saver.save(any(), any())).thenAnswer { SaveResult.Failed }
+            whenever(saver.save(any(), any())).thenAnswer { SaveResult.Failed() }
             testScheduler.advanceUntilIdle()
 
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed, viewModel.state.value.saveResult)
+            assertEquals(SaveResult.Failed(), viewModel.state.value.saveResult)
         }
 
     @Test
@@ -286,7 +286,7 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS * 2 + 1000).milliseconds)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed, vm.state.value.saveResult)
+            assertEquals(SaveResult.Failed(), vm.state.value.saveResult)
             saveJob.cancel()
         }
 
@@ -347,7 +347,7 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed, vm.state.value.saveResult)
+            assertEquals(SaveResult.Failed("Settings were not loaded"), vm.state.value.saveResult)
             verify(saver, never()).save(any(), any())
         }
 
@@ -377,7 +377,7 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             testScheduler.runCurrent()
 
-            assertEquals(SaveResult.Failed, vm.state.value.saveResult)
+            assertEquals(SaveResult.Failed("Settings are still loading"), vm.state.value.saveResult)
             verify(saver, never()).save(any(), any())
             deferred.complete(WidgetSettingsState())
         }

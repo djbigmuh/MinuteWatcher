@@ -59,8 +59,12 @@ open class SemanticSearchManager
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
+    @Volatile
         private var lastSnapshotHash: Int? = null
+
+    @Volatile
         private var lastSnapshotVersion: SchemaVersion? = null
+
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
@@ -107,10 +111,19 @@ open class SemanticSearchManager
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
-                lastSnapshotHash = null
-                lastSnapshotVersion = null
-                indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
-                    _status.value = newStatus
+                indexMutex.withLock {
+                    lastSnapshotHash = null
+                    lastSnapshotVersion = null
+                    errorHandler.resetFailures()
+                    try {
+                        indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
+                            _status.value = newStatus
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("SemanticSearchManager: stale package types cleanup failed during init", e)
+                    }
                 }
                 setupObservation(snapshotFlow)
             }
@@ -221,6 +234,8 @@ open class SemanticSearchManager
                         false
                     }
                 }
+                // ensureSession failed
+                resetLastSnapshotState()
             } else {
                 AppLogger.e("AppSearch indexing failed", e)
                 resetLastSnapshotState()
@@ -239,6 +254,13 @@ open class SemanticSearchManager
             currentHash: Int?,
         ): Boolean =
             withContext(ioDispatcher) {
+                // Ensure the session is valid and active immediately before usage.
+                // sessionManager.ensureSession is synchronized internally.
+                if (!sessionManager.ensureSession({ _status.value = it })) {
+                    AppLogger.e("AppSearch session could not be ensured in executeIndexing")
+                    return@withContext false
+                }
+
                 val currentSession =
                     sessionManager.session ?: run {
                         AppLogger.e("AppSearch session is null in executeIndexing, skipping")
@@ -267,6 +289,9 @@ open class SemanticSearchManager
 
                 if (result == null) {
                     AppLogger.e("AppSearch indexing timed out")
+                    // Resetting state on timeout ensures that the next indexing attempt
+                    // is not skipped, preventing stale data from persisting if the
+                    // current partial update failed to complete.
                     resetLastSnapshotState()
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Indexing timeout")
                     return@withContext false

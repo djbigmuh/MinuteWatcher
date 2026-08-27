@@ -507,12 +507,12 @@ class TrafficTrackerTest {
             // Attempt: Stats unavailable
             tracker.updateTrafficUsage()
 
-            // Assert: baseline NOT set to -1L, AND lastDataSubId NOT UPDATED to 2
+            // Assert: baseline NOT set to -1L, BUT lastDataSubId SHOULD BE UPDATED to 2
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
             assertTrue(tracker.status.value is TrackingStatus.Error)
 
-            // verify setLastDataSubId(2) was never called
-            verify(callSessionRepository, never()).setLastDataSubId(2)
+            // verify setLastDataSubId(2) WAS called
+            verify(callSessionRepository).setLastDataSubId(2)
 
             // 3. Stats become available
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
@@ -590,10 +590,10 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            // Verify status is Error, baseline NOT reset
+            // Verify status is Error, baseline NOT reset, but lastDataSubId IS UPDATED
             assertTrue(tracker.status.value is TrackingStatus.Error)
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
-            verify(callSessionRepository, never()).setLastDataSubId(2)
+            verify(callSessionRepository).setLastDataSubId(2)
         }
 
     @Test

@@ -84,15 +84,15 @@ class WidgetSettingsViewModel
             viewModelScope.launch {
                 loadMutex.withLock {
                     loadJob?.let { job ->
-                        job.cancel()
-                        if (withTimeoutOrNull(LOAD_TIMEOUT) { job.join() } == null) {
-                            AppLogger.w("loadSettings: previous load job join timed out, continuing")
+                        if (job.isActive) {
+                            job.cancel()
+                            if (withTimeoutOrNull(LOAD_TIMEOUT) { job.join() } == null) {
+                                AppLogger.w("loadSettings: previous load job join timed out, continuing")
+                            }
                         }
                     }
 
-                    reduce { copy(isLoadError = false) }
-
-                    loadJob =
+                    val currentJob =
                         launch {
                             try {
                                 val loaded =
@@ -101,7 +101,7 @@ class WidgetSettingsViewModel
                                     }
                                 ensureActive()
                                 if (loaded != null) {
-                                    reduce { copy(settings = loaded) }
+                                    reduce { copy(settings = loaded, isLoadError = false) }
                                 } else {
                                     AppLogger.e("Failed to load widget settings: timeout")
                                     reduce { copy(isLoadError = true) }
@@ -113,6 +113,12 @@ class WidgetSettingsViewModel
                                 reduce { copy(isLoadError = true) }
                             }
                         }
+                    currentJob.invokeOnCompletion {
+                        if (loadJob === currentJob) {
+                            loadJob = null
+                        }
+                    }
+                    loadJob = currentJob
                 }
             }
         }
@@ -168,14 +174,20 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
+            consumeSaveResult()
+            // AlreadyInProgress is only set here if the mutex cannot be acquired immediately.
+            // This ensures that multiple concurrent save triggers (e.g. rapid button clicks)
+            // are safely throttled and reported to the user.
+            // Note: performSaveInternal and its descendants never return AlreadyInProgress.
             if (!saveMutex.tryLock()) {
                 AppLogger.w("saveAndNotify: already in progress, notifying UI")
                 reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
                 return
             }
 
+            reduce { copy(isSaving = true) }
+
             try {
-                reduce { copy(isSaving = true) }
                 val currentState = state.value
                 val result = performSaveInternal(currentState)
                 reduce { copy(saveResult = result) }
@@ -183,10 +195,10 @@ class WidgetSettingsViewModel
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)
-                reduce { copy(saveResult = SaveResult.Failed) }
+                reduce { copy(saveResult = SaveResult.Failed()) }
             } finally {
-                reduce { copy(isSaving = false) }
                 saveMutex.unlock()
+                reduce { copy(isSaving = false) }
             }
         }
 
@@ -202,12 +214,12 @@ class WidgetSettingsViewModel
             when (val saveState = determineSaveState(currentState)) {
                 is SaveState.LoadFailed -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
-                    SaveResult.Failed
+                    SaveResult.Failed("Settings were not loaded")
                 }
 
                 is SaveState.NotLoaded -> {
                     AppLogger.w("saveAndNotify called before settings were loaded")
-                    SaveResult.Failed
+                    SaveResult.Failed("Settings are still loading")
                 }
 
                 is SaveState.Ready -> {
@@ -232,20 +244,36 @@ class WidgetSettingsViewModel
                     saver.save(validatedState, skipSimSettings = isPartial)
                 } ?: run {
                     AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
-                    SaveResult.Failed
+                    SaveResult.Failed()
                 }
 
-            if (result is SaveResult.PartialFailure) {
-                AppLogger.e("Widget settings partial save failure: ${result.message}")
-            } else if (result is SaveResult.Failed) {
-                AppLogger.e("Widget settings save failed")
+            when (result) {
+                is SaveResult.Success -> {
+                    AppLogger.d("Widget settings saved successfully")
+                }
+
+                is SaveResult.PartialSuccess -> {
+                    AppLogger.w("Widget settings saved partially: SIM settings skipped")
+                }
+
+                is SaveResult.PartialFailure -> {
+                    AppLogger.e("Widget settings partial save failure: ${result.message}")
+                }
+
+                is SaveResult.Failed -> {
+                    AppLogger.e("Widget settings save failed")
+                }
+
+                is SaveResult.AlreadyInProgress -> {
+                    AppLogger.w("Widget settings save already in progress")
+                }
             }
 
             return result
         }
 
         companion object {
-            private val LOAD_TIMEOUT: Duration = 10.seconds
+            private val LOAD_TIMEOUT: Duration = 15.seconds
         }
 
         private sealed class SaveState {

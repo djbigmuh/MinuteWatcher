@@ -51,10 +51,10 @@ fun WidgetSettingsScreen(
 
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val strings = remember(configuration) { WidgetStringsFactory.create(context) }
+    val strings = remember(configuration, context) { WidgetStringsFactory.create(context) }
 
     val screenUiState =
-        remember(uiState.settings, snapshot, strings) {
+        remember(uiState.settings, snapshot, strings, context) {
             val settings = uiState.settings ?: return@remember null
             val operatorNames = WidgetStringsFactory.createOperatorNames(context, snapshot.simSnapshots)
             WidgetUiMapper.mapFromSnapshot(
@@ -115,7 +115,9 @@ private fun ErrorState(
             )
         },
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = stringResource(id = R.string.error),
@@ -151,20 +153,21 @@ private fun WidgetSettingsContent(
     val alreadyInProgressMessage = stringResource(id = R.string.settings_save_already_in_progress)
 
     LaunchedEffect(saveResult) {
-        saveResult?.let { result ->
-            val message =
-                when (result) {
-                    SaveResult.Success -> successMessage
-                    is SaveResult.PartialSuccess -> partialSuccessMessage
-                    is SaveResult.PartialFailure -> result.message
-                    SaveResult.Failed -> failedMessage
-                    SaveResult.AlreadyInProgress -> alreadyInProgressMessage
-                }
+        if (saveResult != null) {
+            try {
+                val message =
+                    when (saveResult) {
+                        SaveResult.Success -> successMessage
+                        is SaveResult.PartialSuccess -> partialSuccessMessage
+                        is SaveResult.PartialFailure -> saveResult.message
+                        is SaveResult.Failed -> saveResult.message ?: failedMessage
+                        SaveResult.AlreadyInProgress -> alreadyInProgressMessage
+                    }
 
-            message.let {
-                snackbarHostState.showSnackbar(it)
+                snackbarHostState.showSnackbar(message)
+            } finally {
+                viewModel.consumeSaveResult()
             }
-            viewModel.consumeSaveResult()
         }
     }
 

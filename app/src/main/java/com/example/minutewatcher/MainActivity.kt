@@ -230,7 +230,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                 }
-                viewModel.setPhonePermissionPermanentlyDenied(false)
+                viewModel.updatePermissionDeniedState(phone = false)
                 if (!permissionManager.hasUsageStatsPermission()) {
                     viewModel.setUsageAccessDialog(true)
                 } else {
@@ -242,7 +242,7 @@ class MainActivity : AppCompatActivity() {
                         this@MainActivity,
                         Manifest.permission.READ_PHONE_STATE,
                     )
-                viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
+                viewModel.updatePermissionDeniedState(phone = permanentlyDenied)
             }
             permissionStateNotifier.notifyChanged()
         }
@@ -252,14 +252,14 @@ class MainActivity : AppCompatActivity() {
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
             if (granted) {
-                viewModel.setNotificationPermissionPermanentlyDenied(false)
+                viewModel.updatePermissionDeniedState(notification = false)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val permanentlyDenied =
                     !ActivityCompat.shouldShowRequestPermissionRationale(
                         this@MainActivity,
                         Manifest.permission.POST_NOTIFICATIONS,
                     )
-                viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+                viewModel.updatePermissionDeniedState(notification = permanentlyDenied)
             }
             permissionStateNotifier.notifyChanged()
         }
@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val settings = viewModel.appSettings.first()
                 if (permissionManager.hasPhoneStatePermission()) {
-                    viewModel.setPhonePermissionPermanentlyDenied(false)
+                    viewModel.updatePermissionDeniedState(phone = false)
                     // WorkManager.enqueue() performs disk I/O internally.
                     // Injected ioDispatcher prevents potential ANR on slow storage.
                     launch(ioDispatcher) {
@@ -297,10 +297,10 @@ class MainActivity : AppCompatActivity() {
                     // Если рациональ НЕ должна показываться при отсутствующем разрешении,
                     // значит оно либо еще не запрашивалось, либо заблокировано "Don't ask again".
                     // Мы используем флаг wasPhonePermissionRequestedBefore, чтобы отличить эти случаи.
-                    viewModel.setPhonePermissionPermanentlyDenied(!shouldShowRationale)
+                    viewModel.updatePermissionDeniedState(phone = !shouldShowRationale)
                 } else {
                     // Первый запуск: разрешение еще не запрашивалось.
-                    viewModel.setPhonePermissionPermanentlyDenied(false)
+                    viewModel.updatePermissionDeniedState(phone = false)
                     viewModel.setPhonePermissionRequested()
                     phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                 }
@@ -322,10 +322,10 @@ class MainActivity : AppCompatActivity() {
                                 this@MainActivity,
                                 Manifest.permission.POST_NOTIFICATIONS,
                             )
-                        viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+                        viewModel.updatePermissionDeniedState(notification = permanentlyDenied)
                     }
                 } else {
-                    viewModel.setNotificationPermissionPermanentlyDenied(false)
+                    viewModel.updatePermissionDeniedState(notification = false)
                 }
             }
         }
@@ -400,15 +400,15 @@ class MainActivity : AppCompatActivity() {
 
         checkPermissionChanges()
 
-        if (permissionManager.hasPhoneStatePermission()) {
-            viewModel.setPhonePermissionPermanentlyDenied(false)
-        }
+        val phoneGranted = permissionManager.hasPhoneStatePermission()
+        val notificationGranted = permissionManager.hasNotificationPermission()
 
-        if (permissionManager.hasNotificationPermission()) {
-            viewModel.setNotificationPermissionPermanentlyDenied(false)
-        }
+        viewModel.updatePermissionDeniedState(
+            phone = if (phoneGranted) false else null,
+            notification = if (notificationGranted) false else null,
+        )
 
-        if (permissionManager.hasPhoneStatePermission() && permissionManager.hasUsageStatsPermission()) {
+        if (phoneGranted && permissionManager.hasUsageStatsPermission()) {
             permissionHandler.checkNotifications(autoRequest = false)
         }
     }

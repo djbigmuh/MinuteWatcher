@@ -83,6 +83,10 @@ class AppSettingsRepositoryImpl
          *
          * Initialized using [SharingStarted.Eagerly] to ensure that [.value] always returns
          * the latest data, even when there are no active subscribers.
+         *
+         * If the DataStore has not yet been loaded, [.value] returns the initial [AppSettings]
+         * (default values). Once the first emit from DataStore succeeds, [.value] is updated.
+         *
          * Safe to call from any coroutine context.
          */
         override fun observeAppSettings(): StateFlow<AppSettings> = appSettingsState

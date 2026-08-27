@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -100,21 +101,25 @@ class TrafficTracker
             )
         }
 
-    private suspend fun fetchActiveSims(): List<ActiveSimInfo> = simIdentityRepository.observeActiveSims().first()
+    private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
+        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            simIdentityRepository.observeActiveSims().first()
+        } ?: run {
+            AppLogger.e("TrafficTracker: timeout fetching active sims")
+            emptyList()
+        }
 
         private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
             if (activeSims.isEmpty()) {
+                baselineManager.cleanupRetries(emptySet())
                 trafficMutex.withLock {
-                    baselineManager.cleanupRetries(emptySet())
                     _status.value = TrackingStatus.Idle
                 }
                 return
             }
 
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
-            trafficMutex.withLock {
-                baselineManager.cleanupRetries(activeIdentities)
-            }
+            baselineManager.cleanupRetries(activeIdentities)
 
             processActiveSimsTraffic(activeSims)
         }
@@ -144,13 +149,6 @@ class TrafficTracker
         ) {
             // 1. Data Collection Phase (Outside trafficMutex, but under simChangeMutex)
 
-            // Check if SIM is still active
-            val activeIdentities =
-                simIdentityRepository
-                    .getActiveIdentities()
-                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) ?: return
-            if (targetIdentity !in activeIdentities) return
-
             // Fetch Usage only if we are NOT in a known retry state,
             // as we'll need usage.lastResetDate for the normal path.
             val usage =
@@ -168,6 +166,22 @@ class TrafficTracker
 
             // 2. Atomic Transaction Phase
             trafficMutex.withLock {
+                // Check if SIM is still active under the lock to prevent race conditions
+                val activeIdentities =
+                    simIdentityRepository
+                        .getActiveIdentities()
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) ?: return@withLock
+                if (targetIdentity !in activeIdentities) {
+                    AppLogger.d("TrafficTracker: targetIdentity $targetIdentity is no longer active, skipping update")
+                    return@withLock
+                }
+
+                // NonCancellable is used to ensure that the atomic state update (baseline and usage)
+                // completes fully even if the parent coroutine is cancelled. This prevents
+                // data inconsistency and loss of tracked traffic.
+                //
+                // The trafficMutex is held throughout this block to maintain transaction atomicity
+                // and prevent concurrent updates while the persistent state is being modified.
                 withContext(NonCancellable) {
                     val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
 
@@ -189,15 +203,16 @@ class TrafficTracker
                     // Path B: Normal path
                     val startTime = usage?.lastResetDate ?: 0L
                     val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+
+                    if (statsResult !is StatsResult.Success) {
+                        errorHandler.handleStatsFailure(statsResult, _status)
+                        return@withContext
+                    }
+
                     val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
 
                     if (lastTotalBytes == null) {
                         errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                        return@withContext
-                    }
-
-                    if (statsResult !is StatsResult.Success) {
-                        errorHandler.handleStatsFailure(statsResult, _status)
                         return@withContext
                     }
 
@@ -246,7 +261,7 @@ class TrafficTracker
             targetIdentity: String,
             statsResult: StatsResult,
     ): Long? {
-        if (statsResult !is StatsResult.Success) return -1L
+        if (statsResult !is StatsResult.Success) return null
         return simUsageResetRepository
             .getLastTotalBytes(targetIdentity)
             .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)

@@ -66,11 +66,16 @@ class MainViewModel
 
         fun setUsageAccessDialog(show: Boolean) = controllers.dialog.setUsageAccessDialog(show)
 
-        fun setPhonePermissionPermanentlyDenied(denied: Boolean) =
-            controllers.banner.setPhonePermissionPermanentlyDenied(denied)
-
-        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) =
-            controllers.banner.setNotificationPermissionPermanentlyDenied(denied)
+    /**
+     * Updates the permanently denied state for permissions.
+     *
+     * @param phone If provided, updates the phone permission denied state.
+     * @param notification If provided, updates the notification permission denied state.
+     */
+    fun updatePermissionDeniedState(
+        phone: Boolean? = null,
+        notification: Boolean? = null,
+    ) = controllers.banner.updatePermissionDeniedState(phone, notification)
 
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 

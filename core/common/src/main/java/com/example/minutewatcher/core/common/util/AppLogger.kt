@@ -70,7 +70,9 @@ object AppLogger {
 
     fun d(message: String) {
         logger.d(TAG, message)
-        logToFile("D", message)
+        if (IS_FILE_LOGGING_ENABLED) {
+            logToFile("D", message)
+        }
     }
 
     fun w(
@@ -78,13 +80,15 @@ object AppLogger {
         throwable: Throwable? = null,
     ) {
         logger.w(TAG, message, throwable)
-        val fullMessage =
-            if (throwable != null) {
-                "$message\n${throwable.stackTraceToString()}"
-            } else {
-                message
-            }
-        logToFile("W", fullMessage)
+        if (IS_FILE_LOGGING_ENABLED) {
+            val fullMessage =
+                if (throwable != null) {
+                    "$message\n${throwable.stackTraceToString()}"
+                } else {
+                    message
+                }
+            logToFile("W", fullMessage)
+        }
     }
 
     fun e(
@@ -92,13 +96,15 @@ object AppLogger {
         throwable: Throwable? = null,
     ) {
         logger.e(TAG, message, throwable)
-        val fullMessage =
-            if (throwable != null) {
-                "$message\n${throwable.stackTraceToString()}"
-            } else {
-                message
-            }
-        logToFile("E", fullMessage)
+        if (IS_FILE_LOGGING_ENABLED) {
+            val fullMessage =
+                if (throwable != null) {
+                    "$message\n${throwable.stackTraceToString()}"
+                } else {
+                    message
+                }
+            logToFile("E", fullMessage)
+        }
     }
 
     /**
@@ -113,7 +119,7 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (!IS_FILE_LOGGING_ENABLED || logDir == null) return
+        if (logDir == null) return
 
         val entry = LogEntry(level, message)
         var fallbackRequired = false

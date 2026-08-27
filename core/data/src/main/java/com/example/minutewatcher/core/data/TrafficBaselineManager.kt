@@ -44,15 +44,22 @@ class TrafficBaselineManager
             onSuccess: suspend () -> Unit,
         ) {
             try {
-                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout() ?: return
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                if (usage == null) {
+                    AppLogger.e("TrafficBaselineManager: timeout fetching usage for $identity during baseline reset")
+                    status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout fetching usage")
+                    return
+                }
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
+
+                // Sync data subId regardless of stats result to prevent stale attribution
+                syncLastDataSubIdIfNeeded(identity, onSuccess)
 
                 if (statsResult is StatsResult.Success) {
                     val currentBytes = statsResult.bytes
                     simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
                     AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
 
-                    syncLastDataSubIdIfNeeded(identity, onSuccess)
                     baselineNeedsRetry.remove(identity)
                     status.value = TrackingStatus.Active
                 } else {
@@ -105,22 +112,34 @@ class TrafficBaselineManager
             status: MutableStateFlow<TrackingStatus>,
             onSuccess: suspend (Int) -> Unit,
         ): Boolean {
+            val currentRetryCount = baselineNeedsRetry[targetIdentity] ?: return false
+
             if (statsResult is StatsResult.Success) {
                 val currentBytes = statsResult.bytes
-                if (baselineNeedsRetry.remove(targetIdentity) != null) {
-                    simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                    AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
-                    onSuccess(target.dataSubId)
-                    status.value = TrackingStatus.Active
-                    return true
+                baselineNeedsRetry.remove(targetIdentity)
+                simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
+                onSuccess(target.dataSubId)
+                status.value = TrackingStatus.Active
+                return true
+            } else {
+                val nextRetryCount = currentRetryCount + 1
+                if (nextRetryCount >= MAX_BASELINE_RETRIES) {
+                    AppLogger.e("Traffic baseline reset failed for $targetIdentity after $nextRetryCount attempts")
+                    baselineNeedsRetry.remove(targetIdentity)
+                    status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Baseline reset failed for $targetIdentity",
+                        )
+                } else {
+                    AppLogger.w("Stats still unavailable for $targetIdentity (attempt $nextRetryCount), will retry later")
+                    baselineNeedsRetry[targetIdentity] = nextRetryCount
+                    status.value =
+                        TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable, retry pending")
                 }
-            } else if (baselineNeedsRetry.getOrDefault(targetIdentity, 0) > 0) {
-                AppLogger.w("Stats still unavailable for $targetIdentity, will retry baseline reset later")
-                status.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable, retry pending")
                 return true
             }
-            return false
         }
 
         fun cleanupRetries(activeIdentities: Set<String>) {

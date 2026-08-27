@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -190,7 +191,20 @@ class MainSimDataController
                         AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
                         delay(500.milliseconds)
                         try {
-                            block()
+                            val success =
+                                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                    block()
+                                    true
+                                } ?: false
+                            if (!success) {
+                                AppLogger.e("Timeout during $operationName retry for slot $slot")
+                                _lastOperationError.value =
+                                    OperationError(
+                                        "Operation timed out after retry. Please check storage availability.",
+                                        slot,
+                                    )
+                                return@launch
+                            }
                         } catch (e2: CancellationException) {
                             throw e2
                         } catch (e2: IOException) {
@@ -235,7 +249,7 @@ class MainSimDataController
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.w("MainSimDataController: refresh after $operationName failed", e)
+                    AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
                 }
             }
         }

@@ -44,7 +44,9 @@ sealed interface SaveResult {
      *
      * **Важно:** это одноразовое событие для Snackbar.
      */
-    data object Failed : SaveResult
+    data class Failed(
+        val message: String? = null,
+    ) : SaveResult
 
     /**
      * Сохранение уже выполняется.

@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
@@ -20,8 +21,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,30 +52,31 @@ class MainBannerController
         private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-        private val isPhonePermissionPermanentlyDenied = MutableStateFlow(value = false)
+    private data class PermissionDeniedState(
+        val phone: Boolean = false,
+        val notification: Boolean = false,
+    )
+
+    private val permissionDeniedState = MutableStateFlow(PermissionDeniedState())
 
         /**
-         * Sets whether the phone permission is permanently denied.
+         * Updates the permanently denied state for phone and/or notification permissions.
          *
-         * @param denied True if permanently denied.
+         * @param phone If provided, updates the phone permission denied state.
+         * @param notification If provided, updates the notification permission denied state.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
-        fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
-            isPhonePermissionPermanentlyDenied.value = denied
-        }
-
-        private val isNotificationPermissionPermanentlyDenied = MutableStateFlow(value = false)
-
-        /**
-         * Sets whether the notification permission is permanently denied.
-         *
-         * @param denied True if permanently denied.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         */
-        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
-            isNotificationPermissionPermanentlyDenied.value = denied
+        fun updatePermissionDeniedState(
+            phone: Boolean? = null,
+            notification: Boolean? = null,
+        ) {
+            permissionDeniedState.update { current ->
+                current.copy(
+                    phone = phone ?: current.phone,
+                    notification = notification ?: current.notification,
+                )
+            }
         }
 
         private val appSearchRetryCount = MutableStateFlow(value = 0)
@@ -105,8 +108,6 @@ class MainBannerController
         private val initMutex = Mutex()
         private val isObservationStarted = AtomicBoolean(false)
 
-        private val recoveryTrigger = MutableStateFlow(0L)
-
     init {
         initialize()
     }
@@ -124,8 +125,9 @@ class MainBannerController
             initialize()
             initMutex.withLock {
                 lastTrackingStatusFlow?.let { setupObservation(it) }
-                recoveryTrigger.value++
             }
+            appSearchRetryCount.value = 0
+            appSearchBannerDismissed.value = false
         }
 
         // trackingStatus инициализирован emptyMap(). До первого эмита
@@ -190,11 +192,10 @@ class MainBannerController
 
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
-                isPhonePermissionPermanentlyDenied,
-                isNotificationPermissionPermanentlyDenied,
-                appSettingsRepository.observeAppSettings(),
-            ) { phoneDenied, notifDenied, settings ->
-                Triple(phoneDenied, notifDenied, settings)
+                permissionDeniedState,
+                appSettingsRepository.observeAppSettings().onStart { emit(AppSettings()) },
+            ) { deniedState, settings ->
+                Triple(deniedState.phone, deniedState.notification, settings)
             }
 
         /**
@@ -206,45 +207,46 @@ class MainBannerController
          *
          * При успешной эмиссии статус восстанавливается в Active.
          */
-        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
         val trackingBannerState: StateFlow<TrackingBannerState> =
-            recoveryTrigger
-                .flatMapLatest {
-                    val permissionsFlow =
-                        combine(
-                            trackingStatus,
-                            permissionRepository.phoneStatePermissionGranted,
-                            permissionRepository.usageStatsPermissionGranted,
-                            permissionRepository.notificationPermissionGranted,
-                        ) { status, phone, usage, notif ->
-                            PermissionsSnapshot(status, phone, usage, notif)
-                        }
-
+            run {
+                val permissionsFlow =
                     combine(
-                        permissionsFlow,
-                        appSearchRetryCount,
-                        appSearchBannerDismissed,
-                        bannerExtraData,
-                        seedRepository.isEphemeralSeedActive,
-                    ) { snapshot, retry, dismissed, extra, ephemeralActive ->
-                        TrackingBannerMapper.mapToBannerState(
-                            statusMap = snapshot.statusMap,
-                            phoneGranted = snapshot.phoneGranted,
-                            usageGranted = snapshot.usageGranted,
-                            notificationsGranted = snapshot.notificationsGranted,
-                            phonePermanentlyDenied = extra.first,
-                            notificationPermanentlyDenied = extra.second,
-                            settings = extra.third,
-                            appSearchRetryCount = retry,
-                            appSearchBannerDismissed = dismissed,
-                            isStorageDegraded = ephemeralActive,
-                        )
+                        trackingStatus,
+                        permissionRepository.phoneStatePermissionGranted,
+                        permissionRepository.usageStatsPermissionGranted,
+                        permissionRepository.notificationPermissionGranted,
+                    ) { status, phone, usage, notif ->
+                        PermissionsSnapshot(status, phone, usage, notif)
                     }
-                }.stateIn(
-                    scope = scope,
-                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000L),
-                    initialValue = TrackingBannerState(),
-                )
+
+                combine(
+                    permissionsFlow,
+                    appSearchRetryCount,
+                    appSearchBannerDismissed,
+                    bannerExtraData,
+                    seedRepository.isEphemeralSeedActive,
+                ) { snapshot, retry, dismissed, extra, ephemeralActive ->
+                    TrackingBannerMapper.mapToBannerState(
+                        statusMap = snapshot.statusMap,
+                        phoneGranted = snapshot.phoneGranted,
+                        usageGranted = snapshot.usageGranted,
+                        notificationsGranted = snapshot.notificationsGranted,
+                        phonePermanentlyDenied = extra.first,
+                        notificationPermanentlyDenied = extra.second,
+                        settings = extra.third,
+                        appSearchRetryCount = retry,
+                        appSearchBannerDismissed = dismissed,
+                        isStorageDegraded = ephemeralActive,
+                    )
+                }
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = TrackingBannerState(
+                    notificationPermissionState = PermissionUiState.GRANTED,
+                    phonePermissionState = PermissionUiState.GRANTED,
+                ),
+            )
 
         private data class PermissionsSnapshot(
             val statusMap: Map<String, TrackingStatus>,

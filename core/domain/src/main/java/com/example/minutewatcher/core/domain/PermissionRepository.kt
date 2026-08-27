@@ -1,6 +1,6 @@
 package com.example.minutewatcher.core.domain
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Repository for observing permission states.
@@ -12,15 +12,15 @@ interface PermissionRepository {
     /**
      * Flow emitting true if READ_PHONE_STATE permission is granted.
      */
-    val phoneStatePermissionGranted: Flow<Boolean>
+    val phoneStatePermissionGranted: StateFlow<Boolean>
 
     /**
      * Flow emitting true if PACKAGE_USAGE_STATS permission is granted.
      */
-    val usageStatsPermissionGranted: Flow<Boolean>
+    val usageStatsPermissionGranted: StateFlow<Boolean>
 
     /**
      * Flow emitting true if POST_NOTIFICATIONS permission is granted.
      */
-    val notificationPermissionGranted: Flow<Boolean>
+    val notificationPermissionGranted: StateFlow<Boolean>
 }

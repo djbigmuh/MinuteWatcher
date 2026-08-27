@@ -116,7 +116,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `indexSnapshot performs both remove and put operations`() =
+    fun `indexSnapshot performs put but skips remove if put fails`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val snapshot = createSnapshotWithOneSim()
@@ -127,21 +127,21 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
             // Act: try indexing
             manager.indexSnapshot(snapshot)
 
-            // Assert: verify put was attempted but failed, and remove WAS called (it's called first now)
+            // Assert: verify put was attempted but failed, and remove was NOT called
             val session = fakeWrapper.lastSession!!
             assertTrue(
                 "putDocuments should have failed (no successful requests recorded)",
                 session.putRequests.isEmpty(),
             )
             assertEquals(
-                "removeByDocumentId SHOULD have been called",
-                1,
+                "removeByDocumentId SHOULD NOT have been called",
+                0,
                 session.removeRequests.size,
             )
         }
 
     @Test
-    fun `stale documents are removed even if putDocuments fails`() =
+    fun `stale documents are NOT removed if putDocuments fails`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
 
@@ -172,16 +172,12 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
 
             manager.indexSnapshot(snapshotWithSim1)
 
-            // 4. Assert: verify put was attempted but failed, and remove WAS called
+            // 4. Assert: verify put was attempted but failed, and remove was NOT called for sim_0
             assertEquals(
-                "Total removeByDocumentId calls should be 2",
-                2,
+                "Total removeByDocumentId calls should still be 1 (from initial indexing)",
+                1,
                 session.removeRequests.size,
             )
-
-            val lastRemove = session.removeRequests.last()
-            assertTrue("Should remove sim_0_minutes", lastRemove.ids.contains("sim_0_minutes"))
-            assertTrue("Should remove sim_0_data", lastRemove.ids.contains("sim_0_data"))
 
             // Verify status is Error because put failed
             assertTrue(manager.status.value is TrackingStatus.Error)

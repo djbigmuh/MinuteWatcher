@@ -43,7 +43,7 @@ class WidgetSettingsSaver
         ): SaveResult {
             if (state.settingsLoadFailed) {
                 AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
-                return SaveResult.Failed
+                return SaveResult.Failed()
             }
 
             // Вход уже провалидирован вызывающей стороной (WidgetSettingsViewModel).
@@ -74,7 +74,7 @@ class WidgetSettingsSaver
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Failed to save widget settings", e)
-                    SaveResult.Failed
+                    SaveResult.Failed()
                 }
             }
         }

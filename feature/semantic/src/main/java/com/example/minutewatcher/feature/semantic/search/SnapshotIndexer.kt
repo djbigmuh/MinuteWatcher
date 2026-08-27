@@ -46,18 +46,6 @@ open class SnapshotIndexer
                 staleIds.addAll(possibleIds.filter { it !in currentIds })
             }
 
-            var removeException: Exception? = null
-            if (staleIds.isNotEmpty()) {
-                try {
-                    session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("SnapshotIndexer: failure during removeByDocumentId (idempotent)", e)
-                    removeException = e
-                }
-            }
-
             var putException: Exception? = null
             if (documents.isNotEmpty()) {
                 try {
@@ -70,11 +58,16 @@ open class SnapshotIndexer
                 }
             }
 
-            // Если put успешен, а remove упал — не блокируем обновление.
-            // Старые документы — мусор, который будет удален при следующем обновлении.
-            if ((putException == null) && (removeException != null)) {
-                AppLogger.w("SnapshotIndexer: putDocuments succeeded but removeByDocumentId failed. Continuing.")
-                return
+            var removeException: Exception? = null
+            if (putException == null && staleIds.isNotEmpty()) {
+                try {
+                    session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("SnapshotIndexer: failure during removeByDocumentId (idempotent)", e)
+                    removeException = e
+                }
             }
 
             errorHandler.throwIfErrors(putException, removeException)

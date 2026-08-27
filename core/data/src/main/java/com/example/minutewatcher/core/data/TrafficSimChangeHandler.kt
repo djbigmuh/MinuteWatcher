@@ -32,15 +32,17 @@ class TrafficSimChangeHandler
     ) {
         private val simChangeMutex = Mutex()
         private var inMemoryLastDataSubId: Int = -1
+    private var lastDataSubIdLoaded: Boolean = false
 
         suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 
         suspend fun ensureInMemoryLastDataSubId() {
-            if (inMemoryLastDataSubId != -1) return
+            if (lastDataSubIdLoaded) return
             inMemoryLastDataSubId =
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     callSessionRepository.getLastDataSubId().first()
                 } ?: -1
+            lastDataSubIdLoaded = true
         }
 
         suspend fun handleSimChangeIfNeeded(
@@ -50,31 +52,28 @@ class TrafficSimChangeHandler
         ) {
             ensureInMemoryLastDataSubId()
             val savedLastDataSubId = inMemoryLastDataSubId
+            val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
             val isSimChanged =
                 (savedLastDataSubId != -1) &&
                     (target.dataSubId != -1) &&
                     (savedLastDataSubId != target.dataSubId)
 
+            // We always call handleSimChange to ensure the retry map is cleaned up for other identities.
+            // Logic for actual SIM change processing is contained within handleSimChange.
+            handleSimChange(
+                targetIdentity,
+                target.dataSubId,
+                savedLastDataSubId,
+                status,
+                isSimChanged,
+            )
+
             if (isSimChanged) {
-                val targetIdentity = simIdentityRepository.getIdentity(target.slot)
+                // Read the updated retry count from the map to accurately log the state after the attempt.
                 val retryCount = baselineManager.baselineNeedsRetry.getOrDefault(targetIdentity, 0)
-
-                // Fetch stats before lock
-                val statsResult = baselineManager.getCurrentMobileBytes(0L)
-
-                handleSimChange(
-                    targetIdentity,
-                    target.dataSubId,
-                    savedLastDataSubId,
-                    retryCount,
-                    statsResult,
-                    status,
-                )
                 handleSkipDelta(target, retryCount, status)
             } else {
-                val targetIdentity = simIdentityRepository.getIdentity(target.slot)
-                baselineManager.baselineNeedsRetry.entries.removeIf { it.key != targetIdentity }
                 onNoChange(targetIdentity)
             }
         }
@@ -94,19 +93,26 @@ class TrafficSimChangeHandler
             identity: String,
             currentDataSubId: Int,
             savedLastDataSubId: Int,
-            retryCount: Int,
-            statsResult: StatsResult,
             status: MutableStateFlow<TrackingStatus>,
+            isSimChanged: Boolean,
         ) {
+            // Centralized cleanup: remove all retries for other identities
+            baselineManager.baselineNeedsRetry.entries.removeIf { it.key != identity }
+
+            if (!isSimChanged) return
+
             AppLogger.d("Default data SIM changed from $savedLastDataSubId to $currentDataSubId. Resetting baseline.")
             try {
-                baselineManager.baselineNeedsRetry.entries.removeIf { it.key != identity }
+                // Update the last seen data subId immediately to "commit" the detection of the SIM change.
+                // This prevents the same SIM change from being repeatedly detected if the baseline
+                // reset operation fails and enters a retry cycle.
+                updateLastDataSubId(currentDataSubId)
 
+                val retryCount = baselineManager.baselineNeedsRetry.getOrDefault(identity, 0)
                 if (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                     AppLogger.e(
                         "TrafficSimChangeHandler: Baseline reset failed after $retryCount retries for $identity",
                     )
-                    updateLastDataSubId(currentDataSubId)
                     baselineManager.baselineNeedsRetry.remove(identity)
                     status.value =
                         TrackingStatus.Error(
@@ -116,10 +122,10 @@ class TrafficSimChangeHandler
                     return
                 }
 
+                val statsResult = baselineManager.getCurrentMobileBytes(0L)
                 if (statsResult is StatsResult.Success) {
                     simUsageResetRepository.setLastTotalBytes(identity, statsResult.bytes)
                     baselineManager.baselineNeedsRetry.remove(identity)
-                    updateLastDataSubId(currentDataSubId)
                     AppLogger.d("Baseline reset successfully for $identity")
                     status.value = TrackingStatus.Active
                 } else {
@@ -142,6 +148,7 @@ class TrafficSimChangeHandler
         }
 
         suspend fun updateLastDataSubId(dataSubId: Int) {
+            lastDataSubIdLoaded = true
             if ((dataSubId == -1) || (dataSubId == inMemoryLastDataSubId)) return
             inMemoryLastDataSubId = dataSubId
             try {

@@ -47,24 +47,32 @@ internal class CallEndHandler
                 }
 
                 callMutex.withLock {
-                    executeCallEndLogic(
-                        subId,
-                        isCallTrackingEnabled,
-                        clearAllCallSessions,
-                        endCallAction,
-                        callEndResolver,
-                    )
+                    if (subId == -1 && !isCallTrackingEnabled()) {
+                        // If tracking is disabled and subId is unknown (-1), we clear all pending sessions
+                        // to ensure no orphaned sessions remain when tracking is turned back on.
+                        AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
+                        clearAllCallSessions()
+                    } else {
+                        executeCallEndLogic(
+                            subId,
+                            endCallAction,
+                            callEndResolver,
+                        )
+                    }
                     operationCompleted = true
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
+                operationCompleted = true
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
                 throw e
             } catch (e: SecurityException) {
+                operationCompleted = true
                 AppLogger.e("SecurityException in onCallEnded", e)
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             } catch (e: Exception) {
+                operationCompleted = true
                 handlePerformCallEndError(subId, e, statusFlow, cleanupCounters)
             } finally {
                 finalizeCallEnd(operationCompleted, statusFlow, refreshStatus)
@@ -73,17 +81,9 @@ internal class CallEndHandler
 
     private suspend fun executeCallEndLogic(
         subId: Int,
-        isCallTrackingEnabled: suspend () -> Boolean,
-        clearAllCallSessions: suspend () -> Unit,
         endCallAction: suspend (Int) -> Unit,
         callEndResolver: CallEndResolver,
     ) {
-        if (subId == -1 && !isCallTrackingEnabled()) {
-            AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
-            clearAllCallSessions()
-            return
-        }
-
         val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
         if (effectiveSubId == -1) {
             callEndResolver.resolveUnknownSubIdEnd()

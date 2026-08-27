@@ -21,9 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -107,8 +105,7 @@ class UpdateCoordinator
                     AppLogger.w(
                         "UpdateCoordinator: previous observation job did not terminate in time",
                     )
-                    oldJob.cancel()
-                    AppLogger.w("UpdateCoordinator: force-cancelling stale observation job")
+                    // Note: cancel() is idempotent, so no need to call it again here.
                 }
             }
             observationJob = null
@@ -118,7 +115,7 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
             val newJob =
-                flow { emitAll(usageStateRepository.observeSnapshot()) }
+                usageStateRepository.observeSnapshot()
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
@@ -197,14 +194,22 @@ class UpdateCoordinator
             // намеренно — виджет должен корректно отобразить состояние
             // "No SIM" или "No Data".
             val success =
-                catchingCancellation(
-                    block = {
-                        widgetUpdater.updateAll()
-                    },
-                    onError = { e ->
-                        AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                    },
-                ) ?: false
+                try {
+                    catchingCancellation(
+                        block = {
+                            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                                widgetUpdater.updateAll()
+                            } ?: false
+                        },
+                        onError = { e ->
+                            AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+                        },
+                    ) ?: false
+                } catch (e: CancellationException) {
+                    // If the operation was cancelled, we stop processing this snapshot
+                    // immediately without updating the failure counter or the success hash.
+                    throw e
+                }
 
             widgetUpdateMutex.withLock {
                 if (success) {

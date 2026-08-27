@@ -82,7 +82,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `both putDocuments and removeByDocumentId failure logs both messages`() =
+    fun `putDocuments failure prevents removeByDocumentId and reports only put error`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
 
@@ -116,14 +116,20 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             // Assert: indexSnapshot returns false
             assertTrue("indexSnapshot should return false when update fails", !result)
 
-            // Assert: status is Error and contains both messages
+            // Assert: status is Error and contains ONLY put message
+            // Note: throwIfErrors throws putEx directly if it is an AppSearchException and removeEx is null
             val status = manager.status.value
             assertTrue(status is TrackingStatus.Error)
             val errorMessage = (status as TrackingStatus.Error).message ?: ""
-            assertTrue("Message should contain put failure: $errorMessage", errorMessage.contains("put failed"))
-            assertTrue("Message should contain remove failure: $errorMessage", errorMessage.contains("remove failed"))
             assertTrue("Message should contain 'Put failed': $errorMessage", errorMessage.contains("Put failed"))
-            assertTrue("Message should contain 'Remove failed': $errorMessage", errorMessage.contains("Remove failed"))
+            assertTrue(
+                "Message should NOT contain 'Remove failed': $errorMessage",
+                !errorMessage.contains("Remove failed")
+            )
+
+            // Verify remove was NOT called
+            val session = fakeWrapper.lastSession!!
+            assertEquals("Remove should not have been called after initial indexing", 1, session.removeRequests.size)
         }
 
     @Test

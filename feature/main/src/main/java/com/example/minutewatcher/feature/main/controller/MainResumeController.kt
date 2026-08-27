@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -23,6 +24,7 @@ class MainResumeController
         private val timeProvider: TimeProvider,
     ) {
         private var resumeRefreshJob: Job? = null
+    private val lastResumeTimestamp = MutableStateFlow(-1L)
 
         fun onActivityResume(
             scope: CoroutineScope,
@@ -31,6 +33,13 @@ class MainResumeController
             onRefreshNeeded: suspend () -> Unit,
             onUpdateLastRefreshAt: (Long) -> Unit,
         ) {
+            val now = timeProvider.elapsedRealtime()
+            val last = lastResumeTimestamp.value
+            if (last != -1L && (now - last < RESUME_DEBOUNCE_MS)) {
+                return
+            }
+            lastResumeTimestamp.value = now
+
             scope.launch {
                 resumeRefreshJob?.cancelAndJoin()
                 resumeRefreshJob =
@@ -66,5 +75,6 @@ class MainResumeController
 
         companion object {
             private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
+            private const val RESUME_DEBOUNCE_MS = 5_000L
         }
     }
