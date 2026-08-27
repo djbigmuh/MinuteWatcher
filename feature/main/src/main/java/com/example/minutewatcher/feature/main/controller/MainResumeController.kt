@@ -49,13 +49,18 @@ class MainResumeController
                             initController.initializeApp(scope, lastRefreshAt, onUpdateLastRefreshAt)
                         }
 
-                        val isCompleted =
-                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                initController.initializationState.first { it is InitializationState.Completed }
+                        // Если инициализация ещё в процессе (включая только что запущенную из Failed),
+                        // ждём её завершения с LONG_TIMEOUT_MS.
+                        val state =
+                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                initController.initializationState.first {
+                                    it is InitializationState.Completed ||
+                                        it is InitializationState.Failed
+                                }
                             }
 
-                        if (isCompleted == null) {
-                            AppLogger.w("onActivityResume: initialization not complete, skipping refresh")
+                        if (state !is InitializationState.Completed) {
+                            AppLogger.w("onActivityResume: initialization not complete after wait, skipping refresh")
                             return@launch
                         }
 

@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -46,7 +44,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainBannerController
     @Inject
     constructor(
-        trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
+        trackingStatusRepository: TrackingStatusRepository,
         permissionRepository: PermissionRepository,
         appSettingsRepository: AppSettingsRepository,
         private val seedRepository: SimIdentitySeedRepository,
@@ -124,7 +122,15 @@ class MainBannerController
         suspend fun recover() {
             initialize()
             initMutex.withLock {
-                lastTrackingStatusFlow?.let { setupObservation(it) }
+                job?.cancel()
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job?.join()
+                }
+                isObservationStarted.set(false)
+                lastTrackingStatusFlow?.let {
+                    setupObservation(it)
+                    isObservationStarted.set(true)
+                }
             }
             appSearchRetryCount.value = 0
             appSearchBannerDismissed.value = false
@@ -137,11 +143,10 @@ class MainBannerController
         // На AOSP StateFlow эмитит начальное значение синхронно.
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
             trackingStatusRepository
-                .get()
                 .observeTrackingStatus()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000L),
+                    started = SharingStarted.Eagerly,
                     initialValue = emptyMap(),
                 )
 
@@ -149,9 +154,8 @@ class MainBannerController
             if (isObservationStarted.get()) return
             scope.launch {
                 initMutex.withLock {
-                    if (isObservationStarted.compareAndSet(false, true)) {
-                        setupObservation(trackingStatus)
-                    }
+                    isObservationStarted.set(true)
+                    setupObservation(trackingStatus)
                 }
             }
         }
@@ -193,7 +197,7 @@ class MainBannerController
         private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
             combine(
                 permissionDeniedState,
-                appSettingsRepository.observeAppSettings().onStart { emit(AppSettings()) },
+                appSettingsRepository.observeAppSettings(),
             ) { deniedState, settings ->
                 Triple(deniedState.phone, deniedState.notification, settings)
             }
@@ -242,11 +246,7 @@ class MainBannerController
             }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,
-                initialValue =
-                    TrackingBannerState(
-                        notificationPermissionState = PermissionUiState.GRANTED,
-                        phonePermissionState = PermissionUiState.GRANTED,
-                    ),
+                initialValue = TrackingBannerState(),
             )
 
         private data class PermissionsSnapshot(

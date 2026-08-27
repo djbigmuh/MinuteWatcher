@@ -90,9 +90,10 @@ class WidgetSettingsViewModel
                                 AppLogger.w("loadSettings: previous load job join timed out, continuing")
                             }
                         }
+                        loadJob = null
                     }
 
-                    val currentJob =
+                    loadJob =
                         launch {
                             try {
                                 val loaded =
@@ -113,12 +114,6 @@ class WidgetSettingsViewModel
                                 reduce { copy(isLoadError = true) }
                             }
                         }
-                    currentJob.invokeOnCompletion {
-                        if (loadJob === currentJob) {
-                            loadJob = null
-                        }
-                    }
-                    loadJob = currentJob
                 }
             }
         }
@@ -174,7 +169,6 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            consumeSaveResult()
             // AlreadyInProgress is only set here if the mutex cannot be acquired immediately.
             // This ensures that multiple concurrent save triggers (e.g. rapid button clicks)
             // are safely throttled and reported to the user.
@@ -185,11 +179,11 @@ class WidgetSettingsViewModel
                 return
             }
 
+            consumeSaveResult()
             reduce { copy(isSaving = true) }
 
             try {
-                val currentState = state.value
-                val result = performSaveInternal(currentState)
+                val result = performSaveInternal()
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {
                 throw e
@@ -202,30 +196,25 @@ class WidgetSettingsViewModel
             }
         }
 
-        @Suppress("ReturnCount")
-        private fun determineSaveState(currentState: WidgetSettingsUiState): SaveState {
-            if (currentState.isLoadError) return SaveState.LoadFailed
-            val settings = currentState.settings ?: return SaveState.NotLoaded
-            if (settings.settingsLoadFailed) return SaveState.LoadFailed
-            return SaveState.Ready(settings)
-        }
-
-        private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult =
-            when (val saveState = determineSaveState(currentState)) {
-                is SaveState.LoadFailed -> {
+    private suspend fun performSaveInternal(): SaveResult {
+        val currentState = state.value
+        val settings = currentState.settings
+        return when {
+            currentState.isLoadError || settings?.settingsLoadFailed == true -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
                     SaveResult.Failed("Settings were not loaded")
                 }
 
-                is SaveState.NotLoaded -> {
+            settings == null -> {
                     AppLogger.w("saveAndNotify called before settings were loaded")
                     SaveResult.Failed("Settings are still loading")
                 }
 
-                is SaveState.Ready -> {
-                    executeSave(saveState.state)
-                }
+            else -> {
+                executeSave(settings)
             }
+        }
+    }
 
         private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
             val validatedState = WidgetSettingsState.validate(state)
@@ -274,15 +263,5 @@ class WidgetSettingsViewModel
 
         companion object {
             private val LOAD_TIMEOUT: Duration = 15.seconds
-        }
-
-        private sealed class SaveState {
-            data object LoadFailed : SaveState()
-
-            data object NotLoaded : SaveState()
-
-            data class Ready(
-                val state: WidgetSettingsState,
-            ) : SaveState()
         }
     }

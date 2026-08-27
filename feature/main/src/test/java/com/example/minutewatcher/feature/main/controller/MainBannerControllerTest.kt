@@ -55,7 +55,7 @@ class MainBannerControllerTest {
         runTest(UnconfinedTestDispatcher()) {
             val controller =
                 MainBannerController(
-                    trackingStatusRepository = { trackingStatusRepository },
+                    trackingStatusRepository = trackingStatusRepository,
                     permissionRepository,
                     appSettingsRepository,
                     seedRepository,
@@ -86,7 +86,7 @@ class MainBannerControllerTest {
         runTest(UnconfinedTestDispatcher()) {
             val controller =
                 MainBannerController(
-                    trackingStatusRepository = { trackingStatusRepository },
+                    trackingStatusRepository = trackingStatusRepository,
                     permissionRepository,
                     appSettingsRepository,
                     seedRepository,
@@ -118,7 +118,7 @@ class MainBannerControllerTest {
         runTest(UnconfinedTestDispatcher()) {
             val controller =
                 MainBannerController(
-                    trackingStatusRepository = { trackingStatusRepository },
+                    trackingStatusRepository = trackingStatusRepository,
                     permissionRepository,
                     appSettingsRepository,
                     seedRepository,

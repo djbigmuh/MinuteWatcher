@@ -91,7 +91,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
         }
 
     @Test
-    fun `refreshAndNotify updates lastRefreshAt also on Timeout`() =
+    fun `refreshAndNotify does NOT update lastRefreshAt on Timeout`() =
         testScope.runTest {
             val initialSnapshot =
                 GlobalSnapshot(
@@ -113,7 +113,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             viewModel.refreshSimCardsNow()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(now, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED))
+            assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED))
         }
 
     @Test
@@ -136,16 +136,15 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             testScheduler.advanceUntilIdle()
 
             val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED) ?: 0L
-            assertTrue("lastRefreshAt should be set even after Timeout", lastRefresh > 0)
+            assertEquals("lastRefreshAt should NOT be set after Timeout", 0L, lastRefresh)
 
             clearInvocations(usageStateRepository)
 
-            val now = lastRefresh + 5000L
-            timeProvider.setRealtime(now)
+            timeProvider.setRealtime(5000L)
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
-            // New behavior: even if lastRefreshAt was set after a Timeout, if state is Failed, we retry.
+            // After Timeout, data is considered stale (lastRefreshAt is 0), so it should refresh.
             // initialization controller does 3 internal retries.
             verify(usageStateRepository, times(3)).refresh()
         }

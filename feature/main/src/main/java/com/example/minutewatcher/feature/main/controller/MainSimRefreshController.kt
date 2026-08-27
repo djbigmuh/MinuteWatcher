@@ -108,7 +108,7 @@ class MainSimRefreshController
             }
             if (outcome is RefreshOutcome.Completed) {
                 val result = outcome.result
-                if ((result is RefreshResult.Success) || (result is RefreshResult.Timeout)) {
+                if (result is RefreshResult.Success) {
                     onUpdateLastRefresh(timeProvider.elapsedRealtime())
                 }
             }

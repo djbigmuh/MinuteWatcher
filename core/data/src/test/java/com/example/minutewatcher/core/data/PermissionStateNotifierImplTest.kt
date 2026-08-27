@@ -1,8 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -19,15 +17,17 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class PermissionStateNotifierImplTest {
     @Test
-    fun `initial value is emitted`() =
+    fun `initial value is not emitted`() =
         runTest {
             val notifier = PermissionStateNotifierImpl()
-            val firstValue = notifier.changes.first()
-            assertEquals(Unit, firstValue)
+            val results = mutableListOf<Unit>()
+            val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
+            assertEquals(0, results.size)
+            job.cancel()
         }
 
     @Test
-    fun `notifyChanged emits new value`() =
+    fun `notifyChanged emits value`() =
         runTest {
             val testDispatcher = UnconfinedTestDispatcher()
             val notifier = PermissionStateNotifierImpl()
@@ -35,12 +35,12 @@ class PermissionStateNotifierImplTest {
 
             val job =
                 launch(testDispatcher) {
-                    notifier.changes.take(2).toList(results)
+                    notifier.changes.toList(results)
                 }
 
             notifier.notifyChanged()
 
-            assertEquals(2, results.size)
+            assertEquals(1, results.size)
             job.cancel()
         }
 
@@ -73,18 +73,16 @@ class PermissionStateNotifierImplTest {
         }
 
     @Test
-    fun `does not emit duplicate states`() =
+    fun `does not emit until notifyChanged is called`() =
         runTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
 
-            // We can't really test "duplicate Unit" because Unit is a singleton.
-            // But we can verify that if we don't call notifyChanged, it doesn't emit after initial.
             val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
 
-            assertEquals(1, results.size) // Initial value from MutableStateFlow(0)
+            assertEquals(0, results.size)
 
-            // No call to notifyChanged()
+            notifier.notifyChanged()
             assertEquals(1, results.size)
 
             job.cancel()

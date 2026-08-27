@@ -398,8 +398,6 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.onActivityResume()
 
-        checkPermissionChanges()
-
         val phoneGranted = permissionManager.hasPhoneStatePermission()
         val notificationGranted = permissionManager.hasNotificationPermission()
 
@@ -407,6 +405,8 @@ class MainActivity : AppCompatActivity() {
             phone = if (phoneGranted) false else null,
             notification = if (notificationGranted) false else null,
         )
+
+        checkPermissionChanges()
 
         if (phoneGranted && permissionManager.hasUsageStatsPermission()) {
             permissionHandler.checkNotifications(autoRequest = false)
