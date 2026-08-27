@@ -134,7 +134,7 @@ class MainBannerController
                 .observeTrackingStatus()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.Eagerly,
+                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000L),
                     initialValue = emptyMap(),
                 )
 
@@ -235,7 +235,7 @@ class MainBannerController
                     }
                 }.stateIn(
                     scope = scope,
-                    started = SharingStarted.Eagerly,
+                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000L),
                     initialValue = TrackingBannerState(),
                 )
 

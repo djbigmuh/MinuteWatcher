@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -122,19 +121,14 @@ internal class SimIdentityObserver
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
                 mocks ?: physical
             }.distinctUntilChanged()
-                .stateIn(
-                    scope,
-                    SharingStarted.Eagerly,
-                    emptyList(),
-                )
-
-        init {
-            activeSimsCache
                 .onEach { sims ->
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     cache.cleanupManual(activeSlots)
-                }.launchIn(scope)
-        }
+                }.stateIn(
+                    scope,
+                    SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000L),
+                    emptyList(),
+                )
 
         private suspend fun generateSeedWithRetry(): String? =
             withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {

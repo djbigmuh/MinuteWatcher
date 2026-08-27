@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.catchingCancellation
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
@@ -10,14 +11,14 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -92,34 +93,14 @@ class TrafficTracker
 
                     if (!permissionChecker.checkPermissions(_status)) return@catchingCancellation
 
-                    val activeSims = fetchActiveSims() ?: return@catchingCancellation
+                    val activeSims = fetchActiveSims()
                     handleActiveSims(activeSims)
                 },
                 onError = { e -> errorHandler.handleUpdateError(e, _status) },
             )
         }
 
-        private suspend fun fetchActiveSims(): List<ActiveSimInfo>? {
-            val flow = simIdentityRepository.observeActiveSims()
-            var activeSims =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    flow.first()
-                }
-
-            if (activeSims == null) {
-                AppLogger.w("TrafficTracker: observeActiveSims timed out, retrying once after 1s...")
-                delay(1000.milliseconds)
-                activeSims =
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds * 2) {
-                        flow.first()
-                    }
-            }
-
-            if (activeSims == null) {
-                errorHandler.handleSimListTimeout(_status)
-            }
-            return activeSims
-        }
+    private suspend fun fetchActiveSims(): List<ActiveSimInfo> = simIdentityRepository.observeActiveSims().first()
 
         private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
             if (activeSims.isEmpty()) {
@@ -161,187 +142,122 @@ class TrafficTracker
             target: TargetInfo,
             targetIdentity: String,
         ) {
-            val initialDecision =
-                trafficMutex.withLock {
-                    determineInitialUpdateAction(targetIdentity)
-                }
+            // 1. Data Collection Phase (Outside trafficMutex, but under simChangeMutex)
 
-            when (initialDecision) {
-                is UpdateAction.Abort -> return
-                is UpdateAction.Retry -> {
-                    performRetryPath(target, targetIdentity, initialDecision.currentCount)
-                }
-                UpdateAction.Normal -> {
-                    performNormalPath(target, targetIdentity)
-                }
-            }
-        }
+            // Check if SIM is still active
+            val activeIdentities =
+                simIdentityRepository
+                    .getActiveIdentities()
+                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) ?: return
+            if (targetIdentity !in activeIdentities) return
 
-        private fun determineInitialUpdateAction(targetIdentity: String): UpdateAction {
-            val pending = baselineManager.baselineNeedsRetry[targetIdentity]
-            return when {
-                pending == null -> UpdateAction.Normal
-                pending >= TrafficBaselineManager.MAX_BASELINE_RETRIES -> {
-                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                    errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                    UpdateAction.Abort
-                }
-                else -> UpdateAction.Retry(pending)
-            }
-        }
+            // Get initial retry state to decide what to fetch
+            val initialRetryCount = trafficMutex.withLock { baselineManager.baselineNeedsRetry[targetIdentity] }
 
-        private suspend fun performNormalPath(
-            target: TargetInfo,
-            targetIdentity: String,
-        ) {
-            val currentActiveIdentities =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    simIdentityRepository.getActiveIdentities().first()
-                }
-            if ((currentActiveIdentities != null) && (targetIdentity !in currentActiveIdentities)) {
-                return
-            }
-
+            // Fetch Usage only if we are NOT in a known retry state,
+            // as we'll need usage.lastResetDate for the normal path.
             val usage =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    simUsageRepository.getSimUsage(targetIdentity).first()
-                } ?: run {
-                    trafficMutex.withLock {
-                        errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                    }
-                    return
-                }
-
-            val statsResult = baselineManager.getCurrentMobileBytes(usage.lastResetDate)
-            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-
-            val finalAction =
-                trafficMutex.withLock {
-                    determineFinalUpdateAction(targetIdentity, statsResult, lastTotalBytes)
-                }
-
-            handleFinalAction(finalAction, target, targetIdentity, statsResult, lastTotalBytes)
-        }
-
-        private suspend fun fetchLastTotalBytes(
-            targetIdentity: String,
-            statsResult: StatsResult,
-        ): Long? {
-            if (statsResult !is StatsResult.Success) return -1L
-            return withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                simUsageResetRepository.getLastTotalBytes(targetIdentity).first()
-            }
-        }
-
-        private fun determineFinalUpdateAction(
-            targetIdentity: String,
-            statsResult: StatsResult,
-            lastTotalBytes: Long?,
-        ): UpdateAction =
-            if (baselineManager.baselineNeedsRetry.containsKey(targetIdentity)) {
-                if (statsResult is StatsResult.Success) {
-                    UpdateAction.Retry(0)
+                if (initialRetryCount == null) {
+                    simUsageRepository
+                        .getSimUsage(targetIdentity)
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                        ?: run {
+                            trafficMutex.withLock { errorHandler.handleUsageReadTimeout(targetIdentity, _status) }
+                            return
+                        }
                 } else {
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Stats unavailable, retry pending",
-                        )
-                    UpdateAction.Abort
+                    null
                 }
-            } else if (lastTotalBytes == null) {
-                errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                UpdateAction.Abort
-            } else {
-                UpdateAction.Normal
-            }
 
-        private suspend fun handleFinalAction(
-            action: UpdateAction,
-            target: TargetInfo,
-            targetIdentity: String,
-            statsResult: StatsResult,
-            lastTotalBytes: Long?,
-        ) {
-            when (action) {
-                UpdateAction.Abort -> return
-                is UpdateAction.Retry -> {
-                    simUsageResetRepository.setLastTotalBytes(
+            // If we are in retry, we reset to 'now' (effectively usage 0 since now).
+            // If normal, we query since lastResetDate.
+            val startTime = usage?.lastResetDate ?: 0L
+            val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+
+            val lastTotalBytes =
+                if (initialRetryCount == null) {
+                    fetchLastTotalBytes(targetIdentity, statsResult)
+                } else {
+                    null
+                }
+
+            // 2. Atomic Transaction Phase
+            trafficMutex.withLock {
+                withContext(NonCancellable) {
+                    val pending = baselineManager.baselineNeedsRetry[targetIdentity]
+
+                    // Check for exceeded retries (Check again inside lock)
+                    if (pending != null && pending >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                        errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                        return@withContext
+                    }
+
+                    // Path A: Current state is Retry
+                    if (pending != null) {
+                        handleRetryAction(target, targetIdentity, pending, statsResult)
+                        return@withContext
+                    }
+
+                    // Path B: Normal path
+                    if (lastTotalBytes == null) {
+                        errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                        return@withContext
+                    }
+
+                    if (statsResult !is StatsResult.Success) {
+                        errorHandler.handleStatsFailure(statsResult, _status)
+                        return@withContext
+                    }
+
+                    // Perform atomic update
+                    deltaCalculator.updateTrafficBaselineAndUsage(
                         targetIdentity,
-                        (statsResult as StatsResult.Success).bytes,
+                        statsResult.bytes,
+                        lastTotalBytes,
+                        target,
                     )
                     simChangeHandler.updateLastDataSubId(target.dataSubId)
-                    trafficMutex.withLock {
-                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                        _status.value = TrackingStatus.Active
-                    }
-                }
-                UpdateAction.Normal -> {
-                    executeTrafficUpdate(target, targetIdentity, statsResult, lastTotalBytes!!)
+                    _status.value = TrackingStatus.Active
                 }
             }
         }
 
-        private suspend fun performRetryPath(
+    private suspend fun handleRetryAction(
             target: TargetInfo,
             targetIdentity: String,
             currentPending: Int,
+            statsResult: StatsResult,
         ) {
-            val statsResult = baselineManager.getCurrentMobileBytes(0L)
             if (statsResult is StatsResult.Success) {
-                // Phase 2: Write (вне мьютекса)
                 simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
                 simChangeHandler.updateLastDataSubId(target.dataSubId)
-
-                // Phase 3: Commit (под мьютексом)
-                trafficMutex.withLock {
-                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                    _status.value = TrackingStatus.Active
-                }
+                baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                _status.value = TrackingStatus.Active
+                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
             } else {
-                // Phase 3: Commit (под мьютексом)
-                trafficMutex.withLock {
-                    val current = baselineManager.baselineNeedsRetry[targetIdentity] ?: currentPending
-                    baselineManager.baselineNeedsRetry[targetIdentity] = current + 1
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Stats unavailable, retry pending",
-                        )
-                }
+                baselineManager.baselineNeedsRetry[targetIdentity] = currentPending + 1
+                val reason =
+                    if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message
+                    } else {
+                        "Stats unavailable"
+                    }
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        reason ?: "Stats unavailable, retry pending",
+                    )
             }
         }
 
-        private suspend fun executeTrafficUpdate(
-            target: TargetInfo,
+    private suspend fun fetchLastTotalBytes(
             targetIdentity: String,
             statsResult: StatsResult,
-            lastTotalBytes: Long,
-        ) {
-            if (statsResult !is StatsResult.Success) {
-                trafficMutex.withLock {
-                    errorHandler.handleStatsFailure(statsResult, _status)
-                }
-                return
-            }
-
-            // Phase 2: Write (вне мьютекса)
-            deltaCalculator.updateTrafficBaselineAndUsage(targetIdentity, statsResult.bytes, lastTotalBytes, target)
-            simChangeHandler.updateLastDataSubId(target.dataSubId)
-
-            // Phase 3: Commit (под мьютексом)
-            trafficMutex.withLock {
-                _status.value = TrackingStatus.Active
-            }
-        }
-
-        private sealed interface UpdateAction {
-            object Abort : UpdateAction
-
-            data class Retry(
-                val currentCount: Int,
-            ) : UpdateAction
-
-            object Normal : UpdateAction
+    ): Long? {
+        if (statsResult !is StatsResult.Success) return -1L
+        return simUsageResetRepository
+            .getLastTotalBytes(targetIdentity)
+            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
         }
     }

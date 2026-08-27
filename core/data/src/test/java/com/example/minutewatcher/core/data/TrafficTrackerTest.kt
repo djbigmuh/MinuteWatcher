@@ -651,80 +651,6 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `updateTrafficUsage does not skip delta after identity timeout`() =
-        runTest(testDispatcher) {
-            // 1. Successful first run to set initial state
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            val lastTotalFlow = flowOf(1000L)
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow)
-
-            tracker.updateTrafficUsage()
-            verify(callSessionRepository).setLastDataSubId(1)
-
-            // 2. Second run: observeActiveSims times out
-            whenever(simIdentityRepository.observeActiveSims())
-                .thenReturn(MutableSharedFlow()) // Never emits
-            tracker.updateTrafficUsage()
-
-            assertTrue(tracker.status.value is TrackingStatus.Error)
-            assertEquals(
-                "SIM list read timeout",
-                (tracker.status.value as TrackingStatus.Error).message,
-            )
-
-            // 3. Third run: observeActiveSims succeeds, same SIM
-            val activeSims =
-                listOf(
-                    ActiveSimInfo(
-                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        displayName = "SIM 1",
-                        carrierName = "Carrier 1",
-                        mccMnc = "25001",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(50000L))
-
-            tracker.updateTrafficUsage()
-
-            // Verify skipDelta did NOT trigger: usage should be incremented (50000 - 1000 = 49000)
-            val deltaMb = (49000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(50000L))
-            assertEquals(TrackingStatus.Active, tracker.status.value)
-        }
-
-    @Test
-    fun `getActiveSimsAndCleanup timeout does not reset inMemoryLastDataSubId`() =
-        runTest(testDispatcher) {
-            // 1. Initial success to set inMemoryLastDataSubId to 1
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
-            tracker.updateTrafficUsage()
-
-            val simChangeHandlerField = TrafficTracker::class.java.getDeclaredField("simChangeHandler")
-            simChangeHandlerField.isAccessible = true
-            val simChangeHandler = simChangeHandlerField[tracker] as TrafficSimChangeHandler
-
-            val field = TrafficSimChangeHandler::class.java.getDeclaredField("inMemoryLastDataSubId")
-            field.isAccessible = true
-            val subId = field[simChangeHandler] as Int
-            assertEquals(1, subId)
-
-            // 2. Timeout on observeActiveSims
-            whenever(simIdentityRepository.observeActiveSims())
-                .thenReturn(MutableSharedFlow())
-            tracker.updateTrafficUsage()
-
-            // 3. Verify inMemoryLastDataSubId is STILL 1, not -1
-            val subIdAfter = field[simChangeHandler] as Int
-            assertEquals("inMemoryLastDataSubId should NOT be reset on timeout", 1, subIdAfter)
-        }
-
-    @Test
     fun `updateTrafficUsage reads fresh lastTotalBytes after resetBaseline due to serialization`() =
         runTest(testDispatcher) {
             val currentStoredValue = MutableStateFlow(1000L)
@@ -786,51 +712,6 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `updateTrafficUsage sets error status on identity timeout`() =
-        runTest(testDispatcher) {
-            // Arrange: observeActiveSims never emits
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
-
-            // Act
-            tracker.updateTrafficUsage()
-            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS * 3) // Advance through initial and retry
-            testScheduler.runCurrent()
-
-            // Assert
-            val status = tracker.status.value
-            assertTrue(status is TrackingStatus.Error)
-            assertEquals("SIM list read timeout", (status as TrackingStatus.Error).message)
-            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
-        }
-
-    @Test
-    fun `getActiveSimsAndCleanup timeout does not clear baselineNeedsRetry`() =
-        runTest(testDispatcher) {
-            // Arrange: add an entry to baselineNeedsRetry
-            val identity = "sim_0"
-            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
-            baselineManagerField.isAccessible = true
-            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
-
-            val field = TrafficBaselineManager::class.java.getDeclaredField("baselineNeedsRetry")
-            field.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val map = field[baselineManager] as MutableMap<String, Int>
-            map[identity] = 1
-
-            // Mock timeout
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
-
-            // Act
-            tracker.updateTrafficUsage()
-            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS * 3)
-            testScheduler.runCurrent()
-
-            // Assert
-            assertTrue("baselineNeedsRetry should NOT be cleared on timeout", map.containsKey(identity))
-        }
-
-    @Test
     fun `resetBaseline initializes inMemoryLastDataSubId and avoids subsequent DataStore read`() =
         runTest(testDispatcher) {
             // Setup: sim_0 is active default data SIM (subId 1)
@@ -847,52 +728,6 @@ class TrafficTrackerTest {
 
             @Suppress("UnusedFlow")
             verify(callSessionRepository, never()).getLastDataSubId()
-        }
-
-    @Test
-    fun `baselineNeedsRetry is cleared of inactive SIMs after successful call following timeout`() =
-        runTest(testDispatcher) {
-            val staleIdentity = "stale_sim"
-            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
-            baselineManagerField.isAccessible = true
-            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
-
-            val field = TrafficBaselineManager::class.java.getDeclaredField("baselineNeedsRetry")
-            field.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val map = field[baselineManager] as MutableMap<String, Int>
-            map[staleIdentity] = 1
-
-            // 1. First call: timeout on observeActiveSims
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
-            tracker.updateTrafficUsage()
-            assertTrue("Should still contain stale_sim after timeout", map.containsKey(staleIdentity))
-
-            // 2. Second call: success, but stale_sim is NOT in activeSims
-            val activeSims =
-                listOf(
-                    ActiveSimInfo(
-                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        displayName = "SIM 1",
-                        carrierName = "Carrier 1",
-                        mccMnc = "25001",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
-            val lastTotalFlow3 = flowOf(1000L)
-            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(lastTotalFlow3)
-
-            tracker.updateTrafficUsage()
-
-            // 3. Verify stale_sim is gone
-            assertFalse("stale_sim should be cleared after successful call", map.containsKey(staleIdentity))
-            assertTrue("sim_0 should not be in retry map unless it failed", map.isEmpty())
         }
 
     @Test

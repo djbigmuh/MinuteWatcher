@@ -45,35 +45,38 @@ class SimIdentityPersistence
          * Saves SIM identities to DataStore and performs migrations if needed.
          */
         suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) {
-            saveMutex.withLock {
-                val validIdentities = filterValidIdentities(identities)
-                if (validIdentities.isEmpty()) return@withLock
+            val validIdentities = filterValidIdentities(identities)
+            if (validIdentities.isEmpty()) return
 
-                try {
-                    val toUpdate = filterIdentitiesRequiringUpdate(validIdentities)
-                    if (toUpdate.isEmpty()) return@withLock
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(
+                    (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
+                ) {
+                    saveMutex.withLock {
+                        val currentPrefs = fetchCurrentPrefs() ?: return@withLock
+                        val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, currentPrefs) }
+                        if (toUpdate.isEmpty()) return@withLock
 
-                    kotlinx.coroutines.withTimeoutOrNull(
-                        (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
-                    ) {
+                        // Perform migrations OUTSIDE dataStore.edit to avoid potential deadlock
+                        // and long DataStore locking.
+                        val toMigrate = filterIdentitiesRequiringMigration(toUpdate, currentPrefs)
+                        val failedIds = performMigrations(toMigrate)
+
                         dataStore.edit { prefs ->
                             val updatedToUpdate = applyOptimizationAndFilterUpdates(toUpdate, prefs)
                             if (updatedToUpdate.isEmpty()) return@edit
 
-                            val toMigrate = filterIdentitiesRequiringMigration(updatedToUpdate, prefs)
-                            val failedIds = performMigrations(toMigrate)
                             val toActuallyUpdate = updatedToUpdate.filter { it.stableId !in failedIds }
-
                             updatePreferences(toActuallyUpdate, prefs)
                         }
-                    } ?: run {
-                        AppLogger.e("SimIdentityPersistence: DataStore edit timed out, could not save identities")
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("SimIdentityPersistence: Failed to update DataStore", e)
+                } ?: run {
+                    AppLogger.e("SimIdentityPersistence: Save operation timed out (mutex or IO)")
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("SimIdentityPersistence: Failed to update DataStore", e)
             }
         }
 
@@ -83,11 +86,6 @@ class SimIdentityPersistence
                     (it.source != IdentitySource.SLOT_FALLBACK) &&
                         (!SimConstants.isInvalid(it.stableId))
                 }.distinctBy { it.stableId }
-
-        private suspend fun filterIdentitiesRequiringUpdate(identities: List<SimIdentity>): List<SimIdentity> {
-            val currentPrefs = fetchCurrentPrefs() ?: return identities
-            return identities.filter { isIdentityUpdateRequired(it, currentPrefs) }
-        }
 
         private fun applyOptimizationAndFilterUpdates(
             identities: List<SimIdentity>,
@@ -102,7 +100,7 @@ class SimIdentityPersistence
 
         private fun filterIdentitiesRequiringMigration(
             identities: List<SimIdentity>,
-            prefs: MutablePreferences,
+            prefs: Preferences,
         ): List<SimIdentity> = identities.filter { isMigrationRequired(it, prefs) }
 
         private fun updatePreferences(

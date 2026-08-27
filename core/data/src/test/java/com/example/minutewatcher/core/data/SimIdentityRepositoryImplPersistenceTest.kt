@@ -152,7 +152,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
     @Test
     @Suppress("LongMethod")
-    fun `getSimIdentity returns fresh data even without subscribers`() =
+    fun `getSimIdentity returns fresh data when subscribed`() =
         runTest(testDispatcher) {
             val appSettingsRepo = mock<AppSettingsRepository>()
             val appSettingsFlow = MutableStateFlow(AppSettings())
@@ -212,7 +212,10 @@ class SimIdentityRepositoryImplPersistenceTest {
                     scope = backgroundScope,
                 )
 
-            // 1. Initial check (no subscribers)
+            // Start observation to activate WhileSubscribed
+            val collectJob = launch { repository.observeActiveSims().collect {} }
+
+            // 1. Initial check
             val id1 = repository.getSimIdentity(0)
             assertTrue("Expected icc_ prefix, got ${id1.stableId}", id1.stableId.startsWith("icc_"))
 
@@ -227,9 +230,11 @@ class SimIdentityRepositoryImplPersistenceTest {
             permissionChanges.emit(Unit)
             testScheduler.advanceUntilIdle()
 
-            // 3. Check again (still no subscribers to observeActiveSims)
+            // 3. Check again
             val id2 = repository.getSimIdentity(0)
             assertTrue("Expected updated identity, got ${id2.stableId}", id2.stableId != id1.stableId)
             assertTrue("Expected icc_ prefix, got ${id2.stableId}", id2.stableId.startsWith("icc_"))
+
+            collectJob.cancel()
         }
 }

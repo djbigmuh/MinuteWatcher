@@ -38,6 +38,7 @@ object AppLogger {
     private val criticalQueue = ArrayDeque<LogEntry>()
     private val normalQueue = ArrayDeque<LogEntry>()
     private val lock = ReentrantLock()
+    private val fileLock = ReentrantLock()
     private val condition = lock.newCondition()
     private val droppedCount = AtomicLong(0)
 
@@ -113,27 +114,43 @@ object AppLogger {
         if (logDir == null) return
 
         val entry = LogEntry(level, message)
+        var fallbackRequired = false
+
         lock.withLock {
             val totalSize = criticalQueue.size + normalQueue.size
             if (entry.isCritical) {
                 if (totalSize >= LOG_QUEUE_CAPACITY) {
-                    // Вытесняем сначала обычные логи, если их нет — старые критические.
-                    if (normalQueue.pollFirst() == null) {
-                        criticalQueue.pollFirst()
+                    // Try to make room by displacing a non-critical log.
+                    if (normalQueue.pollFirst() != null) {
+                        criticalQueue.addLast(entry)
+                        condition.signalAll()
+                    } else {
+                        // All capacity is taken by critical logs.
+                        // Fallback to synchronous recording to avoid losing this critical log.
+                        fallbackRequired = true
                     }
-                    reportDropped()
+                } else {
+                    criticalQueue.addLast(entry)
+                    condition.signalAll()
                 }
-                criticalQueue.addLast(entry)
             } else {
                 if (totalSize < LOG_QUEUE_CAPACITY) {
                     normalQueue.addLast(entry)
+                    condition.signalAll()
                 } else {
                     reportDropped()
                 }
             }
-            condition.signalAll()
         }
-        ensureWorkerStarted()
+
+        if (fallbackRequired) {
+            // Synchronous fallback for critical logs when queue is full.
+            reportDropped()
+            Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
+            writeEntryToFile(entry)
+        } else {
+            ensureWorkerStarted()
+        }
     }
 
     private fun ensureWorkerStarted() {
@@ -170,41 +187,45 @@ object AppLogger {
 
     private fun writeEntryToFile(entry: LogEntry) {
         val dir = logDir ?: return
-        try {
-            val logFile = File(dir, LOG_FILE_NAME)
-            if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+        fileLock.withLock {
+            try {
+                val logFile = File(dir, LOG_FILE_NAME)
+                if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                    closeWriter()
+
+                    val oldFile = File(dir, LOG_FILE_OLD_NAME)
+                    if (oldFile.exists()) oldFile.delete()
+                    logFile.renameTo(oldFile)
+                }
+
+                if (logWriter == null) {
+                    logWriter =
+                        BufferedWriter(
+                            OutputStreamWriter(FileOutputStream(logFile, true)),
+                            LOG_BUFFER_SIZE,
+                        )
+                }
+
+                val timestamp = dateFormat.format(entry.timestamp)
+                val line = "$timestamp ${entry.level}/$TAG: ${entry.message}\n"
+                logWriter?.write(line)
+                logWriter?.flush()
+            } catch (e: Exception) {
                 closeWriter()
-
-                val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                if (oldFile.exists()) oldFile.delete()
-                logFile.renameTo(oldFile)
-            }
-
-            if (logWriter == null) {
-                logWriter =
-                    BufferedWriter(
-                        OutputStreamWriter(FileOutputStream(logFile, true)),
-                        LOG_BUFFER_SIZE,
-                    )
-            }
-
-            val timestamp = dateFormat.format(entry.timestamp)
-            val line = "$timestamp ${entry.level}/$TAG: ${entry.message}\n"
-            logWriter?.write(line)
-            logWriter?.flush()
-        } catch (e: Exception) {
-            closeWriter()
-            if (BuildConfig.DEBUG) {
-                Log.w(TAG, "File logging failed", e)
+                if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "File logging failed", e)
+                }
             }
         }
     }
 
     private fun closeWriter() {
-        try {
-            logWriter?.close()
-        } catch (_: Exception) {
+        fileLock.withLock {
+            try {
+                logWriter?.close()
+            } catch (_: Exception) {
+            }
+            logWriter = null
         }
-        logWriter = null
     }
 }

@@ -24,15 +24,6 @@ class TrafficErrorHandler
             }
         }
 
-        fun handleSimListTimeout(statusFlow: MutableStateFlow<TrackingStatus>) {
-            AppLogger.e("TrafficTracker: observeActiveSims timed out after retry")
-            statusFlow.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "SIM list read timeout",
-                )
-        }
-
         fun handleInconsistentFirmware(statusFlow: MutableStateFlow<TrackingStatus>) {
             AppLogger.w("TrafficTracker: inconsistent firmware state")
             statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)

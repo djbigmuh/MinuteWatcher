@@ -94,6 +94,7 @@ class MainBannerControllerTest {
                 )
 
             // Initial subscription in init
+            backgroundScope.launch { controller.trackingBannerState.collect {} }
             testScheduler.advanceUntilIdle()
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
 
@@ -123,6 +124,8 @@ class MainBannerControllerTest {
                     seedRepository,
                     backgroundScope,
                 )
+
+            backgroundScope.launch { controller.trackingBannerState.collect {} }
 
             // Initial state
             assertEquals(false, controller.trackingBannerState.value.isStorageDegraded)

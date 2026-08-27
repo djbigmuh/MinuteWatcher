@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.HashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
@@ -102,20 +101,18 @@ class ResetManager
             resetIdentities: MutableSet<String>,
         ): Boolean {
             val identity = simInfo.identity.stableId
-            // Чтение getSimUsage() вынесено за пределы resetMutex.withLock.
-            // Обернуто в таймаут для предотвращения зависания при деградации DataStore.
-            val usage =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    simUsageRepository.getSimUsage(identity).first()
-                }
-
-            if (usage == null) {
-                AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
-                return false
-            }
-
             val resetPerformed =
                 resetMutex.withLock {
+                    val usage =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            simUsageRepository.getSimUsage(identity).first()
+                        }
+
+                    if (usage == null) {
+                        AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+                        return@withLock false
+                    }
+
                     checkAndPerformResetForSimInternal(simInfo, now, nowElapsed, usage)
                 }
 

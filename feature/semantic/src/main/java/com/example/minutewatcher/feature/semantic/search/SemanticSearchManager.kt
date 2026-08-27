@@ -119,7 +119,11 @@ open class SemanticSearchManager
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
-            job?.join()
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                job?.join()
+            } ?: run {
+                AppLogger.w("SemanticSearchManager: previous observation job did not terminate in time")
+            }
             lastSnapshotFlow = snapshotFlow
             job =
                 scope.launch {

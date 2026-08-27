@@ -24,12 +24,9 @@ object TrackingBannerMapper {
         val shortcuts = statusMap["shortcuts"]
         val calls = statusMap["calls"]
 
-        val observationFailed =
-            (
-                (statusMap["widget_observation"] as? TrackingStatus.Error)?.type ==
-                    TrackingStatus.ErrorType.DATABASE_ERROR
-                ) ||
-                isStorageDegraded
+        val widgetError = statusMap["widget_observation"] as? TrackingStatus.Error
+        val isDatabaseError = widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
+        val observationFailed = isDatabaseError || isStorageDegraded
 
         val phonePermissionState =
             determinePhonePermissionState(
