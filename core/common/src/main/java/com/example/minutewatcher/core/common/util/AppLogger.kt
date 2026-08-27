@@ -29,6 +29,7 @@ object AppLogger {
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
     private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
     private const val LOG_BUFFER_SIZE = 8192
+    private const val WORKER_RETRY_DELAY_MS = 1000L
 
     @Volatile private var logDir: File? = null
 
@@ -112,8 +113,7 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (!IS_FILE_LOGGING_ENABLED) return
-        if (logDir == null) return
+        if (!IS_FILE_LOGGING_ENABLED || logDir == null) return
 
         val entry = LogEntry(level, message)
         var fallbackRequired = false
@@ -121,45 +121,72 @@ object AppLogger {
         lock.withLock {
             val totalSize = criticalQueue.size + normalQueue.size
             if (entry.isCritical) {
-                if (totalSize >= LOG_QUEUE_CAPACITY) {
-                    // Try to make room by displacing a non-critical log.
-                    if (normalQueue.pollFirst() != null) {
-                        criticalQueue.addLast(entry)
-                        condition.signalAll()
-                    } else {
-                        // All capacity is taken by critical logs.
-                        // Fallback to synchronous recording to avoid losing this critical log.
-                        fallbackRequired = true
-                    }
-                } else {
-                    criticalQueue.addLast(entry)
-                    condition.signalAll()
-                }
+                fallbackRequired = !enqueueCritical(entry, totalSize)
             } else {
-                if (totalSize < LOG_QUEUE_CAPACITY) {
-                    normalQueue.addLast(entry)
-                    condition.signalAll()
-                } else {
-                    reportDropped()
-                }
+                enqueueNormal(entry, totalSize)
             }
         }
 
         if (fallbackRequired) {
-            // Synchronous fallback for critical logs when queue is full.
-            reportDropped()
-            Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
-            if (fileLock.tryLock()) {
-                try {
-                    writeEntryToFileUnlocked(entry)
-                } finally {
-                    fileLock.unlock()
-                }
-            } else {
-                Log.w(TAG, "Critical log dropped: file lock contended")
-            }
+            handleSynchronousFallback(entry, level)
         } else {
             ensureWorkerStarted()
+        }
+    }
+
+    @Suppress("ReturnCount")
+    private fun enqueueCritical(
+        entry: LogEntry,
+        totalSize: Int,
+    ): Boolean {
+        if (totalSize < LOG_QUEUE_CAPACITY) {
+            criticalQueue.addLast(entry)
+            condition.signalAll()
+            return true
+        }
+
+        // Try to make room by displacing a non-critical log.
+        if (normalQueue.pollFirst() != null) {
+            criticalQueue.addLast(entry)
+            condition.signalAll()
+            return true
+        }
+
+        // All capacity is taken by critical logs.
+        return false
+    }
+
+    private fun enqueueNormal(
+        entry: LogEntry,
+        totalSize: Int,
+    ) {
+        if (totalSize < LOG_QUEUE_CAPACITY) {
+            normalQueue.addLast(entry)
+            condition.signalAll()
+        } else {
+            reportDropped()
+        }
+    }
+
+    private fun handleSynchronousFallback(
+        entry: LogEntry,
+        level: String,
+    ) {
+        // Synchronous fallback for critical logs when queue is full.
+        reportDropped()
+        Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
+        if (fileLock.tryLock()) {
+            try {
+                writeEntryToFileUnlocked(entry)
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "Critical log synchronous write failed", e)
+                }
+            } finally {
+                fileLock.unlock()
+            }
+        } else {
+            Log.w(TAG, "Critical log dropped: file lock contended")
         }
     }
 
@@ -185,21 +212,43 @@ object AppLogger {
     private fun workerLoop() {
         try {
             while (true) {
-                val entry =
-                    lock.withLock {
-                        while (criticalQueue.isEmpty() && normalQueue.isEmpty()) {
-                            condition.await()
-                        }
-                        criticalQueue.pollFirst() ?: normalQueue.pollFirst()
-                    } ?: continue
-
-                writeEntryToFile(entry)
+                val entry = pollEntry() ?: continue
+                processWorkerEntry(entry)
             }
         } catch (t: Throwable) {
             // Поток завершается аварийно. Сбрасываем флаг, чтобы
             // следующий вызов logToFile мог запустить новый поток.
             isWorkerStarted = false
             Log.e(TAG, "AppLogger worker thread crashed", t)
+        }
+    }
+
+    private fun pollEntry(): LogEntry? =
+        lock.withLock {
+            while (criticalQueue.isEmpty() && normalQueue.isEmpty()) {
+                condition.await()
+            }
+            criticalQueue.pollFirst() ?: normalQueue.pollFirst()
+        }
+
+    private fun processWorkerEntry(entry: LogEntry) {
+        try {
+            writeEntryToFile(entry)
+        } catch (e: Exception) {
+            // Запись не удалась. Возвращаем в начало соответствующей очереди.
+            lock.withLock {
+                if (entry.isCritical) criticalQueue.addFirst(entry) else normalQueue.addFirst(entry)
+                condition.signalAll()
+            }
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "AppLogger: failed to write log entry, re-queued", e)
+            }
+            // Добавляем задержку перед повтором, чтобы не забить CPU при фатальной ошибке диска
+            try {
+                Thread.sleep(WORKER_RETRY_DELAY_MS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
         }
     }
 
@@ -240,9 +289,7 @@ object AppLogger {
             logWriter?.flush()
         } catch (e: Exception) {
             closeWriterUnlocked()
-            if (BuildConfig.DEBUG) {
-                Log.w(TAG, "File logging failed", e)
-            }
+            throw e
         }
     }
 

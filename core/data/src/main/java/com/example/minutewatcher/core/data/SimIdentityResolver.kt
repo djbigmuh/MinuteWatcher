@@ -83,6 +83,8 @@ internal class SimIdentityResolver
             if (finalIdentity === identity) {
                 try {
                     persistence.saveSimIdentitiesInfo(listOf(identity))
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
                 }

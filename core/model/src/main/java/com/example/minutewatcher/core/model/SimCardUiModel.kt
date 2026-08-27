@@ -1,5 +1,7 @@
 package com.example.minutewatcher.core.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Модель SIM-карты для UI.
  * Содержит все данные, необходимые для отображения SIM-карты в UI.
@@ -24,6 +26,7 @@ package com.example.minutewatcher.core.model
  * @property autoResetDay День автосброса.
  * @property rolloverEnabled Включён ли перенос остатков.
  */
+@Immutable
 data class SimCardUiModel(
     val slot: Int,
     val identity: String,

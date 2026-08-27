@@ -23,21 +23,16 @@ class WidgetSettingsSaver
         /**
          * Сохраняет настройки виджета.
          *
-         * **Единая точка валидации (защитный барьер):**
-         * Валидация выполняется через [WidgetSettingsState.validate].
-         * Это гарантирует консистентность данных при сохранении, даже если
-         * ViewModel передаст некорректные значения.
-         *
-         * Строгое соблюдение API: виджет читает эти значения напрямую
-         * и не выполняет повторную валидацию. Поэтому валидация на границе
-         * записи — единственный гарант корректности данных в хранилище.
+         * **Строгое соблюдение API:** Валидация выполняется на стороне вызывающего
+         * кода (ViewModel). Saver принимает провалидированное состояние.
+         * Это гарантирует консистентность данных при сохранении.
          *
          * **Строгое соблюдение API:** на AOSP сохранение настроек завершается за миллисекунды.
          * Сбой на этапе SIM-настроек указывает на деградацию DataStore или недоступность
          * seed (проблема кастомной прошивки). Общие настройки не зависят от seed и
          * сохраняются всегда.
          *
-         * @param state Состояние настроек (будет провалидировано перед сохранением).
+         * @param state Состояние настроек (уже провалидировано).
          * @param skipSimSettings Если true, SIM-специфичные настройки не
          *   сохраняются (используется при simListLoadFailed).
          * @return [SaveResult] результат операции.
@@ -51,8 +46,9 @@ class WidgetSettingsSaver
                 return SaveResult.Failed
             }
 
-            // Единая точка валидации на границе записи.
-            val validatedState = WidgetSettingsState.validate(state)
+            // Вход уже провалидирован вызывающей стороной (WidgetSettingsViewModel).
+            // Повторная валидация не требуется.
+            val validatedState = state
 
             return withContext(NonCancellable) {
                 try {
@@ -90,6 +86,8 @@ class WidgetSettingsSaver
                 } ?: run {
                     AppLogger.w("WidgetSettingsSaver: widget notification timed out, skipping")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
             }

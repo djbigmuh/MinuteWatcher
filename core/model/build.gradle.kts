@@ -11,6 +11,8 @@ java {
 }
 
 dependencies {
+    api(platform(libs.androidxComposeBom))
+    api(libs.androidxComposeRuntime)
     implementation(libs.kotlinxCoroutinesCore)
 
     testImplementation(libs.junit)

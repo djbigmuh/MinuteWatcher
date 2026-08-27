@@ -56,11 +56,20 @@ class UpdateCoordinator
         override val key: String = "widget_observation"
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus>
-            get() {
-                ensureObservationStarted()
-                return _status.asStateFlow()
-            }
+    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    private var lastSnapshotHash: Int? = null
+    private var consecutiveUpdateFailures = 0
+    private val widgetUpdateMutex = Mutex()
+    private val initMutex = Mutex()
+
+    private val isObservationStarted = AtomicBoolean(false)
+
+    private var observationJob: Job? = null
+
+    init {
+        ensureObservationStarted()
+    }
 
         /**
          * Recovers widget observation state.
@@ -74,15 +83,6 @@ class UpdateCoordinator
                 restartObservation()
             }
         }
-
-        private var lastSnapshotHash: Int? = null
-        private var consecutiveUpdateFailures = 0
-        private val widgetUpdateMutex = Mutex()
-        private val initMutex = Mutex()
-
-        private val isObservationStarted = AtomicBoolean(false)
-
-        private var observationJob: Job? = null
 
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
@@ -117,7 +117,7 @@ class UpdateCoordinator
                 CoroutineExceptionHandler { _, cause ->
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
-            observationJob =
+            val newJob =
                 flow { emitAll(usageStateRepository.observeSnapshot()) }
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
@@ -131,6 +131,21 @@ class UpdateCoordinator
                     // процесса. Если кастомная прошивка убивает процесс без вызова
                     // Application.onTerminate() — это проблема кастомной прошивки.
                     .launchIn(scope + handler)
+
+            observationJob = newJob
+
+            // Мониторинг завершения: если наблюдение упало — перезапускаем через 5 секунд.
+            scope.launch {
+                newJob.join()
+                // Если текущий job изменился (т.е. setupObservation вызван снова), ничего не делаем.
+                if (observationJob !== newJob) return@launch
+                if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
+                AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
+                kotlinx.coroutines.delay(5000.milliseconds)
+                if (isObservationStarted.get() && observationJob === newJob) {
+                    restartObservation()
+                }
+            }
         }
 
         /**

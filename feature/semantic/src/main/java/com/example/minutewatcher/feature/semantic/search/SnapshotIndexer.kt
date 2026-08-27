@@ -107,6 +107,8 @@ open class SnapshotIndexer
             if (staleIds.isNotEmpty()) {
                 try {
                     sessionManager.session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.w("SnapshotIndexer: failed to remove stale documents", e)
                 }

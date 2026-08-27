@@ -106,28 +106,10 @@ internal class SimIdentityObserver
                         }
                 }.catch { e ->
                     if (e is CancellationException) throw e
-                    AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims, retrying in 10s", e)
+                    AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims", e)
                     emit(emptyList())
-                    throw e
-                }.retryWhen { cause, attempt ->
-                    if (cause is CancellationException) return@retryWhen false
-
-                    when {
-                        cause is SeedUnavailableException -> {
-                            delay(10000.milliseconds)
-                            true
-                        }
-
-                        attempt >= MAX_CONSECUTIVE_RETRIES -> {
-                            AppLogger.e("SimIdentityObserver: max retries reached, stopping observation", cause)
-                            false
-                        }
-
-                        else -> {
-                            delay(10000.milliseconds)
-                            true
-                        }
-                    }
+                    // Не пробрасываем — позволяем потоку завершиться штатно.
+                    // Восстановление возможно через подписку заново (WhileSubscribed).
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -158,7 +140,6 @@ internal class SimIdentityObserver
 
         companion object {
             private const val INITIAL_BACKOFF_MS = 1000L
-            private const val MAX_CONSECUTIVE_RETRIES = 5
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
         }

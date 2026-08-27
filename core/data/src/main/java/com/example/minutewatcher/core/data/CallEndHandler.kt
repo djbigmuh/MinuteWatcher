@@ -17,7 +17,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList", "CyclomaticComplexMethod", "TooManyFunctions")
 internal class CallEndHandler
     @Inject
     constructor(
@@ -26,6 +26,7 @@ internal class CallEndHandler
         private val retryHelper: DataStoreRetryHelper,
         private val attributionResolver: CallAttributionResolver,
     ) {
+    @Suppress("LongMethod", "ThrowsCount")
         suspend fun performCallEnd(
             subId: Int,
             callEndResolver: CallEndResolver,
@@ -41,29 +42,18 @@ internal class CallEndHandler
             var operationCompleted = false
             try {
                 if (!checkPermissions()) {
-                    // Гарантируем вызов refreshStatus в finally, так как checkPermissions()
-                    // мог изменить статус (установить ошибку), который нужно отобразить.
                     operationCompleted = true
                     return
                 }
 
                 callMutex.withLock {
-                    if (subId == -1) {
-                        if (!isCallTrackingEnabled()) {
-                            AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
-                            clearAllCallSessions()
-                            operationCompleted = true
-                            return@withLock
-                        }
-                    }
-
-                    val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
-
-                    if (effectiveSubId == -1) {
-                        callEndResolver.resolveUnknownSubIdEnd()
-                    } else {
-                        endCallAction(effectiveSubId)
-                    }
+                    executeCallEndLogic(
+                        subId,
+                        isCallTrackingEnabled,
+                        clearAllCallSessions,
+                        endCallAction,
+                        callEndResolver,
+                    )
                     operationCompleted = true
                 }
             } catch (e: CancellationException) {
@@ -75,26 +65,69 @@ internal class CallEndHandler
                 AppLogger.e("SecurityException in onCallEnded", e)
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             } catch (e: Exception) {
-                AppLogger.e("Error in onCallEnded", e)
-                if (statusFlow.value !is TrackingStatus.Error) {
-                    statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                }
-                if (subId != -1) {
-                    try {
-                        cleanupCounters(subId)
-                    } catch (ex: Exception) {
-                        AppLogger.e("Cleanup failed in onCallEnded catch block", ex)
-                    }
-                }
+                handlePerformCallEndError(subId, e, statusFlow, cleanupCounters)
             } finally {
-                withContext(NonCancellable) {
-                    try {
-                        if (operationCompleted || (statusFlow.value is TrackingStatus.Error)) {
-                            refreshStatus(false)
-                        }
-                    } catch (e: Exception) {
-                        AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
-                    }
+                finalizeCallEnd(operationCompleted, statusFlow, refreshStatus)
+            }
+    }
+
+    private suspend fun executeCallEndLogic(
+        subId: Int,
+        isCallTrackingEnabled: suspend () -> Boolean,
+        clearAllCallSessions: suspend () -> Unit,
+        endCallAction: suspend (Int) -> Unit,
+        callEndResolver: CallEndResolver,
+    ) {
+        if (subId == -1 && !isCallTrackingEnabled()) {
+            AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
+            clearAllCallSessions()
+            return
+        }
+
+        val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
+        if (effectiveSubId == -1) {
+            callEndResolver.resolveUnknownSubIdEnd()
+        } else {
+            endCallAction(effectiveSubId)
+        }
+    }
+
+    private suspend fun handlePerformCallEndError(
+        subId: Int,
+        e: Exception,
+        statusFlow: MutableStateFlow<TrackingStatus>,
+        cleanupCounters: suspend (Int) -> Unit,
+    ) {
+        AppLogger.e("Error in onCallEnded", e)
+        if (statusFlow.value !is TrackingStatus.Error) {
+            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+        }
+        if (subId != -1) {
+            try {
+                cleanupCounters(subId)
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                AppLogger.e("Cleanup failed in onCallEnded catch block", ex)
+            }
+        }
+    }
+
+    @Suppress("ThrowingExceptionFromFinally")
+    private suspend fun finalizeCallEnd(
+        operationCompleted: Boolean,
+        statusFlow: MutableStateFlow<TrackingStatus>,
+        refreshStatus: suspend (Boolean) -> Unit,
+    ) {
+        withContext(NonCancellable) {
+            try {
+                if (operationCompleted || (statusFlow.value is TrackingStatus.Error)) {
+                    refreshStatus(false)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
                 }
             }
         }

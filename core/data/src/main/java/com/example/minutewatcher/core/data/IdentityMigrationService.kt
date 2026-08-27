@@ -66,6 +66,8 @@ class IdentityMigrationService
                             .any { it.isLegacyKey(activeIdentities) }
                     appHasLegacy || simHasLegacy
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Migration logic is protected against corrupted DataStore state.
                 // Errors result in skipping migration to maintain app stability.
@@ -125,6 +127,8 @@ class IdentityMigrationService
         suspend fun markSchemaCurrent() {
             try {
                 appDataStore.edit { it[DataStoreKeys.DATA_SCHEMA_VERSION] = DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("IdentityMigrationService: Failed to mark schema current", e)
             }

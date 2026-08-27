@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -152,25 +153,43 @@ open class CallTracker
         }
 
     private suspend fun clearSessionsAndRefresh(tag: String) {
+        var operationCompleted = false
             try {
                 callMutex.withLock {
                     sessionCleaner.clearAllSessions()
                     AppLogger.d("CallTracker: cleared all sessions during $tag")
                 }
+                operationCompleted = true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("Error during $tag", e)
             } finally {
-                refreshStatus(force = true)
+                if (operationCompleted) {
+                    refreshStatus(force = true)
+                }
             }
     }
 
     fun onBoot() {
         scope.launch {
-            clearSessionsAndRefresh("boot cleanup")
+            try {
+                clearSessionsAndRefresh("boot cleanup")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("CallTracker: boot cleanup failed", e)
+            }
             }
     }
 
     override suspend fun recover() {
-        clearSessionsAndRefresh("recovery")
+        try {
+            clearSessionsAndRefresh("recovery")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("CallTracker: recovery failed", e)
+        }
         }
     }

@@ -221,6 +221,8 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch(ioDispatcher) {
                     try {
                         workScheduler.scheduleInitialSetup()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         AppLogger.e(
                             "MainActivity: Failed to schedule background work after phone permission granted",
@@ -272,6 +274,8 @@ class MainActivity : AppCompatActivity() {
                     launch(ioDispatcher) {
                         try {
                             workScheduler.scheduleInitialSetup()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             AppLogger.e("MainActivity: Failed to schedule background work during init", e)
                         }

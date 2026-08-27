@@ -103,6 +103,8 @@ internal class CallAttributionResolver
             val active =
                 try {
                     callSessionRepository.getActiveCallSubIds()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error reading active call subIds", e)
                     emptyList()

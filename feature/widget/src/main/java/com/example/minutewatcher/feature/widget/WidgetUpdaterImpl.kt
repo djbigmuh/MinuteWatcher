@@ -122,8 +122,17 @@ class WidgetUpdaterImpl
         private suspend fun performSimplifiedFallback(): Boolean {
             AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout (fallback).")
             limitManager.setWidgetLimitExceeded(value = true)
-            val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
-            return result is UpdateResult.Success
+
+            repeat(MAX_SIMPLIFIED_ATTEMPTS) { attempt ->
+                val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
+                if (result is UpdateResult.Success) return true
+                if (attempt < MAX_SIMPLIFIED_ATTEMPTS - 1) {
+                    AppLogger.w("Simplified widget update attempt ${attempt + 1} failed, retrying")
+                    kotlinx.coroutines.delay(Constants.Widget.RETRY_BACKOFF_MS.milliseconds)
+                }
+            }
+            AppLogger.e("Simplified widget update failed after $MAX_SIMPLIFIED_ATTEMPTS attempts")
+            return false
         }
 
         @Suppress("TooGenericExceptionCaught")
@@ -149,4 +158,8 @@ class WidgetUpdaterImpl
             SIMPLIFIED,
             PROBE,
         }
+
+    companion object {
+        private const val MAX_SIMPLIFIED_ATTEMPTS = 2
+    }
     }

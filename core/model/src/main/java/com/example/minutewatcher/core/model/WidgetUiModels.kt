@@ -1,5 +1,8 @@
 package com.example.minutewatcher.core.model
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+
 /**
  * Состояние виджета для рендера.
  * Содержит все данные, необходимые для рендера виджета.
@@ -16,6 +19,7 @@ package com.example.minutewatcher.core.model
  * @property refreshFailed Флаг ошибки обновления данных.
  * @property isSnapshotEmpty Флаг пустого snapshot.
  */
+@Immutable
 data class WidgetUiState(
     val layoutMode: Int,
     val simArrangement: Int,
@@ -41,6 +45,7 @@ data class WidgetUiState(
  * @property gbAbbr Аббревиатура гигабайт ("ГБ").
  * @property fractionFormat Формат дроби ("/%1$s").
  */
+@Immutable
 data class WidgetStrings(
     val usedText: String,
     val minutesAbbr: String,
@@ -77,6 +82,7 @@ data class WidgetStrings(
  * @property trafficLimitFullText Полный текст лимита трафика.
  * @property layoutSpec Спецификация layout для SimLayoutRenderV2.
  */
+@Immutable
 data class SimUiState(
     val slot: Int,
     val operatorName: String,
@@ -111,6 +117,7 @@ data class SimUiState(
  *
  * @property rows Список строк layout.
  */
+@Immutable
 data class SimLayoutSpec(
     val rows: List<SimLayoutRow>,
 )
@@ -121,6 +128,7 @@ data class SimLayoutSpec(
  *
  * @property components Список компонентов строки.
  */
+@Immutable
 data class SimLayoutRow(
     val components: List<SimLayoutComponent>,
 )
@@ -134,12 +142,15 @@ data class SimLayoutRow(
  * - [Text] — текст (text, color, fontSizeSp, isBold).
  * - [Spacer] — spacer (widthDp, heightDp).
  */
+@Stable
 sealed class SimLayoutComponent {
+    @Immutable
     data class Icon(
         val iconRes: Int,
         val sizeDp: Int,
     ) : SimLayoutComponent()
 
+    @Immutable
     data class Text(
         val text: String,
         val color: Int,
@@ -147,6 +158,7 @@ sealed class SimLayoutComponent {
         val isBold: Boolean = false,
     ) : SimLayoutComponent()
 
+    @Immutable
     data class Spacer(
         val widthDp: Int = 0,
         val heightDp: Int = 0,
