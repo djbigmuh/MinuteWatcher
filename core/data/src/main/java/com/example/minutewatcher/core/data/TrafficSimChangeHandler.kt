@@ -48,8 +48,7 @@ class TrafficSimChangeHandler
         suspend fun handleSimChangeIfNeeded(
             target: TargetInfo,
             status: MutableStateFlow<TrackingStatus>,
-            onNoChange: suspend (String) -> Unit,
-        ) {
+        ): String? {
             ensureInMemoryLastDataSubId()
             val savedLastDataSubId = inMemoryLastDataSubId
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
@@ -69,12 +68,13 @@ class TrafficSimChangeHandler
                 isSimChanged,
             )
 
-            if (isSimChanged) {
+            return if (isSimChanged) {
                 // Read the updated retry count from the map to accurately log the state after the attempt.
                 val retryCount = baselineManager.baselineNeedsRetry.getOrDefault(targetIdentity, 0)
                 handleSkipDelta(target, retryCount, status)
+                null
             } else {
-                onNoChange(targetIdentity)
+                targetIdentity
             }
         }
 

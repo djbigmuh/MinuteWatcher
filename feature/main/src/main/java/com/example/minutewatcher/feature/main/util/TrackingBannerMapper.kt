@@ -12,8 +12,6 @@ object TrackingBannerMapper {
         phoneGranted: Boolean,
         usageGranted: Boolean,
         notificationsGranted: Boolean,
-        phonePermanentlyDenied: Boolean,
-        notificationPermanentlyDenied: Boolean,
         settings: AppSettings,
         appSearchRetryCount: Int = 0,
         appSearchBannerDismissed: Boolean = false,
@@ -28,6 +26,7 @@ object TrackingBannerMapper {
         val isDatabaseError = widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
         val observationFailed = isDatabaseError || isStorageDegraded
 
+        val phonePermanentlyDenied = settings.wasPhonePermissionRequestedBefore && !phoneGranted
         val phonePermissionState =
             determinePhonePermissionState(
                 phoneGranted,
@@ -43,6 +42,7 @@ object TrackingBannerMapper {
 
         val appSearchErrorType = (appsearch as? TrackingStatus.Error)?.type
 
+        val notificationPermanentlyDenied = settings.notificationPermissionRequested && !notificationsGranted
         return TrackingBannerState(
             phonePermissionState = phonePermissionState,
             showUsageAccessBanner = !usageGranted,
@@ -89,9 +89,8 @@ object TrackingBannerMapper {
         permanentlyDenied: Boolean,
         settings: AppSettings,
     ): PermissionUiState {
-        val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
         return when {
-            !showNotifications || granted -> PermissionUiState.GRANTED
+            granted -> PermissionUiState.GRANTED
             permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
             settings.notificationPermissionRequested -> PermissionUiState.DENIED
             else -> PermissionUiState.NOT_REQUESTED

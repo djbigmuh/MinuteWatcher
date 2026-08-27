@@ -27,7 +27,8 @@ object AppLogger {
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
     private const val LOG_QUEUE_CAPACITY = 4096
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
-    private val IS_FILE_LOGGING_ENABLED = BuildConfig.DEBUG
+    @Volatile
+    private var isFileLoggingEnabled = BuildConfig.DEBUG
     private const val LOG_BUFFER_SIZE = 8192
     private const val WORKER_RETRY_DELAY_MS = 1000L
 
@@ -44,6 +45,7 @@ object AppLogger {
     private val fileLock = ReentrantLock()
     private val condition = lock.newCondition()
     private val droppedCount = AtomicLong(0)
+    private val workerRestartCount = AtomicLong(0)
 
     @Volatile private var isWorkerStarted = false
 
@@ -70,7 +72,7 @@ object AppLogger {
 
     fun d(message: String) {
         logger.d(TAG, message)
-        if (IS_FILE_LOGGING_ENABLED) {
+        if (isFileLoggingEnabled) {
             logToFile("D", message)
         }
     }
@@ -80,7 +82,7 @@ object AppLogger {
         throwable: Throwable? = null,
     ) {
         logger.w(TAG, message, throwable)
-        if (IS_FILE_LOGGING_ENABLED) {
+        if (isFileLoggingEnabled) {
             val fullMessage =
                 if (throwable != null) {
                     "$message\n${throwable.stackTraceToString()}"
@@ -96,7 +98,7 @@ object AppLogger {
         throwable: Throwable? = null,
     ) {
         logger.e(TAG, message, throwable)
-        if (IS_FILE_LOGGING_ENABLED) {
+        if (isFileLoggingEnabled) {
             val fullMessage =
                 if (throwable != null) {
                     "$message\n${throwable.stackTraceToString()}"
@@ -197,9 +199,15 @@ object AppLogger {
     }
 
     private fun ensureWorkerStarted() {
-        if (isWorkerStarted) return
+        if (isWorkerStarted || !isFileLoggingEnabled) return
         lock.withLock {
-            if (isWorkerStarted) return
+            if (isWorkerStarted || !isFileLoggingEnabled) return
+
+            val count = workerRestartCount.get()
+            if (count > 0) {
+                Log.w(TAG, "AppLogger: restarting worker thread (previous crash count: $count)")
+            }
+
             isWorkerStarted = true
             val thread = Thread({ workerLoop() }, "AppLogger-Worker")
             thread.isDaemon = true
@@ -214,18 +222,25 @@ object AppLogger {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun workerLoop() {
         try {
             while (true) {
                 val entry = pollEntry() ?: continue
                 processWorkerEntry(entry)
             }
-        } catch (t: Throwable) {
-            // Поток завершается аварийно. Сбрасываем флаг, чтобы
-            // следующий вызов logToFile мог запустить новый поток.
+        } catch (e: Exception) {
             isWorkerStarted = false
-            Log.e(TAG, "AppLogger worker thread crashed", t)
+            val count = workerRestartCount.incrementAndGet()
+            Log.e(TAG, "AppLogger worker thread crashed (restart count: $count)", e)
+            if (count > 3) {
+                isFileLoggingEnabled = false
+                Log.e(TAG, "AppLogger: too many worker crashes, file logging disabled")
+            }
+        } catch (e: Error) {
+            // Do not suppress Error (OOM, StackOverflow, etc.)
+            isWorkerStarted = false
+            Log.e(TAG, "AppLogger worker thread fatal error", e)
+            throw e
         }
     }
 

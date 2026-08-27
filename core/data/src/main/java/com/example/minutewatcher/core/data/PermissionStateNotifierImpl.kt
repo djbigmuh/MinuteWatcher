@@ -23,7 +23,7 @@ class PermissionStateNotifierImpl
 
     private val _changes =
         MutableSharedFlow<Unit>(
-            replay = 0,
+            replay = 1,
             extraBufferCapacity = 1,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )

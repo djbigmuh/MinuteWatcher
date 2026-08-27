@@ -64,14 +64,17 @@ class MainResumeController
                             return@launch
                         }
 
-                        val nowElapsed = timeProvider.elapsedRealtime()
-                        val elapsed = nowElapsed - lastRefreshAt
+                        val nowWall = timeProvider.now()
                         val isStale =
                             (lastRefreshAt == 0L) ||
-                                (elapsed < 0) ||
-                                (elapsed > RESUME_REFRESH_THRESHOLD_MS)
+                                (lastRefreshAt > nowWall) ||
+                                (nowWall - lastRefreshAt > RESUME_REFRESH_THRESHOLD_MS)
 
                         if (isStale) {
+                            if (lastRefreshAt > nowWall) {
+                                AppLogger.d("onActivityResume: clock moved backwards, resetting lastRefreshAt")
+                                onUpdateLastRefreshAt(0L)
+                            }
                             onRefreshNeeded()
                         }
                     }

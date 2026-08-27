@@ -39,10 +39,10 @@ internal class CallEndHandler
             callMutex: Mutex,
             clearAllCallSessions: suspend () -> Unit,
         ) {
-            var operationCompleted = false
+        var shouldRefreshStatus = false
             try {
                 if (!checkPermissions()) {
-                    operationCompleted = true
+                    shouldRefreshStatus = true
                     return
                 }
 
@@ -59,23 +59,22 @@ internal class CallEndHandler
                             callEndResolver,
                         )
                     }
-                    operationCompleted = true
+                    shouldRefreshStatus = true
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                operationCompleted = true
+                shouldRefreshStatus = true
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                throw e
             } catch (e: SecurityException) {
-                operationCompleted = true
+                shouldRefreshStatus = true
                 AppLogger.e("SecurityException in onCallEnded", e)
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             } catch (e: Exception) {
-                operationCompleted = true
+                shouldRefreshStatus = true
                 handlePerformCallEndError(subId, e, statusFlow, cleanupCounters)
             } finally {
-                finalizeCallEnd(operationCompleted, statusFlow, refreshStatus)
+                finalizeCallEnd(shouldRefreshStatus, refreshStatus)
             }
     }
 
@@ -115,13 +114,12 @@ internal class CallEndHandler
 
     @Suppress("ThrowingExceptionFromFinally")
     private suspend fun finalizeCallEnd(
-        operationCompleted: Boolean,
-        statusFlow: MutableStateFlow<TrackingStatus>,
+        shouldRefreshStatus: Boolean,
         refreshStatus: suspend (Boolean) -> Unit,
     ) {
         withContext(NonCancellable) {
             try {
-                if (operationCompleted || (statusFlow.value is TrackingStatus.Error)) {
+                if (shouldRefreshStatus) {
                     refreshStatus(false)
                 }
             } catch (e: CancellationException) {

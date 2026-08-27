@@ -277,6 +277,7 @@ open class SemanticSearchManager
                             true
                         }
                     } catch (e: CancellationException) {
+                        resetLastSnapshotState()
                         throw e
                     } catch (e: AppSearchException) {
                         throw e

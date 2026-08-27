@@ -23,7 +23,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.core.common.di.ApplicationScope
@@ -230,37 +229,14 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                 }
-                viewModel.updatePermissionDeniedState(phone = false)
-                if (!permissionManager.hasUsageStatsPermission()) {
-                    viewModel.setUsageAccessDialog(true)
-                } else {
-                    checkNotifications(autoRequest = true)
-                }
-            } else {
-                val permanentlyDenied =
-                    !ActivityCompat.shouldShowRequestPermissionRationale(
-                        this@MainActivity,
-                        Manifest.permission.READ_PHONE_STATE,
-                    )
-                viewModel.updatePermissionDeniedState(phone = permanentlyDenied)
             }
             permissionStateNotifier.notifyChanged()
         }
 
-        private fun handleNotificationResult(granted: Boolean) {
+        private fun handleNotificationResult(@Suppress("UNUSED_PARAMETER") granted: Boolean) {
             // API 33+ required for POST_NOTIFICATIONS runtime permission.
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
-            if (granted) {
-                viewModel.updatePermissionDeniedState(notification = false)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val permanentlyDenied =
-                    !ActivityCompat.shouldShowRequestPermissionRationale(
-                        this@MainActivity,
-                        Manifest.permission.POST_NOTIFICATIONS,
-                    )
-                viewModel.updatePermissionDeniedState(notification = permanentlyDenied)
-            }
             permissionStateNotifier.notifyChanged()
         }
 
@@ -268,7 +244,6 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val settings = viewModel.appSettings.first()
                 if (permissionManager.hasPhoneStatePermission()) {
-                    viewModel.updatePermissionDeniedState(phone = false)
                     // WorkManager.enqueue() performs disk I/O internally.
                     // Injected ioDispatcher prevents potential ANR on slow storage.
                     launch(ioDispatcher) {
@@ -287,20 +262,10 @@ class MainActivity : AppCompatActivity() {
                         checkNotifications(autoRequest = true)
                     }
                 } else if (settings.wasPhonePermissionRequestedBefore) {
-                    // Если разрешение не выдано, но мы его уже запрашивали ранее,
-                    // проверяем, заблокирован ли запрос.
-                    val shouldShowRationale =
-                        ActivityCompat.shouldShowRequestPermissionRationale(
-                            this@MainActivity,
-                            Manifest.permission.READ_PHONE_STATE,
-                        )
-                    // Если рациональ НЕ должна показываться при отсутствующем разрешении,
-                    // значит оно либо еще не запрашивалось, либо заблокировано "Don't ask again".
-                    // Мы используем флаг wasPhonePermissionRequestedBefore, чтобы отличить эти случаи.
-                    viewModel.updatePermissionDeniedState(phone = !shouldShowRationale)
+                    // Permission not granted, but requested before.
+                    // The derived UI state will handle "Permanently Denied" vs "Denied".
                 } else {
-                    // Первый запуск: разрешение еще не запрашивалось.
-                    viewModel.updatePermissionDeniedState(phone = false)
+                    // First run: permission not yet requested.
                     viewModel.setPhonePermissionRequested()
                     phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                 }
@@ -313,19 +278,7 @@ class MainActivity : AppCompatActivity() {
                     val settings = viewModel.appSettings.first()
                     if (autoRequest && !settings.notificationPermissionRequested) {
                         requestNotificationPermission()
-                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        // API 33+ required for POST_NOTIFICATIONS runtime permission.
-                        // See: https://developer.android.com/training/notify-user/runtime-permissions
-                        // minSdk is 26, so this branch is reachable and required.
-                        val permanentlyDenied =
-                            !ActivityCompat.shouldShowRequestPermissionRationale(
-                                this@MainActivity,
-                                Manifest.permission.POST_NOTIFICATIONS,
-                            )
-                        viewModel.updatePermissionDeniedState(notification = permanentlyDenied)
                     }
-                } else {
-                    viewModel.updatePermissionDeniedState(notification = false)
                 }
             }
         }
@@ -399,12 +352,6 @@ class MainActivity : AppCompatActivity() {
         viewModel.onActivityResume()
 
         val phoneGranted = permissionManager.hasPhoneStatePermission()
-        val notificationGranted = permissionManager.hasNotificationPermission()
-
-        viewModel.updatePermissionDeniedState(
-            phone = if (phoneGranted) false else null,
-            notification = if (notificationGranted) false else null,
-        )
 
         checkPermissionChanges()
 
@@ -421,7 +368,7 @@ class MainActivity : AppCompatActivity() {
                 (if (permissionManager.hasUsageStatsPermission()) STATE_BIT_USAGE else 0) or
                 (if (permissionManager.hasNotificationPermission()) STATE_BIT_NOTIFICATION else 0)
 
-        if (lastPermissionState != -1 && currentState != lastPermissionState) {
+        if (lastPermissionState == -1 || currentState != lastPermissionState) {
             permissionStateNotifier.notifyChanged()
         }
         lastPermissionState = currentState

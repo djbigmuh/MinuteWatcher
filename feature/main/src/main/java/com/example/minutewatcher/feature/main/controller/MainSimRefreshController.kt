@@ -109,7 +109,7 @@ class MainSimRefreshController
             if (outcome is RefreshOutcome.Completed) {
                 val result = outcome.result
                 if (result is RefreshResult.Success) {
-                    onUpdateLastRefresh(timeProvider.elapsedRealtime())
+                    onUpdateLastRefresh(timeProvider.now())
                 }
             }
             onNotifyChanged(force)

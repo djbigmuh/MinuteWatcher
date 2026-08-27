@@ -78,7 +78,7 @@ internal class SimIdentityObserver
                         .map {
                             fetcher.fetchActiveSimsWithRetry(seed)
                         }.retryWhen { cause, attempt ->
-                            if (cause is CancellationException) return@retryWhen false
+                            if (cause is CancellationException) throw cause
 
                             when {
                                 cause is SeedUnavailableException -> {

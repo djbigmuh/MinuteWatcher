@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,14 +25,17 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -62,8 +66,7 @@ class UpdateCoordinator
     private val initMutex = Mutex()
 
     private val isObservationStarted = AtomicBoolean(false)
-
-    private var observationJob: Job? = null
+    private val observationJob = AtomicReference<Job?>(null)
 
     init {
         ensureObservationStarted()
@@ -95,20 +98,19 @@ class UpdateCoordinator
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
-            observationJob?.let { oldJob ->
-                oldJob.cancel()
+            val oldJob = observationJob.get()
+            if (oldJob != null) {
                 val completed =
                     withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        oldJob.join()
+                        oldJob.cancelAndJoin()
                     }
                 if (completed == null) {
-                    AppLogger.w(
-                        "UpdateCoordinator: previous observation job did not terminate in time",
-                    )
-                    // Note: cancel() is idempotent, so no need to call it again here.
+                    val errorMsg = "UpdateCoordinator: previous observation job did not terminate in time"
+                    AppLogger.e(errorMsg)
+                    throw IllegalStateException(errorMsg)
                 }
+                observationJob.compareAndSet(oldJob, null)
             }
-            observationJob = null
 
             val handler =
                 CoroutineExceptionHandler { _, cause ->
@@ -122,25 +124,22 @@ class UpdateCoordinator
                     .onEach { snapshot ->
                         processSnapshot(snapshot)
                     }
-                    // Строгое соблюдение API: launchIn(scope + handler) создаёт дочернюю
-                    // корутину scope, которая будет отменена при отмене scope. Это
-                    // гарантирует, что наблюдение за снапшотами будет остановлено при
-                    // завершении приложения. На AOSP ApplicationScope живёт до завершения
-                    // процесса. Если кастомная прошивка убивает процесс без вызова
-                    // Application.onTerminate() — это проблема кастомной прошивки.
                     .launchIn(scope + handler)
 
-            observationJob = newJob
+            if (!observationJob.compareAndSet(null, newJob)) {
+                newJob.cancel()
+                return
+            }
 
             // Мониторинг завершения: если наблюдение упало — перезапускаем через 5 секунд.
             scope.launch {
                 newJob.join()
                 // Если текущий job изменился (т.е. setupObservation вызван снова), ничего не делаем.
-                if (observationJob !== newJob) return@launch
+                if (observationJob.get() !== newJob) return@launch
                 if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
                 AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
                 kotlinx.coroutines.delay(5000.milliseconds)
-                if (isObservationStarted.get() && observationJob === newJob) {
+                if (isObservationStarted.get() && observationJob.get() === newJob) {
                     restartObservation()
                 }
             }
@@ -163,6 +162,7 @@ class UpdateCoordinator
         }
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+            if (!coroutineContext.isActive) return
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
             if (snapshot.suppressWidgetUpdate) {

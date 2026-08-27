@@ -66,17 +66,6 @@ class MainViewModel
 
         fun setUsageAccessDialog(show: Boolean) = controllers.dialog.setUsageAccessDialog(show)
 
-    /**
-     * Updates the permanently denied state for permissions.
-     *
-     * @param phone If provided, updates the phone permission denied state.
-     * @param notification If provided, updates the notification permission denied state.
-     */
-    fun updatePermissionDeniedState(
-        phone: Boolean? = null,
-        notification: Boolean? = null,
-    ) = controllers.banner.updatePermissionDeniedState(phone, notification)
-
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 
         fun setPhonePermissionRequested() = controllers.settings.setPhonePermissionRequested()
@@ -177,9 +166,9 @@ class MainViewModel
         }
 
         private var lastRefreshAt: Long
-            get() = savedStateHandle[KEY_LAST_REFRESH_ELAPSED] ?: 0L
+            get() = savedStateHandle[KEY_LAST_REFRESH_TIME] ?: 0L
             set(value) {
-                savedStateHandle[KEY_LAST_REFRESH_ELAPSED] = value
+                savedStateHandle[KEY_LAST_REFRESH_TIME] = value
             }
 
         fun onActivityResume() {
@@ -193,6 +182,6 @@ class MainViewModel
         }
 
         companion object {
-            internal const val KEY_LAST_REFRESH_ELAPSED = "last_refresh_elapsed"
+            internal const val KEY_LAST_REFRESH_TIME = "last_refresh_time"
         }
     }

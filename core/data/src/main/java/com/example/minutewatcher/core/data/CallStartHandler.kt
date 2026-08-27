@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,13 +34,17 @@ internal class CallStartHandler
             refreshStatus: suspend (Boolean) -> Unit,
             isCallTrackingEnabled: suspend () -> Boolean,
         ) {
-            var operationCompleted = false
+            var shouldRefreshStatus = false
             try {
-                if (!checkPermissions()) return
+                if (!checkPermissions()) {
+                    shouldRefreshStatus = true
+                    return
+                }
 
                 val targetSubId = attributionResolver.resolveTargetSubId(subId)
                 if (targetSubId == -1) {
                     AppLogger.w("CallTracker: could not attribute start event (unknown subId and no default SIM)")
+                    shouldRefreshStatus = true
                     return
                 }
 
@@ -47,25 +52,31 @@ internal class CallStartHandler
                     if (!isCallTrackingEnabled()) {
                         AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $targetSubId")
                         cleanupCounters(targetSubId)
+                        shouldRefreshStatus = true
                         return@withLock
                     }
 
                     val startData = fetchCallStartData(targetSubId)
                     processCallStartLocked(targetSubId, startData, statusFlow, cleanupCounters)
+                    shouldRefreshStatus = true
                 }
-                operationCompleted = true
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                shouldRefreshStatus = true
+                statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
             } catch (e: SecurityException) {
+                shouldRefreshStatus = true
                 AppLogger.e("SecurityException in onCallStarted", e)
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             } catch (e: Exception) {
+                shouldRefreshStatus = true
                 AppLogger.e("Error in onCallStarted", e)
                 if (statusFlow.value !is TrackingStatus.Error) {
                     statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 }
             } finally {
-                finalizeCallStart(operationCompleted, statusFlow, refreshStatus)
+                finalizeCallStart(shouldRefreshStatus, refreshStatus)
             }
         }
 
@@ -143,13 +154,12 @@ internal class CallStartHandler
         }
 
         private suspend fun finalizeCallStart(
-            operationCompleted: Boolean,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            shouldRefreshStatus: Boolean,
             refreshStatus: suspend (Boolean) -> Unit,
         ) {
             withContext(NonCancellable) {
                 try {
-                    if (operationCompleted || (statusFlow.value is TrackingStatus.Error)) {
+                    if (shouldRefreshStatus) {
                         refreshStatus(false)
                     }
                 } catch (e: Exception) {

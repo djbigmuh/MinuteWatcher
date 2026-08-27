@@ -55,17 +55,27 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
     @Test
     fun `trackingBannerState reflects permanently denied status`() =
         testScope.runTest {
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        wasPhonePermissionRequestedBefore = true,
+                        onboardingCompleted = true,
+                    ),
+                )
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            phonePermissionFlow.value = false
+
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 viewModel.trackingBannerState.collect {}
             }
-
-            viewModel.updatePermissionDeniedState(phone = true)
             testScheduler.advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
+            // Since phonePermissionFlow.value = false and wasPhonePermissionRequestedBefore = true,
+            // it's derived as PERMANENTLY_DENIED now internally in mapper.
             assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
         }
 

@@ -4,9 +4,11 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -22,7 +24,7 @@ class PermissionRepositoryImpl
     @Inject
     constructor(
         private val permissionManager: PermissionManager,
-        private val notifier: PermissionStateNotifier,
+        notifier: PermissionStateNotifier,
         @ApplicationScope scope: CoroutineScope,
     ) : PermissionRepository {
         /**
@@ -34,9 +36,11 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasPhoneStatePermission()
-                }.stateIn(
+                }
+                .distinctUntilChanged()
+                .stateIn(
                     scope = scope,
-                    started = SharingStarted.Eagerly,
+                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                     initialValue = permissionManager.hasPhoneStatePermission(),
                 )
 
@@ -49,9 +53,11 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasUsageStatsPermission()
-                }.stateIn(
+                }
+                .distinctUntilChanged()
+                .stateIn(
                     scope = scope,
-                    started = SharingStarted.Eagerly,
+                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                     initialValue = permissionManager.hasUsageStatsPermission(),
                 )
 
@@ -64,9 +70,11 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasNotificationPermission()
-                }.stateIn(
+                }
+                .distinctUntilChanged()
+                .stateIn(
                     scope = scope,
-                    started = SharingStarted.Eagerly,
+                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                     initialValue = permissionManager.hasNotificationPermission(),
                 )
     }

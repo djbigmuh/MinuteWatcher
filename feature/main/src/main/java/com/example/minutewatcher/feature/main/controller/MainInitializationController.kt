@@ -71,7 +71,7 @@ class MainInitializationController
                         if (refreshSuccessful || alreadyInProgress) {
                             isSuccess = true
                             if (refreshSuccessful && lastRefreshAt == 0L) {
-                                onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                                onUpdateLastRefreshAt(timeProvider.now())
                             }
                             if (alreadyInProgress) {
                                 AppLogger.d("initializeApp: refresh already in progress, treating as success for loop")

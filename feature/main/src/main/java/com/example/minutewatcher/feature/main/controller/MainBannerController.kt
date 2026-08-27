@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
-import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
@@ -15,13 +14,11 @@ import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,33 +47,6 @@ class MainBannerController
         private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-    private data class PermissionDeniedState(
-        val phone: Boolean = false,
-        val notification: Boolean = false,
-    )
-
-    private val permissionDeniedState = MutableStateFlow(PermissionDeniedState())
-
-        /**
-         * Updates the permanently denied state for phone and/or notification permissions.
-         *
-         * @param phone If provided, updates the phone permission denied state.
-         * @param notification If provided, updates the notification permission denied state.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         */
-        fun updatePermissionDeniedState(
-            phone: Boolean? = null,
-            notification: Boolean? = null,
-        ) {
-            permissionDeniedState.update { current ->
-                current.copy(
-                    phone = phone ?: current.phone,
-                    notification = notification ?: current.notification,
-                )
-            }
-        }
-
         private val appSearchRetryCount = MutableStateFlow(value = 0)
         private val appSearchBannerDismissed = MutableStateFlow(value = false)
 
@@ -194,13 +164,7 @@ class MainBannerController
                 }
         }
 
-        private val bannerExtraData: Flow<Triple<Boolean, Boolean, AppSettings>> =
-            combine(
-                permissionDeniedState,
-                appSettingsRepository.observeAppSettings(),
-            ) { deniedState, settings ->
-                Triple(deniedState.phone, deniedState.notification, settings)
-            }
+    private val appSettings = appSettingsRepository.observeAppSettings()
 
         /**
          * Состояние баннеров отслеживания.
@@ -227,17 +191,15 @@ class MainBannerController
                     permissionsFlow,
                     appSearchRetryCount,
                     appSearchBannerDismissed,
-                    bannerExtraData,
+                    appSettings,
                     seedRepository.isEphemeralSeedActive,
-                ) { snapshot, retry, dismissed, extra, ephemeralActive ->
+                ) { snapshot, retry, dismissed, settings, ephemeralActive ->
                     TrackingBannerMapper.mapToBannerState(
                         statusMap = snapshot.statusMap,
                         phoneGranted = snapshot.phoneGranted,
                         usageGranted = snapshot.usageGranted,
                         notificationsGranted = snapshot.notificationsGranted,
-                        phonePermanentlyDenied = extra.first,
-                        notificationPermanentlyDenied = extra.second,
-                        settings = extra.third,
+                        settings = settings,
                         appSearchRetryCount = retry,
                         appSearchBannerDismissed = dismissed,
                         isStorageDegraded = ephemeralActive,

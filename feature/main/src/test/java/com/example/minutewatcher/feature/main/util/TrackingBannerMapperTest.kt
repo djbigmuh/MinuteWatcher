@@ -17,8 +17,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -37,37 +35,31 @@ class TrackingBannerMapperTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(wasPhonePermissionRequestedBefore = false, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.NOT_REQUESTED, state.phonePermissionState)
 
-        // Case: Denied
+        // Case: Denied (Requested but not granted)
         state =
             TrackingBannerMapper.mapToBannerState(
                 statusMap = emptyMap(),
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(wasPhonePermissionRequestedBefore = true, onboardingCompleted = true),
             )
-        assertEquals(PermissionUiState.DENIED, state.phonePermissionState)
+        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState) // Internally derived
 
-        // Case: Permanently Denied
+        // Case: Granted
         state =
             TrackingBannerMapper.mapToBannerState(
                 statusMap = emptyMap(),
-                phoneGranted = false,
+                phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = true,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(wasPhonePermissionRequestedBefore = true, onboardingCompleted = true),
             )
-        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
+        assertEquals(PermissionUiState.GRANTED, state.phonePermissionState)
     }
 
     @Test
@@ -78,8 +70,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = false,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -94,8 +84,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -112,8 +100,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = false,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -123,7 +109,38 @@ class TrackingBannerMapperTest {
 
     @Test
     fun `mapToBannerState reflects notification permission based on settings`() {
-        // ... (текущий код) ...
+        // Case: Notifications granted (always GRANTED)
+        var state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true, notificationPermissionRequested = true),
+            )
+        assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
+
+        // Case: Not granted, requested before -> PERMANENTLY_DENIED (derived internally)
+        state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = false,
+                settings = AppSettings(onboardingCompleted = true, notificationPermissionRequested = true),
+            )
+        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.notificationPermissionState)
+
+        // Case: Not granted, NOT requested before -> NOT_REQUESTED
+        state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = false,
+                settings = AppSettings(onboardingCompleted = true, notificationPermissionRequested = false),
+            )
+        assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState)
     }
 
     @Test
@@ -141,8 +158,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -158,8 +173,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = false,
                 usageGranted = false,
                 notificationsGranted = false,
-                phonePermanentlyDenied = true,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = false, wasPhonePermissionRequestedBefore = true),
             )
 
@@ -212,8 +225,6 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -229,8 +240,6 @@ class TrackingBannerMapperTest {
         phoneGranted = true,
         usageGranted = true,
         notificationsGranted = true,
-        phonePermanentlyDenied = false,
-        notificationPermanentlyDenied = false,
         settings = AppSettings(onboardingCompleted = true),
         appSearchRetryCount = retryCount,
         appSearchBannerDismissed = dismissed,
