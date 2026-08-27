@@ -151,31 +151,26 @@ open class CallTracker
             )
         }
 
-        fun onBoot() {
-            scope.launch {
-                try {
-                    callMutex.withLock {
-                        sessionCleaner.clearAllSessions()
-                        AppLogger.d("CallTracker: cleared all sessions on boot")
-                    }
-                } catch (e: Exception) {
-                    AppLogger.e("Error during boot cleanup", e)
-                } finally {
-                    refreshStatus(force = true)
-                }
-            }
-        }
-
-        override suspend fun recover() {
+    private suspend fun clearSessionsAndRefresh(tag: String) {
             try {
                 callMutex.withLock {
                     sessionCleaner.clearAllSessions()
-                    AppLogger.d("CallTracker: cleared all sessions during recovery")
+                    AppLogger.d("CallTracker: cleared all sessions during $tag")
                 }
             } catch (e: Exception) {
-                AppLogger.e("Error during recovery", e)
+                AppLogger.e("Error during $tag", e)
             } finally {
                 refreshStatus(force = true)
             }
+    }
+
+    fun onBoot() {
+        scope.launch {
+            clearSessionsAndRefresh("boot cleanup")
+            }
+    }
+
+    override suspend fun recover() {
+        clearSessionsAndRefresh("recovery")
         }
     }

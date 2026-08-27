@@ -129,7 +129,7 @@ class SimUsageRepositoryImpl
             }
             dataStore.edit { prefs ->
                 val current = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val newValue = (current + deltaMb.toDouble()).toFloat().coerceAtMost(MAX_TRAFFIC_MB)
+                val newValue = (current + deltaMb.toDouble()).toFloat().coerceIn(0f, MAX_TRAFFIC_MB)
                 prefs[DataStoreKeys.trafficUsedKey(identity)] = newValue
             }
         }
@@ -324,7 +324,7 @@ class SimUsageRepositoryImpl
             dataStore.edit { prefs ->
                 // 1. Increment traffic
                 val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val newValue = (currentUsage + deltaMb.toDouble()).toFloat().coerceAtMost(MAX_TRAFFIC_MB)
+                val newValue = (currentUsage + deltaMb.toDouble()).toFloat().coerceIn(0f, MAX_TRAFFIC_MB)
                 prefs[DataStoreKeys.trafficUsedKey(identity)] = newValue
 
                 // 2. Update baseline

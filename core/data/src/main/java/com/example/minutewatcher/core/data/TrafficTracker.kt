@@ -151,13 +151,10 @@ class TrafficTracker
                     .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) ?: return
             if (targetIdentity !in activeIdentities) return
 
-            // Get initial retry state to decide what to fetch
-            val initialRetryCount = trafficMutex.withLock { baselineManager.baselineNeedsRetry[targetIdentity] }
-
             // Fetch Usage only if we are NOT in a known retry state,
             // as we'll need usage.lastResetDate for the normal path.
             val usage =
-                if (initialRetryCount == null) {
+                if (trafficMutex.withLock { baselineManager.baselineNeedsRetry[targetIdentity] } == null) {
                     simUsageRepository
                         .getSimUsage(targetIdentity)
                         .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
@@ -172,20 +169,20 @@ class TrafficTracker
             // 2. Atomic Transaction Phase
             trafficMutex.withLock {
                 withContext(NonCancellable) {
-                    val pending = baselineManager.baselineNeedsRetry[targetIdentity]
+                    val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
 
                     // Check for exceeded retries (Check again inside lock)
-                    if (pending != null && pending >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                    if (initialRetryCount != null && initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                         baselineManager.baselineNeedsRetry.remove(targetIdentity)
                         errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
                         return@withContext
                     }
 
                     // Path A: Current state is Retry
-                    if (pending != null) {
+                    if (initialRetryCount != null) {
                         val startTime = 0L
                         val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-                        handleRetryAction(target, targetIdentity, pending, statsResult)
+                        handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
                         return@withContext
                     }
 

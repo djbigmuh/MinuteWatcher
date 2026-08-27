@@ -19,6 +19,7 @@ import kotlin.concurrent.withLock
 /**
  * Централизованное логирование.
  */
+@Suppress("TooManyFunctions")
 object AppLogger {
     private const val TAG = "MinuteWatcher"
     private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
@@ -31,7 +32,8 @@ object AppLogger {
 
     @Volatile private var logDir: File? = null
 
-    @Volatile private var logWriter: BufferedWriter? = null
+    // Access is guarded by fileLock
+    private var logWriter: BufferedWriter? = null
 
     @Volatile private var logger: Logger = AndroidLogger()
 
@@ -147,7 +149,15 @@ object AppLogger {
             // Synchronous fallback for critical logs when queue is full.
             reportDropped()
             Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
-            writeEntryToFile(entry)
+            if (fileLock.tryLock()) {
+                try {
+                    writeEntryToFileUnlocked(entry)
+                } finally {
+                    fileLock.unlock()
+                }
+            } else {
+                Log.w(TAG, "Critical log dropped: file lock contended")
+            }
         } else {
             ensureWorkerStarted()
         }
@@ -171,6 +181,7 @@ object AppLogger {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun workerLoop() {
         try {
             while (true) {
@@ -193,51 +204,53 @@ object AppLogger {
     }
 
     private fun writeEntryToFile(entry: LogEntry) {
-        val dir = logDir ?: return
         fileLock.withLock {
-            try {
-                val logFile = File(dir, LOG_FILE_NAME)
-                if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
-                    closeWriter()
+            writeEntryToFileUnlocked(entry)
+        }
+    }
 
-                    val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                    if (oldFile.exists()) oldFile.delete()
-                    val renamed = logFile.renameTo(oldFile)
-                    if (!renamed) {
-                        // Переименование не удалось — удаляем текущий файл, чтобы предотвратить
-                        // неограниченный рост. Потеря текущего лога допустима.
-                        logFile.delete()
-                    }
-                }
+    private fun writeEntryToFileUnlocked(entry: LogEntry) {
+        val dir = logDir ?: return
+        try {
+            val logFile = File(dir, LOG_FILE_NAME)
+            if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                closeWriterUnlocked()
 
-                if (logWriter == null) {
-                    logWriter =
-                        BufferedWriter(
-                            OutputStreamWriter(FileOutputStream(logFile, true)),
-                            LOG_BUFFER_SIZE,
-                        )
+                val oldFile = File(dir, LOG_FILE_OLD_NAME)
+                if (oldFile.exists()) oldFile.delete()
+                val renamed = logFile.renameTo(oldFile)
+                if (!renamed) {
+                    // Переименование не удалось — удаляем текущий файл, чтобы предотвратить
+                    // неограниченный рост. Потеря текущего лога допустима.
+                    logFile.delete()
                 }
+            }
 
-                val timestamp = dateFormat.format(entry.timestamp)
-                val line = "$timestamp ${entry.level}/$TAG: ${entry.message}\n"
-                logWriter?.write(line)
-                logWriter?.flush()
-            } catch (e: Exception) {
-                closeWriter()
-                if (BuildConfig.DEBUG) {
-                    Log.w(TAG, "File logging failed", e)
-                }
+            if (logWriter == null) {
+                logWriter =
+                    BufferedWriter(
+                        OutputStreamWriter(FileOutputStream(logFile, true)),
+                        LOG_BUFFER_SIZE,
+                    )
+            }
+
+            val timestamp = dateFormat.format(entry.timestamp)
+            val line = "$timestamp ${entry.level}/$TAG: ${entry.message}\n"
+            logWriter?.write(line)
+            logWriter?.flush()
+        } catch (e: Exception) {
+            closeWriterUnlocked()
+            if (BuildConfig.DEBUG) {
+                Log.w(TAG, "File logging failed", e)
             }
         }
     }
 
-    private fun closeWriter() {
-        fileLock.withLock {
-            try {
-                logWriter?.close()
-            } catch (_: Exception) {
-            }
-            logWriter = null
+    private fun closeWriterUnlocked() {
+        try {
+            logWriter?.close()
+        } catch (_: Exception) {
         }
+        logWriter = null
     }
 }

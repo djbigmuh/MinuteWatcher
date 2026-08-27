@@ -83,9 +83,11 @@ class WidgetSettingsViewModel
         private fun loadSettings() {
             viewModelScope.launch {
                 loadMutex.withLock {
-                    loadJob?.cancel()
-                    if (withTimeoutOrNull(LOAD_TIMEOUT) { loadJob?.join() } == null) {
-                        AppLogger.w("loadSettings: previous load job join timed out, continuing")
+                    loadJob?.let { job ->
+                        job.cancel()
+                        if (withTimeoutOrNull(LOAD_TIMEOUT) { job.join() } == null) {
+                            AppLogger.w("loadSettings: previous load job join timed out, continuing")
+                        }
                     }
 
                     reduce { copy(isLoadError = false) }

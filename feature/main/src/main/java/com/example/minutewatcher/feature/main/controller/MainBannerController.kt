@@ -107,18 +107,23 @@ class MainBannerController
 
         private val recoveryTrigger = MutableStateFlow(0L)
 
+    init {
+        initialize()
+    }
+
+    private fun initialize() {
+        ensureObservationStarted()
+    }
+
         /**
          * Attempts to recover tracking observation.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         suspend fun recover() {
+            initialize()
             initMutex.withLock {
-                if (!isObservationStarted.get()) {
-                    ensureObservationStarted()
-                } else {
-                    lastTrackingStatusFlow?.let { setupObservation(it) }
-                }
+                lastTrackingStatusFlow?.let { setupObservation(it) }
                 recoveryTrigger.value++
             }
         }
@@ -205,7 +210,6 @@ class MainBannerController
         val trackingBannerState: StateFlow<TrackingBannerState> =
             recoveryTrigger
                 .flatMapLatest {
-                    ensureObservationStarted()
                     val permissionsFlow =
                         combine(
                             trackingStatus,

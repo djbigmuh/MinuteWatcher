@@ -98,7 +98,13 @@ internal class CallEndResolver(
     private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
         AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
         for (subId in activeSubIds) {
-            endCall(subId, false)
+            try {
+                endCall(subId, false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to end call for subId $subId during global idle", e)
+            }
         }
         dataChangeNotifier.notifyDataChanged()
     }

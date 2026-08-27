@@ -107,6 +107,8 @@ class UpdateCoordinator
                     AppLogger.w(
                         "UpdateCoordinator: previous observation job did not terminate in time",
                     )
+                    oldJob.cancel()
+                    AppLogger.w("UpdateCoordinator: force-cancelling stale observation job")
                 }
             }
             observationJob = null
