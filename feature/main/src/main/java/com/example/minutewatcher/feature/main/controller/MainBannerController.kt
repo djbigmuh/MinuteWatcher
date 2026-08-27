@@ -152,10 +152,13 @@ class MainBannerController
         private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
             lastTrackingStatusFlow = statusFlow
             job?.cancel()
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                job?.join()
-            } ?: run {
-                AppLogger.w("MainBannerController: previous observation job did not terminate in time")
+            val completed =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job?.join()
+                }
+            if (completed == null) {
+                AppLogger.w("MainBannerController: previous observation job did not terminate in time, cancelling")
+                job?.cancel()
             }
             job =
                 scope.launch {

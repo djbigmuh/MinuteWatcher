@@ -12,7 +12,6 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -83,9 +82,12 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             viewModelScope.launch {
-                loadJob?.cancelAndJoin()
-
                 loadMutex.withLock {
+                    loadJob?.cancel()
+                    if (withTimeoutOrNull(LOAD_TIMEOUT) { loadJob?.join() } == null) {
+                        AppLogger.w("loadSettings: previous load job join timed out, continuing")
+                    }
+
                     reduce { copy(isLoadError = false) }
 
                     loadJob =

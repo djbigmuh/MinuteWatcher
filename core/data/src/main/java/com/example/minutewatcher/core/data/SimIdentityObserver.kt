@@ -59,6 +59,12 @@ internal class SimIdentityObserver
                                 if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
                             }
                         } ?: SeedResult.Fallback
+                    if (initial is SeedResult.Fallback) {
+                        AppLogger.e(
+                            "SimIdentityObserver: seed unavailable after timeout, emitting Fallback. " +
+                                "SIM identity resolution will fail until seed is available.",
+                        )
+                    }
                     emit(initial)
                 }.distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Lazily, replay = 1)

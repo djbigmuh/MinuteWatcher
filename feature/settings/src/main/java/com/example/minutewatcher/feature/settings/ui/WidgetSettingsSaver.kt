@@ -3,12 +3,15 @@ package com.example.minutewatcher.feature.settings.ui
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class WidgetSettingsSaver
@@ -81,11 +84,12 @@ class WidgetSettingsSaver
         }
 
         private suspend fun notifyDataChanged() {
-            // После успешного сохранения уведомляем систему об изменениях.
-            // force = true гарантирует немедленное обновление виджета.
-            // Уведомление виджетов — отдельная операция, не влияющая на результат сохранения.
             try {
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                } ?: run {
+                    AppLogger.w("WidgetSettingsSaver: widget notification timed out, skipping")
+                }
             } catch (e: Exception) {
                 AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
             }

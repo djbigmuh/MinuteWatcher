@@ -67,7 +67,7 @@ class WidgetUpdaterImpl
                     }
                 }
             } ?: run {
-                AppLogger.e("WidgetUpdater: updateAll timed out completely after 30s")
+                AppLogger.w("WidgetUpdater: updateAll timed out after 30s (mutex may still be held by previous call)")
                 false
             }
 

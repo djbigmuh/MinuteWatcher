@@ -164,7 +164,12 @@ class SimIdentitySeedRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("Failed to read/write identity seed, generating/using ephemeral seed", e)
+                    AppLogger.e(
+                        "Failed to read/write identity seed. Using EPHEMERAL seed — " +
+                            "all SIM identities will change on next app restart, " +
+                            "causing accumulated statistics to be orphaned.",
+                        e,
+                    )
                     // Используем уже сгенерированный в этом вызове seed, если он есть,
                     // либо ранее закэшированный эфемерный, либо создаем новый.
                     val fallback = generatedSeed ?: cachedEphemeralSeed ?: generator()

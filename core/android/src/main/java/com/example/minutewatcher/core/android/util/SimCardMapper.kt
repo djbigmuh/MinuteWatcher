@@ -26,7 +26,7 @@ object SimCardMapper {
      * Использует [ConcurrentHashMap] для потокобезопасности без явной синхронизации.
      */
     private val negativeLogged = ConcurrentHashMap<Int, String>()
-    private const val MAX_LOGGED_SIZE = 20
+    private const val MAX_LOGGED_SIZE = Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS
 
     fun map(
         context: Context,

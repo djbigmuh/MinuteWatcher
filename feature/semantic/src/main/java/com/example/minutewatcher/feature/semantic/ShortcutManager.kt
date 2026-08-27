@@ -91,10 +91,13 @@ open class ShortcutManager
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                job?.join()
-            } ?: run {
-                AppLogger.w("ShortcutManager: previous observation job did not terminate in time")
+            val completed =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job?.join()
+                }
+            if (completed == null) {
+                AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
+                job?.cancel()
             }
             job = null
 
@@ -139,10 +142,13 @@ open class ShortcutManager
          */
         override suspend fun recover() {
             job?.cancel()
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                job?.join()
-            } ?: run {
-                AppLogger.w("ShortcutManager: previous observation job did not terminate in time")
+            val completed =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job?.join()
+                }
+            if (completed == null) {
+                AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
+                job?.cancel()
             }
             job = null
 

@@ -303,7 +303,7 @@ class IdentityMigrationService
                         "to identity $identity: $migratedCount keys, $conflictCount conflicts",
                 )
             }
-            return migratedCount > 0
+            return migratedCount > 0 || conflictCount > 0
         }
 
         private enum class MigrationResult {

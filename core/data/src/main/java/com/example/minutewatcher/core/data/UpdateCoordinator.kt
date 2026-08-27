@@ -100,17 +100,13 @@ class UpdateCoordinator
             observationJob?.let { oldJob ->
                 oldJob.cancel()
                 val completed =
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                         oldJob.join()
                     }
                 if (completed == null) {
-                    AppLogger.e(
-                        "UpdateCoordinator: previous observation job did not terminate in time, " +
-                            "forcing cancellation",
+                    AppLogger.w(
+                        "UpdateCoordinator: previous observation job did not terminate in time",
                     )
-                    // Принудительная отмена без ожидания join, так как корутина может висеть
-                    // на не-прерываемой операции или деградировавшем API.
-                    oldJob.cancel()
                 }
             }
             observationJob = null

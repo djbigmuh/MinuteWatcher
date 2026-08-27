@@ -169,18 +169,6 @@ class TrafficTracker
                     null
                 }
 
-            // If we are in retry, we reset to 'now' (effectively usage 0 since now).
-            // If normal, we query since lastResetDate.
-            val startTime = usage?.lastResetDate ?: 0L
-            val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-
-            val lastTotalBytes =
-                if (initialRetryCount == null) {
-                    fetchLastTotalBytes(targetIdentity, statsResult)
-                } else {
-                    null
-                }
-
             // 2. Atomic Transaction Phase
             trafficMutex.withLock {
                 withContext(NonCancellable) {
@@ -195,11 +183,17 @@ class TrafficTracker
 
                     // Path A: Current state is Retry
                     if (pending != null) {
+                        val startTime = 0L
+                        val statsResult = baselineManager.getCurrentMobileBytes(startTime)
                         handleRetryAction(target, targetIdentity, pending, statsResult)
                         return@withContext
                     }
 
                     // Path B: Normal path
+                    val startTime = usage?.lastResetDate ?: 0L
+                    val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+                    val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+
                     if (lastTotalBytes == null) {
                         errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
                         return@withContext

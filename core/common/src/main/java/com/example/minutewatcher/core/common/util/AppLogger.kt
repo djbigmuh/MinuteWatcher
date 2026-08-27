@@ -172,16 +172,23 @@ object AppLogger {
     }
 
     private fun workerLoop() {
-        while (true) {
-            val entry =
-                lock.withLock {
-                    while (criticalQueue.isEmpty() && normalQueue.isEmpty()) {
-                        condition.await()
-                    }
-                    criticalQueue.pollFirst() ?: normalQueue.pollFirst()
-                } ?: continue
+        try {
+            while (true) {
+                val entry =
+                    lock.withLock {
+                        while (criticalQueue.isEmpty() && normalQueue.isEmpty()) {
+                            condition.await()
+                        }
+                        criticalQueue.pollFirst() ?: normalQueue.pollFirst()
+                    } ?: continue
 
-            writeEntryToFile(entry)
+                writeEntryToFile(entry)
+            }
+        } catch (t: Throwable) {
+            // Поток завершается аварийно. Сбрасываем флаг, чтобы
+            // следующий вызов logToFile мог запустить новый поток.
+            isWorkerStarted = false
+            Log.e(TAG, "AppLogger worker thread crashed", t)
         }
     }
 
@@ -195,7 +202,12 @@ object AppLogger {
 
                     val oldFile = File(dir, LOG_FILE_OLD_NAME)
                     if (oldFile.exists()) oldFile.delete()
-                    logFile.renameTo(oldFile)
+                    val renamed = logFile.renameTo(oldFile)
+                    if (!renamed) {
+                        // Переименование не удалось — удаляем текущий файл, чтобы предотвратить
+                        // неограниченный рост. Потеря текущего лога допустима.
+                        logFile.delete()
+                    }
                 }
 
                 if (logWriter == null) {

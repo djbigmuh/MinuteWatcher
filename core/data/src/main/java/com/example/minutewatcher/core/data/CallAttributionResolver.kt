@@ -32,7 +32,7 @@ internal class CallAttributionResolver
         fun getFailureCount(subId: Int): Int = attributionFailures[subId] ?: 0
 
         fun retainOnlyActiveSubIds(activeSubIds: Set<Int>) {
-            attributionFailures.keys.retainAll(activeSubIds)
+            attributionFailures.entries.removeIf { it.key !in activeSubIds }
         }
 
         suspend fun resolveTargetIdentity(
