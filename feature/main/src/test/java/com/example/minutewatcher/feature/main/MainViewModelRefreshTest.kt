@@ -30,8 +30,8 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             testScheduler.advanceUntilIdle() // Let initializeApp() finish
             clearInvocations(usageStateRepository)
 
-            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_ELAPSED] = 500_000L
-            timeProvider.setRealtime(1000L)
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_TIME] = 2_000_000L
+            timeProvider.setTime(1000L)
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
@@ -47,7 +47,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             testScheduler.advanceUntilIdle()
             clearInvocations(usageStateRepository)
 
-            timeProvider.setRealtime(1000L)
+            timeProvider.setTime(1000L)
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
@@ -66,11 +66,11 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
 
             assertTrue(
                 "lastRefreshAt should be set",
-                (savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED) ?: 0L) > 0,
+                (savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L) > 0,
             )
             clearInvocations(usageStateRepository)
 
-            timeProvider.setRealtime(timeProvider.elapsedRealtime() + 5000L)
+            timeProvider.setTime(timeProvider.now() + 5000L)
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
@@ -106,14 +106,14 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 
-            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_ELAPSED] = 0L
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_TIME] = 0L
             val now = 2000000L
-            timeProvider.setRealtime(now)
+            timeProvider.setTime(now)
 
             viewModel.refreshSimCardsNow()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED))
+            assertEquals(0L, savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME))
         }
 
     @Test
@@ -135,12 +135,12 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             viewModel.refreshSimCardsNow()
             testScheduler.advanceUntilIdle()
 
-            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED) ?: 0L
+            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
             assertEquals("lastRefreshAt should NOT be set after Timeout", 0L, lastRefresh)
 
             clearInvocations(usageStateRepository)
 
-            timeProvider.setRealtime(5000L)
+            timeProvider.setTime(5000L)
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 
@@ -168,13 +168,13 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             viewModel.refreshSimCardsNow()
             testScheduler.advanceUntilIdle()
 
-            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_ELAPSED) ?: 0L
+            val lastRefresh = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
             assertTrue("lastRefreshAt should be set after pull-to-refresh", lastRefresh > 0)
 
             clearInvocations(usageStateRepository)
 
             val now = lastRefresh + 5000L
-            timeProvider.setRealtime(now)
+            timeProvider.setTime(now)
             viewModel.onActivityResume()
             testScheduler.advanceUntilIdle()
 

@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +36,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -123,8 +123,7 @@ class UpdateCoordinator
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
                         processSnapshot(snapshot)
-                    }
-                    .launchIn(scope + handler)
+                    }.launchIn(scope + handler)
 
             if (!observationJob.compareAndSet(null, newJob)) {
                 newJob.cancel()
@@ -139,7 +138,7 @@ class UpdateCoordinator
                 if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
                 AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
                 kotlinx.coroutines.delay(5000.milliseconds)
-                if (isObservationStarted.get() && observationJob.get() === newJob) {
+                if (isObservationStarted.get() && (observationJob.get() === newJob)) {
                     restartObservation()
                 }
             }
@@ -161,8 +160,9 @@ class UpdateCoordinator
             }
         }
 
+    @Suppress("ReturnCount")
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
-            if (!coroutineContext.isActive) return
+        if (!currentCoroutineContext().isActive) return
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
             if (snapshot.suppressWidgetUpdate) {

@@ -33,6 +33,7 @@ class WidgetUpdaterImpl
     ) : WidgetUpdater {
     private val activeUpdate = AtomicReference<CompletableDeferred<Boolean>?>(null)
 
+    @Suppress("ReturnCount")
     override suspend fun updateAll(): Boolean {
         val deferred = CompletableDeferred<Boolean>()
         if (!activeUpdate.compareAndSet(null, deferred)) {
@@ -48,14 +49,16 @@ class WidgetUpdaterImpl
                         performSingleUpdate(attempt).also { lastOutcome = it }
                     }
             deferred.complete(success)
+        } catch (e: CancellationException) {
+            deferred.completeExceptionally(e)
+            throw e
         } catch (e: Exception) {
             deferred.completeExceptionally(e)
-            if (e is CancellationException) throw e
         } finally {
             activeUpdate.compareAndSet(deferred, null)
         }
 
-        if (!success && lastOutcome is UpdateOutcome.LimitExceeded) {
+        if ((!success) && (lastOutcome is UpdateOutcome.LimitExceeded)) {
             return handleLimitExceeded()
         }
         return success
@@ -147,13 +150,13 @@ class WidgetUpdaterImpl
             AppLogger.d("WidgetUpdater: simplified update skipped, another update in progress")
             return false
         }
-        try {
+        return try {
             val success =
                 retryManager.updateWithRetry {
                     handleUpdateResult(safeUpdateInternal(context, isFullAttempt = false, isProbe = false))
                 }
             deferred.complete(success)
-            return success
+            success
         } finally {
             activeUpdate.compareAndSet(deferred, null)
         }

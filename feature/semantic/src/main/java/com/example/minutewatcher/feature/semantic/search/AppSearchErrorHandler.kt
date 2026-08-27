@@ -53,13 +53,15 @@ class AppSearchErrorHandler
         }
 
         fun handleInitializationError(e: Exception): TrackingStatus {
-            if (e is CancellationException) throw e
+            if (e is CancellationException) {
+                throw e
+            }
 
             val isNotSupported =
-                hasCause(e, IllegalStateException::class.java) ||
-                    hasCause(e, DeadObjectException::class.java) ||
-                    hasCause(e, SecurityException::class.java) ||
-                    (e is AppSearchException && e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR)
+                (hasCause(e, IllegalStateException::class.java)) ||
+                    (hasCause(e, DeadObjectException::class.java)) ||
+                    (hasCause(e, SecurityException::class.java)) ||
+                    (e is AppSearchException && (e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR))
 
             return if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)

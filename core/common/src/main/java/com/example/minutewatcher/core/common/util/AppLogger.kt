@@ -27,6 +27,7 @@ object AppLogger {
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
     private const val LOG_QUEUE_CAPACITY = 4096
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
+
     @Volatile
     private var isFileLoggingEnabled = BuildConfig.DEBUG
     private const val LOG_BUFFER_SIZE = 8192
@@ -46,6 +47,8 @@ object AppLogger {
     private val condition = lock.newCondition()
     private val droppedCount = AtomicLong(0)
     private val workerRestartCount = AtomicLong(0)
+
+    private const val MAX_WORKER_CRASHES = 3
 
     @Volatile private var isWorkerStarted = false
 
@@ -217,7 +220,7 @@ object AppLogger {
 
     private fun reportDropped() {
         val count = droppedCount.incrementAndGet()
-        if (count % DROPPED_LOGS_REPORT_INTERVAL == 1L) {
+        if ((count % DROPPED_LOGS_REPORT_INTERVAL) == 1L) {
             Log.w(TAG, "Log queue full! Total dropped/displaced non-critical logs: $count")
         }
     }
@@ -232,11 +235,13 @@ object AppLogger {
             isWorkerStarted = false
             val count = workerRestartCount.incrementAndGet()
             Log.e(TAG, "AppLogger worker thread crashed (restart count: $count)", e)
-            if (count > 3) {
+            if (count > MAX_WORKER_CRASHES) {
                 isFileLoggingEnabled = false
                 Log.e(TAG, "AppLogger: too many worker crashes, file logging disabled")
             }
-        } catch (e: Error) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Error,
+        ) {
             // Do not suppress Error (OOM, StackOverflow, etc.)
             isWorkerStarted = false
             Log.e(TAG, "AppLogger worker thread fatal error", e)

@@ -21,12 +21,10 @@ class PermissionLogicTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = settings,
             )
 
-        assertEquals(PermissionUiState.DENIED, state.phonePermissionState)
+        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
     }
 
     @Test
@@ -43,8 +41,6 @@ class PermissionLogicTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = false,
-                notificationPermanentlyDenied = false,
                 settings = settings,
             )
 
@@ -65,8 +61,6 @@ class PermissionLogicTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                phonePermanentlyDenied = true,
-                notificationPermanentlyDenied = false,
                 settings = settings,
             )
 

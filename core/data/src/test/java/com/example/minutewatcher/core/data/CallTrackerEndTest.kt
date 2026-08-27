@@ -308,7 +308,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             )
         }
 
-    @Test(expected = java.io.IOException::class)
+    @Test
     fun `endCall propagates session on write failure`() =
         runTest(testDispatcher) {
             setupCommonMocks()
@@ -336,9 +336,14 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Act
             callTracker.onCallEnded(subId)
             advanceUntilIdle()
+
+            // Assert: verify status is Error
+            val status = callTracker.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
         }
 
-    @Test(expected = java.io.IOException::class)
+    @Test
     fun `write failure propagates IOException`() =
         runTest(testDispatcher) {
             setupCommonMocks()
@@ -364,6 +369,11 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Act
             callTracker.onCallEnded(subId)
             advanceUntilIdle()
+
+            // Assert: verify status is Error
+            val status = callTracker.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
         }
 
     @Test
@@ -617,12 +627,8 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                 .whenever(simUsageRepository)
                 .incrementMinutesUsed(eq(identity), any())
 
-            try {
-                callTracker.onCallEnded(subId)
-                advanceUntilIdle()
-            } catch (e: java.io.IOException) {
-                assertEquals("DataStore failure", e.message)
-            }
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
 
             // Verify status is Error
             val status = callTracker.status.value

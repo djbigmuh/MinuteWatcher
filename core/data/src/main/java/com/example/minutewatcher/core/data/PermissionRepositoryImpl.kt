@@ -36,11 +36,13 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasPhoneStatePermission()
-                }
-                .distinctUntilChanged()
+                }.distinctUntilChanged()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    started =
+                        SharingStarted.WhileSubscribed(
+                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
+                        ),
                     initialValue = permissionManager.hasPhoneStatePermission(),
                 )
 
@@ -53,11 +55,13 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasUsageStatsPermission()
-                }
-                .distinctUntilChanged()
+                }.distinctUntilChanged()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    started =
+                        SharingStarted.WhileSubscribed(
+                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
+                        ),
                     initialValue = permissionManager.hasUsageStatsPermission(),
                 )
 
@@ -70,11 +74,13 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasNotificationPermission()
-                }
-                .distinctUntilChanged()
+                }.distinctUntilChanged()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    started =
+                        SharingStarted.WhileSubscribed(
+                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
+                        ),
                     initialValue = permissionManager.hasNotificationPermission(),
                 )
     }

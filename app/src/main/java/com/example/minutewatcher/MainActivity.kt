@@ -233,7 +233,9 @@ class MainActivity : AppCompatActivity() {
             permissionStateNotifier.notifyChanged()
         }
 
-        private fun handleNotificationResult(@Suppress("UNUSED_PARAMETER") granted: Boolean) {
+        private fun handleNotificationResult(
+            @Suppress("UNUSED_PARAMETER") granted: Boolean,
+        ) {
             // API 33+ required for POST_NOTIFICATIONS runtime permission.
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
@@ -368,7 +370,7 @@ class MainActivity : AppCompatActivity() {
                 (if (permissionManager.hasUsageStatsPermission()) STATE_BIT_USAGE else 0) or
                 (if (permissionManager.hasNotificationPermission()) STATE_BIT_NOTIFICATION else 0)
 
-        if (lastPermissionState == -1 || currentState != lastPermissionState) {
+        if (lastPermissionState == -1 || (currentState != lastPermissionState)) {
             permissionStateNotifier.notifyChanged()
         }
         lastPermissionState = currentState

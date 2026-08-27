@@ -89,8 +89,10 @@ object TrackingBannerMapper {
         permanentlyDenied: Boolean,
         settings: AppSettings,
     ): PermissionUiState {
+        val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
         return when {
             granted -> PermissionUiState.GRANTED
+            !showNotifications -> PermissionUiState.GRANTED
             permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
             settings.notificationPermissionRequested -> PermissionUiState.DENIED
             else -> PermissionUiState.NOT_REQUESTED

@@ -165,7 +165,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             testScheduler.advanceUntilIdle()
 
             bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.phonePermissionState == PermissionUiState.DENIED)
+            assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
         }
 
     @Test

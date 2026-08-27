@@ -140,9 +140,7 @@ class TrafficTracker
                     simChangeHandler.handleSimChangeIfNeeded(target, _status)
                 }
 
-            if (targetIdentity != null) {
-                performTrafficUpdate(target, targetIdentity)
-            }
+            targetIdentity?.let { performTrafficUpdate(target, it) }
         }
 
     @Suppress("ReturnCount", "LongMethod")
@@ -170,7 +168,7 @@ class TrafficTracker
         // 2. Atomic Transaction Phase
         val updateResult =
             withContext(NonCancellable) {
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds + 2000.milliseconds) {
                     trafficMutex.withLock {
                         // Check if SIM is still active under the lock to prevent race conditions
                         val activeIdentities =
@@ -178,14 +176,16 @@ class TrafficTracker
                                 .getActiveIdentities()
                                 .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) ?: return@withLock
                         if (targetIdentity !in activeIdentities) {
-                            AppLogger.d("TrafficTracker: targetIdentity $targetIdentity is no longer active, skipping update")
+                            AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
                             return@withLock
                         }
 
                         val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
 
                         // Check for exceeded retries (Check again inside lock)
-                        if (initialRetryCount != null && initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                        if (initialRetryCount != null &&
+                            initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
+                        ) {
                             baselineManager.baselineNeedsRetry.remove(targetIdentity)
                             errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
                             return@withLock
