@@ -58,10 +58,9 @@ class WidgetSettingsViewModel
         // saveMutex — мьютекс для предотвращения конкурентных сохранений.
         private val saveMutex = Mutex()
 
-        // loadMutex — мьютекс для сериализации загрузок.
+    // loadMutex — мьютекс для сериализации операций загрузки.
         private val loadMutex = Mutex()
 
-        // loadJob — Job текущей загрузки.
         private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
@@ -132,26 +131,23 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Updates settings for a specific SIM slot.
+         * Обновляет настройки конкретной SIM-карты.
          */
         fun updateSimSettings(
             slot: Int,
-            update: (SimSettingsState) -> SimSettingsState,
+            transform: (SimSettingsState) -> SimSettingsState,
         ) {
-            if (slot !in Constants.SimConstants.SUPPORTED_SLOT_INDICES) {
-                AppLogger.w("updateSimSettings called with invalid slot $slot, ignoring")
-                return
-            }
             reduce {
                 val currentSettings = settings ?: return@reduce this
-                val currentSims = currentSettings.simStates.toMutableMap()
-                val simState = currentSims[slot] ?: SimSettingsState()
-                currentSims[slot] = update(simState)
+                val updatedSimStates = currentSettings.simStates.toMutableMap()
+                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                updatedSimStates[slot] = transform(currentSimState)
+
                 copy(
                     isLoadError = false,
                     settings =
                         currentSettings.copy(
-                            simStates = currentSims,
+                            simStates = updatedSimStates,
                             widgetLimitExceeded = false,
                         ),
                 )
@@ -159,7 +155,7 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Consumes the last save result, resetting it to null.
+         * Сбрасывает результат сохранения.
          */
         fun consumeSaveResult() {
             reduce { copy(saveResult = null) }
@@ -227,38 +223,15 @@ class WidgetSettingsViewModel
             }
 
             val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
-
             val result =
                 withTimeoutOrNull(timeout) {
                     saver.save(validatedState, skipSimSettings = isPartial)
-                } ?: run {
-                    AppLogger.e("saveAndNotify: timeout during ${if (isPartial) "partial" else "full"} save.")
-                    SaveResult.Failed()
                 }
 
-            when (result) {
-                is SaveResult.Success -> {
-                    AppLogger.d("Widget settings saved successfully")
-                }
-
-                is SaveResult.PartialSuccess -> {
-                    AppLogger.w("Widget settings saved partially: SIM settings skipped")
-                }
-
-                is SaveResult.PartialFailure -> {
-                    AppLogger.e("Widget settings partial save failure: ${result.message}")
-                }
-
-                is SaveResult.Failed -> {
-                    AppLogger.e("Widget settings save failed")
-                }
-
-                is SaveResult.AlreadyInProgress -> {
-                    AppLogger.w("Widget settings save already in progress")
-                }
+            return result ?: run {
+                AppLogger.e("saveAndNotify: operation timed out after ${timeout.inWholeMilliseconds}ms")
+                SaveResult.Failed("Saving timed out. Storage might be slow or unavailable.")
             }
-
-            return result
         }
 
         companion object {

@@ -286,7 +286,10 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS * 2 + 1000).milliseconds)
             testScheduler.advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed(), vm.state.value.saveResult)
+            assertEquals(
+                SaveResult.Failed("Saving timed out. Storage might be slow or unavailable."),
+                vm.state.value.saveResult,
+            )
             saveJob.cancel()
         }
 

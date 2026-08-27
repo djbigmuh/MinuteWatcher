@@ -3,8 +3,8 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -14,22 +14,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Implementation of [SimIdentitySeedRepository] using [DataStore].
+ * Implementation of [SimIdentitySeedRepository] using AOSP DataStore.
  *
- * Provides a stable seed for generating unique SIM identities.
- * AOSP DataStore compliant.
- * Safe to call from any coroutine context.
+ * **Thread Safety:** Safe to call from any coroutine context.
+ * **Error Handling:** Propagates [CancellationException].
+ * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics.
  */
 @Singleton
 class SimIdentitySeedRepositoryImpl
@@ -55,128 +51,55 @@ class SimIdentitySeedRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override val seedFlow: Flow<String> =
-            dataStore.data
-                .catch { e ->
-                    AppLogger.e("DataStore error in seedFlow, emitting empty string", e)
-                    emit(emptyPreferences())
-                }.map { prefs ->
-                    prefs[DataStoreKeys.SIM_IDENTITY_SEED] ?: ""
-                }
+            dataStore.data.map { preferences ->
+                preferences[DataStoreKeys.SIM_IDENTITY_SEED] ?: ""
+            }
 
-        /**
-         * Updates the identity seed string.
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if write fails.
-         */
         override suspend fun setSeed(seed: String) {
             seedMutex.withLock {
-                dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = seed }
-                cachedEphemeralSeed = null
-                _isEphemeralSeedActive.value = false
-            }
-        }
-
-        /**
-         * Попытка восстановиться после использования эфемерного seed.
-         *
-         * @return true, если эфемерный seed больше не активен (успешно восстановлен основной или не был активен).
-         */
-        private suspend fun tryRecoverFromEphemeral(): Boolean {
-            if (!_isEphemeralSeedActive.value) return true
-
-            var recovered = false
-            try {
-                val existingSeed =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED]
-                    } ?: ""
-
-                if (existingSeed.isNotEmpty()) {
-                    AppLogger.d("SimIdentitySeedRepository: successfully recovered persistent seed from DataStore")
-                    cachedEphemeralSeed = null
-                    _isEphemeralSeedActive.value = false
-                    recovered = true
+                dataStore.edit { preferences ->
+                    preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("SimIdentitySeedRepository: recovery attempt failed", e)
+                _isEphemeralSeedActive.value = false
+                cachedEphemeralSeed = null
             }
-            return recovered
         }
 
         /**
-         * Возвращает существующий seed или генерирует и сохраняет новый.
+         * Returns the existing seed or creates a new one atomically.
          *
-         * **Штатный путь:** seed читается/создаётся один раз и сохраняется в DataStore. Это обеспечивает стабильность
-         * identity всех SIM-карт между перезапусками приложения, что критично для накопления статистики.
-         *
-         * **Error-путь (деградация):** При недоступности или повреждении DataStore (например, на кастомных прошивках
-         * с некорректно работающим API хранилища) возвращается **эфемерный** seed. Этот seed не сохраняется.
-         *
-         * **ВАЖНО:** Использование эфемерного seed приводит к тому, что после перезапуска приложения будет
-         * сгенерирован новый seed, вследствие чего все identity SIM-карт изменятся. Накопленная статистика
-         * и лимиты для старых identity станут «осиротевшими». Это поведение является осознанным компромиссом
-         * для сохранения работоспособности приложения при системных сбоях хранилища.
-         *
-         * **Защита от зависаний:** Чтение и запись в DataStore ограничены таймаутом [Constants.Flow.SHORT_TIMEOUT_MS].
-         * Это гарантирует, что мьютекс [seedMutex] не будет заблокирован на неопределённое время при деградации
-         * файловой системы или системных сервисов (актуально для кастомных прошивок).
-         *
-         * Строгое соблюдение API: на AOSP DataStore работает стабильно. Проблемы с сохранением seed —
-         * это проблема окружения (кастомной прошивки), а не логики приложения.
-         *
-         * @param generator Функция для генерации нового seed, если он отсутствует.
-         * @return Стабильный seed из DataStore или эфемерный seed при сбое.
+         * @param generator Lambda that provides a new seed if needed.
+         * @return The resulting seed string.
+         * Safe to call from any coroutine context.
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String =
             seedMutex.withLock {
-                tryRecoverFromEphemeral()
-
-                var generatedSeed: String? = null
                 try {
-                    val existingSeed =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED]
-                        } ?: ""
-
-                    if (existingSeed.isNotEmpty()) {
-                        cachedEphemeralSeed = null
-                        _isEphemeralSeedActive.value = false
-                        return@withLock existingSeed
-                    }
-
-                    val seed = generator()
-                    generatedSeed = seed
-
-                    val saveSuccess =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = seed }
-                        } != null
-
-                    if (!saveSuccess) {
-                        AppLogger.e("Timeout writing identity seed to DataStore")
-                    }
-
-                    cachedEphemeralSeed = if (saveSuccess) null else seed
-                    _isEphemeralSeedActive.value = !saveSuccess
-                    seed
+                    val currentSeed = dataStore.getOrCreateSeedInternal(generator)
+                    _isEphemeralSeedActive.value = false
+                    cachedEphemeralSeed = null
+                    currentSeed
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e(
-                        "Failed to read/write identity seed. Using EPHEMERAL seed — " +
-                            "all SIM identities will change on next app restart, " +
-                            "causing accumulated statistics to be orphaned.",
-                        e,
-                    )
-                    // Используем уже сгенерированный в этом вызове seed, если он есть,
-                    // либо ранее закэшированный эфемерный, либо создаем новый.
-                    val fallback = generatedSeed ?: cachedEphemeralSeed ?: generator()
-                    cachedEphemeralSeed = fallback
+                    AppLogger.e("DataStore unreachable for seed, falling back to ephemeral session seed", e)
                     _isEphemeralSeedActive.value = true
-                    fallback
+                    cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                 }
             }
+
+    private suspend fun DataStore<Preferences>.getOrCreateSeedInternal(generator: () -> String): String {
+        val existing =
+            this.data
+                .map { it[DataStoreKeys.SIM_IDENTITY_SEED] }
+                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+
+        if (!existing.isNullOrEmpty()) return existing
+
+        val newSeed = generator()
+        this.edit { preferences ->
+            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+        }
+        return newSeed
+    }
     }
