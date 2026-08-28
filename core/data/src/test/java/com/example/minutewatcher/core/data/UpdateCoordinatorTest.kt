@@ -385,12 +385,13 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     supervisorScope,
                 )
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
+            assertEquals("No updates should happen on empty snapshot", 0, callCount)
 
             // 1. Trigger first update and crash
-            snapshotFlow.tryEmit(createSnapshot(timestamp = 1000L, content = "Crash"))
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "Crash"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
 
             // Verify crash happened
             assertEquals("First call (crash) should have occurred", 1, callCount)
@@ -400,12 +401,13 @@ class UpdateCoordinatorTest {
             testScheduler.advanceUntilIdle() // Ensure restart logic runs
 
             // 3. Emit new snapshot and verify update works again
-            snapshotFlow.tryEmit(createSnapshot(timestamp = 2000L, content = "Success"))
+            snapshotFlow.emit(createSnapshot(timestamp = 2000L, content = "Success"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.advanceUntilIdle()
 
-            // Verify second update succeeded
-            verify(widgetUpdater, times(2)).updateAll()
+            // Verify second update (on Crash snapshot) and third update (on Success snapshot) succeeded
+            // total: 1 (crash) + 1 (automatic restart on same snapshot) + 1 (new snapshot) = 3
+            verify(widgetUpdater, times(3)).updateAll()
 
             supervisorJob.cancel()
         }
