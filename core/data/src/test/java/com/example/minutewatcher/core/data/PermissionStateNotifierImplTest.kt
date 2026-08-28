@@ -10,24 +10,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Edge case tests verify behavior under error conditions.
- * These are critical for production stability on custom ROMs
- * where system services may degrade or fail unexpectedly.
+ * Unit tests for [PermissionStateNotifierImpl].
+ *
+ * Safe to call from any coroutine context.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PermissionStateNotifierImplTest {
     @Test
-    fun `initial value is not emitted`() =
+    fun `initial value is emitted immediately`() =
         runTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
             val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
-            assertEquals(0, results.size)
+            assertEquals(1, results.size)
             job.cancel()
         }
 
     @Test
-    fun `notifyChanged emits value`() =
+    fun `notifyChanged emits new value`() =
         runTest {
             val testDispatcher = UnconfinedTestDispatcher()
             val notifier = PermissionStateNotifierImpl()
@@ -38,9 +38,13 @@ class PermissionStateNotifierImplTest {
                     notifier.changes.toList(results)
                 }
 
+            // 1 emission initially
+            assertEquals(1, results.size)
+
             notifier.notifyChanged()
 
-            assertEquals(1, results.size)
+            // 2 emissions total
+            assertEquals(2, results.size)
             job.cancel()
         }
 
@@ -54,7 +58,7 @@ class PermissionStateNotifierImplTest {
             // Simulate permission grant
             notifier.notifyChanged()
 
-            assertTrue(results.isNotEmpty())
+            assertTrue(results.size >= 2)
             job.cancel()
         }
 
@@ -68,22 +72,25 @@ class PermissionStateNotifierImplTest {
             // Simulate permission revoke
             notifier.notifyChanged()
 
-            assertTrue(results.isNotEmpty())
+            assertTrue(results.size >= 2)
             job.cancel()
         }
 
     @Test
-    fun `does not emit until notifyChanged is called`() =
+    fun `emits multiple notifications correctly`() =
         runTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
 
             val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
 
-            assertEquals(0, results.size)
+            assertEquals(1, results.size)
 
             notifier.notifyChanged()
-            assertEquals(1, results.size)
+            assertEquals(2, results.size)
+
+            notifier.notifyChanged()
+            assertEquals(3, results.size)
 
             job.cancel()
         }

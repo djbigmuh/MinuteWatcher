@@ -34,8 +34,7 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasPhoneStatePermission()
-                }
-                .stateIn(
+                }.stateIn(
                     scope = scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
                     started = SharingStarted.Eagerly,
@@ -51,8 +50,7 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasUsageStatsPermission()
-                }
-                .stateIn(
+                }.stateIn(
                     scope = scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
                     started = SharingStarted.Eagerly,
@@ -68,8 +66,7 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasNotificationPermission()
-                }
-                .stateIn(
+                }.stateIn(
                     scope = scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
                     started = SharingStarted.Eagerly,

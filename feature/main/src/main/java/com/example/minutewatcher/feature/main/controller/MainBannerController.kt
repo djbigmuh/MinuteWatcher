@@ -116,8 +116,7 @@ class MainBannerController
                     isStorageDegraded = ephemeralActive,
                 )
             }
-        }
-            .distinctUntilChanged()
+        }.distinctUntilChanged()
             .stateIn(
                 scope = scope,
                 started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
@@ -131,8 +130,6 @@ class MainBannerController
     private fun initialize() {
         ensureObservationStarted()
     }
-
-
 
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
@@ -152,7 +149,9 @@ class MainBannerController
                         job?.join()
                     }
                 if (completed == null) {
-                    AppLogger.w("MainBannerController: previous observation job did not terminate in time, forcing cancel")
+                    AppLogger.w(
+                        "MainBannerController: previous observation job did not terminate in time, forcing cancel",
+                    )
                     job?.cancel()
                 }
                 job =
@@ -178,7 +177,6 @@ class MainBannerController
                     }
             }
         }
-
 
         private data class PermissionsSnapshot(
             val statusMap: Map<String, TrackingStatus>,

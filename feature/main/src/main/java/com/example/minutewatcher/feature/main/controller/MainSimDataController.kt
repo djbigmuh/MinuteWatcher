@@ -223,9 +223,7 @@ class MainSimDataController
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
-        fun resetUsage(
-            slot: Int,
-        ) {
+        fun resetUsage(slot: Int) {
             executeSimOperation(slot, "resetUsage") {
                 usageUseCase.resetCounters(slot)
             }
