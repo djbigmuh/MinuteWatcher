@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -9,10 +10,15 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsSaverTest {
     private val loader: WidgetSettingsLoader = mock()
@@ -21,6 +27,7 @@ class WidgetSettingsSaverTest {
 
     @Before
     fun setup() {
+        initTestLogger()
         saver = WidgetSettingsSaver(loader, dataChangeNotifier)
     }
 

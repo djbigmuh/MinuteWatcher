@@ -60,4 +60,5 @@ dependencies {
     testImplementation(libs.mockingCore)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.kotlinxCoroutinesTesting)
+    testImplementation(testFixtures(project(":core:common")))
 }

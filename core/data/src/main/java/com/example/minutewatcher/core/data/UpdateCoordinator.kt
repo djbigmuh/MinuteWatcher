@@ -207,7 +207,7 @@ class UpdateCoordinator
                     },
                     onError = { e ->
                         AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                    }
+                    },
                 ) ?: WidgetUpdateResult.Failure(isRetryable = false)
 
             widgetUpdateMutex.withLock {

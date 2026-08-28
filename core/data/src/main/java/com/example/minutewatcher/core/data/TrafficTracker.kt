@@ -96,7 +96,7 @@ class TrafficTracker
 
                     val activeSims = fetchActiveSims()
                     handleActiveSims(activeSims)
-                }
+                },
             ) { e -> errorHandler.handleUpdateError(e, _status) }
         }
 
@@ -172,7 +172,8 @@ class TrafficTracker
                         mutexAcquired = true
                         AppLogger.d("TrafficTracker: Update phase: Mutex acquired for $targetIdentity")
 
-                        // Check if SIM is still active under the lock to prevent race conditions
+                        // Check if SIM is still active under the lock to prevent race conditions.
+                        // This ensures that the identity we are about to update is still relevant.
                         val activeIdentities =
                             simIdentityRepository
                                 .getActiveIdentities()

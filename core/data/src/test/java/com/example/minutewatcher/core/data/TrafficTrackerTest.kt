@@ -847,36 +847,30 @@ class TrafficTrackerTest {
             }
 
             // 1. Initial update to set baseline to 1000L
-            tracker.updateTrafficUsage()
-            testScheduler.runCurrent()
+            val initJob = launch { tracker.updateTrafficUsage() }
+            testScheduler.advanceUntilIdle()
+            initJob.join()
+
             verify(simUsageResetRepository).setLastTotalBytes(eq(id), eq(1000L))
 
             // 2. Mock baseline reset to happen
-            whenever(simUsageResetRepository.setLastTotalBytes(eq(id), eq(5000L))).thenAnswer {
-                lastTotalFlow.tryEmit(5000L)
+            whenever(simUsageResetRepository.setLastTotalBytes(eq(id), any())).thenAnswer {
+                val bytes = it.arguments[1] as Long
+                lastTotalFlow.tryEmit(bytes)
                 Unit
             }
 
             // 3. Launch both concurrent. Because they are serialized by simChangeLock,
             // one will finish before the other starts.
-            // If updateTrafficUsage starts first, it should see 1000L, then resetBaseline runs and sets 5000L.
-            // If resetBaseline starts first, it sets 5000L, then updateTrafficUsage sees 5000L.
+            launch { tracker.updateTrafficUsage() }
+            launch { tracker.resetBaseline(id) }
 
-            val job1 = launch { tracker.updateTrafficUsage() }
-            val job2 = launch { tracker.resetBaseline(id) }
-
-            testScheduler.runCurrent()
-            job1.join()
-            job2.join()
-
-            // Verify that incrementTrafficAndSetBaseline was called with a delta calculated
-            // from the result of resetBaseline (5000L) if resetBaseline ran first,
-            // OR resetBaseline happened after updateTrafficUsage.
-            // In either case, the state should be consistent.
+            // advanceUntilIdle ensures all concurrent jobs finish in a StandardTestDispatcher
+            testScheduler.advanceUntilIdle()
 
             // To be more specific about serialization, we can check the total query count.
-            // initial (1) + job1 (1) + job2 (1) = 3
-            assertEquals(3, updateCallCount)
+            // initial (1) + update (1) + reset (1) = 3
+            assertEquals("Total query count should be 3", 3, updateCallCount)
         }
 }
 
