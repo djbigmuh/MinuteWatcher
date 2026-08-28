@@ -50,32 +50,32 @@ class WidgetSettingsSaver
             // Повторная валидация не требуется.
             val validatedState = state
 
-            return withContext(NonCancellable) {
-                try {
-                    saveGeneralSettings(validatedState)
+            return try {
+                saveGeneralSettings(validatedState)
 
-                    val failedSlots = saveSimSettings(validatedState, skipSimSettings)
+                val failedSlots = saveSimSettings(validatedState, skipSimSettings)
 
-                    val result =
-                        if (failedSlots.isEmpty()) {
-                            if (skipSimSettings) {
-                                SaveResult.PartialSuccess(skippedSimSettings = true)
-                            } else {
-                                SaveResult.Success
-                            }
+                val result =
+                    if (failedSlots.isEmpty()) {
+                        if (skipSimSettings) {
+                            SaveResult.PartialSuccess(skippedSimSettings = true)
                         } else {
-                            val slotsString = failedSlots.joinToString(", ")
-                            SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
+                            SaveResult.Success
                         }
+                    } else {
+                        val slotsString = failedSlots.joinToString(", ")
+                        SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
+                    }
 
+                withContext(NonCancellable) {
                     notifyDataChanged()
-                    result
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to save widget settings", e)
-                    SaveResult.Failed()
                 }
+                result
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save widget settings", e)
+                SaveResult.Failed()
             }
         }
 

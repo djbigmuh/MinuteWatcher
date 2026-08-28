@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -76,6 +77,53 @@ class MainBannerController
         private val initMutex = Mutex()
         private val isObservationStarted = AtomicBoolean(false)
 
+        val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
+            trackingStatusRepository
+                .observeTrackingStatus()
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    initialValue = emptyMap(),
+                )
+
+    val trackingBannerState: StateFlow<TrackingBannerState> =
+        run {
+            val permissionsFlow =
+                combine(
+                    trackingStatus,
+                    permissionRepository.phoneStatePermissionGranted,
+                    permissionRepository.usageStatsPermissionGranted,
+                    permissionRepository.notificationPermissionGranted,
+                ) { status, phone, usage, notif ->
+                    PermissionsSnapshot(status, phone, usage, notif)
+                }
+
+            combine(
+                permissionsFlow,
+                appSearchRetryCount,
+                appSearchBannerDismissed,
+                appSettingsRepository.observeAppSettings(),
+                seedRepository.isEphemeralSeedActive,
+            ) { snapshot, retry, dismissed, settings, ephemeralActive ->
+                TrackingBannerMapper.mapToBannerState(
+                    statusMap = snapshot.statusMap,
+                    phoneGranted = snapshot.phoneGranted,
+                    usageGranted = snapshot.usageGranted,
+                    notificationsGranted = snapshot.notificationsGranted,
+                    settings = settings,
+                    appSearchRetryCount = retry,
+                    appSearchBannerDismissed = dismissed,
+                    isStorageDegraded = ephemeralActive,
+                )
+            }
+        }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                initialValue = TrackingBannerState(),
+            )
+
     init {
         initialize()
     }
@@ -84,37 +132,7 @@ class MainBannerController
         ensureObservationStarted()
     }
 
-        /**
-         * Attempts to recover tracking observation.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         */
-        suspend fun recover() {
-            initialize()
-            val flow = lastTrackingStatusFlow
-            if (flow == null) {
-                AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
-            } else {
-                setupObservation(flow)
-                isObservationStarted.set(true)
-            }
-            appSearchRetryCount.value = 0
-            appSearchBannerDismissed.value = false
-        }
 
-        // trackingStatus инициализирован emptyMap(). До первого эмита
-        // из observeTrackingStatus() (что происходит в течение микросекунд
-        // при SharingStarted.Eagerly) баннеры ошибок будут скрыты.
-        // Это допустимое поведение: окно составляет микросекунды.
-        // На AOSP StateFlow эмитит начальное значение синхронно.
-        val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
-            trackingStatusRepository
-                .observeTrackingStatus()
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = emptyMap(),
-                )
 
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
@@ -134,7 +152,7 @@ class MainBannerController
                         job?.join()
                     }
                 if (completed == null) {
-                    AppLogger.w("MainBannerController: previous observation job did not terminate in time, cancelling")
+                    AppLogger.w("MainBannerController: previous observation job did not terminate in time, forcing cancel")
                     job?.cancel()
                 }
                 job =
@@ -161,52 +179,6 @@ class MainBannerController
             }
         }
 
-    private val appSettings = appSettingsRepository.observeAppSettings()
-
-        /**
-         * Состояние баннеров отслеживания.
-         *
-         * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
-         * Сбой наблюдения возможен только при деградации хранилища на кастомной прошивке.
-         * Это проблема кастомной прошивки.
-         *
-         * При успешной эмиссии статус восстанавливается в Active.
-         */
-        val trackingBannerState: StateFlow<TrackingBannerState> =
-            run {
-                val permissionsFlow =
-                    combine(
-                        trackingStatus,
-                        permissionRepository.phoneStatePermissionGranted,
-                        permissionRepository.usageStatsPermissionGranted,
-                        permissionRepository.notificationPermissionGranted,
-                    ) { status, phone, usage, notif ->
-                        PermissionsSnapshot(status, phone, usage, notif)
-                    }
-
-                combine(
-                    permissionsFlow,
-                    appSearchRetryCount,
-                    appSearchBannerDismissed,
-                    appSettings,
-                    seedRepository.isEphemeralSeedActive,
-                ) { snapshot, retry, dismissed, settings, ephemeralActive ->
-                    TrackingBannerMapper.mapToBannerState(
-                        statusMap = snapshot.statusMap,
-                        phoneGranted = snapshot.phoneGranted,
-                        usageGranted = snapshot.usageGranted,
-                        notificationsGranted = snapshot.notificationsGranted,
-                        settings = settings,
-                        appSearchRetryCount = retry,
-                        appSearchBannerDismissed = dismissed,
-                        isStorageDegraded = ephemeralActive,
-                    )
-                }
-            }.stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = TrackingBannerState(),
-            )
 
         private data class PermissionsSnapshot(
             val statusMap: Map<String, TrackingStatus>,
@@ -214,4 +186,22 @@ class MainBannerController
             val usageGranted: Boolean,
             val notificationsGranted: Boolean,
         )
+
+    /**
+     * Attempts to recover tracking observation.
+     *
+     * **Thread Safety:** Safe to call from any coroutine context.
+     */
+    suspend fun recover() {
+        initialize()
+        val flow = lastTrackingStatusFlow
+        if (flow == null) {
+            AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
+        } else {
+            setupObservation(flow)
+            isObservationStarted.set(true)
+        }
+        appSearchRetryCount.value = 0
+        appSearchBannerDismissed.value = false
+    }
     }

@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
@@ -61,8 +63,7 @@ class AppSettingsRepositoryImpl
                     emit(AppSettings())
                 }.stateIn(
                     scope,
-                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
-                    SharingStarted.Eagerly,
+                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                     AppSettings(),
                 )
 
@@ -76,18 +77,21 @@ class AppSettingsRepositoryImpl
 
         /**
          * Returns the current application settings once.
+         *
+         * Ensures a fresh read from DataStore by waiting for the first emission
+         * if the internal flow is not currently active.
          */
-        override suspend fun getAppSettingsOnce(): AppSettings = appSettingsState.value
+        override suspend fun getAppSettingsOnce(): AppSettings = appSettingsState.first()
 
         /**
          * Returns a state flow of application settings.
          *
-         * Initialized using [SharingStarted.Eagerly] (поток критичен для корректности UI,
-         * остановка недопустима) to ensure that [.value] always returns
-         * the latest data, even when there are no active subscribers.
+         * Initialized using [SharingStarted.WhileSubscribed] to conserve resources
+         * when no UI components or background services are observing settings.
+         * Use [getAppSettingsOnce] for a guaranteed fresh atomic read.
          *
-         * If the DataStore has not yet been loaded, [.value] returns the initial [AppSettings]
-         * (default values). Once the first emit from DataStore succeeds, [.value] is updated.
+         * If the DataStore has not yet been loaded, the flow emits the initial [AppSettings]
+         * (default values). Once the first emit from DataStore succeeds, the state is updated.
          *
          * Safe to call from any coroutine context.
          */

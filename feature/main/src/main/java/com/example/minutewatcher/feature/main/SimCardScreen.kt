@@ -5,6 +5,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,7 +31,7 @@ fun SimCardScreen(
     actions: SimCardScreenActions,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val trackingBannerState by viewModel.trackingBannerState.collectAsStateWithLifecycle()
+    val trackingBannerState by viewModel.trackingBannerState.collectAsState()
     val highlightedSlot by viewModel.highlightedSlot.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()

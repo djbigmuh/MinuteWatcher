@@ -187,8 +187,8 @@ class WidgetSettingsViewModel
                 AppLogger.e("Failed to save widget settings", e)
                 reduce { copy(saveResult = SaveResult.Failed()) }
             } finally {
-                saveMutex.unlock()
                 reduce { copy(isSaving = false) }
+                saveMutex.unlock()
             }
         }
 

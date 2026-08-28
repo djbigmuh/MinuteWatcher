@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main.util
 
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -98,18 +97,12 @@ object TrackingBannerMapper {
         val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
         val result =
             when {
-                granted -> PermissionUiState.GRANTED
                 !showNotifications -> PermissionUiState.GRANTED
+                granted -> PermissionUiState.GRANTED
                 permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
                 settings.notificationPermissionRequested -> PermissionUiState.DENIED
                 else -> PermissionUiState.NOT_REQUESTED
             }
-
-        AppLogger.d(
-            "determineNotificationPermissionState: granted=$granted, " +
-                "showNotifications=$showNotifications, permanentlyDenied=$permanentlyDenied, " +
-                "notificationPermissionRequested=${settings.notificationPermissionRequested} -> result=$result",
-        )
 
         return result
     }

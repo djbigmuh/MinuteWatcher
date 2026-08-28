@@ -3,8 +3,11 @@ package com.example.minutewatcher.feature.main
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.feature.main.controller.MainDialogController
+import com.example.minutewatcher.feature.main.controller.MainInitializationController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -29,15 +32,18 @@ class MainViewModel
     @Inject
     constructor(
         private val controllers: MainViewModelControllers,
+        private val dialogController: MainDialogController,
+        private val initController: MainInitializationController,
+        private val timeProvider: TimeProvider,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         // Delegate UI States
-        val showLimitDialog = controllers.dialog.showLimitDialog
-        val showDayDialog = controllers.dialog.showDayDialog
-        val showAdjustDialog = controllers.dialog.showAdjustDialog
-        val showTrafficLimitationDialog = controllers.dialog.showTrafficLimitationDialog
-        val showUsageAccessDialog = controllers.dialog.showUsageAccessDialog
-        val showOnboardingDialog: StateFlow<Boolean> get() = controllers.dialog.showOnboardingDialog
+        val showLimitDialog = dialogController.showLimitDialog
+    val showDayDialog = dialogController.showDayDialog
+    val showAdjustDialog = dialogController.showAdjustDialog
+    val showTrafficLimitationDialog = dialogController.showTrafficLimitationDialog
+    val showUsageAccessDialog = dialogController.showUsageAccessDialog
+    val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
         val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
         val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
@@ -47,31 +53,37 @@ class MainViewModel
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
 
         init {
-            controllers.init.initializeApp(
+            initController.initializeApp(
                 scope = viewModelScope,
                 lastRefreshAt = lastRefreshAt,
             ) {
                 lastRefreshAt = it
             }
+
+            viewModelScope.launch {
+                controllers.dataRefreshNotifier.refreshFlow.collect {
+                    lastRefreshAt = timeProvider.now()
+                }
+            }
         }
 
         // Delegate Dialog/Banner Actions
-        fun setLimitDialog(data: LimitDialogData?) = controllers.dialog.setLimitDialog(data)
+        fun setLimitDialog(data: LimitDialogData?) = dialogController.setLimitDialog(data)
 
-        fun setDayDialog(data: DayDialogData?) = controllers.dialog.setDayDialog(data)
+    fun setDayDialog(data: DayDialogData?) = dialogController.setDayDialog(data)
 
-        fun setAdjustDialog(data: AdjustDialogData?) = controllers.dialog.setAdjustDialog(data)
+    fun setAdjustDialog(data: AdjustDialogData?) = dialogController.setAdjustDialog(data)
 
-        fun setTrafficLimitationDialog(show: Boolean) = controllers.dialog.setTrafficLimitationDialog(show)
+    fun setTrafficLimitationDialog(show: Boolean) = dialogController.setTrafficLimitationDialog(show)
 
-        fun setUsageAccessDialog(show: Boolean) = controllers.dialog.setUsageAccessDialog(show)
+    fun setUsageAccessDialog(show: Boolean) = dialogController.setUsageAccessDialog(show)
 
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 
         fun setPhonePermissionRequested() = controllers.settings.setPhonePermissionRequested()
 
         fun completeOnboarding() {
-            controllers.dialog.setShowOnboardingDialog(show = false)
+            dialogController.setShowOnboardingDialog(show = false)
             controllers.settings.completeOnboarding()
         }
 
@@ -87,7 +99,7 @@ class MainViewModel
 
         fun retryShortcuts() = controllers.simData.retryShortcuts()
 
-        fun retryTraffic() = controllers.simData.retryTraffic { refreshAndNotify(force = true) }
+    fun retryTraffic() = controllers.simData.retryTraffic()
 
         fun dismissWidgetError() = controllers.settings.dismissWidgetError()
 
@@ -113,45 +125,36 @@ class MainViewModel
             trafMb: Int,
             roll: Boolean = false,
         ) {
-            controllers.simData.updateLimits(slot, min, trafMb, roll) { refreshAndNotify(force = true) }
+            controllers.simData.updateLimits(slot, min, trafMb, roll)
         }
 
-        fun resetUsage(slot: Int) = controllers.simData.resetUsage(slot) { refreshAndNotify(force = true) }
+    fun resetUsage(slot: Int) = controllers.simData.resetUsage(slot)
 
         fun toggleAutoReset(
             slot: Int,
             enabled: Boolean,
-        ) = controllers.simData.toggleAutoReset(slot, enabled) {
-            refreshAndNotify(force = true)
-        }
+        ) = controllers.simData.toggleAutoReset(slot, enabled)
 
         fun updateAutoResetDay(
             slot: Int,
             day: Int,
-        ) = controllers.simData.updateAutoResetDay(slot, day) {
-            refreshAndNotify(force = true)
-        }
+        ) = controllers.simData.updateAutoResetDay(slot, day)
 
         fun adjustRemainingMinutes(
             slot: Int,
             min: Int,
-        ) = controllers.simData.adjustRemainingMinutes(slot, min) {
-            refreshAndNotify(force = true)
-        }
+        ) = controllers.simData.adjustRemainingMinutes(slot, min)
 
         fun adjustRemainingTraffic(
             slot: Int,
             gb: Float,
-        ) = controllers.simData.adjustRemainingTraffic(slot, gb) {
-            refreshAndNotify(force = true)
-        }
+        ) = controllers.simData.adjustRemainingTraffic(slot, gb)
 
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
             controllers.refresh.refreshSimCardsNow(
                 scope = viewModelScope,
-                onUpdateLastRefresh = { lastRefreshAt = it },
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
                 onComplete = onComplete,
             )
@@ -159,7 +162,6 @@ class MainViewModel
 
         private suspend fun refreshAndNotify(force: Boolean = false) {
             controllers.refresh.refreshAndNotify(
-                onUpdateLastRefresh = { lastRefreshAt = it },
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
                 force = force,
             )
@@ -174,7 +176,7 @@ class MainViewModel
         fun onActivityResume() {
             controllers.resume.onActivityResume(
                 scope = viewModelScope,
-                initController = controllers.init,
+                initController = initController,
                 lastRefreshAt = lastRefreshAt,
                 onRefreshNeeded = { refreshAndNotify(force = false) },
                 onUpdateLastRefreshAt = { lastRefreshAt = it },

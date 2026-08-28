@@ -152,25 +152,24 @@ class MainSimDataController
         }
 
         /**
-         * After success, [onRefresh] is called. Errors in [onRefresh] are logged and do not
-         * affect the operation result. [CancellationException] is always propagated.
+         * After success, data change notification is triggered.
+         * Errors in notification are logged and do not affect the operation result.
+         * [CancellationException] is always propagated.
          *
          * @param slot Индекс слота SIM.
          * @param operationName Название операции для логирования.
-         * @param onRefresh Callback для обновления данных после успешной операции.
          * @param block Блок операции для выполнения.
          */
         private fun executeSimOperation(
             slot: Int,
             operationName: String,
-            onRefresh: suspend () -> Unit,
             block: suspend () -> Unit,
         ) {
             scope.launch(ioDispatcher) {
                 try {
                     performBlockWithRetry(slot, operationName, block)
                     try {
-                        onRefresh()
+                        notifyDataChanged(updateWidget = true, force = true)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -196,7 +195,6 @@ class MainSimDataController
          * @param minutesLimit New minutes limit.
          * @param trafficLimitMb New traffic limit in MB.
          * @param rolloverEnabled Whether rollover is enabled.
-         * @param onRefresh Callback to refresh data after successful update.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
@@ -207,9 +205,8 @@ class MainSimDataController
             minutesLimit: Int,
             trafficLimitMb: Int,
             rolloverEnabled: Boolean = false,
-            onRefresh: suspend () -> Unit,
         ) {
-            executeSimOperation(slot, "updateLimits", onRefresh) {
+            executeSimOperation(slot, "updateLimits") {
                 val identity = simIdentityRepository.getIdentity(slot)
                 simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
             }
@@ -221,7 +218,6 @@ class MainSimDataController
          * Resets usage statistics for the SIM in the specified slot.
          *
          * @param slot SIM slot index.
-         * @param onRefresh Callback to refresh data after successful reset.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
@@ -229,9 +225,8 @@ class MainSimDataController
          */
         fun resetUsage(
             slot: Int,
-            onRefresh: suspend () -> Unit,
         ) {
-            executeSimOperation(slot, "resetUsage", onRefresh) {
+            executeSimOperation(slot, "resetUsage") {
                 usageUseCase.resetCounters(slot)
             }
         }
@@ -245,7 +240,6 @@ class MainSimDataController
          *
          * @param slot SIM slot index.
          * @param enabled True to enable auto-reset.
-         * @param onRefresh Callback to refresh data after successful toggle.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
@@ -254,9 +248,8 @@ class MainSimDataController
         fun toggleAutoReset(
             slot: Int,
             enabled: Boolean,
-            onRefresh: suspend () -> Unit,
         ) {
-            executeSimOperation(slot, "toggleAutoReset", onRefresh) {
+            executeSimOperation(slot, "toggleAutoReset") {
                 val identity = simIdentityRepository.getIdentity(slot)
                 val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
                 simLimitsRepository.setAutoReset(identity, currentDay, enabled)
@@ -272,7 +265,6 @@ class MainSimDataController
          *
          * @param slot SIM slot index.
          * @param day Day of the month (1-31).
-         * @param onRefresh Callback to refresh data after successful update.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
@@ -281,9 +273,8 @@ class MainSimDataController
         fun updateAutoResetDay(
             slot: Int,
             day: Int,
-            onRefresh: suspend () -> Unit,
         ) {
-            executeSimOperation(slot, "updateAutoResetDay", onRefresh) {
+            executeSimOperation(slot, "updateAutoResetDay") {
                 val identity = simIdentityRepository.getIdentity(slot)
                 val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
                 simLimitsRepository.setAutoReset(identity, day, enabled)
@@ -297,7 +288,6 @@ class MainSimDataController
          *
          * @param slot SIM slot index.
          * @param remainingMinutes New remaining minutes value.
-         * @param onRefresh Callback to refresh data after successful adjustment.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
@@ -306,9 +296,8 @@ class MainSimDataController
         fun adjustRemainingMinutes(
             slot: Int,
             remainingMinutes: Int,
-            onRefresh: suspend () -> Unit,
         ) {
-            executeSimOperation(slot, "adjustRemainingMinutes", onRefresh) {
+            executeSimOperation(slot, "adjustRemainingMinutes") {
                 usageUseCase.adjustMinutes(slot, remainingMinutes)
             }
         }
@@ -320,7 +309,6 @@ class MainSimDataController
          *
          * @param slot SIM slot index.
          * @param remainingGb New remaining traffic value in GB.
-         * @param onRefresh Callback to refresh data after successful adjustment.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
@@ -329,9 +317,8 @@ class MainSimDataController
         fun adjustRemainingTraffic(
             slot: Int,
             remainingGb: Float,
-            onRefresh: suspend () -> Unit,
         ) {
-            executeSimOperation(slot, "adjustRemainingTraffic", onRefresh) {
+            executeSimOperation(slot, "adjustRemainingTraffic") {
                 usageUseCase.adjustTraffic(slot, remainingGb)
             }
         }
@@ -374,12 +361,13 @@ class MainSimDataController
          *
          * Retries traffic tracking recovery.
          *
-         * @param onRefresh Callback to refresh data after successful recovery.
-         *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
-        fun retryTraffic(onRefresh: suspend () -> Unit) {
-            scope.launch { trackingRecoveryController.retryTraffic(onRefresh) }
+        fun retryTraffic() {
+            scope.launch {
+                trackingRecoveryController.retryTraffic()
+                notifyDataChanged(updateWidget = true, force = true)
+            }
         }
 
     private suspend fun performBlockWithRetry(

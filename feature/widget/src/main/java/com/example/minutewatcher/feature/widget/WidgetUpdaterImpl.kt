@@ -89,8 +89,9 @@ class WidgetUpdaterImpl
             settings == null -> {
                 AppLogger.e(
                     "WidgetUpdater: Timeout fetching settings after LimitExceeded. " +
-                        "Proceeding to simplified update without persisting flag.",
+                        "Proceeding to simplified update with background flag update.",
                 )
+                limitManager.setWidgetLimitExceeded(value = true)
                 executeUpdate {
                     safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
                 }

@@ -31,4 +31,9 @@ abstract class BaseViewModel<S>(
     protected fun reduce(reducer: S.() -> S) {
         _state.update { it.reducer() }
     }
+
+    override fun onCleared() {
+        // Хук для очистки ресурсов в подклассах.
+        // Вызывается автоматически при уничтожении ViewModel.
+    }
 }

@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -35,7 +34,7 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasPhoneStatePermission()
-                }.distinctUntilChanged()
+                }
                 .stateIn(
                     scope = scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
@@ -52,7 +51,7 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasUsageStatsPermission()
-                }.distinctUntilChanged()
+                }
                 .stateIn(
                     scope = scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
@@ -69,7 +68,7 @@ class PermissionRepositoryImpl
             notifier.changes
                 .map {
                     permissionManager.hasNotificationPermission()
-                }.distinctUntilChanged()
+                }
                 .stateIn(
                     scope = scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.

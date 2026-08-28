@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -31,7 +30,6 @@ class MainSimRefreshController
         private val usageUseCase: UsageUseCase,
         private val usageStateRepository: UsageStateRepository,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-        private val timeProvider: TimeProvider,
     ) {
         /**
          * The outcome of a SIM card data refresh operation.
@@ -97,7 +95,6 @@ class MainSimRefreshController
          * Refreshes SIM card data internally and updates last refresh time.
          */
         suspend fun refreshAndNotify(
-            onUpdateLastRefresh: (Long) -> Unit,
             onNotifyChanged: (Boolean) -> Unit,
             force: Boolean = false,
         ) {
@@ -106,13 +103,9 @@ class MainSimRefreshController
                 // Обновление уже выполняется другим вызовом — не дублируем
                 return
             }
-            if (outcome is RefreshOutcome.Completed) {
-                val result = outcome.result
-                if (result is RefreshResult.Success) {
-                    onUpdateLastRefresh(timeProvider.now())
-                }
+            if (outcome is RefreshOutcome.Completed && outcome.result is RefreshResult.Success) {
+                onNotifyChanged(force)
             }
-            onNotifyChanged(force)
         }
 
         /**
@@ -121,13 +114,12 @@ class MainSimRefreshController
          */
         fun refreshSimCardsNow(
             scope: CoroutineScope,
-            onUpdateLastRefresh: (Long) -> Unit,
             onNotifyChanged: (Boolean) -> Unit,
             onComplete: () -> Unit = {},
         ) {
             scope.launch {
                 try {
-                    refreshAndNotify(onUpdateLastRefresh, onNotifyChanged, force = false)
+                    refreshAndNotify(onNotifyChanged, force = false)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

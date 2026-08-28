@@ -47,12 +47,9 @@ class TrackingRecoveryController
         /**
          * Retries traffic tracking recovery.
          *
-         * @param onRefresh Callback to refresh data after recovery.
-         *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
-        suspend fun retryTraffic(onRefresh: suspend () -> Unit) {
+        suspend fun retryTraffic() {
             trackingStatusRepository.recoverTracking("traffic")
-            onRefresh()
         }
     }

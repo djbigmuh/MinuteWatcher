@@ -90,7 +90,7 @@ internal class SimIdentityObserver
                                     true
                                 }
 
-                                (cause is IOException || cause is Exception) && attempt < 3 -> {
+                                cause is IOException && attempt < MAX_FETCH_RETRIES -> {
                                     val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
                                     AppLogger.w(
                                         "SimIdentityObserver: Error fetching sims, " +
@@ -141,6 +141,7 @@ internal class SimIdentityObserver
 
         companion object {
             private const val INITIAL_BACKOFF_MS = 1000L
+            private const val MAX_FETCH_RETRIES = 3L
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
         }
