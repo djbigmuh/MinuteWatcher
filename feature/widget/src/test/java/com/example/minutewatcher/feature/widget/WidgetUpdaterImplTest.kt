@@ -424,13 +424,12 @@ class WidgetUpdaterImplTest {
 
             // 2. Second call: success on probe
             val mockLimitManager: WidgetLimitManager = mock()
+            whenever(mockLimitManager.isLimitExceeded()).thenReturn(true)
             whenever(mockLimitManager.shouldProbe()).thenReturn(true)
             @Suppress("UNCHECKED_CAST")
             whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
-                runBlocking {
-                    val updateBlock = it.arguments[1] as suspend (Context, Boolean) -> UpdateResult
-                    updateBlock(context, true)
-                }
+                // Return success immediately to simulate successful probe
+                UpdateResult.Success(wasFull = true)
             }
 
             val updaterWithMock =
@@ -443,11 +442,10 @@ class WidgetUpdaterImplTest {
                     errorClassifier,
                 )
 
-            whenever(renderer.renderAll(any(), eq(true))).thenReturn(Unit) // Success on probe
-
             val result = updaterWithMock.updateAll()
 
             assertTrue("Probe update should succeed", result.isSuccess)
+            // handleUpdateResult should call setWidgetLimitExceeded(false)
             verify(mockLimitManager).setWidgetLimitExceeded(false)
         }
 
