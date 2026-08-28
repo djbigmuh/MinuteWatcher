@@ -9,11 +9,15 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -49,7 +53,7 @@ class UpdateCoordinatorTest {
     fun setup() {
         initTestLogger()
         snapshotFlow.tryEmit(createEmptySnapshot())
-        runTest {
+        runBlocking {
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
         }
     }
@@ -351,9 +355,16 @@ class UpdateCoordinatorTest {
     @Suppress("TooGenericExceptionThrown")
     fun `observation restarts after exception in reactive path`() {
         runTest {
+            // Independent supervisor to isolate the crash from the test scope.
+            // Using StandardTestDispatcher linked to the test scheduler ensures
+            // all launched coroutines are controlled by the test clock.
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val supervisorScope = CoroutineScope(testDispatcher + supervisorJob)
+
             val stateFlow =
                 snapshotFlow.stateIn(
-                    backgroundScope,
+                    supervisorScope,
                     SharingStarted.Eagerly,
                     createEmptySnapshot(),
                 )
@@ -372,29 +383,31 @@ class UpdateCoordinatorTest {
                     dataRefreshNotifier,
                     widgetUpdater,
                     usageStateRepository,
-                    backgroundScope,
+                    supervisorScope,
                 )
             testScheduler.advanceUntilIdle()
 
             // 1. Trigger first update and crash
             snapshotFlow.tryEmit(createSnapshot(timestamp = 1000L, content = "Crash"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             // Verify crash happened
-            assertEquals(1, callCount)
+            assertEquals("First call (crash) should have occurred", 1, callCount)
 
             // 2. Wait for 5 seconds for restart
             testScheduler.advanceTimeBy(5000.milliseconds)
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle() // Ensure restart logic runs
 
             // 3. Emit new snapshot and verify update works again
             snapshotFlow.tryEmit(createSnapshot(timestamp = 2000L, content = "Success"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             // Verify second update succeeded
             verify(widgetUpdater, times(2)).updateAll()
+
+            supervisorJob.cancel()
         }
     }
 

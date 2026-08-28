@@ -167,70 +167,70 @@ class TrafficTracker
                             }
 
                 // 2. Atomic Transaction Phase
-                withContext(NonCancellable) {
                     trafficMutex.withLock {
-                        mutexAcquired = true
-                        AppLogger.d("TrafficTracker: Update phase: Mutex acquired for $targetIdentity")
+                        withContext(NonCancellable) {
+                            mutexAcquired = true
+                            AppLogger.d("TrafficTracker: Update phase: Mutex acquired for $targetIdentity")
 
-                        // Check if SIM is still active under the lock to prevent race conditions.
-                        // This ensures that the identity we are about to update is still relevant.
-                        val activeIdentities =
-                            simIdentityRepository
-                                .getActiveIdentities()
-                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                                ?: return@withLock false
-                        if (targetIdentity !in activeIdentities) {
-                            AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                            return@withLock false
-                        }
+                            // Check if SIM is still active under the lock to prevent race conditions.
+                            // This ensures that the identity we are about to update is still relevant.
+                            val activeIdentities =
+                                simIdentityRepository
+                                    .getActiveIdentities()
+                                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                                    ?: return@withContext false
+                            if (targetIdentity !in activeIdentities) {
+                                AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
+                                return@withContext false
+                            }
 
-                        val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
+                            val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
 
-                        // Check for exceeded retries (Check again inside lock)
-                        if (initialRetryCount != null &&
-                            initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
-                        ) {
-                            baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                            errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                            return@withLock false
-                        }
+                            // Check for exceeded retries (Check again inside lock)
+                            if (initialRetryCount != null &&
+                                initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
+                            ) {
+                                baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                                errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                                return@withContext false
+                            }
 
-                        // Path A: Current state is Retry
-                        if (initialRetryCount != null) {
-                            val startTime = 0L
+                            // Path A: Current state is Retry
+                            if (initialRetryCount != null) {
+                                val startTime = 0L
+                                val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+                                handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
+                                return@withContext true
+                            }
+
+                            // Path B: Normal path
+                            val startTime = usage.lastResetDate
                             val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-                            handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                            return@withLock true
+
+                            if (statsResult !is StatsResult.Success) {
+                                errorHandler.handleStatsFailure(statsResult, _status)
+                                return@withContext false
+                            }
+
+                            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+
+                            if (lastTotalBytes == null) {
+                                errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                                return@withContext false
+                            }
+
+                            // Perform atomic update
+                            deltaCalculator.updateTrafficBaselineAndUsage(
+                                targetIdentity,
+                                statsResult.bytes,
+                                lastTotalBytes,
+                                target,
+                            )
+                            simChangeHandler.updateLastDataSubId(target.dataSubId)
+                            _status.value = TrackingStatus.Active
+                            true
                         }
-
-                        // Path B: Normal path
-                        val startTime = usage.lastResetDate
-                        val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-
-                        if (statsResult !is StatsResult.Success) {
-                            errorHandler.handleStatsFailure(statsResult, _status)
-                            return@withLock false
-                        }
-
-                        val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-
-                        if (lastTotalBytes == null) {
-                            errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                            return@withLock false
-                        }
-
-                        // Perform atomic update
-                        deltaCalculator.updateTrafficBaselineAndUsage(
-                            targetIdentity,
-                            statsResult.bytes,
-                            lastTotalBytes,
-                            target,
-                        )
-                        simChangeHandler.updateLastDataSubId(target.dataSubId)
-                        _status.value = TrackingStatus.Active
-                        true
                     }
-                }
             }
 
         if (updateResult == null) {

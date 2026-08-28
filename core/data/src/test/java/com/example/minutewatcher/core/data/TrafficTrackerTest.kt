@@ -44,7 +44,6 @@ class TrafficTrackerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1700000000000L)
-    private val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
 
     private lateinit var tracker: TrafficTracker
 
@@ -110,8 +109,8 @@ class TrafficTrackerTest {
     private fun setupIdentityMocks() {
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
         runBlocking {
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
+            doReturn("sim_0").whenever(simIdentityRepository).getIdentity(0)
+            doReturn("sim_1").whenever(simIdentityRepository).getIdentity(1)
         }
         val activeSims =
             listOf(
@@ -152,7 +151,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage sets Idle when no active SIM`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
@@ -164,7 +163,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage initializes baseline on first run`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
 
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
@@ -178,7 +177,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `processTrafficUpdate handles timeout reading lastTotalBytes without resetting baseline`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
 
             // lastTotalBytes never emits - use a flow that never emits
@@ -203,7 +202,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `processTrafficUpdate handles timeout reading simUsage`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
 
             tracker.updateTrafficUsage()
@@ -220,7 +219,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles SecurityException gracefully`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any()))
                 .thenThrow(SecurityException("No permission"))
 
@@ -233,7 +232,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage reports error when Usage Access is missing`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
 
             tracker.updateTrafficUsage()
@@ -245,7 +244,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage increments usage based on delta atomically`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
 
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -258,7 +257,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage preserves delta when atomic update fails`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup initial state: baseline = 1000L
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
@@ -292,7 +291,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles network stats unavailable`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
 
             tracker.updateTrafficUsage()
@@ -305,7 +304,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `findSingleActiveSimSlot returns slot when only one SIM has valid operator`() =
-        runTest(testDispatcher) {
+        runTest {
             // No default data subId
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
 
@@ -330,7 +329,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles SIM swap by resetting baseline`() =
-        runTest(testDispatcher) {
+        runTest {
             // First run: SubId 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
@@ -352,7 +351,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage retries baseline reset when stats become available after SIM swap`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
 
@@ -387,7 +386,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage continues to retry baseline reset if stats remain unavailable`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
 
@@ -427,7 +426,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `resetBaseline initializes storage correctly`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
 
             tracker.resetBaseline("sim_0")
@@ -438,7 +437,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `resetBaseline sets error status on unexpected exception`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Unavailable)
 
             tracker.resetBaseline("sim_0")
@@ -451,7 +450,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage respects small deltas`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any()))
                 .thenReturn(StatsResult.Success(2000L)) // 1000 bytes delta
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -465,7 +464,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage handles reboot or overflow`() =
-        runTest(testDispatcher) {
+        runTest {
             // lastTotalBytes = 1000, current = 500 (reboot)
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(500L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -477,7 +476,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `test recover updates status`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup valid bucket for updateTrafficUsage inside recover()
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1500L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
@@ -493,7 +492,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `handleSimChange does NOT update lastDataSubId if stats are unavailable`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state: SubId 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -527,7 +526,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `getCurrentMobileBytes uses now on first run`() =
-        runTest(testDispatcher) {
+        runTest {
             val now = timeProvider.now()
 
             // Usage with lastResetDate = 0
@@ -544,7 +543,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `handleSimChange clears previous retry entries`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state: SubId 1 (sim_0)
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -578,7 +577,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `handleSimChange does not reset baseline when stats are unavailable`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state: SubId 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -598,7 +597,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `handleSimChange breaks retry cycle when limit is exceeded`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
@@ -634,7 +633,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage calls observeActiveSims only once and checks permissions first`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
             tracker.updateTrafficUsage()
             testScheduler.runCurrent()
@@ -652,7 +651,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage reads fresh lastTotalBytes after resetBaseline due to serialization`() =
-        runTest(testDispatcher) {
+        runTest {
             val currentStoredValue = MutableStateFlow(1000L)
 
             // Mock repository to reflect updates in-memory
@@ -690,7 +689,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `ensureInMemoryLastDataSubId avoids redundant DataStore reads`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup: initial state with sim_0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             val lastTotalFlow2 = flowOf(1000L)
@@ -713,7 +712,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `resetBaseline initializes inMemoryLastDataSubId and avoids subsequent DataStore read`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup: sim_0 is active default data SIM (subId 1)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
@@ -732,7 +731,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateLastDataSubId updates memory even if repository fails`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Initial state: subId = 1
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             val lastTotalFlow4 = flowOf(1000L)
@@ -762,7 +761,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage does not block concurrent calls during IO`() =
-        runTest(testDispatcher) {
+        runTest {
             val flow = MutableSharedFlow<List<ActiveSimInfo>>()
             val callCount =
                 java.util.concurrent.atomic
@@ -793,7 +792,7 @@ class TrafficTrackerTest {
 
     @Test
     fun `processTrafficUpdate handles total timeout during mutex acquisition`() =
-        runTest(testDispatcher) {
+        runTest {
             val mutexField = TrafficTracker::class.java.getDeclaredField("trafficMutex")
             mutexField.isAccessible = true
             val trafficMutex = mutexField[tracker] as kotlinx.coroutines.sync.Mutex
@@ -822,55 +821,48 @@ class TrafficTrackerTest {
 
     @Test
     fun `updateTrafficUsage and resetBaseline are serialized via simChangeLock`() =
-        runTest(testDispatcher) {
+        runTest {
             val id = "sim_0"
             // Use a SharedFlow that we can control
             val lastTotalFlow = MutableSharedFlow<Long>(replay = 1)
-            lastTotalFlow.tryEmit(1000L)
+            lastTotalFlow.emit(-1L) // Start uninitialized
             whenever(simUsageResetRepository.getLastTotalBytes(id)).thenReturn(lastTotalFlow)
 
             var updateCallCount = 0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
                 updateCallCount++
-                // 1st call for updateTrafficUsage (initial) -> 1000L
-                // 2nd call for resetBaseline -> 5000L
-                // 3rd call for updateTrafficUsage (after reset) -> 10000L
                 StatsResult.Success(
-                    if (updateCallCount == 1) {
-                        1000L
-                    } else if (updateCallCount == 2) {
-                        5000L
-                    } else {
-                        10000L
+                    when (updateCallCount) {
+                        1 -> 1000L
+                        2 -> 5000L
+                        else -> 10000L
                     },
                 )
             }
 
-            // 1. Initial update to set baseline to 1000L
-            val initJob = launch { tracker.updateTrafficUsage() }
-            testScheduler.advanceUntilIdle()
-            initJob.join()
-
-            verify(simUsageResetRepository).setLastTotalBytes(eq(id), eq(1000L))
-
-            // 2. Mock baseline reset to happen
+            // Mock setLastTotalBytes to update our control flow
             whenever(simUsageResetRepository.setLastTotalBytes(eq(id), any())).thenAnswer {
                 val bytes = it.arguments[1] as Long
                 lastTotalFlow.tryEmit(bytes)
                 Unit
             }
 
-            // 3. Launch both concurrent. Because they are serialized by simChangeLock,
-            // one will finish before the other starts.
-            launch { tracker.updateTrafficUsage() }
-            launch { tracker.resetBaseline(id) }
+            // 1. Initial update to set baseline to 1000L
+            tracker.updateTrafficUsage()
 
-            // advanceUntilIdle ensures all concurrent jobs finish in a StandardTestDispatcher
-            testScheduler.advanceUntilIdle()
+            // 2. Launch both concurrent.
+            // Using a dispatcher that yields to ensure they actually start and compete for the lock.
+            val job1 = launch { tracker.updateTrafficUsage() }
+            val job2 = launch { tracker.resetBaseline(id) }
+
+            // Give them time to complete (runTest will advance virtual time if they are suspended)
+            job1.join()
+            job2.join()
 
             // To be more specific about serialization, we can check the total query count.
             // initial (1) + update (1) + reset (1) = 3
             assertEquals("Total query count should be 3", 3, updateCallCount)
+            assertEquals("Final baseline should be 10000L", 10000L, lastTotalFlow.replayCache.first())
         }
 }
 

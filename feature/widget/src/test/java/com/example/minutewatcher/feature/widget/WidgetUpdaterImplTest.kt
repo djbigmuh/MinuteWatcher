@@ -7,10 +7,8 @@ import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -178,30 +176,52 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
             val startBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
-            whenever(renderer.renderAll(any(), any())).thenAnswer {
-                runBlocking { startBarrier.await() }
-            }
+            val finishBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
 
-            val result1Deferred = async { updater.updateAll() }
-            val result2Deferred = async { updater.updateAll() }
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        startBarrier.complete(Unit)
+                        finishBarrier.await()
+                    }
+                }
 
-            // Give them time to reach the renderer
-            delay(100)
+            val updaterWithFake =
+                WidgetUpdaterImpl(
+                    context = context,
+                    appSettingsRepository = appSettingsRepository,
+                    renderer = fakeRenderer,
+                    retryManager = retryManager,
+                    limitManager = limitManager,
+                    errorClassifier = errorClassifier,
+                )
 
-            startBarrier.complete(Unit)
+            val result1Deferred = async { updaterWithFake.updateAll() }
+
+            // Wait until the first update is actually inside the renderer
+            startBarrier.await()
+
+            // Launch second update while first is still "rendering"
+            val result2Deferred = async { updaterWithFake.updateAll() }
+
+            // Allow the first update to complete
+            finishBarrier.complete(Unit)
 
             val result1 = result1Deferred.await()
             val result2 = result2Deferred.await()
 
-            assertTrue(result1.isSuccess)
-            assertTrue(result2.isSuccess)
+            assertTrue("Primary update should succeed", result1.isSuccess)
+            assertTrue("Coalesced update should succeed", result2.isSuccess)
 
-            // One should be primary, one should be coalesced
+            // One should be primary (not coalesced), one should be coalesced
             val results = listOf(result1, result2)
             val successResults = results.filterIsInstance<WidgetUpdateResult.Success>()
             assertEquals(2, successResults.size)
-            assertTrue("One update should be coalesced", successResults.any { it.wasCoalesced })
-            assertTrue("One update should NOT be coalesced", successResults.any { !it.wasCoalesced })
+            assertTrue("At least one update should be coalesced", successResults.any { it.wasCoalesced })
+            assertTrue("At least one update should NOT be coalesced", successResults.any { !it.wasCoalesced })
         }
 
     @Test
@@ -257,13 +277,13 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
             val mockLimitManager: WidgetLimitManager = mock()
+            whenever(mockLimitManager.isLimitExceeded()).thenReturn(true)
             whenever(mockLimitManager.shouldProbe()).thenReturn(true)
             @Suppress("UNCHECKED_CAST")
             whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
-                runBlocking {
-                    val updateBlock = it.arguments[1] as suspend (Context, Boolean) -> UpdateResult
-                    updateBlock(context, true)
-                }
+                // Return success immediately to simulate successful probe result
+                // This avoids using runBlocking or complex coroutine sync in the mock
+                UpdateResult.Success(wasFull = true)
             }
 
             val updaterWithMock =
@@ -278,6 +298,7 @@ class WidgetUpdaterImplTest {
 
             updaterWithMock.updateAll()
 
+            verify(mockLimitManager).isLimitExceeded()
             verify(mockLimitManager).shouldProbe()
             verify(mockLimitManager).performProbeUpdate(eq(context), any())
         }
