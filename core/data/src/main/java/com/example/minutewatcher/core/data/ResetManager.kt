@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
@@ -43,7 +44,7 @@ class ResetManager
          * atomicity for individual SIM reset operations.
          */
         private val resetMutex = Mutex()
-        private val lastResetCheck = HashMap<String, Long>()
+    private val lastResetCheck = ConcurrentHashMap<String, Long>()
 
         /**
          * Checks and performs automatic resets for all active SIMs.
@@ -103,6 +104,14 @@ class ResetManager
             val identity = simInfo.identity.stableId
             val resetPerformed =
                 resetMutex.withLock {
+                    // 1. Skip if we checked this identity recently (e.g. within the last hour)
+                    // This check is the primary protection against redundant work from concurrent callers.
+                    val lastCheck = lastResetCheck[identity]
+                    if ((lastCheck != null) && (nowElapsed - lastCheck < CHECK_INTERVAL_MS)) {
+                        return@withLock false
+                    }
+
+                    // 2. Perform the reset check and operation
                     val usage =
                         withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                             simUsageRepository.getSimUsage(identity).first()
@@ -113,7 +122,10 @@ class ResetManager
                         return@withLock false
                     }
 
-                    checkAndPerformResetForSimInternal(simInfo, now, nowElapsed, usage)
+                    // Mark as checked immediately before proceeding to ensure next concurrent call skips.
+                    lastResetCheck[identity] = nowElapsed
+
+                    checkAndPerformResetForSimInternal(simInfo, now, usage)
                 }
 
             if (resetPerformed) {
@@ -126,7 +138,7 @@ class ResetManager
             activeSims: List<com.example.minutewatcher.core.model.ActiveSimInfo>,
         ) {
             resetMutex.withLock {
-                val activeIdentitySet = activeSims.map { it.identity.stableId }.toSet()
+                val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
                 lastResetCheck.keys.removeAll { it !in activeIdentitySet }
             }
         }
@@ -151,19 +163,9 @@ class ResetManager
         private suspend fun checkAndPerformResetForSimInternal(
             simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
             now: Long,
-            nowElapsed: Long,
             usage: SimUsage,
         ): Boolean {
             val identity = simInfo.identity.stableId
-
-            // Skip if we checked this identity recently (e.g. within the last hour)
-            // Access to lastResetCheck is protected by resetMutex in the caller.
-            val lastCheck = lastResetCheck[identity]
-            if (lastCheck != null && nowElapsed - lastCheck < CHECK_INTERVAL_MS) {
-                return false
-            }
-            lastResetCheck[identity] = nowElapsed
-
             var result = false
             if (usage.autoReset) {
                 val reset =

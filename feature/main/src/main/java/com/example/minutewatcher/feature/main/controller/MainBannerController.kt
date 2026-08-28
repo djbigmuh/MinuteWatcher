@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -43,9 +46,10 @@ class MainBannerController
     @Inject
     constructor(
         trackingStatusRepository: TrackingStatusRepository,
-        permissionRepository: PermissionRepository,
-        appSettingsRepository: AppSettingsRepository,
+        private val permissionRepository: PermissionRepository,
+        private val appSettingsRepository: AppSettingsRepository,
         private val seedRepository: SimIdentitySeedRepository,
+        private val permissionManager: PermissionManager,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val appSearchRetryCount = MutableStateFlow(value = 0)
@@ -86,6 +90,7 @@ class MainBannerController
                     initialValue = emptyMap(),
                 )
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val trackingBannerState: StateFlow<TrackingBannerState> =
         run {
             val permissionsFlow =
@@ -98,23 +103,32 @@ class MainBannerController
                     PermissionsSnapshot(status, phone, usage, notif)
                 }
 
+            val appSettingsFlow = appSettingsRepository.observeAppSettings()
+
             combine(
                 permissionsFlow,
                 appSearchRetryCount,
                 appSearchBannerDismissed,
-                appSettingsRepository.observeAppSettings(),
+                appSettingsFlow,
                 seedRepository.isEphemeralSeedActive,
             ) { snapshot, retry, dismissed, settings, ephemeralActive ->
-                TrackingBannerMapper.mapToBannerState(
-                    statusMap = snapshot.statusMap,
-                    phoneGranted = snapshot.phoneGranted,
-                    usageGranted = snapshot.usageGranted,
-                    notificationsGranted = snapshot.notificationsGranted,
-                    settings = settings,
-                    appSearchRetryCount = retry,
-                    appSearchBannerDismissed = dismissed,
-                    isStorageDegraded = ephemeralActive,
-                )
+                FlowData(snapshot, retry, dismissed, settings, ephemeralActive)
+            }.flatMapLatest { data ->
+                flow {
+                    emit(
+                        TrackingBannerMapper.mapToBannerState(
+                            statusMap = data.snapshot.statusMap,
+                            phoneGranted = data.snapshot.phoneGranted,
+                            usageGranted = data.snapshot.usageGranted,
+                            notificationsGranted = data.snapshot.notificationsGranted,
+                            notificationsGrantedActual = permissionManager.hasNotificationPermission(),
+                            settings = data.settings,
+                            appSearchRetryCount = data.retry,
+                            appSearchBannerDismissed = data.dismissed,
+                            isStorageDegraded = data.ephemeralActive,
+                        ),
+                    )
+                }
             }
         }.distinctUntilChanged()
             .stateIn(
@@ -122,6 +136,14 @@ class MainBannerController
                 started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                 initialValue = TrackingBannerState(),
             )
+
+    private data class FlowData(
+        val snapshot: PermissionsSnapshot,
+        val retry: Int,
+        val dismissed: Boolean,
+        val settings: com.example.minutewatcher.core.model.AppSettings,
+        val ephemeralActive: Boolean,
+    )
 
     init {
         initialize()

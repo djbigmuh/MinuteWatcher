@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.common.util
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
 import com.example.minutewatcher.core.common.util.AppLogger.MAX_FILE_SIZE
 import java.io.BufferedWriter
@@ -307,15 +308,7 @@ object AppLogger {
             val logFile = File(dir, LOG_FILE_NAME)
             if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
                 closeWriterUnlocked()
-
-                val oldFile = File(dir, LOG_FILE_OLD_NAME)
-                if (oldFile.exists()) oldFile.delete()
-                val renamed = logFile.renameTo(oldFile)
-                if (!renamed) {
-                    // Переименование не удалось — удаляем текущий файл, чтобы предотвратить
-                    // неограниченный рост. Потеря текущего лога допустима.
-                    logFile.delete()
-                }
+                rotateLogFilesUnlocked(dir, logFile)
             }
 
             if (logWriter == null) {
@@ -336,11 +329,52 @@ object AppLogger {
         }
     }
 
+    private fun rotateLogFilesUnlocked(
+        dir: File,
+        logFile: File,
+    ) {
+        val oldFile = File(dir, LOG_FILE_OLD_NAME)
+        if (oldFile.exists()) oldFile.delete()
+        val renamed = logFile.renameTo(oldFile)
+        if (!renamed) {
+            // Переименование не удалось — удаляем текущий файл, чтобы предотвратить
+            // неограниченный рост. Потеря текущего лога допустима.
+            logFile.delete()
+        }
+    }
+
     private fun closeWriterUnlocked() {
         try {
             logWriter?.close()
         } catch (_: Exception) {
         }
         logWriter = null
+    }
+
+    @VisibleForTesting
+    fun resetForTest() {
+        fileLock.withLock {
+            closeWriterUnlocked()
+            logDir = null
+        }
+        lock.withLock {
+            criticalQueue.clear()
+            normalQueue.clear()
+        }
+    }
+
+    @VisibleForTesting
+    fun getQueueSizeForTest(): Int =
+        lock.withLock {
+            criticalQueue.size + normalQueue.size
+        }
+
+    @VisibleForTesting
+    fun initForTest(
+        dir: File,
+        enabled: Boolean = true,
+    ) {
+        logDir = dir
+        isFileLoggingEnabled = enabled
     }
 }

@@ -23,6 +23,9 @@ class WidgetLimitManager
     ) {
         private val exceededUpdateCounter = AtomicLong(0L)
 
+    @Volatile
+    private var cachedLimitExceeded: Boolean? = null
+
         fun shouldProbe(): Boolean {
             val count = exceededUpdateCounter.incrementAndGet()
             return count % PROBE_INTERVAL_UPDATES == 0L
@@ -32,7 +35,10 @@ class WidgetLimitManager
             exceededUpdateCounter.set(0L)
         }
 
+    fun isLimitExceeded(): Boolean? = cachedLimitExceeded
+
         suspend fun setWidgetLimitExceeded(value: Boolean) {
+            cachedLimitExceeded = value
             try {
                 val current = appSettingsRepository.observeAppSettings().value
                 if (current.widgetLimitExceeded == value) return

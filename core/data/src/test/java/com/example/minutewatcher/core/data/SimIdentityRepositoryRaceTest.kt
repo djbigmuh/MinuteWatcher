@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -247,5 +248,71 @@ class SimIdentityRepositoryRaceTest {
             // Persistence.saveSimIdentitiesInfo should be called, which in turn calls migrationService if needed.
             // Since all 10 calls happen concurrently for the SAME slot, the mutex ensures only one resolution occurs.
             verify(migrationService, times(1)).migrateLegacyData(any())
+        }
+
+    @Test
+    fun `getSimIdentity concurrent calls for same slot return same instance`() =
+        runTest {
+            dataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tmpFolder.newFile("test_sim_settings_4.preferences_pb") },
+                )
+            val storedSeed = MutableStateFlow("instance-test-seed")
+            val seedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
+                    override suspend fun setSeed(seed: String) {
+                        storedSeed.value = seed
+                    }
+
+                    override suspend fun getOrCreateSeed(generator: () -> String): String = storedSeed.value
+                }
+
+            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+            whenever(mockSubInfo.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfo.subscriptionId).thenReturn(1)
+            whenever(mockSubInfo.iccId).thenReturn("icc_instance_test")
+
+            val permissionManager = mock<PermissionManager>()
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+            val localDiscoveryDeps =
+                SimDiscoveryDependencies(
+                    context = mock(),
+                    subscriptionManager = mock(),
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) },
+                )
+            val repository =
+                SimIdentityRepositoryImpl(
+                    discoveryDeps = localDiscoveryDeps,
+                    dataStore = dataStore,
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    timeProvider = mock { on { elapsedRealtime() } doReturn 1000L },
+                    scope = backgroundScope,
+                )
+
+            val results = mutableListOf<SimIdentity>()
+            val jobs =
+                List(10) {
+                    launch {
+                        results.add(repository.getSimIdentity(0))
+                    }
+                }
+            jobs.joinAll()
+
+            assertEquals(10, results.size)
+            val first = results[0]
+            assertTrue(
+                "All concurrent calls for same slot must return referentially equal SimIdentity instance",
+                results.all { it === first },
+            )
         }
 }

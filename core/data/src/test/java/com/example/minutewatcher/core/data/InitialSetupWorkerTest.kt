@@ -76,6 +76,7 @@ class InitialSetupWorkerTest {
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),
             )
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
         }
 
         deps =

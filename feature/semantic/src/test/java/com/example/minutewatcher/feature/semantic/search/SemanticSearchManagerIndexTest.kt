@@ -205,6 +205,34 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
+    fun `indexSnapshot concurrent calls with invalid schema results in single session recreation`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            // 1. Initial indexing success
+            manager.indexSnapshot(snapshot)
+            assertEquals(1, fakeWrapper.createdSessions)
+            val session1 = fakeWrapper.lastSession!!
+
+            // 2. Setup next indexing to fail with INVALID_SCHEMA
+            session1.putDocumentsResultCode = AppSearchResult.RESULT_INVALID_SCHEMA
+
+            // 3. Launch 5 concurrent indexing calls for NEW data
+            val jobs =
+                List(5) { i ->
+                    launch {
+                        manager.indexSnapshot(createTestSnapshot(101L + i))
+                    }
+                }
+            jobs.joinAll()
+
+            // 4. Verify only ONE additional session was created (total 2)
+            assertEquals(2, fakeWrapper.createdSessions)
+            assertTrue(session1.isClosed)
+        }
+
+    @Test
     fun `continues operation on RESULT_INTERNAL_ERROR`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)

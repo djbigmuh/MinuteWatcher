@@ -20,6 +20,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -38,6 +39,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(wasPhonePermissionRequestedBefore = false, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.NOT_REQUESTED, state.phonePermissionState)
@@ -49,6 +51,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(wasPhonePermissionRequestedBefore = true, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState) // Internally derived
@@ -60,6 +63,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(wasPhonePermissionRequestedBefore = true, onboardingCompleted = true),
             )
         assertEquals(PermissionUiState.GRANTED, state.phonePermissionState)
@@ -73,6 +77,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = false,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -87,6 +92,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -103,6 +109,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = false,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -119,6 +126,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true, notificationPermissionRequested = true),
             )
         assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
@@ -130,6 +138,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = false,
+                notificationsGrantedActual = false,
                 settings = AppSettings(onboardingCompleted = true, notificationPermissionRequested = true),
             )
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.notificationPermissionState)
@@ -141,6 +150,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = false,
+                notificationsGrantedActual = false,
                 settings = AppSettings(onboardingCompleted = true, notificationPermissionRequested = false),
             )
         assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState)
@@ -161,6 +171,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -176,6 +187,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = false,
                 usageGranted = false,
                 notificationsGranted = false,
+                notificationsGrantedActual = false,
                 settings = AppSettings(onboardingCompleted = false, wasPhonePermissionRequestedBefore = true),
             )
 
@@ -196,6 +208,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = false,
                 notificationsGranted = false,
+                notificationsGrantedActual = false,
                 settings = AppSettings(onboardingCompleted = false),
                 isStorageDegraded = true,
             )
@@ -250,6 +263,7 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
+                notificationsGrantedActual = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
 
@@ -265,6 +279,7 @@ class TrackingBannerMapperTest {
         phoneGranted = true,
         usageGranted = true,
         notificationsGranted = true,
+        notificationsGrantedActual = true,
         settings = AppSettings(onboardingCompleted = true),
         appSearchRetryCount = retryCount,
         appSearchBannerDismissed = dismissed,

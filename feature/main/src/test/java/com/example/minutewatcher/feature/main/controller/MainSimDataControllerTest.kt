@@ -19,6 +19,7 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -108,5 +109,23 @@ class MainSimDataControllerTest {
 
             // Should be cleared because timer was NOT restarted
             assertNull("Highlight should be cleared based on first timer", controller.highlightedSlot.value)
+        }
+
+    @Test
+    fun `executeSimOperation reports partial success when widget update fails`() =
+        testScope.runTest {
+            val slot = 0
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(slot)).thenReturn(identity)
+
+            // Operation succeeds, but widget update fails
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(false)
+
+            controller.updateLimits(slot, 100, 1024)
+            testScheduler.runCurrent()
+
+            val error = controller.lastOperationError.value
+            assertEquals("Data saved, but widget not updated", error?.message)
+            assertEquals(slot, error?.slot)
         }
 }

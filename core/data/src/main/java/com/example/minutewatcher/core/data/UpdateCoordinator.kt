@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -135,8 +136,13 @@ class UpdateCoordinator
                     // Если текущий job изменился (т.е. setupObservation вызван снова), ничего не делаем.
                     if (observationJob.get() !== newJob) return@launch
                     if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
+
+                    // Если job завершился, хотя должен был работать вечно — это признак сбоя.
+                    // Перезапускаем через 5 секунд.
                     AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
                     kotlinx.coroutines.delay(5000.milliseconds)
+
+                    // Повторная проверка перед перезапуском
                     if (isObservationStarted.get() && (observationJob.get() === newJob)) {
                         restartObservation()
                     }
@@ -192,22 +198,22 @@ class UpdateCoordinator
             // Обновление виджета при отсутствии активных SIM выполняется
             // намеренно — виджет должен корректно отобразить состояние
             // "No SIM" или "No Data".
-            val success =
+        val result =
                 catchingCancellation(
                     block = {
                         withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                             widgetUpdater.updateAll()
-                        } ?: false
+                        } ?: WidgetUpdateResult.Failure(isRetryable = false)
                     },
                     onError = { e ->
                         AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                    },
-                ) ?: false
+                    }
+                ) ?: WidgetUpdateResult.Failure(isRetryable = false)
 
             widgetUpdateMutex.withLock {
-                if (success) {
+                if (result.isSuccess) {
                     handleUpdateSuccess(newHash)
-                } else {
+                } else if ((result is WidgetUpdateResult.Failure) && (!result.wasCoalesced)) {
                     handleUpdateFailure()
                 }
             }
@@ -249,42 +255,51 @@ class UpdateCoordinator
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,
             force: Boolean,
-        ) {
-            if (!updateWidget) return
+        ): Boolean {
+            if (!updateWidget) return true
 
-            if (force) {
-                performForcedUpdate()
+            return if (force) {
+                val success = performForcedUpdate()
                 dataRefreshNotifier.notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+                success
             } else {
                 dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
                 // Реактивный путь в init обработает обновление, если данные изменились.
-                // Если данные не изменились, но вызывающий явно запросил обновление,
-                // это покрывается только через force=true.
+                // Мы возвращаем true, так как уведомление успешно отправлено.
+                true
             }
         }
 
-        private suspend fun performForcedUpdate() {
+    private suspend fun performForcedUpdate(): Boolean =
             widgetUpdateMutex.withLock {
                 try {
                     val snapshot = usageStateRepository.observeSnapshot().value
-                    val success = widgetUpdater.updateAll()
-                    if (success) {
+                    var result = widgetUpdater.updateAll()
+
+                    if (!result.isSuccess) {
+                        AppLogger.w("Force widget update failed, retrying once immediately")
+                        result = widgetUpdater.updateAll()
+                    }
+
+                    if (result.isSuccess) {
                         consecutiveUpdateFailures = 0
                         if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
                             lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
                         }
+                        true
                     } else {
                         consecutiveUpdateFailures++
                         AppLogger.w(
                             "Force widget update reported failure ($consecutiveUpdateFailures), hash not updated",
                         )
+                        false
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.w("Force widget update failed, hash not updated", e)
                     lastSnapshotHash = null
+                    false
                 }
             }
-        }
     }

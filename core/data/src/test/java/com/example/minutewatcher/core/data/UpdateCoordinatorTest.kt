@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -49,7 +50,7 @@ class UpdateCoordinatorTest {
         initTestLogger()
         snapshotFlow.tryEmit(createEmptySnapshot())
         runTest {
-            whenever(widgetUpdater.updateAll()).thenReturn(true)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
         }
     }
 
@@ -192,7 +193,7 @@ class UpdateCoordinatorTest {
                     createEmptySnapshot(),
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
-            whenever(widgetUpdater.updateAll()).thenReturn(false)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Failure(wasCoalesced = false))
 
             val coordinator =
                 UpdateCoordinator(
@@ -228,7 +229,7 @@ class UpdateCoordinatorTest {
                     createEmptySnapshot(),
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
-            whenever(widgetUpdater.updateAll()).thenReturn(false)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Failure(wasCoalesced = false))
 
             val coordinator =
                 UpdateCoordinator(
@@ -260,7 +261,7 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             // 4. Now successful update
-            whenever(widgetUpdater.updateAll()).thenReturn(true)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
             snapshotFlow.tryEmit(createSnapshot(timestamp = 7000L, content = "Success"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
@@ -314,7 +315,7 @@ class UpdateCoordinatorTest {
                     createEmptySnapshot(),
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
-            whenever(widgetUpdater.updateAll()).thenReturn(false)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Failure(wasCoalesced = false))
 
             val coordinator =
                 UpdateCoordinator(
@@ -343,6 +344,57 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             assertEquals(TrackingStatus.Idle, coordinator.status.value)
+        }
+    }
+
+    @Test
+    @Suppress("TooGenericExceptionThrown")
+    fun `observation restarts after exception in reactive path`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Make first update throw a Throwable (not Exception) to bypass catchingCancellation
+            var callCount = 0
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                callCount++
+                if (callCount == 1) throw Throwable("Simulated crash")
+                WidgetUpdateResult.Success()
+            }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.advanceUntilIdle()
+
+            // 1. Trigger first update and crash
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 1000L, content = "Crash"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Verify crash happened
+            assertEquals(1, callCount)
+
+            // 2. Wait for 5 seconds for restart
+            testScheduler.advanceTimeBy(5000.milliseconds)
+            testScheduler.runCurrent()
+
+            // 3. Emit new snapshot and verify update works again
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 2000L, content = "Success"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Verify second update succeeded
+            verify(widgetUpdater, times(2)).updateAll()
         }
     }
 

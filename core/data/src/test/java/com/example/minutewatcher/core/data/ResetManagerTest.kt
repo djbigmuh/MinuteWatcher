@@ -259,4 +259,64 @@ class ResetManagerTest {
             // Verify only one repository call happened despite concurrent high-level calls
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
         }
+
+    @Test
+    fun `performAutoReset concurrent calls for multiple SIMs result in single reset per SIM`() =
+        runTest {
+            val id0 = "sim_0"
+            val id1 = "sim_1"
+            val sim0 = createMockSimInfo(id0, 0)
+            val sim1 = createMockSimInfo(id1, 1)
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
+            whenever(simUsageRepository.getSimUsage(any())).thenAnswer {
+                val id = it.arguments[0] as String
+                flowOf(createMockSimUsage(id))
+            }
+            whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+
+            // Launch two concurrent calls
+            val d1 = async { resetManager.performAutoReset() }
+            val d2 = async { resetManager.performAutoReset() }
+
+            d1.await()
+            d2.await()
+
+            // Verify exactly one reset call per SIM
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(id0), any(), any())
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(id1), any(), any())
+            verify(dataChangeNotifier, times(1)).notifyDataChanged()
+        }
+
+    private fun createMockSimInfo(
+        identity: String,
+        slot: Int,
+    ) = com.example.minutewatcher.core.model.ActiveSimInfo(
+        identity = SimIdentity(identity, slot + 1, slot, IdentitySource.ICCID),
+        slotIndex = slot,
+        subscriptionId = slot + 1,
+        displayName = "Op $slot",
+        carrierName = "Op $slot",
+        mccMnc = "2500$slot",
+        isDefaultData = slot == 0,
+        isDefaultVoice = slot == 0,
+    )
+
+    private fun createMockSimUsage(identity: String) =
+        SimUsage(
+            identity,
+            0,
+            1,
+            "MTS",
+            100,
+            200,
+            1.0f,
+            1024,
+            0,
+            0f,
+            true,
+            1,
+            0L,
+            false,
+        )
 }

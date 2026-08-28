@@ -169,7 +169,11 @@ class MainSimDataController
                 try {
                     performBlockWithRetry(slot, operationName, block)
                     try {
-                        notifyDataChanged(updateWidget = true, force = true)
+                        val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
+                        if (!widgetSuccess) {
+                            _lastOperationError.value =
+                                OperationError("Data saved, but widget not updated", slot)
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -423,27 +427,23 @@ class MainSimDataController
          *
          * @param updateWidget Whether to trigger a widget update.
          * @param force Whether to force notification even if data hasn't changed.
+         * @return True if the operation (and optional widget update) completed successfully.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException].
          */
-        fun notifyDataChanged(
+        suspend fun notifyDataChanged(
             updateWidget: Boolean = true,
             force: Boolean = false,
-        ) {
-            // notifyDataChanged вызывается на ioDispatcher. DataChangeNotifier
-            // реализован через UpdateCoordinator, который использует MutableSharedFlow
-            // (потокобезопасный). Одновременный вызов из разных диспетчеров безопасен.
-            scope.launch(ioDispatcher) {
-                try {
-                    dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
-                }
+        ): Boolean =
+            try {
+                dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
+                false
             }
-        }
 
         private companion object {
             private const val MAX_RETRY_ATTEMPTS = 3L

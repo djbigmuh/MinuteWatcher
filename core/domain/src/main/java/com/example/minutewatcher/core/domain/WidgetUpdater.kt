@@ -14,9 +14,9 @@ interface WidgetUpdater {
      *
      * This operation is typically bounded by a timeout (e.g., SHORT_TIMEOUT_MS).
      *
-     * @return true if the update was successfully triggered.
+     * @return [WidgetUpdateResult] indicating the outcome of the update.
      * @throws IOException if communication with the widget system fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
-    suspend fun updateAll(): Boolean
+    suspend fun updateAll(): WidgetUpdateResult
 }

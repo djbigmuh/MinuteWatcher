@@ -14,11 +14,12 @@ interface DataChangeNotifier {
      *
      * @param updateWidget Whether to trigger a widget update.
      * @param force Whether to force the notification regardless of throttle.
+     * @return True if the operation (and optional widget update) completed successfully.
      * @throws IOException if storage access fails during related operations.
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun notifyDataChanged(
         updateWidget: Boolean = true,
         force: Boolean = false,
-    )
+    ): Boolean
 }

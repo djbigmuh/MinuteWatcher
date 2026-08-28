@@ -32,20 +32,7 @@ class WidgetUpdateRetryManagerTest {
         }
 
     @Test
-    fun `updateWithRetry returns true after retries`() =
-        runTest {
-            var attempts = 0
-            val result =
-                manager.updateWithRetry {
-                    attempts++
-                    if (attempts < 3) UpdateOutcome.Retry else UpdateOutcome.Success()
-                }
-            assertTrue(result)
-            assertEquals(3, attempts)
-        }
-
-    @Test
-    fun `updateWithRetry returns false after max attempts exhausted`() =
+    fun `updateWithRetry returns false on Retry outcome (no retries anymore)`() =
         runTest {
             var attempts = 0
             val result =
@@ -54,7 +41,7 @@ class WidgetUpdateRetryManagerTest {
                     UpdateOutcome.Retry
                 }
             assertFalse(result)
-            assertEquals(com.example.minutewatcher.core.model.Constants.Widget.MAX_UPDATE_ATTEMPTS, attempts)
+            assertEquals(1, attempts)
         }
 
     @Test

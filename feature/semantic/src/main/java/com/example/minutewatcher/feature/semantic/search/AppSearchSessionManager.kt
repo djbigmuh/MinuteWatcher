@@ -38,7 +38,9 @@ class AppSearchSessionManager
                 val s = session
                 if ((s != null) && (!s.isClosed) && (!forceOverride)) return true
 
-                session?.close()
+                if (session?.isClosed == false) {
+                    session?.close()
+                }
                 session = null
 
                 if (forceOverride) return tryOpenSession(updateStatus, forceOverride = true).isSuccess

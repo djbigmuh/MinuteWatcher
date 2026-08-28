@@ -87,7 +87,7 @@ class WidgetSettingsSaver
                     AppLogger.w("WidgetSettingsSaver: widget notification timed out, skipping")
                 }
             } catch (e: CancellationException) {
-                throw e
+                AppLogger.w("WidgetSettingsSaver: widget notification cancelled, skipping", e)
             } catch (e: Exception) {
                 AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
             }

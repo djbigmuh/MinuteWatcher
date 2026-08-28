@@ -3,8 +3,11 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
@@ -18,6 +21,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -163,7 +167,41 @@ class WidgetUpdaterImplTest {
 
             val result = failingUpdater.updateAll()
 
-            assertFalse("updateAll should return false on unexpected exception", result)
+            assertFalse("updateAll should return failure on unexpected exception", result.isSuccess)
+        }
+
+    @Test
+    fun `updateAll coalesces concurrent calls`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings())
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            val startBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+            whenever(renderer.renderAll(any(), any())).thenAnswer {
+                runBlocking { startBarrier.await() }
+            }
+
+            val result1Deferred = async { updater.updateAll() }
+            val result2Deferred = async { updater.updateAll() }
+
+            // Give them time to reach the renderer
+            delay(100)
+
+            startBarrier.complete(Unit)
+
+            val result1 = result1Deferred.await()
+            val result2 = result2Deferred.await()
+
+            assertTrue(result1.isSuccess)
+            assertTrue(result2.isSuccess)
+
+            // One should be primary, one should be coalesced
+            val results = listOf(result1, result2)
+            val successResults = results.filterIsInstance<WidgetUpdateResult.Success>()
+            assertEquals(2, successResults.size)
+            assertTrue("One update should be coalesced", successResults.any { it.wasCoalesced })
+            assertTrue("One update should NOT be coalesced", successResults.any { !it.wasCoalesced })
         }
 
     @Test
@@ -206,7 +244,7 @@ class WidgetUpdaterImplTest {
 
             val result = updater.updateAll()
 
-            assertTrue("updateAll should return true even on LimitExceeded", result)
+            assertTrue("updateAll should return success even on LimitExceeded", result.isSuccess)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
             assertTrue("widgetLimitExceeded flag should be set", mockSettings.value.widgetLimitExceeded)
         }
@@ -255,12 +293,12 @@ class WidgetUpdaterImplTest {
 
             val result = updater.updateAll()
 
-            assertFalse("updateAll should return false on SecurityException", result)
+            assertFalse("updateAll should return failure on SecurityException", result.isSuccess)
             verify(renderer).renderAll(any(), any()) // Should be called only once
         }
 
     @Test
-    fun `updateAll returns false and does not retry on Error`() =
+    fun `updateAll returns failure and does not retry on Error`() =
         runTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
@@ -270,7 +308,7 @@ class WidgetUpdaterImplTest {
 
             val result = updater.updateAll()
 
-            assertFalse("updateAll should return false on Error", result)
+            assertFalse("updateAll should return failure on Error", result.isSuccess)
             verify(renderer).renderAll(any(), any()) // Should be called only once
         }
 
@@ -314,7 +352,7 @@ class WidgetUpdaterImplTest {
 
             val result = updater.updateAll()
 
-            assertTrue("updateAll should return true even on LimitExceeded with timeout", result)
+            assertTrue("updateAll should return success even on LimitExceeded with timeout", result.isSuccess)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
             assertTrue(
                 "widgetLimitExceeded flag should be set even on timeout",
@@ -354,7 +392,10 @@ class WidgetUpdaterImplTest {
 
             val result = updater.updateAll()
 
-            assertFalse("updateAll should return false if simplified update fails and already exceeded", result)
+            assertFalse(
+                "updateAll should return failure if simplified update fails and already exceeded",
+                result.isSuccess,
+            )
             assertEquals("performWidgetUpdate should be called only once", 1, callCount)
         }
 
@@ -406,7 +447,42 @@ class WidgetUpdaterImplTest {
 
             val result = updaterWithMock.updateAll()
 
-            assertTrue("Probe update should succeed", result)
+            assertTrue("Probe update should succeed", result.isSuccess)
             verify(mockLimitManager).setWidgetLimitExceeded(false)
+        }
+
+    @Test
+    fun `performSingleUpdate uses limitManager cache to avoid repository check`() =
+        runTest {
+            val mockLimitManager: WidgetLimitManager = mock()
+            whenever(mockLimitManager.isLimitExceeded()).thenReturn(true)
+            whenever(mockLimitManager.shouldProbe()).thenReturn(false)
+
+            val updaterWithMock =
+                WidgetUpdaterImpl(
+                    context = context,
+                    appSettingsRepository = appSettingsRepository,
+                    renderer = renderer,
+                    retryManager = retryManager,
+                    limitManager = mockLimitManager,
+                    errorClassifier = errorClassifier,
+                )
+
+            // When cache returns true, it should use SIMPLIFIED mode (or PROBE if shouldProbe is true)
+            // It should NOT call appSettingsRepository.getAppSettings() or observeAppSettings()
+
+            // Trigger internal performSingleUpdate via updateAll
+            whenever(renderer.renderAll(any(), any())).thenReturn(Unit)
+
+            updaterWithMock.updateAll()
+
+            verify(appSettingsRepository, never()).getAppSettings()
+            // observeAppSettings().value is used as fallback,
+            // but since isLimitExceeded is NOT null, it shouldn't be reached
+            verify(appSettingsRepository, never()).observeAppSettings()
+
+            verify(mockLimitManager).isLimitExceeded()
+            verify(mockLimitManager).shouldProbe()
+            verify(renderer).renderAll(eq(context), eq(false)) // Simplified mode
         }
 }

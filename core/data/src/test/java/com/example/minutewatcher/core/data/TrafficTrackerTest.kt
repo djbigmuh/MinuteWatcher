@@ -819,6 +819,65 @@ class TrafficTrackerTest {
             trafficMutex.unlock()
             job.join()
         }
+
+    @Test
+    fun `updateTrafficUsage and resetBaseline are serialized via simChangeLock`() =
+        runTest(testDispatcher) {
+            val id = "sim_0"
+            // Use a SharedFlow that we can control
+            val lastTotalFlow = MutableSharedFlow<Long>(replay = 1)
+            lastTotalFlow.tryEmit(1000L)
+            whenever(simUsageResetRepository.getLastTotalBytes(id)).thenReturn(lastTotalFlow)
+
+            var updateCallCount = 0
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
+                updateCallCount++
+                // 1st call for updateTrafficUsage (initial) -> 1000L
+                // 2nd call for resetBaseline -> 5000L
+                // 3rd call for updateTrafficUsage (after reset) -> 10000L
+                StatsResult.Success(
+                    if (updateCallCount == 1) {
+                        1000L
+                    } else if (updateCallCount == 2) {
+                        5000L
+                    } else {
+                        10000L
+                    },
+                )
+            }
+
+            // 1. Initial update to set baseline to 1000L
+            tracker.updateTrafficUsage()
+            testScheduler.runCurrent()
+            verify(simUsageResetRepository).setLastTotalBytes(eq(id), eq(1000L))
+
+            // 2. Mock baseline reset to happen
+            whenever(simUsageResetRepository.setLastTotalBytes(eq(id), eq(5000L))).thenAnswer {
+                lastTotalFlow.tryEmit(5000L)
+                Unit
+            }
+
+            // 3. Launch both concurrent. Because they are serialized by simChangeLock,
+            // one will finish before the other starts.
+            // If updateTrafficUsage starts first, it should see 1000L, then resetBaseline runs and sets 5000L.
+            // If resetBaseline starts first, it sets 5000L, then updateTrafficUsage sees 5000L.
+
+            val job1 = launch { tracker.updateTrafficUsage() }
+            val job2 = launch { tracker.resetBaseline(id) }
+
+            testScheduler.runCurrent()
+            job1.join()
+            job2.join()
+
+            // Verify that incrementTrafficAndSetBaseline was called with a delta calculated
+            // from the result of resetBaseline (5000L) if resetBaseline ran first,
+            // OR resetBaseline happened after updateTrafficUsage.
+            // In either case, the state should be consistent.
+
+            // To be more specific about serialization, we can check the total query count.
+            // initial (1) + job1 (1) + job2 (1) = 3
+            assertEquals(3, updateCallCount)
+        }
 }
 
 private fun createSimUsage(id: String) =

@@ -37,6 +37,21 @@ class WidgetLimitManagerTest {
     }
 
     @Test
+    fun `isLimitExceeded returns null initially`() {
+        assertEquals(null, manager.isLimitExceeded())
+    }
+
+    @Test
+    fun `isLimitExceeded returns value set by setWidgetLimitExceeded synchronously`() =
+        runTest {
+            manager.setWidgetLimitExceeded(true)
+            assertEquals(true, manager.isLimitExceeded())
+
+            manager.setWidgetLimitExceeded(false)
+            assertEquals(false, manager.isLimitExceeded())
+        }
+
+    @Test
     fun `shouldProbe returns true every PROBE_INTERVAL_UPDATES`() {
         manager.resetCounter()
         repeat(WidgetLimitManager.PROBE_INTERVAL_UPDATES - 1) {

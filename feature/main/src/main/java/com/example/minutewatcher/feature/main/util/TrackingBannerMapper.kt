@@ -12,6 +12,7 @@ object TrackingBannerMapper {
         phoneGranted: Boolean,
         usageGranted: Boolean,
         notificationsGranted: Boolean,
+        notificationsGrantedActual: Boolean,
         settings: AppSettings,
         appSearchRetryCount: Int = 0,
         appSearchBannerDismissed: Boolean = false,
@@ -69,6 +70,7 @@ object TrackingBannerMapper {
             notificationPermissionState =
                 determineNotificationPermissionState(
                     notificationsGranted,
+                    notificationsGrantedActual,
                     notificationPermanentlyDenied,
                     settings,
                 ),
@@ -91,6 +93,7 @@ object TrackingBannerMapper {
 
     private fun determineNotificationPermissionState(
         granted: Boolean,
+        notificationsGrantedActual: Boolean,
         permanentlyDenied: Boolean,
         settings: AppSettings,
     ): PermissionUiState {
@@ -98,7 +101,7 @@ object TrackingBannerMapper {
         val result =
             when {
                 !showNotifications -> PermissionUiState.GRANTED
-                granted -> PermissionUiState.GRANTED
+                granted || notificationsGrantedActual -> PermissionUiState.GRANTED
                 permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
                 settings.notificationPermissionRequested -> PermissionUiState.DENIED
                 else -> PermissionUiState.NOT_REQUESTED

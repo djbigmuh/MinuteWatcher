@@ -95,7 +95,7 @@ class MainSimRefreshController
          * Refreshes SIM card data internally and updates last refresh time.
          */
         suspend fun refreshAndNotify(
-            onNotifyChanged: (Boolean) -> Unit,
+            onNotifyChanged: suspend (Boolean) -> Unit,
             force: Boolean = false,
         ) {
             val outcome = refreshSimCardsInternal()
@@ -114,7 +114,7 @@ class MainSimRefreshController
          */
         fun refreshSimCardsNow(
             scope: CoroutineScope,
-            onNotifyChanged: (Boolean) -> Unit,
+            onNotifyChanged: suspend (Boolean) -> Unit,
             onComplete: () -> Unit = {},
         ) {
             scope.launch {

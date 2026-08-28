@@ -86,8 +86,8 @@ class TrafficTracker
                 block = {
                     val currentStatus = _status.value
                     val isTimeoutError =
-                        currentStatus is TrackingStatus.Error &&
-                            currentStatus.type == TrackingStatus.ErrorType.UNKNOWN
+                        (currentStatus is TrackingStatus.Error) &&
+                            (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN)
                     if (isTimeoutError) {
                         _status.value = TrackingStatus.Idle
                     }
@@ -96,9 +96,8 @@ class TrafficTracker
 
                     val activeSims = fetchActiveSims()
                     handleActiveSims(activeSims)
-                },
-                onError = { e -> errorHandler.handleUpdateError(e, _status) },
-            )
+                }
+            ) { e -> errorHandler.handleUpdateError(e, _status) }
         }
 
     private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
@@ -135,12 +134,10 @@ class TrafficTracker
 
             val target = (result as TrafficTargetResolver.TargetResult.Success).target
 
-            val targetIdentity =
-                simChangeHandler.withSimChangeLock {
-                    simChangeHandler.handleSimChangeIfNeeded(target, _status)
-                }
-
-            targetIdentity?.let { performTrafficUpdate(target, it) }
+            simChangeHandler.withSimChangeLock {
+                val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
+                targetIdentity?.let { performTrafficUpdate(target, it) }
+            }
         }
 
     @Suppress("ReturnCount", "LongMethod")
@@ -153,10 +150,9 @@ class TrafficTracker
             withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                 // 1. Data Collection Phase (Now inside timeout)
 
-                // Fetch Usage only if we are NOT in a known retry state,
-                // as we'll need usage.lastResetDate for the normal path.
+                // Fetch Usage upfront to keep the critical section (trafficMutex) as short as possible.
+                // It's used in the normal path (Path B).
                 val usage =
-                    if (trafficMutex.withLock { baselineManager.baselineNeedsRetry[targetIdentity] } == null) {
                         simUsageRepository
                             .getSimUsage(targetIdentity)
                             .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
@@ -169,9 +165,6 @@ class TrafficTracker
                                 }
                                 return@withTimeoutOrNull false
                             }
-                    } else {
-                        null
-                    }
 
                 // 2. Atomic Transaction Phase
                 withContext(NonCancellable) {
@@ -210,7 +203,7 @@ class TrafficTracker
                         }
 
                         // Path B: Normal path
-                        val startTime = usage?.lastResetDate ?: 0L
+                        val startTime = usage.lastResetDate
                         val statsResult = baselineManager.getCurrentMobileBytes(startTime)
 
                         if (statsResult !is StatsResult.Success) {

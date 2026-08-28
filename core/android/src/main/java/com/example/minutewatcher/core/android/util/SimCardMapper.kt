@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.android.util.SimCardMapper.negativeLogged
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.Constants
@@ -10,6 +11,7 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.ClampingUtils
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Mappers for converting domain models (SimUsage) to UI models (SimCardUiModel).
@@ -19,13 +21,28 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object SimCardMapper {
     /**
+     * Cache entry for negative logging state.
+     */
+    internal data class LogEntry(
+        val identity: String,
+        val version: Long,
+    )
+
+    /**
      * Кэш identity SIM-карт, для которых уже было залогировано предупреждение
      * об отрицательных значениях. Предотвращает повторное логирование
      * одного и того же identity в одном слоте.
      *
-     * Использует [ConcurrentHashMap] для потокобезопасности без явной синхронизации.
+     * Использует [ConcurrentHashMap] для потокобезопасности.
      */
-    private val negativeLogged = ConcurrentHashMap<Int, String>()
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal val negativeLogged = ConcurrentHashMap<Int, LogEntry>()
+
+    /**
+     * Счётчики вызовов для каждого слота, обеспечивающие версионность кэша.
+     */
+    private val slotCallCounters = ConcurrentHashMap<Int, AtomicLong>()
+
     private const val MAX_LOGGED_SIZE = Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS
 
     fun map(
@@ -34,6 +51,8 @@ object SimCardMapper {
         usage: SimUsage,
     ): SimCardUiModel {
         require(slot in Constants.SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+
+        val version = slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
 
         val hasNegativeValues =
             usage.minutesUsed < 0 ||
@@ -44,8 +63,8 @@ object SimCardMapper {
         // Кэш negativeLogged подавляет повторное логирование отрицательных
         // значений для одного и того же identity в слоте. При смене SIM
         // в слоте (identity изменился) старая запись удаляется. Все операции
-        // объединены в один блок для исключения race conditions.
-        updateNegativeLoggedState(slot, usage, hasNegativeValues)
+        // объединены в один блок для исключения race conditions через версионность.
+        updateNegativeLoggedState(slot, usage, hasNegativeValues, version)
 
         val safeMinutesUsed = ClampingUtils.clamp(usage.minutesUsed, 0, Constants.MAX_MINUTES_LIMIT)
         val safeMinutesLimit = ClampingUtils.clamp(usage.minutesLimit, 0, Constants.MAX_MINUTES_LIMIT)
@@ -99,17 +118,21 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
         hasNegativeValues: Boolean,
+        version: Long,
     ) {
-        negativeLogged.compute(slot) { _, currentIdentity ->
-            if (currentIdentity == usage.identity) return@compute currentIdentity
+        negativeLogged.compute(slot) { _, currentEntry ->
+            // Если в кэше уже есть более новая версия (race condition), ничего не меняем.
+            if (currentEntry != null && currentEntry.version > version) return@compute currentEntry
 
-            if (hasNegativeValues && (currentIdentity != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
+            if (currentEntry?.identity == usage.identity) return@compute currentEntry
+
+            if (hasNegativeValues && (currentEntry != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
                 AppLogger.e(
                     "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
                         "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
                         "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
                 )
-                usage.identity
+                LogEntry(usage.identity, version)
             } else {
                 null
             }

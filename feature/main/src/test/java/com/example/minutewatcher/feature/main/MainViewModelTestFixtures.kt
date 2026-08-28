@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main
 
 import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -54,6 +55,7 @@ abstract class MainViewModelTestFixtures {
     protected val dataChangeNotifier: DataChangeNotifier = mock()
     protected val dataRefreshNotifier: com.example.minutewatcher.core.domain.DataRefreshNotifier = mock()
     protected val permissionRepository: PermissionRepository = mock()
+    protected val permissionManager: PermissionManager = mock()
     protected val seedRepository: SimIdentitySeedRepository = mock()
     protected val trackingRecoveryController: TrackingRecoveryController = mock()
     protected val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
@@ -169,6 +171,7 @@ abstract class MainViewModelTestFixtures {
             MainBannerController(
                 trackingStatusRepository = trackingStatusRepository,
                 permissionRepository = permissionRepository,
+                permissionManager = permissionManager,
                 appSettingsRepository = appSettingsRepository,
                 seedRepository = seedRepository,
                 scope = scope,
