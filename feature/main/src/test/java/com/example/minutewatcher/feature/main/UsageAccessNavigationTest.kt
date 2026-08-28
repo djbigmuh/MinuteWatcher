@@ -28,6 +28,7 @@ import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -62,6 +63,7 @@ class UsageAccessNavigationTest {
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
+    private val dataRefreshNotifier: com.example.minutewatcher.core.domain.DataRefreshNotifier = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
@@ -72,10 +74,18 @@ class UsageAccessNavigationTest {
     private val phonePermissionFlow = MutableStateFlow(true)
     private val usageStatsPermissionFlow = MutableStateFlow(false)
     private val notificationPermissionFlow = MutableStateFlow(true)
+    private val refreshFlow =
+        MutableSharedFlow<com.example.minutewatcher.core.domain.DataRefreshNotifier.RefreshEvent>(replay = 1)
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+
+        refreshFlow.tryEmit(
+            com.example.minutewatcher.core.domain.DataRefreshNotifier
+                .RefreshEvent(),
+        )
+        whenever(dataRefreshNotifier.refreshFlow).thenReturn(refreshFlow)
 
         whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
@@ -116,7 +126,6 @@ class UsageAccessNavigationTest {
                 usageUseCase = usageUseCase,
                 usageStateRepository = usageStateRepository,
                 ioDispatcher = testDispatcher,
-                timeProvider = timeProvider,
             )
         val settingsController =
             MainSettingsController(
@@ -157,17 +166,19 @@ class UsageAccessNavigationTest {
 
         val controllers =
             MainViewModelControllers(
-                dialog = dialogController,
                 banner = bannerController,
                 refresh = refreshController,
                 settings = settingsController,
                 simData = simDataController,
-                init = initController,
                 resume = resumeController,
+                dataRefreshNotifier = dataRefreshNotifier,
             )
 
         return MainViewModel(
             controllers = controllers,
+            dialogController = dialogController,
+            initController = initController,
+            timeProvider = timeProvider,
             savedStateHandle = savedStateHandle,
         )
     }

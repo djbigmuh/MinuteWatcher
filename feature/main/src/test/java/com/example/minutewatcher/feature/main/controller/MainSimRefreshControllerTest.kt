@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main.controller
 
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -24,7 +23,6 @@ import org.robolectric.RobolectricTestRunner
 class MainSimRefreshControllerTest {
     private val usageUseCase: UsageUseCase = mock()
     private val usageStateRepository: UsageStateRepository = mock()
-    private val timeProvider: TimeProvider = mock()
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var controller: MainSimRefreshController
@@ -36,7 +34,6 @@ class MainSimRefreshControllerTest {
                 usageUseCase,
                 usageStateRepository,
                 testDispatcher,
-                timeProvider,
             )
     }
 
@@ -66,7 +63,6 @@ class MainSimRefreshControllerTest {
                     usageUseCase,
                     fakeRepository,
                     testDispatcher,
-                    timeProvider,
                 )
 
             // Launch first refresh

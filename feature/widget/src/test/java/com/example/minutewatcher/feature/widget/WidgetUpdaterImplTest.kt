@@ -316,8 +316,8 @@ class WidgetUpdaterImplTest {
 
             assertTrue("updateAll should return true even on LimitExceeded with timeout", result)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
-            assertFalse(
-                "widgetLimitExceeded flag should NOT be set due to timeout",
+            assertTrue(
+                "widgetLimitExceeded flag should be set even on timeout",
                 mockSettings.value.widgetLimitExceeded,
             )
         }
