@@ -33,21 +33,40 @@ class WidgetUpdaterImpl
     ) : WidgetUpdater {
     private val activeUpdate = AtomicReference<CompletableDeferred<Boolean>?>(null)
 
-    @Suppress("ReturnCount")
     override suspend fun updateAll(): Boolean {
+        var lastOutcome: UpdateOutcome? = null
+        val success =
+            executeUpdate {
+                val s =
+                    retryManager.updateWithRetry { attempt ->
+                        performSingleUpdate(attempt).also { lastOutcome = it }
+                    }
+                if (s) {
+                    UpdateResult.Success(wasFull = true)
+                } else {
+                    when (lastOutcome) {
+                        is UpdateOutcome.LimitExceeded -> UpdateResult.LimitExceeded
+                        else -> UpdateResult.GenericFailure(isRetryable = false)
+                    }
+                }
+            }
+
+        if ((!success) && (lastOutcome is UpdateOutcome.LimitExceeded)) {
+            return handleLimitExceeded()
+        }
+        return success
+    }
+
+    private suspend fun executeUpdate(block: suspend () -> UpdateResult): Boolean {
         val deferred = CompletableDeferred<Boolean>()
         if (!activeUpdate.compareAndSet(null, deferred)) {
             AppLogger.d("WidgetUpdater: update already in progress, skipping")
             return false
         }
-
-        var lastOutcome: UpdateOutcome? = null
         var success = false
         try {
-            success =
-                    retryManager.updateWithRetry { attempt ->
-                        performSingleUpdate(attempt).also { lastOutcome = it }
-                    }
+            val result = block()
+            success = result is UpdateResult.Success
             deferred.complete(success)
         } catch (e: CancellationException) {
             deferred.completeExceptionally(e)
@@ -56,10 +75,6 @@ class WidgetUpdaterImpl
             deferred.completeExceptionally(e)
         } finally {
             activeUpdate.compareAndSet(deferred, null)
-        }
-
-        if ((!success) && (lastOutcome is UpdateOutcome.LimitExceeded)) {
-            return handleLimitExceeded()
         }
         return success
     }
@@ -76,15 +91,8 @@ class WidgetUpdaterImpl
                     "WidgetUpdater: Timeout fetching settings after LimitExceeded. " +
                         "Proceeding to simplified update without persisting flag.",
                 )
-                val deferred = CompletableDeferred<Boolean>()
-                if (!activeUpdate.compareAndSet(null, deferred)) return false
-                try {
-                    val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
-                    val success = result is UpdateResult.Success
-                    deferred.complete(success)
-                    success
-                } finally {
-                    activeUpdate.compareAndSet(deferred, null)
+                executeUpdate {
+                    safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
                 }
             }
 
@@ -145,20 +153,12 @@ class WidgetUpdaterImpl
             limitManager.setWidgetLimitExceeded(value = true)
         }
 
-        val deferred = CompletableDeferred<Boolean>()
-        if (!activeUpdate.compareAndSet(null, deferred)) {
-            AppLogger.d("WidgetUpdater: simplified update skipped, another update in progress")
-            return false
-        }
-        return try {
-            val success =
+        return executeUpdate {
+            val s =
                 retryManager.updateWithRetry {
                     handleUpdateResult(safeUpdateInternal(context, isFullAttempt = false, isProbe = false))
                 }
-            deferred.complete(success)
-            success
-        } finally {
-            activeUpdate.compareAndSet(deferred, null)
+            if (s) UpdateResult.Success(wasFull = false) else UpdateResult.GenericFailure(isRetryable = false)
         }
     }
 

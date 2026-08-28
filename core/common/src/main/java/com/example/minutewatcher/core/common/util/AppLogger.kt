@@ -238,6 +238,19 @@ object AppLogger {
             if (count > MAX_WORKER_CRASHES) {
                 isFileLoggingEnabled = false
                 Log.e(TAG, "AppLogger: too many worker crashes, file logging disabled")
+            } else {
+                // Автоматический перезапуск через задержку
+                Thread {
+                    try {
+                        Thread.sleep(WORKER_RETRY_DELAY_MS)
+                        ensureWorkerStarted()
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                    }
+                }.apply {
+                    isDaemon = true
+                    start()
+                }
             }
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Error,
@@ -260,6 +273,10 @@ object AppLogger {
     private fun processWorkerEntry(entry: LogEntry) {
         try {
             writeEntryToFile(entry)
+            // После успешной записи сбрасываем счётчик крахов
+            if (workerRestartCount.get() > 0) {
+                workerRestartCount.set(0)
+            }
         } catch (e: Exception) {
             // Запись не удалась. Возвращаем в начало соответствующей очереди.
             lock.withLock {

@@ -6,11 +6,13 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
-// @Suppress("TooManyFunctions") is required because DataStoreKeys is a centralized registry
-// for all preference keys used in the module, ensuring no key collisions and single source of truth.
-
 /**
  * Centralized registry of all DataStore preference keys.
+ *
+ * **Architectural Note:** Multiple helper functions are used here to ensure
+ * type-safe access to dynamic preference keys (e.g., identity-based keys).
+ * This centralized approach prevents key collisions and serves as the single source
+ * of truth for the DataStore schema within the module.
  *
  * **Strict API compliance:** Keys are implementation details of DataStore.
  * Public repository APIs must not expose them. This object is internal to core:data.
@@ -18,7 +20,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * **Migration safety:** When renaming keys, update both the key name and
  * add a migration step in IdentityMigrationService to preserve user data.
  */
-@Suppress("TooManyFunctions")
 internal object DataStoreKeys {
     // App settings (SettingsKeys)
     @JvmStatic val APP_THEME = intPreferencesKey("app_theme")

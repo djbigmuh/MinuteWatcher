@@ -89,10 +89,10 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `initialization with IllegalStateException sets NOT_SUPPORTED status`() =
+    fun `initialization with IllegalStateException containing not supported sets NOT_SUPPORTED status`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            fakeWrapper.failSessionCreationWith = IllegalStateException("Service not found")
+            fakeWrapper.failSessionCreationWith = IllegalStateException("AppSearch is not supported on this device")
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
             manager.initialize(flow)
@@ -102,6 +102,26 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
             assertEquals(
                 TrackingStatus.ErrorType.NOT_SUPPORTED,
+                (status as TrackingStatus.Error).type,
+            )
+        }
+
+    @Test
+    fun `initialization with generic IllegalStateException sets DATABASE_ERROR status due to indexing wrap`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            fakeWrapper.failSessionCreationWith = IllegalStateException("Something went wrong")
+
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+
+            val status = manager.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            // It's DATABASE_ERROR because SemanticSearchManager wraps initialization failure
+            // into IndexingFailure if it's not NOT_SUPPORTED.
+            assertEquals(
+                TrackingStatus.ErrorType.DATABASE_ERROR,
                 (status as TrackingStatus.Error).type,
             )
         }

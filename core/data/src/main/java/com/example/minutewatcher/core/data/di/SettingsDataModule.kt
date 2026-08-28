@@ -67,7 +67,6 @@ private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore
 @Module
 @InstallIn(SingletonComponent::class)
 // @Suppress("unused") is required because Hilt discovers bindings via reflection.
-// Removing this will cause runtime injection failures.
 @Suppress("unused")
 interface SettingsDataModule {
     /** Binds the concrete [AppSettingsRepositoryImpl] to the [AppSettingsRepository] interface.

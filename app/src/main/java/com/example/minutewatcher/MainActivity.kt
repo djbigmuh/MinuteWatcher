@@ -240,6 +240,7 @@ class MainActivity : AppCompatActivity() {
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
             permissionStateNotifier.notifyChanged()
+            checkPermissionChanges()
         }
 
         fun checkPermissionsAndInit() {

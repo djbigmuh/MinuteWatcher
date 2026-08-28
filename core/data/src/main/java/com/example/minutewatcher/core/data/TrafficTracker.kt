@@ -148,36 +148,46 @@ class TrafficTracker
         target: TargetInfo,
         targetIdentity: String,
     ) {
-        // 1. Data Collection Phase (Outside trafficMutex)
-
-        // Fetch Usage only if we are NOT in a known retry state,
-        // as we'll need usage.lastResetDate for the normal path.
-        val usage =
-            if (trafficMutex.withLock { baselineManager.baselineNeedsRetry[targetIdentity] } == null) {
-                simUsageRepository
-                    .getSimUsage(targetIdentity)
-                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                    ?: run {
-                        trafficMutex.withLock { errorHandler.handleUsageReadTimeout(targetIdentity, _status) }
-                        return
-                    }
-            } else {
-                null
-            }
-
-        // 2. Atomic Transaction Phase
+        var mutexAcquired = false
         val updateResult =
-            withContext(NonCancellable) {
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds + 2000.milliseconds) {
+            withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                // 1. Data Collection Phase (Now inside timeout)
+
+                // Fetch Usage only if we are NOT in a known retry state,
+                // as we'll need usage.lastResetDate for the normal path.
+                val usage =
+                    if (trafficMutex.withLock { baselineManager.baselineNeedsRetry[targetIdentity] } == null) {
+                        simUsageRepository
+                            .getSimUsage(targetIdentity)
+                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                            ?: run {
+                                trafficMutex.withLock {
+                                    errorHandler.handleUsageReadTimeout(
+                                        targetIdentity,
+                                        _status,
+                                    )
+                                }
+                                return@withTimeoutOrNull false
+                            }
+                    } else {
+                        null
+                    }
+
+                // 2. Atomic Transaction Phase
+                withContext(NonCancellable) {
                     trafficMutex.withLock {
+                        mutexAcquired = true
+                        AppLogger.d("TrafficTracker: Update phase: Mutex acquired for $targetIdentity")
+
                         // Check if SIM is still active under the lock to prevent race conditions
                         val activeIdentities =
                             simIdentityRepository
                                 .getActiveIdentities()
-                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) ?: return@withLock
+                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                                ?: return@withLock false
                         if (targetIdentity !in activeIdentities) {
                             AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                            return@withLock
+                            return@withLock false
                         }
 
                         val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
@@ -188,7 +198,7 @@ class TrafficTracker
                         ) {
                             baselineManager.baselineNeedsRetry.remove(targetIdentity)
                             errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                            return@withLock
+                            return@withLock false
                         }
 
                         // Path A: Current state is Retry
@@ -196,7 +206,7 @@ class TrafficTracker
                             val startTime = 0L
                             val statsResult = baselineManager.getCurrentMobileBytes(startTime)
                             handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                            return@withLock
+                            return@withLock true
                         }
 
                         // Path B: Normal path
@@ -205,14 +215,14 @@ class TrafficTracker
 
                         if (statsResult !is StatsResult.Success) {
                             errorHandler.handleStatsFailure(statsResult, _status)
-                            return@withLock
+                            return@withLock false
                         }
 
                         val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
 
                         if (lastTotalBytes == null) {
                             errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                            return@withLock
+                            return@withLock false
                         }
 
                         // Perform atomic update
@@ -230,11 +240,12 @@ class TrafficTracker
             }
 
         if (updateResult == null) {
-            AppLogger.e("TrafficTracker: Traffic update mutex timeout for $targetIdentity")
+            val phase = if (mutexAcquired) "execution" else "mutex acquisition or data fetch"
+            AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
             _status.value =
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.UNKNOWN,
-                    "Traffic update mutex timeout",
+                    "Traffic update timeout ($phase)",
                 )
         }
     }

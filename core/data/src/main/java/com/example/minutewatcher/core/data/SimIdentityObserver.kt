@@ -109,7 +109,7 @@ internal class SimIdentityObserver
                     AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims", e)
                     emit(emptyList())
                     // Не пробрасываем — позволяем потоку завершиться штатно.
-                    // Восстановление возможно через подписку заново (WhileSubscribed).
+                    // Восстановление возможно через подписку заново (Eagerly перезапустит при сбое).
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -129,7 +129,8 @@ internal class SimIdentityObserver
                     cache.cleanupManual(activeSlots)
                 }.stateIn(
                     scope,
-                    SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000L),
+                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
+                    SharingStarted.Eagerly,
                     emptyList(),
                 )
 

@@ -23,6 +23,7 @@
     <ID>TooManyFunctions:CallTracker.kt$CallTracker : TrackingStatusProvider</ID>
     <ID>TooManyFunctions:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl : BaseDataStoreRepositorySimIdentityRepository</ID>
     <ID>TooManyFunctions:SimSettingsKeys.kt$SimSettingsKeys</ID>
+      <ID>TooManyFunctions:DataStoreKeys.kt$DataStoreKeys</ID>
     <ID>TooManyFunctions:SimUsageRepositoryImpl.kt$SimUsageRepositoryImpl : BaseDataStoreRepositorySimUsageRepositorySimUsageAdjustmentRepositorySimUsageResetRepository</ID>
     <ID>TooManyFunctions:TrafficTracker.kt$TrafficTracker : TrackingStatusProvider</ID>
     <ID>TooManyFunctions:UsageDataModule.kt$UsageDataModule</ID>

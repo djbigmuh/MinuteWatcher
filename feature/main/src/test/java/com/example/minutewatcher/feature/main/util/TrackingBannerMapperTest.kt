@@ -7,7 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class TrackingBannerMapperTest {
     @Test
     fun `mapToBannerState returns GRANTED when all permissions are granted`() {
@@ -179,6 +182,28 @@ class TrackingBannerMapperTest {
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
         assertFalse(state.showUsageAccessBanner) // Should be suppressed
         assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState) // Default
+    }
+
+    @Test
+    fun `mapToBannerState shows errors even before onboarding completed`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        "traffic" to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN),
+                        "widget_observation" to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
+                phoneGranted = true,
+                usageGranted = false,
+                notificationsGranted = false,
+                settings = AppSettings(onboardingCompleted = false),
+                isStorageDegraded = true,
+            )
+
+        assertTrue(state.showTrafficErrorBanner)
+        assertTrue(state.observationFailed)
+        assertTrue(state.isStorageDegraded)
+        assertFalse(state.showUsageAccessBanner) // Still suppressed
     }
 
     @Test

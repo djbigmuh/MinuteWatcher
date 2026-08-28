@@ -74,6 +74,21 @@ class SimIdentitySeedRepositoryImpl
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String =
             seedMutex.withLock {
+                // Если активен эфемерный сид, пробуем вернуться к персистентному
+                if (_isEphemeralSeedActive.value) {
+                    try {
+                        val recovered = dataStore.getOrCreateSeedInternal(generator)
+                        _isEphemeralSeedActive.value = false
+                        cachedEphemeralSeed = null
+                        AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+                        return@withLock recovered
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.w("DataStore still unavailable, continuing with ephemeral seed", e)
+                    }
+                }
+
                 try {
                     val currentSeed = dataStore.getOrCreateSeedInternal(generator)
                     _isEphemeralSeedActive.value = false
@@ -82,7 +97,11 @@ class SimIdentitySeedRepositoryImpl
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("DataStore unreachable for seed, falling back to ephemeral session seed", e)
+                    AppLogger.e(
+                        "DataStore unreachable for seed, falling back to ephemeral session seed. " +
+                            "Warning: Identity stable IDs may change on next restart, leading to data loss.",
+                        e,
+                    )
                     _isEphemeralSeedActive.value = true
                     cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                 }

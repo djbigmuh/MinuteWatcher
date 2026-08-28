@@ -357,4 +357,56 @@ class WidgetUpdaterImplTest {
             assertFalse("updateAll should return false if simplified update fails and already exceeded", result)
             assertEquals("performWidgetUpdate should be called only once", 1, callCount)
         }
+
+    @Test
+    fun `updateAll recovers after LimitExceeded via probe update`() =
+        runTest {
+            var callCount = 0
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            // 1. First call: LimitExceeded
+            whenever(renderer.renderAll(any(), any())).thenAnswer {
+                callCount++
+                throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+            }
+
+            updater.updateAll()
+            assertTrue("Limit flag should be set", mockSettings.value.widgetLimitExceeded)
+            assertEquals(2, callCount) // Full attempt + simplified fallback
+
+            // 2. Second call: success on probe
+            val mockLimitManager: WidgetLimitManager = mock()
+            whenever(mockLimitManager.shouldProbe()).thenReturn(true)
+            @Suppress("UNCHECKED_CAST")
+            whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
+                runBlocking {
+                    val updateBlock = it.arguments[1] as suspend (Context, Boolean) -> UpdateResult
+                    updateBlock(context, true)
+                }
+            }
+
+            val updaterWithMock =
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    renderer,
+                    retryManager,
+                    mockLimitManager,
+                    errorClassifier,
+                )
+
+            whenever(renderer.renderAll(any(), eq(true))).thenReturn(Unit) // Success on probe
+
+            val result = updaterWithMock.updateAll()
+
+            assertTrue("Probe update should succeed", result)
+            verify(mockLimitManager).setWidgetLimitExceeded(false)
+        }
 }

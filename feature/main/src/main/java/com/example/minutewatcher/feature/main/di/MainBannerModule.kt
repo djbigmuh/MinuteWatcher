@@ -6,5 +6,6 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-@Suppress("unused") // Hilt discovers bindings via reflection
+// @Suppress("unused") is required because Hilt discovers bindings via reflection.
+@Suppress("unused")
 abstract class MainBannerModule

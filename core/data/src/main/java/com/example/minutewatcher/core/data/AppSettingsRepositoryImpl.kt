@@ -61,6 +61,7 @@ class AppSettingsRepositoryImpl
                     emit(AppSettings())
                 }.stateIn(
                     scope,
+                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
                     SharingStarted.Eagerly,
                     AppSettings(),
                 )
@@ -81,7 +82,8 @@ class AppSettingsRepositoryImpl
         /**
          * Returns a state flow of application settings.
          *
-         * Initialized using [SharingStarted.Eagerly] to ensure that [.value] always returns
+         * Initialized using [SharingStarted.Eagerly] (поток критичен для корректности UI,
+         * остановка недопустима) to ensure that [.value] always returns
          * the latest data, even when there are no active subscribers.
          *
          * If the DataStore has not yet been loaded, [.value] returns the initial [AppSettings]

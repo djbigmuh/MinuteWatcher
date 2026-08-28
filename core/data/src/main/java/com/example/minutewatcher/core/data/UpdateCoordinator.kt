@@ -88,58 +88,58 @@ class UpdateCoordinator
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
             scope.launch {
-                initMutex.withLock {
-                    if (isObservationStarted.compareAndSet(false, true)) {
-                        setupObservation()
-                    }
+                if (isObservationStarted.compareAndSet(false, true)) {
+                    setupObservation()
                 }
             }
         }
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
-            val oldJob = observationJob.get()
-            if (oldJob != null) {
-                val completed =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        oldJob.cancelAndJoin()
+            initMutex.withLock {
+                val oldJob = observationJob.get()
+                if (oldJob != null) {
+                    val completed =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            oldJob.cancelAndJoin()
+                        }
+                    if (completed == null) {
+                        val errorMsg = "UpdateCoordinator: previous observation job did not terminate in time"
+                        AppLogger.e(errorMsg)
+                        throw IllegalStateException(errorMsg)
                     }
-                if (completed == null) {
-                    val errorMsg = "UpdateCoordinator: previous observation job did not terminate in time"
-                    AppLogger.e(errorMsg)
-                    throw IllegalStateException(errorMsg)
+                    observationJob.compareAndSet(oldJob, null)
                 }
-                observationJob.compareAndSet(oldJob, null)
-            }
 
-            val handler =
-                CoroutineExceptionHandler { _, cause ->
-                    AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+                val handler =
+                    CoroutineExceptionHandler { _, cause ->
+                        AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+                    }
+                val newJob =
+                    usageStateRepository
+                        .observeSnapshot()
+                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .onEach { snapshot ->
+                            processSnapshot(snapshot)
+                        }.launchIn(scope + handler)
+
+                if (!observationJob.compareAndSet(null, newJob)) {
+                    newJob.cancel()
+                    return
                 }
-            val newJob =
-                usageStateRepository
-                    .observeSnapshot()
-                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                    .onEach { snapshot ->
-                        processSnapshot(snapshot)
-                    }.launchIn(scope + handler)
 
-            if (!observationJob.compareAndSet(null, newJob)) {
-                newJob.cancel()
-                return
-            }
-
-            // Мониторинг завершения: если наблюдение упало — перезапускаем через 5 секунд.
-            scope.launch {
-                newJob.join()
-                // Если текущий job изменился (т.е. setupObservation вызван снова), ничего не делаем.
-                if (observationJob.get() !== newJob) return@launch
-                if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
-                AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
-                kotlinx.coroutines.delay(5000.milliseconds)
-                if (isObservationStarted.get() && (observationJob.get() === newJob)) {
-                    restartObservation()
+                // Мониторинг завершения: если наблюдение упало — перезапускаем через 5 секунд.
+                scope.launch {
+                    newJob.join()
+                    // Если текущий job изменился (т.е. setupObservation вызван снова), ничего не делаем.
+                    if (observationJob.get() !== newJob) return@launch
+                    if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
+                    AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
+                    kotlinx.coroutines.delay(5000.milliseconds)
+                    if (isObservationStarted.get() && (observationJob.get() === newJob)) {
+                        restartObservation()
+                    }
                 }
             }
         }
@@ -150,14 +150,12 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         suspend fun restartObservation() {
-            initMutex.withLock {
-                widgetUpdateMutex.withLock {
-                    lastSnapshotHash = null
-                    consecutiveUpdateFailures = 0
-                    _status.value = TrackingStatus.Idle
-                }
-                setupObservation()
+            widgetUpdateMutex.withLock {
+                lastSnapshotHash = null
+                consecutiveUpdateFailures = 0
+                _status.value = TrackingStatus.Idle
             }
+            setupObservation()
         }
 
     @Suppress("ReturnCount")

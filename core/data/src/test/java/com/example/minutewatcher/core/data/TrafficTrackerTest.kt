@@ -790,6 +790,35 @@ class TrafficTrackerTest {
             job1.join()
             job2.join()
         }
+
+    @Test
+    fun `processTrafficUpdate handles total timeout during mutex acquisition`() =
+        runTest(testDispatcher) {
+            val mutexField = TrafficTracker::class.java.getDeclaredField("trafficMutex")
+            mutexField.isAccessible = true
+            val trafficMutex = mutexField[tracker] as kotlinx.coroutines.sync.Mutex
+
+            // Hold the mutex from the test
+            trafficMutex.lock()
+
+            // Start update
+            val job = launch { tracker.updateTrafficUsage() }
+            testScheduler.advanceTimeBy(100)
+
+            // Advance time to trigger timeout (15s)
+            testScheduler.advanceTimeBy(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS + 1000)
+
+            val status = tracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertTrue(
+                "Expected timeout message, but was ${(status as TrackingStatus.Error).message}",
+                status.message!!.contains("timeout"),
+            )
+
+            // Cleanup
+            trafficMutex.unlock()
+            job.join()
+        }
 }
 
 private fun createSimUsage(id: String) =

@@ -91,16 +91,12 @@ class MainBannerController
          */
         suspend fun recover() {
             initialize()
-            initMutex.withLock {
-                job?.cancel()
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    job?.join()
-                }
-                isObservationStarted.set(false)
-                lastTrackingStatusFlow?.let {
-                    setupObservation(it)
-                    isObservationStarted.set(true)
-                }
+            val flow = lastTrackingStatusFlow
+            if (flow == null) {
+                AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
+            } else {
+                setupObservation(flow)
+                isObservationStarted.set(true)
             }
             appSearchRetryCount.value = 0
             appSearchBannerDismissed.value = false
@@ -123,45 +119,46 @@ class MainBannerController
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
             scope.launch {
-                initMutex.withLock {
-                    isObservationStarted.set(true)
+                if (isObservationStarted.compareAndSet(false, true)) {
                     setupObservation(trackingStatus)
                 }
             }
         }
 
         private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
-            lastTrackingStatusFlow = statusFlow
-            job?.cancel()
-            val completed =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    job?.join()
-                }
-            if (completed == null) {
-                AppLogger.w("MainBannerController: previous observation job did not terminate in time, cancelling")
+            initMutex.withLock {
+                lastTrackingStatusFlow = statusFlow
                 job?.cancel()
-            }
-            job =
-                scope.launch {
-                    catchingCancellation(
-                        block = {
-                            statusFlow.collect { status ->
-                                val appsearch = status["appsearch"]
-                                val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                                if (currentErrorType != lastAppSearchErrorType) {
-                                    lastAppSearchErrorType = currentErrorType
-                                    appSearchRetryCount.value = 0
-                                    appSearchBannerDismissed.value = false
-                                    if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                                        AppLogger.w("AppSearch not supported on this device")
+                val completed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        job?.join()
+                    }
+                if (completed == null) {
+                    AppLogger.w("MainBannerController: previous observation job did not terminate in time, cancelling")
+                    job?.cancel()
+                }
+                job =
+                    scope.launch {
+                        catchingCancellation(
+                            block = {
+                                statusFlow.collect { status ->
+                                    val appsearch = status["appsearch"]
+                                    val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                                    if (currentErrorType != lastAppSearchErrorType) {
+                                        lastAppSearchErrorType = currentErrorType
+                                        appSearchRetryCount.value = 0
+                                        appSearchBannerDismissed.value = false
+                                        if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                                            AppLogger.w("AppSearch not supported on this device")
+                                        }
                                     }
                                 }
-                            }
-                        },
-                    ) { e ->
-                        AppLogger.e("MainBannerController: tracking status observation failed", e)
+                            },
+                        ) { e ->
+                            AppLogger.e("MainBannerController: tracking status observation failed", e)
+                        }
                     }
-                }
+            }
         }
 
     private val appSettings = appSettingsRepository.observeAppSettings()

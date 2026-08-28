@@ -5,7 +5,10 @@ import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class PermissionLogicTest {
     @Test
     fun `TrackingBannerMapper uses wasPhonePermissionRequestedBefore to determine DENIED state`() {

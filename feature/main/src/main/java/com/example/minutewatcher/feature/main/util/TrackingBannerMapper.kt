@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.util
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -37,6 +38,11 @@ object TrackingBannerMapper {
         if (!settings.onboardingCompleted) {
             return TrackingBannerState(
                 phonePermissionState = phonePermissionState,
+                // Ошибки показываем всегда
+                showTrafficErrorBanner = isTrafficError(traffic),
+                showCallsErrorBanner = isCallsError(calls),
+                observationFailed = observationFailed,
+                isStorageDegraded = isStorageDegraded,
             )
         }
 
@@ -90,13 +96,22 @@ object TrackingBannerMapper {
         settings: AppSettings,
     ): PermissionUiState {
         val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
-        return when {
-            granted -> PermissionUiState.GRANTED
-            !showNotifications -> PermissionUiState.GRANTED
-            permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-            settings.notificationPermissionRequested -> PermissionUiState.DENIED
-            else -> PermissionUiState.NOT_REQUESTED
-        }
+        val result =
+            when {
+                granted -> PermissionUiState.GRANTED
+                !showNotifications -> PermissionUiState.GRANTED
+                permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
+                settings.notificationPermissionRequested -> PermissionUiState.DENIED
+                else -> PermissionUiState.NOT_REQUESTED
+            }
+
+        AppLogger.d(
+            "determineNotificationPermissionState: granted=$granted, " +
+                "showNotifications=$showNotifications, permanentlyDenied=$permanentlyDenied, " +
+                "notificationPermissionRequested=${settings.notificationPermissionRequested} -> result=$result",
+        )
+
+        return result
     }
 
     private fun isTrafficError(status: TrackingStatus?): Boolean =

@@ -4,7 +4,6 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
-import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,10 +38,8 @@ class PermissionRepositoryImpl
                 }.distinctUntilChanged()
                 .stateIn(
                     scope = scope,
-                    started =
-                        SharingStarted.WhileSubscribed(
-                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
-                        ),
+                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
+                    started = SharingStarted.Eagerly,
                     initialValue = permissionManager.hasPhoneStatePermission(),
                 )
 
@@ -58,10 +55,8 @@ class PermissionRepositoryImpl
                 }.distinctUntilChanged()
                 .stateIn(
                     scope = scope,
-                    started =
-                        SharingStarted.WhileSubscribed(
-                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
-                        ),
+                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
+                    started = SharingStarted.Eagerly,
                     initialValue = permissionManager.hasUsageStatsPermission(),
                 )
 
@@ -77,10 +72,8 @@ class PermissionRepositoryImpl
                 }.distinctUntilChanged()
                 .stateIn(
                     scope = scope,
-                    started =
-                        SharingStarted.WhileSubscribed(
-                            stopTimeoutMillis = Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS,
-                        ),
+                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
+                    started = SharingStarted.Eagerly,
                     initialValue = permissionManager.hasNotificationPermission(),
                 )
     }

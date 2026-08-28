@@ -264,4 +264,103 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.showShortcutsErrorBanner)
         }
+
+    @Test
+    fun `notificationPermissionState is GRANTED when notificationsGranted is true`() =
+        testScope.runTest {
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = true,
+                        onboardingCompleted = true,
+                    ),
+                )
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = true
+
+            val viewModel = createViewModel(backgroundScope)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+            testScheduler.advanceUntilIdle()
+
+            val bannerState = viewModel.trackingBannerState.value
+            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+        }
+
+    @Test
+    fun `notificationPermissionState is GRANTED when alerts are disabled and not granted`() =
+        testScope.runTest {
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = false,
+                        notifyLowTraffic = false,
+                        onboardingCompleted = true,
+                    ),
+                )
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = false
+
+            val viewModel = createViewModel(backgroundScope)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+            testScheduler.advanceUntilIdle()
+
+            val bannerState = viewModel.trackingBannerState.value
+            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+        }
+
+    @Test
+    fun `notificationPermissionState is PERMANENTLY_DENIED when alerts enabled and requested but not granted`() =
+        testScope.runTest {
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = true,
+                        notificationPermissionRequested = true,
+                        onboardingCompleted = true,
+                    ),
+                )
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = false
+
+            val viewModel = createViewModel(backgroundScope)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+            testScheduler.advanceUntilIdle()
+
+            val bannerState = viewModel.trackingBannerState.value
+            assertTrue(bannerState.notificationPermissionState == PermissionUiState.PERMANENTLY_DENIED)
+        }
+
+    @Test
+    fun `notificationPermissionState is NOT_REQUESTED when alerts enabled but not yet requested`() =
+        testScope.runTest {
+            val settingsFlow =
+                MutableStateFlow(
+                    AppSettings(
+                        notifyLowMinutes = true,
+                        notificationPermissionRequested = false,
+                        onboardingCompleted = true,
+                    ),
+                )
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+            notificationPermissionFlow.value = false
+
+            val viewModel = createViewModel(backgroundScope)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.trackingBannerState.collect {}
+            }
+            testScheduler.advanceUntilIdle()
+
+            val bannerState = viewModel.trackingBannerState.value
+            assertTrue(bannerState.notificationPermissionState == PermissionUiState.NOT_REQUESTED)
+        }
 }

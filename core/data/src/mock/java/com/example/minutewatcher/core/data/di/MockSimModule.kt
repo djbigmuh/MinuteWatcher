@@ -11,7 +11,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 // @Suppress("unused") is required because Hilt discovers bindings via reflection.
-// Removing this will cause runtime injection failures.
 @Suppress("unused")
 abstract class MockSimModule {
     @Binds

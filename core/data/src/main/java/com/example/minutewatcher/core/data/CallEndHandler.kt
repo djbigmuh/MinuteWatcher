@@ -64,14 +64,14 @@ internal class CallEndHandler
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                shouldRefreshStatus = true
+                shouldRefreshStatus = false
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
             } catch (e: SecurityException) {
-                shouldRefreshStatus = true
+                shouldRefreshStatus = false
                 AppLogger.e("SecurityException in onCallEnded", e)
                 statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             } catch (e: Exception) {
-                shouldRefreshStatus = true
+                shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
                 handlePerformCallEndError(subId, e, statusFlow, cleanupCounters)
             } finally {
                 finalizeCallEnd(shouldRefreshStatus, refreshStatus)
@@ -112,20 +112,18 @@ internal class CallEndHandler
         }
     }
 
-    @Suppress("ThrowingExceptionFromFinally")
     private suspend fun finalizeCallEnd(
         shouldRefreshStatus: Boolean,
         refreshStatus: suspend (Boolean) -> Unit,
     ) {
+        if (!shouldRefreshStatus) return
         withContext(NonCancellable) {
             try {
-                if (shouldRefreshStatus) {
                     refreshStatus(false)
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.w("CallTracker: refreshStatus failed in onCallEnded finally block", e)
+                AppLogger.w("CallTracker: refreshStatus failed in finalizeCallEnd", e)
                 }
             }
         }
@@ -304,4 +302,13 @@ internal class CallEndHandler
 
         private fun calculateDurationMinutes(seconds: Int): Int =
             (seconds + Constants.Time.SECONDS_IN_MINUTE - 1) / Constants.Time.SECONDS_IN_MINUTE
+
+    internal data class CallEndData(
+        val startTimeResult: Result<Long>,
+        val savedBootTimeResult: Result<Long>,
+        val savedIdentityResult: Result<String?>,
+        val savedUptimeResult: Result<Long>,
+        val currentBootTime: Long,
+        val currentUptime: Long,
+    )
     }
