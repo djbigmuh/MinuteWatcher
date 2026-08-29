@@ -147,6 +147,25 @@ class TrackingBannerMapperTest {
     }
 
     @Test
+    fun `mapToBannerState reflects notification permission even before onboarding completed`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = false,
+                settings =
+                    AppSettings(
+                        onboardingCompleted = false,
+                        notifyLowMinutes = true,
+                        notificationPermissionRequested = true,
+                    ),
+            )
+
+        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.notificationPermissionState)
+    }
+
+    @Test
     fun `mapToBannerState reflects traffic fallback slot`() {
         val state =
             TrackingBannerMapper.mapToBannerState(

@@ -36,6 +36,11 @@ object TrackingBannerMapper {
         if (!settings.onboardingCompleted) {
             return TrackingBannerState(
                 phonePermissionState = phonePermissionState,
+                notificationPermissionState =
+                    determineNotificationPermissionState(
+                        notificationsGranted,
+                        settings,
+                    ),
                 notificationsGrantedActual = notificationsGranted,
                 // Ошибки показываем всегда
                 showTrafficErrorBanner = isTrafficError(traffic),
