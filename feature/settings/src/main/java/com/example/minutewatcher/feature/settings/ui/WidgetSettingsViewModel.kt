@@ -60,7 +60,7 @@ class WidgetSettingsViewModel
         // saveMutex — мьютекс для предотвращения конкурентных сохранений.
         private val saveMutex = Mutex()
 
-    // loadMutex — мьютекс для сериализации операций загрузки.
+        // loadMutex — мьютекс для сериализации операций загрузки.
         private val loadMutex = Mutex()
 
         private var loadJob: Job? = null
@@ -123,12 +123,16 @@ class WidgetSettingsViewModel
          * Обновляет текущее состояние настроек виджета.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            reduce {
-                val currentSettings = settings ?: return@reduce this
-                copy(
-                    isLoadError = false,
-                    settings = transform(currentSettings).copy(widgetLimitExceeded = false),
-                )
+            viewModelScope.launch {
+                saveMutex.withLock {
+                    reduce {
+                        val currentSettings = settings ?: return@reduce this
+                        copy(
+                            isLoadError = false,
+                            settings = transform(currentSettings).copy(widgetLimitExceeded = false),
+                        )
+                    }
+                }
             }
         }
 
@@ -139,20 +143,24 @@ class WidgetSettingsViewModel
             slot: Int,
             transform: (SimSettingsState) -> SimSettingsState,
         ) {
-            reduce {
-                val currentSettings = settings ?: return@reduce this
-                val updatedSimStates = currentSettings.simStates.toMutableMap()
-                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                updatedSimStates[slot] = transform(currentSimState)
+            viewModelScope.launch {
+                saveMutex.withLock {
+                    reduce {
+                        val currentSettings = settings ?: return@reduce this
+                        val updatedSimStates = currentSettings.simStates.toMutableMap()
+                        val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                        updatedSimStates[slot] = transform(currentSimState)
 
-                copy(
-                    isLoadError = false,
-                    settings =
-                        currentSettings.copy(
-                            simStates = updatedSimStates,
-                            widgetLimitExceeded = false,
-                        ),
-                )
+                        copy(
+                            isLoadError = false,
+                            settings =
+                                currentSettings.copy(
+                                    simStates = updatedSimStates,
+                                    widgetLimitExceeded = false,
+                                ),
+                        )
+                    }
+                }
             }
         }
 
@@ -181,7 +189,8 @@ class WidgetSettingsViewModel
             reduce { copy(isSaving = true) }
 
             try {
-                val result = performSaveInternal()
+                val currentStateSnapshot = state.value
+                val result = performSaveInternal(currentStateSnapshot)
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {
                 throw e
@@ -196,25 +205,24 @@ class WidgetSettingsViewModel
             }
         }
 
-    private suspend fun performSaveInternal(): SaveResult {
-        val currentState = state.value
-        val settings = currentState.settings
-        return when {
-            currentState.isLoadError || settings?.settingsLoadFailed == true -> {
+        private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
+            val settings = currentState.settings
+            return when {
+                currentState.isLoadError || settings?.settingsLoadFailed == true -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
                     SaveResult.Failed("Settings were not loaded")
                 }
 
-            settings == null -> {
+                settings == null -> {
                     AppLogger.w("saveAndNotify called before settings were loaded")
                     SaveResult.Failed("Settings are still loading")
                 }
 
-            else -> {
-                executeSave(settings)
+                else -> {
+                    executeSave(settings)
+                }
             }
         }
-    }
 
         private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
             val validatedState = WidgetSettingsState.validate(state)

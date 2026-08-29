@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.feature.main.controller.AutoResetScheduler.Companion.KEY_LAST_AUTO_RESET_CHECK
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -40,8 +41,8 @@ class AutoResetScheduler
          * выполняться ровно один раз за время жизни ViewModel. Повторный вызов
          * `checkOnStart()` после успешного завершения немедленно возвращает управление.
          *
-         * Сбрасывается только при ошибке (включая CancellationException),
-         * чтобы позволить повторную попытку при следующем вызове.
+         * Сбрасывается только при ошибке, чтобы позволить повторную попытку при следующем вызове.
+         * CancellationException (отмена корутины) не сбрасывает флаг.
          */
         private val isCheckStarted = AtomicBoolean(false)
 
@@ -69,26 +70,26 @@ class AutoResetScheduler
         suspend fun checkOnStart() {
             if (!isCheckStarted.compareAndSet(false, true)) return
 
-            val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
-            val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
-
-            val now = timeProvider.elapsedRealtime()
-
-            val isInitialOrReboot: Boolean
-            val elapsed: Long
-
-            if (lastResetCheck == null) {
-                isInitialOrReboot = true
-                elapsed = 0
-            } else {
-                elapsed = now - lastResetCheck
-                isInitialOrReboot = elapsed < 0
-            }
-
-            val effectiveFailCount =
-                if (isInitialOrReboot || elapsed > FAIL_COUNT_RESET_INTERVAL_MS) 0 else failCount
-
             try {
+                val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
+                val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+
+                val now = timeProvider.elapsedRealtime()
+
+                val isInitialOrReboot: Boolean
+                val elapsed: Long
+
+                if (lastResetCheck == null) {
+                    isInitialOrReboot = true
+                    elapsed = 0
+                } else {
+                    elapsed = now - lastResetCheck
+                    isInitialOrReboot = elapsed < 0
+                }
+
+                val effectiveFailCount =
+                    if (isInitialOrReboot || (elapsed > FAIL_COUNT_RESET_INTERVAL_MS)) 0 else failCount
+
                 if (isInitialOrReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
                     if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                         autoResetUseCase.performAutoReset(shouldNotify = false)
@@ -100,11 +101,11 @@ class AutoResetScheduler
                     }
                 }
             } catch (e: CancellationException) {
-                isCheckStarted.set(false)
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Auto-reset failed during initialization", e)
-                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = effectiveFailCount + 1
+                val currentFailCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+                savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = currentFailCount + 1
                 isCheckStarted.set(false)
             }
         }

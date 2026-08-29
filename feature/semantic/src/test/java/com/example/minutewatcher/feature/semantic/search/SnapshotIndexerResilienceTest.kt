@@ -54,8 +54,8 @@ class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
             assertTrue("indexSnapshot should return false if remove fails", !result)
             assertTrue("Status should be Error", manager.status.value is TrackingStatus.Error)
 
-            // Verify that put was called (since it was called before remove in the code)
-            assertEquals("Should have one more put request", 2, session.putRequests.size)
+            // Verify that put was NOT called (since remove failed first)
+            assertEquals("Should have ONLY the initial put request", 1, session.putRequests.size)
         }
 
     @Test

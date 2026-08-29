@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -80,5 +81,32 @@ class WidgetSettingsSaverTest {
                     this.layoutMode <= com.example.minutewatcher.core.model.Constants.Widget.MAX_LAYOUT_MODE
                 },
             )
+        }
+
+    @Test
+    fun `save returns PartialFailure if general settings saved but SIM settings throw exception`() =
+        runTest {
+            // Given: General settings save succeeds
+            whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
+            // But: SIM settings save throws an exception
+            whenever(loader.saveSimSettings(any())).thenThrow(RuntimeException("SIM DB failure"))
+
+            val state = WidgetSettingsState()
+
+            // Act: Save
+            val result = saver.save(state)
+
+            // Then: Result should be PartialFailure
+            assertTrue(
+                "Result should be PartialFailure, but was $result",
+                result is SaveResult.PartialFailure,
+            )
+            val partialFailure = result as SaveResult.PartialFailure
+            assertTrue(partialFailure.message.contains("General settings saved"))
+
+            // Verify notification still happened
+            org.mockito.kotlin
+                .verify(dataChangeNotifier)
+                .notifyDataChanged(any(), any())
         }
 }

@@ -50,12 +50,19 @@ class WidgetSettingsSaver
             // Выполняем защитную валидацию.
             val validatedState = WidgetSettingsState.validate(state)
 
-            return try {
+            try {
                 saveGeneralSettings(validatedState)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save general widget settings", e)
+                return SaveResult.Failed()
+            }
 
-                val failedSlots = saveSimSettings(validatedState, skipSimSettings)
+            val result =
+                try {
+                    val failedSlots = saveSimSettings(validatedState, skipSimSettings)
 
-                val result =
                     if (failedSlots.isEmpty()) {
                         if (skipSimSettings) {
                             SaveResult.PartialSuccess(skippedSimSettings = true)
@@ -66,17 +73,19 @@ class WidgetSettingsSaver
                         val slotsString = failedSlots.joinToString(", ")
                         SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
                     }
-
-                withContext(NonCancellable) {
-                    notifyDataChanged()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to save SIM-specific widget settings", e)
+                    SaveResult.PartialFailure(
+                        "General settings saved, but SIM-specific settings failed due to an error.",
+                    )
                 }
-                result
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to save widget settings", e)
-                SaveResult.Failed()
+
+            withContext(NonCancellable) {
+                notifyDataChanged()
             }
+            return result
         }
 
         private suspend fun notifyDataChanged() {

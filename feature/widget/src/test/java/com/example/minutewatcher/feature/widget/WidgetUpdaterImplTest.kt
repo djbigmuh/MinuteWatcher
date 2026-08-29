@@ -504,4 +504,113 @@ class WidgetUpdaterImplTest {
             verify(mockLimitManager).shouldProbe()
             verify(renderer).renderAll(context, forceFull = false) // Simplified mode
         }
+
+    @Test
+    fun `updateAll stays in SIMPLIFIED mode if simplified update fails after LimitExceeded`() =
+        runTest {
+            var callCount = 0
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            // Mock renderer to fail both full and simplified updates initially
+            whenever(renderer.renderAll(any(), any())).thenAnswer {
+                callCount++
+                if (callCount == 1) {
+                    // 1st call: Full update -> LimitExceeded
+                    throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                } else {
+                    // 2nd call and onwards: Simplified update -> also fails
+                    throw RuntimeException("Simplified failed")
+                }
+            }
+
+            // First update attempt
+            val result1 = updater.updateAll()
+            assertFalse("First update should fail", result1.isSuccess)
+            assertEquals(2, callCount) // Full + Simplified
+            assertTrue("Limit flag should be set", mockSettings.value.widgetLimitExceeded)
+
+            // Second update attempt
+            // Should NOT try FULL mode again, but go straight to SIMPLIFIED (or PROBE)
+            // Since we haven't reached probe interval (10), it should be SIMPLIFIED
+            updater.updateAll()
+
+            assertEquals("Should have called renderer again for simplified update", 3, callCount)
+            // Verify that the 3rd call was simplified (forceFull = false)
+            // We use verify with times(2) because it was called with false once in handleLimitExceeded and once in performSingleUpdate
+            verify(renderer, org.mockito.kotlin.times(2)).renderAll(eq(context), eq(false))
+            assertTrue("Limit flag should still be set", mockSettings.value.widgetLimitExceeded)
+        }
+
+    @Test
+    fun `updateAll coalesced calls receive success if recovery succeeds`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            val startBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val finishBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+            var callCount = 0
+
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            startBarrier.complete(Unit)
+                            finishBarrier.await()
+                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                        }
+                        // Second call (simplified recovery) succeeds immediately
+                    }
+                }
+
+            val updaterWithFake =
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    fakeRenderer,
+                    retryManager,
+                    limitManager,
+                    errorClassifier,
+                )
+
+            val result1Deferred = async { updaterWithFake.updateAll() }
+
+            startBarrier.await()
+
+            // Second call joins the first one while it's still in the middle of its executeUpdate block
+            val result2Deferred = async { updaterWithFake.updateAll() }
+
+            finishBarrier.complete(Unit)
+
+            val result1 = result1Deferred.await()
+            val result2 = result2Deferred.await()
+
+            assertTrue("Original update should succeed after recovery", result1.isSuccess)
+            assertTrue("Joined update should succeed after recovery", result2.isSuccess)
+
+            val success1 = result1 as WidgetUpdateResult.Success
+            val success2 = result2 as WidgetUpdateResult.Success
+
+            assertFalse("Result 1 should NOT be coalesced", success1.wasCoalesced)
+            assertTrue("Result 2 SHOULD be coalesced", success2.wasCoalesced)
+
+            assertEquals("Should have called renderer for full attempt and simplified recovery", 2, callCount)
+        }
 }

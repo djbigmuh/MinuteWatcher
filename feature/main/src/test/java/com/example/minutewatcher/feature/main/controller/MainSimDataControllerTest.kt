@@ -104,7 +104,7 @@ class MainSimDataControllerTest {
             testScheduler.runCurrent()
 
             // Advance remaining half of initial delay
-            advanceTimeBy((Constants.UI.HIGHLIGHT_DELAY_MS / 2 + 10).milliseconds)
+            advanceTimeBy(((Constants.UI.HIGHLIGHT_DELAY_MS / 2) + 10).milliseconds)
             testScheduler.runCurrent()
 
             // Should be cleared because timer was NOT restarted

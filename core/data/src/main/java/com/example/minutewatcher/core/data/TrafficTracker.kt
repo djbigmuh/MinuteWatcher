@@ -100,13 +100,13 @@ class TrafficTracker
             ) { e -> errorHandler.handleUpdateError(e, _status) }
         }
 
-    private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
-        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-            simIdentityRepository.observeActiveSims().first()
-        } ?: run {
-            AppLogger.e("TrafficTracker: timeout fetching active sims")
-            emptyList()
-        }
+        private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                simIdentityRepository.observeActiveSims().first()
+            } ?: run {
+                AppLogger.e("TrafficTracker: timeout fetching active sims")
+                emptyList()
+            }
 
         private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
             if (activeSims.isEmpty()) {
@@ -140,136 +140,143 @@ class TrafficTracker
             }
         }
 
-    @Suppress("ReturnCount", "LongMethod")
-    private suspend fun performTrafficUpdate(
-        target: TargetInfo,
-        targetIdentity: String,
-    ) {
-        val updateResult =
-            withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-                // Fetch Usage upfront to keep the critical section (trafficMutex) as short as possible.
-                val usage =
-                    simUsageRepository
-                        .getSimUsage(targetIdentity)
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                        ?: run {
-                            trafficMutex.withLock {
-                                errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                            }
+        @Suppress("ReturnCount", "LongMethod")
+        private suspend fun performTrafficUpdate(
+            target: TargetInfo,
+            targetIdentity: String,
+        ) {
+            var phase = "initialization"
+            val updateResult =
+                trafficMutex.withLock {
+                    withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                        phase = "usage fetch"
+                        // Fetch Usage upfront
+                        val usage =
+                            simUsageRepository
+                                .getSimUsage(targetIdentity)
+                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                                ?: run {
+                                    errorHandler.handleUsageReadTimeout(targetIdentity, _status)
+                                    return@withTimeoutOrNull false
+                                }
+
+                        phase = "identity check"
+                        AppLogger.d("TrafficTracker: Update phase: Mutex acquired for $targetIdentity")
+
+                        // Check if SIM is still active under the lock to prevent race conditions.
+                        val activeIdentities =
+                            simIdentityRepository
+                                .getActiveIdentities()
+                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                                ?: return@withTimeoutOrNull false
+                        if (targetIdentity !in activeIdentities) {
+                            AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
                             return@withTimeoutOrNull false
                         }
 
-                trafficMutex.withLock {
-                    AppLogger.d("TrafficTracker: Update phase: Mutex acquired for $targetIdentity")
+                        phase = "retry check"
+                        val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
 
-                    // Check if SIM is still active under the lock to prevent race conditions.
-                    val activeIdentities =
-                        simIdentityRepository
-                            .getActiveIdentities()
-                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                            ?: return@withLock false
-                    if (targetIdentity !in activeIdentities) {
-                        AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                        return@withLock false
+                        // Check for exceeded retries (Check again inside lock)
+                        if ((initialRetryCount != null) &&
+                            (initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
+                        ) {
+                            baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                            errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                            return@withTimeoutOrNull false
+                        }
+
+                        // Path A: Current state is Retry
+                        if (initialRetryCount != null) {
+                            phase = "retry stats"
+                            val statsResult = baselineManager.getCurrentMobileBytes(0L)
+                            handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
+                            return@withTimeoutOrNull true
+                        }
+
+                        // Path B: Normal path
+                        phase = "stats query"
+                        val startTime = usage.lastResetDate
+                        val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+
+                        if (statsResult !is StatsResult.Success) {
+                            errorHandler.handleStatsFailure(statsResult, _status)
+                            return@withTimeoutOrNull false
+                        }
+
+                        phase = "baseline fetch"
+                        val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+
+                        if (lastTotalBytes == null) {
+                            errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                            return@withTimeoutOrNull false
+                        }
+
+                        phase = "atomic update"
+                        // Perform atomic update
+                        withContext(NonCancellable) {
+                            deltaCalculator.updateTrafficBaselineAndUsage(
+                                targetIdentity,
+                                statsResult.bytes,
+                                lastTotalBytes,
+                                target,
+                            )
+                            simChangeHandler.updateLastDataSubId(target.dataSubId)
+                        }
+                        _status.value = TrackingStatus.Active
+                        true
                     }
-
-                    val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-
-                    // Check for exceeded retries (Check again inside lock)
-                    if (initialRetryCount != null &&
-                        initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
-                    ) {
-                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                        errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                        return@withLock false
-                    }
-
-                    // Path A: Current state is Retry
-                    if (initialRetryCount != null) {
-                        val statsResult = baselineManager.getCurrentMobileBytes(0L)
-                        handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                        return@withLock true
-                    }
-
-                    // Path B: Normal path
-                    val startTime = usage.lastResetDate
-                    val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-
-                    if (statsResult !is StatsResult.Success) {
-                        errorHandler.handleStatsFailure(statsResult, _status)
-                        return@withLock false
-                    }
-
-                    val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-
-                    if (lastTotalBytes == null) {
-                        errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                        return@withLock false
-                    }
-
-                    // Perform atomic update
-                    withContext(NonCancellable) {
-                        deltaCalculator.updateTrafficBaselineAndUsage(
-                            targetIdentity,
-                            statsResult.bytes,
-                            lastTotalBytes,
-                            target,
-                        )
-                        simChangeHandler.updateLastDataSubId(target.dataSubId)
-                    }
-                    _status.value = TrackingStatus.Active
-                    true
                 }
+
+            if (updateResult == null) {
+                AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
+                // Note: Unlike SemanticSearchManager, TrafficTracker does not use a snapshot hash for
+                // indexing optimization (it tracks real-time usage), so there is no hash to reset here.
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Traffic update timeout ($phase)",
+                    )
             }
-
-        if (updateResult == null) {
-            val phase = if (trafficMutex.isLocked) "execution" else "mutex acquisition or data fetch"
-            AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
-            // Note: Unlike SemanticSearchManager, TrafficTracker does not use a snapshot hash for
-            // indexing optimization (it tracks real-time usage), so there is no hash to reset here.
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Traffic update timeout ($phase)",
-                )
         }
-    }
 
-    private suspend fun handleRetryAction(
-        target: TargetInfo,
-        targetIdentity: String,
-        currentPending: Int,
-        statsResult: StatsResult,
-    ) {
-        if (statsResult is StatsResult.Success) {
-            simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
-            simChangeHandler.updateLastDataSubId(target.dataSubId)
-            baselineManager.baselineNeedsRetry.remove(targetIdentity)
-            _status.value = TrackingStatus.Active
-            AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
-        } else {
-            baselineManager.baselineNeedsRetry[targetIdentity] = currentPending + 1
-            val reason =
-                if (statsResult is StatsResult.Error) {
-                    statsResult.exception.message
-                } else {
-                    "Stats unavailable"
+        private suspend fun handleRetryAction(
+            target: TargetInfo,
+            targetIdentity: String,
+            currentPending: Int,
+            statsResult: StatsResult,
+        ) {
+            if (statsResult is StatsResult.Success) {
+                withContext(NonCancellable) {
+                    simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                    simChangeHandler.updateLastDataSubId(target.dataSubId)
                 }
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    reason ?: "Stats unavailable, retry pending",
-                )
+                baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                _status.value = TrackingStatus.Active
+                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
+            } else {
+                baselineManager.baselineNeedsRetry[targetIdentity] = currentPending + 1
+                val reason =
+                    if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message
+                    } else {
+                        "Stats unavailable"
+                    }
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        reason ?: "Stats unavailable, retry pending",
+                    )
+            }
+        }
+
+        private suspend fun fetchLastTotalBytes(
+            targetIdentity: String,
+            statsResult: StatsResult,
+        ): Long? {
+            if (statsResult !is StatsResult.Success) return null
+            return simUsageResetRepository
+                .getLastTotalBytes(targetIdentity)
+                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
         }
     }
-
-    private suspend fun fetchLastTotalBytes(
-        targetIdentity: String,
-        statsResult: StatsResult,
-    ): Long? {
-        if (statsResult !is StatsResult.Success) return null
-        return simUsageResetRepository
-            .getLastTotalBytes(targetIdentity)
-            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-    }
-}

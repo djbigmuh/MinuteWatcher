@@ -71,11 +71,7 @@ class MainSimDataController
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
                 }.retryWhen { cause, attempt ->
-                    // Строгое соблюдение API kotlinx.coroutines: CancellationException должен
-                    // пробрасываться для корректной отмены.
-                    if (cause is CancellationException) {
-                        throw cause
-                    }
+                    if (cause is CancellationException) throw cause
                     if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
                         val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
                         delay(delayMs.milliseconds)
@@ -159,49 +155,40 @@ class MainSimDataController
          * @param slot Индекс слота SIM.
          * @param operationName Название операции для логирования.
          * @param block Блок операции для выполнения.
+         * @return [OperationError] if the operation or notification failed, null otherwise.
          */
-        private fun executeSimOperation(
+        private suspend fun executeSimOperation(
             slot: Int,
             operationName: String,
             block: suspend () -> Unit,
-        ) {
-            scope.launch(ioDispatcher) {
+        ): OperationError? {
+            return try {
+                performBlockWithRetry(slot, operationName, block)
                 try {
-                    performBlockWithRetry(slot, operationName, block)
-                    try {
-                        val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
-                        if (!widgetSuccess) {
-                            AppLogger.w("MainSimDataController: Data saved, but widget update notification failed for $operationName (slot $slot)")
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
+                    val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
+                    if (!widgetSuccess) {
+                        AppLogger.w(
+                            "MainSimDataController: Data saved, but widget update notification failed for $operationName (slot $slot)",
+                        )
+                        return OperationError("Data saved, but widget not updated", slot)
                     }
+                    null
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    handleOperationException(e, slot, operationName)
+                    AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
+                    OperationError("Data saved, but widget refresh failed", slot)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                handleOperationException(e, slot, operationName)
             }
         }
 
         /**
-         * Обновляет лимиты для SIM в указанном слоте.
-         * Если SIM была удалена между отображением UI и вызовом метода,
-         * операция пропускается с логированием. Это штатная ситуация:
-         * пользователь мог извлечь SIM-карту.
-         *
          * Updates limits for the SIM in the specified slot.
-         *
-         * @param slot SIM slot index.
-         * @param minutesLimit New minutes limit.
-         * @param trafficLimitMb New traffic limit in MB.
-         * @param rolloverEnabled Whether rollover is enabled.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
-         * **AOSP DataStore:** Fully compliant with atomic updates.
+         * ...
          */
         fun updateLimits(
             slot: Int,
@@ -209,118 +196,99 @@ class MainSimDataController
             trafficLimitMb: Int,
             rolloverEnabled: Boolean = false,
         ) {
-            executeSimOperation(slot, "updateLimits") {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
+            scope.launch(ioDispatcher) {
+                val error =
+                    executeSimOperation(slot, "updateLimits") {
+                        val identity = simIdentityRepository.getIdentity(slot)
+                        simLimitsRepository.updateSimLimits(identity, minutesLimit, trafficLimitMb, rolloverEnabled)
+                    }
+                _lastOperationError.value = error
             }
         }
 
         /**
-         * Сбрасывает текущую статистику использования для SIM в указанном слоте.
-         *
          * Resets usage statistics for the SIM in the specified slot.
-         *
-         * @param slot SIM slot index.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
-         * **AOSP DataStore:** Fully compliant with atomic updates.
+         * ...
          */
         fun resetUsage(slot: Int) {
-            executeSimOperation(slot, "resetUsage") {
-                usageUseCase.resetCounters(slot)
+            scope.launch(ioDispatcher) {
+                val error =
+                    executeSimOperation(slot, "resetUsage") {
+                        usageUseCase.resetCounters(slot)
+                    }
+                _lastOperationError.value = error
             }
         }
 
         /**
-         * Включает или выключает автоматический сброс лимитов для SIM в указанном слоте.
-         * Если SIM была удалена между отображением UI и вызовом метода,
-         * операция пропускается с логированием.
-         *
          * Toggles automatic limit reset for the SIM in the specified slot.
-         *
-         * @param slot SIM slot index.
-         * @param enabled True to enable auto-reset.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
-         * **AOSP DataStore:** Fully compliant with atomic updates.
+         * ...
          */
         fun toggleAutoReset(
             slot: Int,
             enabled: Boolean,
         ) {
-            executeSimOperation(slot, "toggleAutoReset") {
-                val identity = simIdentityRepository.getIdentity(slot)
-                val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
-                simLimitsRepository.setAutoReset(identity, currentDay, enabled)
+            scope.launch(ioDispatcher) {
+                val error =
+                    executeSimOperation(slot, "toggleAutoReset") {
+                        val identity = simIdentityRepository.getIdentity(slot)
+                        val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
+                        simLimitsRepository.setAutoReset(identity, currentDay, enabled)
+                    }
+                _lastOperationError.value = error
             }
         }
 
         /**
-         * Обновляет день месяца для автоматического сброса лимитов для SIM в указанном слоте.
-         * Если SIM была удалена между отображением UI и вызовом метода,
-         * операция пропускается с логированием.
-         *
          * Updates the day of the month for automatic limit reset.
-         *
-         * @param slot SIM slot index.
-         * @param day Day of the month (1-31).
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
-         * **AOSP DataStore:** Fully compliant with atomic updates.
+         * ...
          */
         fun updateAutoResetDay(
             slot: Int,
             day: Int,
         ) {
-            executeSimOperation(slot, "updateAutoResetDay") {
-                val identity = simIdentityRepository.getIdentity(slot)
-                val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
-                simLimitsRepository.setAutoReset(identity, day, enabled)
+            scope.launch(ioDispatcher) {
+                val error =
+                    executeSimOperation(slot, "updateAutoResetDay") {
+                        val identity = simIdentityRepository.getIdentity(slot)
+                        val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
+                        simLimitsRepository.setAutoReset(identity, day, enabled)
+                    }
+                _lastOperationError.value = error
             }
         }
 
         /**
-         * Корректирует оставшееся количество минут для SIM в указанном слоте.
-         *
          * Adjusts remaining minutes for the SIM in the specified slot.
-         *
-         * @param slot SIM slot index.
-         * @param remainingMinutes New remaining minutes value.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
-         * **AOSP DataStore:** Fully compliant with atomic updates.
+         * ...
          */
         fun adjustRemainingMinutes(
             slot: Int,
             remainingMinutes: Int,
         ) {
-            executeSimOperation(slot, "adjustRemainingMinutes") {
-                usageUseCase.adjustMinutes(slot, remainingMinutes)
+            scope.launch(ioDispatcher) {
+                val error =
+                    executeSimOperation(slot, "adjustRemainingMinutes") {
+                        usageUseCase.adjustMinutes(slot, remainingMinutes)
+                    }
+                _lastOperationError.value = error
             }
         }
 
         /**
-         * Корректирует оставшееся количество трафика для SIM в указанном слоте.
-         *
          * Adjusts remaining traffic for the SIM in the specified slot.
-         *
-         * @param slot SIM slot index.
-         * @param remainingGb New remaining traffic value in GB.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         * **Error Handling:** Propagates [CancellationException]. Errors are captured in [lastOperationError].
-         * **AOSP DataStore:** Fully compliant with atomic updates.
+         * ...
          */
         fun adjustRemainingTraffic(
             slot: Int,
             remainingGb: Float,
         ) {
-            executeSimOperation(slot, "adjustRemainingTraffic") {
-                usageUseCase.adjustTraffic(slot, remainingGb)
+            scope.launch(ioDispatcher) {
+                val error =
+                    executeSimOperation(slot, "adjustRemainingTraffic") {
+                        usageUseCase.adjustTraffic(slot, remainingGb)
+                    }
+                _lastOperationError.value = error
             }
         }
 
@@ -371,53 +339,51 @@ class MainSimDataController
             }
         }
 
-    private suspend fun performBlockWithRetry(
-        slot: Int,
-        operationName: String,
-        block: suspend () -> Unit,
-    ) {
-        try {
-            block()
-        } catch (e: IOException) {
-            AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
-            delay(500.milliseconds)
-            val success =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    block()
-                    true
-                } ?: false
-            if (!success) throw IOException("Operation timed out after retry. Please check storage availability.")
+        private suspend fun performBlockWithRetry(
+            slot: Int,
+            operationName: String,
+            block: suspend () -> Unit,
+        ) {
+            try {
+                block()
+            } catch (e: IOException) {
+                AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
+                delay(500.milliseconds)
+                val success =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        block()
+                        true
+                    } ?: false
+                if (!success) throw IOException("Operation timed out after retry. Please check storage availability.")
+            }
         }
-    }
 
-    private fun handleOperationException(
-        e: Exception,
-        slot: Int,
-        operationName: String,
-    ) {
-        when (e) {
-            is SeedUnavailableException -> {
-                AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
-                _lastOperationError.value =
+        private fun handleOperationException(
+            e: Exception,
+            slot: Int,
+            operationName: String,
+        ): OperationError =
+            when (e) {
+                is SeedUnavailableException -> {
+                    AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
                     OperationError("Storage unavailable for slot ${e.slot}. Retry later.", e.slot)
-            }
+                }
 
-            is SimNotFoundException -> {
-                AppLogger.w("SimNotFoundException during $operationName for slot $slot", e)
-                _lastOperationError.value = OperationError("SIM was removed from slot ${e.slot}", e.slot)
-            }
+                is SimNotFoundException -> {
+                    AppLogger.w("SimNotFoundException during $operationName for slot $slot", e)
+                    OperationError("SIM was removed from slot ${e.slot}", e.slot)
+                }
 
-            is IOException -> {
-                AppLogger.e("Terminal IOException during $operationName for slot $slot after retry", e)
-                _lastOperationError.value = OperationError(e.message ?: "Operation failed after retry.", slot)
-            }
+                is IOException -> {
+                    AppLogger.e("Terminal IOException during $operationName for slot $slot after retry", e)
+                    OperationError(e.message ?: "Operation failed after retry.", slot)
+                }
 
-            else -> {
-                AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
-                _lastOperationError.value = OperationError(e.message ?: "Unknown error", slot)
+                else -> {
+                    AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
+                    OperationError(e.message ?: "Unknown error", slot)
+                }
             }
-        }
-    }
 
         /**
          * Уведомляет систему об изменении данных для обновления виджетов и UI.

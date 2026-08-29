@@ -233,7 +233,9 @@ object AppLogger {
                 processWorkerEntry(entry)
             }
         } catch (e: Exception) {
-            isWorkerStarted = false
+            lock.withLock {
+                isWorkerStarted = false
+            }
             val count = workerRestartCount.incrementAndGet()
             Log.e(TAG, "AppLogger worker thread crashed (restart count: $count)", e)
             if (count > MAX_WORKER_CRASHES) {
@@ -257,7 +259,9 @@ object AppLogger {
             @Suppress("TooGenericExceptionCaught") e: Error,
         ) {
             // Do not suppress Error (OOM, StackOverflow, etc.)
-            isWorkerStarted = false
+            lock.withLock {
+                isWorkerStarted = false
+            }
             Log.e(TAG, "AppLogger worker thread fatal error", e)
             throw e
         }
@@ -306,7 +310,7 @@ object AppLogger {
         val dir = logDir ?: return
         try {
             val logFile = File(dir, LOG_FILE_NAME)
-            if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+            if (logFile.exists() && (logFile.length() > MAX_FILE_SIZE)) {
                 closeWriterUnlocked()
                 rotateLogFilesUnlocked(dir, logFile)
             }

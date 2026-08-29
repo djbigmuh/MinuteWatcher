@@ -168,6 +168,7 @@ class WidgetSettingsViewModelTest {
         runTest {
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(fontSize = 10) }
+            testScheduler.advanceUntilIdle()
             val state = viewModel.state.value.settings
             assertNotNull(state)
             assertEquals(10, state!!.fontSize)
@@ -236,6 +237,7 @@ class WidgetSettingsViewModelTest {
                     }
                 }
             deferreds.awaitAll()
+            testScheduler.advanceUntilIdle()
 
             val state = viewModel.state.value.settings
             assertNotNull(state)
@@ -296,9 +298,10 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify sets PartialFailure when simListLoadFailed is true`() =
         runTest {
-            whenever(saver.save(any(), eq(true))).thenReturn(SaveResult.PartialSuccess(skippedSimSettings = true))
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.PartialSuccess(skippedSimSettings = true))
             testScheduler.advanceUntilIdle()
             viewModel.updateSettings { it.copy(simListLoadFailed = true) }
+            testScheduler.advanceUntilIdle()
 
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
@@ -318,6 +321,7 @@ class WidgetSettingsViewModelTest {
 
             // Обновить настройки
             vm.updateSettings { it.copy(fontSize = 10) }
+            testScheduler.advanceUntilIdle()
 
             // Ошибка НЕ должна быть сброшена, так как settings == null
             assertTrue(vm.state.value.isLoadError)
@@ -334,6 +338,7 @@ class WidgetSettingsViewModelTest {
 
             // Обновить настройки SIM
             vm.updateSimSettings(0) { it.copy(showTraffic = true) }
+            testScheduler.advanceUntilIdle()
 
             // Ошибка НЕ должна быть сброшена, так как settings == null
             assertTrue(vm.state.value.isLoadError)
@@ -400,6 +405,7 @@ class WidgetSettingsViewModelTest {
                     widgetLimitExceeded = true,
                 )
             }
+            testScheduler.advanceUntilIdle()
 
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
@@ -423,6 +429,7 @@ class WidgetSettingsViewModelTest {
                     fontSize = Constants.Widget.MIN_FONT_SIZE - 1,
                 )
             }
+            testScheduler.advanceUntilIdle()
 
             viewModel.saveAndNotify()
             testScheduler.advanceUntilIdle()
