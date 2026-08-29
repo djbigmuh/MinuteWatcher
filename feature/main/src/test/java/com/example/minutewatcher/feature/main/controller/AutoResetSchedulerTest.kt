@@ -36,13 +36,13 @@ class AutoResetSchedulerTest {
 
             // First attempt - fails
             scheduler.checkOnStart()
-            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(value = false))
             assertEquals(1, savedStateHandle.get<Int>("auto_reset_fail_count"))
 
             // Second attempt - should try again
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
             scheduler.checkOnStart()
-            verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
+            verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(value = false))
             assertEquals(0, savedStateHandle.get<Int>("auto_reset_fail_count"))
         }
 
@@ -56,7 +56,7 @@ class AutoResetSchedulerTest {
             } catch (e: CancellationException) {
                 // Second attempt - should NOT try again because flag is still true
                 scheduler.checkOnStart()
-                verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+                verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(value = false))
                 throw e
             }
         }
@@ -67,9 +67,9 @@ class AutoResetSchedulerTest {
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
 
             scheduler.checkOnStart()
-            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(value = false))
 
             scheduler.checkOnStart()
-            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(value = false))
         }
 }

@@ -48,8 +48,9 @@ class SimUsageRepositoryConcurrencyTest {
             val dataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                    produceFile = { file }
-                )
+                ) {
+                    file
+                }
             val repository = SimUsageRepositoryImpl(dataStore, timeProvider, SimUsageMapper(), SimUsageResetLogic())
 
             val identity = "test_sim"

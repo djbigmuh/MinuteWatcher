@@ -87,9 +87,9 @@ class UsageCheckWorkerTest {
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(simUsageRepository.getSimUsage(any())).thenReturn(flowOf(createSimUsage("default")))
         whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(any())).thenReturn(flowOf(value = false))
-        whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(false))
-        whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(any())).thenReturn(flowOf(false))
-        whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(value = false))
+        whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(any())).thenReturn(flowOf(value = false))
+        whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(any())).thenReturn(flowOf(value = false))
 
         worker =
             TestListenableWorkerBuilder<UsageCheckWorker>(application)
@@ -172,14 +172,14 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
-            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
-            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(eq(identity), eq(true))
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(eq(identity), notified = true)
         }
 
     @Test
@@ -244,14 +244,14 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 900f, trafficLimitMb = 1024)))
-            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(value = false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(1))
-            verify(simNotificationFlagsRepository).setNotifiedLowTraffic(eq(identity), eq(true))
+            verify(simNotificationFlagsRepository).setNotifiedLowTraffic(eq(identity), notified = true)
         }
 
     @Test
@@ -303,8 +303,8 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
-            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
@@ -420,8 +420,8 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 950f, trafficLimitMb = 1000)))
-            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(value = false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(value = false))
 
             worker.doWork()
 
@@ -511,8 +511,8 @@ class UsageCheckWorkerTest {
 
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
-            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
@@ -576,7 +576,7 @@ class UsageCheckWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
 
             // Verify widget update was STILL called (using the stale data is okay for UI)
-            verify(dataChangeNotifier).notifyDataChanged(updateWidget = eq(true), force = any())
+            verify(dataChangeNotifier).notifyDataChanged(updateWidget = eq(value = true), force = any())
 
             // Verify it SKIPPED notifications
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())

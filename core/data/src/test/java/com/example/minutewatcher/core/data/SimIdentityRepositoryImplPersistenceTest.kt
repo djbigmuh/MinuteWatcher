@@ -63,8 +63,9 @@ class SimIdentityRepositoryImplPersistenceTest {
             val realDataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_ds.preferences_pb") }
-                )
+                ) {
+                    tmpFolder.newFile("test_ds.preferences_pb")
+                }
             val countingDataStore = CountingDataStore(realDataStore)
             val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
 

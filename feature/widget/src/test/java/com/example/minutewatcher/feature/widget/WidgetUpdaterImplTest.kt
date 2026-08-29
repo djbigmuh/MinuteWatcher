@@ -544,7 +544,10 @@ class WidgetUpdaterImplTest {
             assertEquals("Should have called renderer again for simplified update", 3, callCount)
             // Verify that the 3rd call was simplified (forceFull = false)
             // We use verify with times(2) because it was called with false once in handleLimitExceeded and once in performSingleUpdate
-            verify(renderer, org.mockito.kotlin.times(2)).renderAll(eq(context), eq(false))
+            verify(renderer, org.mockito.kotlin.times(2)).renderAll(
+                context = eq(context),
+                forceFull = eq(value = false)
+            )
             assertTrue("Limit flag should still be set", mockSettings.value.widgetLimitExceeded)
         }
 

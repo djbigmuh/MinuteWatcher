@@ -312,11 +312,11 @@ class ResetManagerTest {
             200,
             1.0f,
             1024,
-            0,
-            0f,
-            true,
-            1,
-            0L,
-            false,
+            manualAdjustment = 0,
+            trafficAdjustmentGb = 0f,
+            autoReset = true,
+            autoResetDay = 1,
+            lastResetDate = 0L,
+            rolloverEnabled = false,
         )
 }

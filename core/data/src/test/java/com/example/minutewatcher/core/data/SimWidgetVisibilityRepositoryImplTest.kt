@@ -30,9 +30,9 @@ class SimWidgetVisibilityRepositoryImplTest {
     @Before
     fun setup() {
         dataStore =
-            PreferenceDataStoreFactory.create(
-                produceFile = { tmpFolder.newFile("test_sim_widget.preferences_pb") }
-            )
+            PreferenceDataStoreFactory.create {
+                tmpFolder.newFile("test_sim_widget.preferences_pb")
+            }
         repository = SimWidgetVisibilityRepositoryImpl(dataStore)
     }
 

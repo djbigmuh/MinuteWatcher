@@ -73,8 +73,9 @@ class SimRepositoryImplTest {
         dataStore =
             PreferenceDataStoreFactory.create(
                 scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
-                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") }
-            )
+            ) {
+                tmpFolder.newFile("test_sim_settings.preferences_pb")
+            }
 
         discoveryDeps =
             SimDiscoveryDependencies(

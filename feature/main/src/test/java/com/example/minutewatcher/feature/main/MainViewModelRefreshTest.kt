@@ -224,7 +224,10 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
 
             testScheduler.advanceUntilIdle()
 
-            verify(dataChangeNotifier, times(2)).notifyDataChanged(eq(true), eq(false))
+            verify(dataChangeNotifier, times(2)).notifyDataChanged(
+                updateWidget = eq(value = true),
+                force = eq(value = false)
+            )
         }
 
     @Test
@@ -234,7 +237,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 
-            verify(autoResetUseCase).performAutoReset(eq(false))
+            verify(autoResetUseCase).performAutoReset(shouldNotify = eq(value = false))
             clearInvocations(autoResetUseCase)
 
             testScheduler.advanceTimeBy(30.minutes)
@@ -242,14 +245,14 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 
-            verify(autoResetUseCase, never()).performAutoReset(any())
+            verify(autoResetUseCase, never()).performAutoReset(shouldNotify = any())
 
             savedStateHandle["last_auto_reset_check"] = 10_000_000L
 
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 
-            verify(autoResetUseCase).performAutoReset(eq(false))
+            verify(autoResetUseCase).performAutoReset(shouldNotify = eq(value = false))
         }
 
     @Test
@@ -258,7 +261,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             org.mockito.kotlin
                 .doThrow(RuntimeException("First failure"))
                 .whenever(autoResetUseCase)
-                .performAutoReset(eq(false))
+                .performAutoReset(shouldNotify = eq(value = false))
 
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
@@ -278,15 +281,15 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             kotlin.runCatching { scheduler.checkOnStart() }
 
             verify(autoResetUseCase, times(2))
-                .performAutoReset(eq(false)) // One from VM init, one from scheduler.checkOnStart
+                .performAutoReset(shouldNotify = eq(value = false)) // One from VM init, one from scheduler.checkOnStart
 
             org.mockito.kotlin
                 .doReturn(Unit)
                 .whenever(autoResetUseCase)
-                .performAutoReset(eq(false))
+                .performAutoReset(shouldNotify = eq(value = false))
 
             scheduler.checkOnStart()
 
-            verify(autoResetUseCase, times(3)).performAutoReset(eq(false))
+            verify(autoResetUseCase, times(3)).performAutoReset(shouldNotify = eq(value = false))
         }
 }

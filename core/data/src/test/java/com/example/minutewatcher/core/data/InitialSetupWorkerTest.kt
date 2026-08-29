@@ -60,7 +60,7 @@ class InitialSetupWorkerTest {
         context = ApplicationProvider.getApplicationContext<Application>()
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
-        whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
+        whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
         val emptySnapshot =
@@ -113,14 +113,14 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(autoResetUseCase).performAutoReset(eq(false))
+            verify(autoResetUseCase).performAutoReset(shouldNotify = false)
         }
 
     @Test
     fun `doWork returns success when migration already completed`() =
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
-            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
             val result = createWorker().doWork()
@@ -133,7 +133,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork skips migration V1 when no permission and no legacy data`() =
         runTest {
-            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
 
@@ -151,7 +151,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork defers migration when no permission but legacy data exists`() =
         runTest {
-            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData()).thenReturn(true)
 
@@ -167,7 +167,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork defers migration when permission granted but no active sims and legacy data exists`() =
         runTest {
-            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
             whenever(migrationService.hasLegacyData(any())).thenReturn(true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
@@ -184,7 +184,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork performs migration when active sims found`() =
         runTest {
-            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
             val activeSim = ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", true, true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))

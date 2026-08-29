@@ -307,7 +307,7 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
 
             assertTrue(viewModel.state.value.saveResult is SaveResult.PartialSuccess)
-            verify(saver).save(any(), eq(true))
+            verify(saver).save(any(), skipSimSettings = eq(value = true))
         }
 
     @Test

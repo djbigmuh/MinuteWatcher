@@ -119,7 +119,10 @@ class UsageStateRepositoryStressTest {
             assertTrue("All calls should complete without deadlock", (successCount + timeoutCount) == 100)
 
             // Verify notifyRefresh was called, but likely fewer than 100 times due to tryLock
-            verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(isManual = eq(true), suppressWidgetUpdate = any())
+            verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(
+                isManual = eq(value = true),
+                suppressWidgetUpdate = any()
+            )
         }
 
     @Test
@@ -156,7 +159,7 @@ class UsageStateRepositoryStressTest {
             verify(
                 dataRefreshNotifier,
                 org.mockito.kotlin.times(1),
-            ).notifyRefresh(isManual = eq(true), suppressWidgetUpdate = any())
+            ).notifyRefresh(isManual = eq(value = true), suppressWidgetUpdate = any())
         }
 
     @Test
@@ -200,6 +203,6 @@ class UsageStateRepositoryStressTest {
             verify(
                 dataRefreshNotifier,
                 org.mockito.kotlin.times(1),
-            ).notifyRefresh(isManual = eq(true), suppressWidgetUpdate = any())
+            ).notifyRefresh(isManual = eq(value = true), suppressWidgetUpdate = any())
         }
 }
