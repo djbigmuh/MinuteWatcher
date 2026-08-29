@@ -106,7 +106,9 @@ class UpdateCoordinator
                                 oldJob.cancelAndJoin()
                             }
                         if (completed == null) {
-                            AppLogger.w("UpdateCoordinator: previous observation job did not terminate in time, forcing cancel")
+                            AppLogger.w(
+                                "UpdateCoordinator: previous observation job did not terminate in time, forcing cancel",
+                            )
                             oldJob.cancel()
                         }
                     } catch (e: CancellationException) {

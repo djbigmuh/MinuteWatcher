@@ -122,7 +122,12 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
 
             // Act
-            callTracker.onCallEnded(-1)
+            try {
+                callTracker.onCallEnded(-1)
+            } catch (e: SecurityException) {
+                val matches = e.message?.contains("Permission revoked") == true
+                assertTrue("Expected SecurityException message to match", matches)
+            }
             advanceUntilIdle()
 
             // Assert: No minutes incremented
@@ -147,7 +152,12 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getActiveCallSubIds()).thenThrow(SecurityException("Permission revoked"))
 
             // Act
-            callTracker.onCallEnded(-1)
+            try {
+                callTracker.onCallEnded(-1)
+            } catch (e: SecurityException) {
+                val matches = e.message?.contains("Permission revoked") == true
+                assertTrue("Expected SecurityException message to match", matches)
+            }
             advanceUntilIdle()
 
             // Assert: No crash, and status is PERMISSION_MISSING

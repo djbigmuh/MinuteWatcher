@@ -66,10 +66,12 @@ internal class CallEndHandler
         } catch (e: IOException) {
             shouldRefreshStatus = false
             statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            throw e
         } catch (e: SecurityException) {
             shouldRefreshStatus = false
             AppLogger.e("SecurityException in onCallEnded", e)
             statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            throw e
         } catch (e: Exception) {
             shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
             handlePerformCallEndError(subId, e, statusFlow, cleanupCounters)

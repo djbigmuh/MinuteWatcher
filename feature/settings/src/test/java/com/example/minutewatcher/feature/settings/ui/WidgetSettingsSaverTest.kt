@@ -74,10 +74,11 @@ class WidgetSettingsSaverTest {
             // Act: Save
             saver.save(invalidState)
 
-            // Then: verify that the loader received a validated state (layoutMode clamped to max)
-            // Constants.Widget.MAX_LAYOUT_MODE is 3 (based on previous code knowledge or inspection)
-            org.mockito.kotlin.verify(loader).saveGeneralSettings(org.mockito.kotlin.argThat {
-                this.layoutMode <= 3
-            })
+            // Then: verify that the loader received a validated state
+            org.mockito.kotlin.verify(loader).saveGeneralSettings(
+                org.mockito.kotlin.argThat {
+                    this.layoutMode <= com.example.minutewatcher.core.model.Constants.Widget.MAX_LAYOUT_MODE
+                },
+            )
         }
 }

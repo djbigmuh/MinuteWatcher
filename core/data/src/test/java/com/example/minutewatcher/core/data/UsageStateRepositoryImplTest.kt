@@ -62,47 +62,13 @@ class UsageStateRepositoryImplTest {
         runTest {
             val activeSims =
                 listOf(
-                    com.example.minutewatcher.core.model.ActiveSimInfo(
-                        identity = SimIdentity("id_0", 1, 0, IdentitySource.ICCID),
-                        slotIndex = 0, // Valid
-                        subscriptionId = 1,
-                        displayName = "SIM 0",
-                        carrierName = "Carrier",
-                        mccMnc = "12345",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                    com.example.minutewatcher.core.model.ActiveSimInfo(
-                        identity = SimIdentity("id_99", 2, 99, IdentitySource.ICCID),
-                        slotIndex = 99, // Invalid
-                        subscriptionId = 2,
-                        displayName = "SIM 99",
-                        carrierName = "Carrier",
-                        mccMnc = "12345",
-                        isDefaultData = false,
-                        isDefaultVoice = false,
-                    ),
+                    createActiveSimInfo("id_0", subId = 1, slot = 0), // Valid
+                    createActiveSimInfo("id_99", subId = 2, slot = 99), // Invalid
                 )
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
 
-            val usage0 =
-                SimUsage(
-                    identity = "id_0",
-                    slotIndex = 0,
-                    subscriptionId = 1,
-                    operator = "Op",
-                    minutesUsed = 0,
-                    minutesLimit = 0,
-                    trafficUsedMb = 0f,
-                    trafficLimitMb = 0,
-                    manualAdjustment = 0,
-                    trafficAdjustmentGb = 0f,
-                    autoReset = false,
-                    autoResetDay = 1,
-                    lastResetDate = 0L,
-                    rolloverEnabled = false,
-                )
-            val usage99 = usage0.copy(identity = "id_99", slotIndex = 99, subscriptionId = 2)
+            val usage0 = createSimUsage("id_0", slot = 0, subId = 1)
+            val usage99 = createSimUsage("id_99", slot = 99, subId = 2)
 
             whenever(simUsageRepository.getSimUsage("id_0")).thenReturn(flowOf(usage0))
             whenever(simUsageRepository.getSimUsage("id_99")).thenReturn(flowOf(usage99))
@@ -127,6 +93,42 @@ class UsageStateRepositoryImplTest {
             assertEquals("Should only contain valid slot index model", 1, uiModels.size)
             assertEquals(0, uiModels[0].slot)
         }
+
+    private fun createActiveSimInfo(
+        id: String,
+        subId: Int,
+        slot: Int,
+    ) = com.example.minutewatcher.core.model.ActiveSimInfo(
+        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID),
+        slotIndex = slot,
+        subscriptionId = subId,
+        displayName = "SIM $slot",
+        carrierName = "Carrier",
+        mccMnc = "12345",
+        isDefaultData = (slot == 0),
+        isDefaultVoice = (slot == 0),
+    )
+
+    private fun createSimUsage(
+        id: String,
+        slot: Int,
+        subId: Int,
+    ) = SimUsage(
+        identity = id,
+        slotIndex = slot,
+        subscriptionId = subId,
+        operator = "Op",
+        minutesUsed = 0,
+        minutesLimit = 0,
+        trafficUsedMb = 0f,
+        trafficLimitMb = 0,
+        manualAdjustment = 0,
+        trafficAdjustmentGb = 0f,
+        autoReset = false,
+        autoResetDay = 1,
+        lastResetDate = 0L,
+        rolloverEnabled = false,
+    )
 
     @Test
     fun `refresh finishes within timeout when snapshot does not update`() =

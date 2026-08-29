@@ -100,6 +100,7 @@ class CallTrackerRaceTest {
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+        whenever(permissionStateNotifier.changes).thenReturn(kotlinx.coroutines.flow.emptyFlow())
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
         whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)

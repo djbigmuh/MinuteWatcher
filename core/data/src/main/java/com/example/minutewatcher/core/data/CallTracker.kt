@@ -51,7 +51,9 @@ open class CallTracker
     init {
         scope.launch {
             permissionStateNotifier.changes.collect {
-                refreshStatus(force = true)
+                launch {
+                    refreshStatus(force = true)
+                }
             }
         }
     }
@@ -114,13 +116,6 @@ open class CallTracker
                     ) {
                         return
                     }
-                }
-
-                // If we were in PERMISSION_MISSING state, reset to Idle before checking
-                if ((currentStatus is TrackingStatus.Error) &&
-                    (currentStatus.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
-                ) {
-                    _status.value = TrackingStatus.Idle
                 }
 
                 if (!checkPermissions()) return

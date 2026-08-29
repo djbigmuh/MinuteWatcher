@@ -127,13 +127,17 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             // Mock both direct call AND permission check to throw
             whenever(permissionManager.hasPhoneStatePermission()).thenThrow(SecurityException())
-            whenever(telephonyManager.getCallStateForSubscription()).thenThrow(SecurityException())
+            whenever(telephonyManager.callStateForSubscription).thenThrow(SecurityException())
 
             callTracker.onCallEnded(-1)
             advanceUntilIdle()
 
             val status = callTracker.status.first()
-            assertTrue((status is TrackingStatus.Error) && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+            val isError = status is TrackingStatus.Error
+            val isPermissionType =
+                (status as? TrackingStatus.Error)?.type ==
+                    TrackingStatus.ErrorType.PERMISSION_MISSING
+            assertTrue(isError && isPermissionType)
         }
 
     @Test
@@ -334,7 +338,11 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             timeProvider.advance(1000)
 
             // Act
-            callTracker.onCallEnded(subId)
+            try {
+                callTracker.onCallEnded(subId)
+            } catch (e: java.io.IOException) {
+                assertTrue("Expected IOException message to match", e.message?.contains("Write failed") == true)
+            }
             advanceUntilIdle()
 
             // Assert: verify status is Error
@@ -366,14 +374,16 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                 .whenever(simUsageRepository)
                 .incrementMinutesUsed(eq(identity), any())
 
-            // Act
-            callTracker.onCallEnded(subId)
-            advanceUntilIdle()
-
-            // Assert: verify status is Error
-            val status = callTracker.status.value
-            assertTrue("Status should be Error", status is TrackingStatus.Error)
-            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+            // Act & Assert: it should propagate the exception
+            val caught =
+                try {
+                    callTracker.onCallEnded(subId)
+                    false
+                } catch (e: java.io.IOException) {
+                    assertTrue("Expected IOException message to match", e.message?.contains("Write failed") == true)
+                    true
+                }
+            assertTrue("IOException should be propagated", caught)
         }
 
     @Test
@@ -627,7 +637,12 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                 .whenever(simUsageRepository)
                 .incrementMinutesUsed(eq(identity), any())
 
-            callTracker.onCallEnded(subId)
+            // Act
+            try {
+                callTracker.onCallEnded(subId)
+            } catch (e: java.io.IOException) {
+                assertTrue("Expected IOException message to match", e.message?.contains("DataStore failure") == true)
+            }
             advanceUntilIdle()
 
             // Verify status is Error
