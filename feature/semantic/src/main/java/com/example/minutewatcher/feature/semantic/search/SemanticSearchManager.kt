@@ -132,11 +132,19 @@ open class SemanticSearchManager
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                job?.join()
-            } ?: run {
-                AppLogger.w("SemanticSearchManager: previous observation job did not terminate in time")
+            try {
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job?.join()
+                } ?: run {
+                    AppLogger.w("SemanticSearchManager: previous observation job did not terminate in time")
+                    job?.cancel()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("SemanticSearchManager: failed to join previous observation job during setupObservation", e)
             }
+
             lastSnapshotFlow = snapshotFlow
             job =
                 scope.launch {

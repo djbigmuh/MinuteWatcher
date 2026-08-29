@@ -105,7 +105,7 @@ androidxMaterialIconsCore = { group = "androidx.compose.material", name = "mater
 androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # Build logic dependencies
-# Removed unused library aliases to fix warnings, used directly in build-logic
+# Used via libs.findLibrary() in build-logic/build.gradle.kts
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 

@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
@@ -41,10 +42,19 @@ open class CallTracker
         private val endHandler: CallEndHandler,
         private val sessionCleaner: CallSessionCleaner,
         private val settingsHandler: CallTrackingSettingsHandler,
+        private val permissionStateNotifier: PermissionStateNotifier,
     ) : TrackingStatusProvider {
-        override val key: String = "CallTracker"
+    override val key: String = "calls"
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    init {
+        scope.launch {
+            permissionStateNotifier.changes.collect {
+                refreshStatus(force = true)
+            }
+        }
+    }
 
         private val callMutex = Mutex()
         private val callEndResolver =
@@ -104,6 +114,13 @@ open class CallTracker
                     ) {
                         return
                     }
+                }
+
+                // If we were in PERMISSION_MISSING state, reset to Idle before checking
+                if ((currentStatus is TrackingStatus.Error) &&
+                    (currentStatus.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+                ) {
+                    _status.value = TrackingStatus.Idle
                 }
 
                 if (!checkPermissions()) return

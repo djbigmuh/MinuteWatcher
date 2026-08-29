@@ -100,16 +100,22 @@ class UpdateCoordinator
             initMutex.withLock {
                 val oldJob = observationJob.get()
                 if (oldJob != null) {
-                    val completed =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            oldJob.cancelAndJoin()
+                    try {
+                        val completed =
+                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                oldJob.cancelAndJoin()
+                            }
+                        if (completed == null) {
+                            AppLogger.w("UpdateCoordinator: previous observation job did not terminate in time, forcing cancel")
+                            oldJob.cancel()
                         }
-                    if (completed == null) {
-                        val errorMsg = "UpdateCoordinator: previous observation job did not terminate in time"
-                        AppLogger.e(errorMsg)
-                        throw IllegalStateException(errorMsg)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("UpdateCoordinator: failed to join previous observation job", e)
+                    } finally {
+                        observationJob.compareAndSet(oldJob, null)
                     }
-                    observationJob.compareAndSet(oldJob, null)
                 }
 
                 val handler =

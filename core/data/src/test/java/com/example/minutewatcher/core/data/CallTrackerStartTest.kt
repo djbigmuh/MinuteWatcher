@@ -202,6 +202,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
                     endHandler = endHandler,
                     sessionCleaner = sessionCleaner,
                     settingsHandler = settingsHandler,
+                    permissionStateNotifier = permissionStateNotifier,
                 ) {
                     override suspend fun refreshStatus(force: Boolean) {
                         refreshStatusCalled = true

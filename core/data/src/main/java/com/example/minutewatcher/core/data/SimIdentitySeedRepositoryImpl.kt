@@ -74,8 +74,9 @@ class SimIdentitySeedRepositoryImpl
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String =
             seedMutex.withLock {
+                val isEphemeral = _isEphemeralSeedActive.value
                 // Если активен эфемерный сид, пробуем вернуться к персистентному
-                if (_isEphemeralSeedActive.value) {
+                if (isEphemeral) {
                     try {
                         val recovered = dataStore.getOrCreateSeedInternal(generator)
                         _isEphemeralSeedActive.value = false
@@ -103,6 +104,7 @@ class SimIdentitySeedRepositoryImpl
                         e,
                     )
                     _isEphemeralSeedActive.value = true
+                    // cachedEphemeralSeed is only accessed under seedMutex
                     cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                 }
             }

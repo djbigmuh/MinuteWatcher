@@ -106,9 +106,11 @@ class UsageStateRepositoryImpl
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
             observeSimUsages()
                 .map { usages ->
-                    usages.map { usage ->
-                        SimCardMapper.map(context, usage.slotIndex, usage)
-                    }
+                    usages
+                        .filter { it.slotIndex in Constants.SimConstants.SUPPORTED_SLOT_INDICES }
+                        .map { usage ->
+                            SimCardMapper.map(context, usage.slotIndex, usage)
+                        }
                 }
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =

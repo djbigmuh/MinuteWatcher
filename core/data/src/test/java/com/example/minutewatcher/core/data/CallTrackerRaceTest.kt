@@ -39,6 +39,7 @@ class CallTrackerRaceTest {
     private val timeProvider: TimeProvider = mock()
     private val sessionCleaner: CallSessionCleaner = mock()
     private val settingsHandler: CallTrackingSettingsHandler = mock()
+    private val permissionStateNotifier: com.example.minutewatcher.core.domain.PermissionStateNotifier = mock()
     private val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
     private val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
 
@@ -95,6 +96,7 @@ class CallTrackerRaceTest {
                 endHandler = endHandler,
                 sessionCleaner = sessionCleaner,
                 settingsHandler = settingsHandler,
+                permissionStateNotifier = permissionStateNotifier,
             )
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)

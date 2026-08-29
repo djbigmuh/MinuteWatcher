@@ -24,7 +24,6 @@ class PermissionLogicTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                notificationsGrantedActual = true,
                 settings = settings,
             )
 
@@ -45,7 +44,6 @@ class PermissionLogicTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                notificationsGrantedActual = true,
                 settings = settings,
             )
 
@@ -66,7 +64,6 @@ class PermissionLogicTest {
                 phoneGranted = false,
                 usageGranted = true,
                 notificationsGranted = true,
-                notificationsGrantedActual = true,
                 settings = settings,
             )
 

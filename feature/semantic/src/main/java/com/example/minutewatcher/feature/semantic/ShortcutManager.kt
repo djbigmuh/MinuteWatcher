@@ -91,15 +91,22 @@ open class ShortcutManager
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             job?.cancel()
-            val completed =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    job?.join()
+            try {
+                val completed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        job?.join()
+                    }
+                if (completed == null) {
+                    AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
+                    job?.cancel()
                 }
-            if (completed == null) {
-                AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
-                job?.cancel()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("ShortcutManager: failed to join previous observation job during initialize", e)
+            } finally {
+                job = null
             }
-            job = null
 
             initMutex.withLock {
                 setupObservation(snapshotFlow)
@@ -142,15 +149,22 @@ open class ShortcutManager
          */
         override suspend fun recover() {
             job?.cancel()
-            val completed =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    job?.join()
+            try {
+                val completed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        job?.join()
+                    }
+                if (completed == null) {
+                    AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
+                    job?.cancel()
                 }
-            if (completed == null) {
-                AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
-                job?.cancel()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("ShortcutManager: failed to join previous observation job during recover", e)
+            } finally {
+                job = null
             }
-            job = null
 
             initMutex.withLock {
                 lastSnapshotFlow?.let { setupObservation(it) }

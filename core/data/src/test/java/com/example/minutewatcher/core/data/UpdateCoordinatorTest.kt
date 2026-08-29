@@ -385,6 +385,8 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     supervisorScope,
                 )
+            // Trigger observation
+            coordinator.status
             testScheduler.runCurrent()
             assertEquals("No updates should happen on empty snapshot", 0, callCount)
 

@@ -199,8 +199,8 @@ class SimCardMapperTest {
         rolloverEnabled = false,
     )
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `map throws for invalid slot index`() {
+    @Test
+    fun `map returns default model for invalid slot index`() {
         val usage =
             SimUsage(
                 identity = "test_id",
@@ -218,6 +218,10 @@ class SimCardMapperTest {
                 lastResetDate = 0L,
                 rolloverEnabled = false,
             )
-        SimCardMapper.map(context, 100, usage)
+        val model = SimCardMapper.map(context, 100, usage)
+        assertEquals(100, model.slot)
+        assertEquals("test_id", model.identity)
+        assertEquals("", model.operatorName)
+        assertEquals(0, model.minutesUsed)
     }
 }

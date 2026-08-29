@@ -19,6 +19,7 @@ data class TrackingBannerState(
     val showWidgetErrorBanner: Boolean = false,
     val showInaccurateCallsBanner: Boolean = false,
     val notificationPermissionState: PermissionUiState = PermissionUiState.NOT_REQUESTED,
+    val notificationsGrantedActual: Boolean = true,
     val observationFailed: Boolean = false,
     val isStorageDegraded: Boolean = false,
 )

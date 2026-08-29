@@ -61,7 +61,10 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
     ): SimCardUiModel {
-        require(slot in Constants.SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+        if (slot !in Constants.SimConstants.SUPPORTED_SLOT_INDICES) {
+            AppLogger.e("SimCardMapper: Attempted to map invalid slot $slot (id=${usage.identity})")
+            return createDefaultModel(slot, usage.identity)
+        }
 
         val version = slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
 
@@ -149,4 +152,29 @@ object SimCardMapper {
             }
         }
     }
+
+    private fun createDefaultModel(
+        slot: Int,
+        identity: String,
+    ) = SimCardUiModel(
+        slot = slot,
+        identity = identity,
+        operatorName = "",
+        iconRes = 0,
+        minutesUsed = 0,
+        minutesLimit = 0,
+        manualAdjustment = 0,
+        minutesRemaining = 0,
+        effectiveMinutesLimit = 0,
+        isMinutesLimitSet = false,
+        trafficUsedMb = 0f,
+        trafficLimitMb = 0,
+        trafficRemainingGb = 0f,
+        effectiveTrafficLimitGb = 0f,
+        trafficAdjustmentGb = 0f,
+        isTrafficLimitSet = false,
+        autoResetEnabled = false,
+        autoResetDay = 1,
+        rolloverEnabled = false,
+    )
 }

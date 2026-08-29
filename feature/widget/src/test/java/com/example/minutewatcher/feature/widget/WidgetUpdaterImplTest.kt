@@ -467,7 +467,7 @@ class WidgetUpdaterImplTest {
 
             assertTrue("Probe update should succeed", result.isSuccess)
             // handleUpdateResult should call setWidgetLimitExceeded(false)
-            verify(mockLimitManager).setWidgetLimitExceeded(false)
+            verify(mockLimitManager).setWidgetLimitExceeded(value = false)
         }
 
     @Test
@@ -495,13 +495,13 @@ class WidgetUpdaterImplTest {
 
             updaterWithMock.updateAll()
 
-            verify(appSettingsRepository, never()).getAppSettings()
+            verify(appSettingsRepository, never()).getAppSettings().let { }
             // observeAppSettings().value is used as fallback,
             // but since isLimitExceeded is NOT null, it shouldn't be reached
             verify(appSettingsRepository, never()).observeAppSettings()
 
             verify(mockLimitManager).isLimitExceeded()
             verify(mockLimitManager).shouldProbe()
-            verify(renderer).renderAll(eq(context), eq(false)) // Simplified mode
+            verify(renderer).renderAll(context, forceFull = false) // Simplified mode
         }
 }

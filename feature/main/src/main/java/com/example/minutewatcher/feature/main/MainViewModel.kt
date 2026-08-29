@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.main
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
@@ -62,7 +63,13 @@ class MainViewModel
 
             viewModelScope.launch {
                 controllers.dataRefreshNotifier.refreshFlow.collect {
-                    lastRefreshAt = timeProvider.now()
+                    try {
+                        lastRefreshAt = timeProvider.now()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("MainViewModel: Error processing data refresh event", e)
+                    }
                 }
             }
         }

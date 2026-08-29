@@ -225,6 +225,8 @@ class TrafficTracker
         if (updateResult == null) {
             val phase = if (trafficMutex.isLocked) "execution" else "mutex acquisition or data fetch"
             AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
+            // Note: Unlike SemanticSearchManager, TrafficTracker does not use a snapshot hash for
+            // indexing optimization (it tracks real-time usage), so there is no hash to reset here.
             _status.value =
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.UNKNOWN,

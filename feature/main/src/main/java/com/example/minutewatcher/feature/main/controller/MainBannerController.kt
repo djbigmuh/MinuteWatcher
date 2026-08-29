@@ -159,8 +159,15 @@ class MainBannerController
                 lastTrackingStatusFlow = statusFlow
                 job?.cancel()
                 val completed =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        job?.join()
+                    try {
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            job?.join()
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("MainBannerController: failed to join previous observation job", e)
+                        null
                     }
                 if (completed == null) {
                     AppLogger.w(

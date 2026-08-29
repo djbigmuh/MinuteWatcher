@@ -64,4 +64,20 @@ class WidgetSettingsSaverTest {
             // Then: Result should be Failed
             assertEquals(SaveResult.Failed(), result)
         }
+
+    @Test
+    fun `save performs defensive validation of input state`() =
+        runTest {
+            // Given: Invalid layout mode (too large)
+            val invalidState = WidgetSettingsState(layoutMode = 99)
+
+            // Act: Save
+            saver.save(invalidState)
+
+            // Then: verify that the loader received a validated state (layoutMode clamped to max)
+            // Constants.Widget.MAX_LAYOUT_MODE is 3 (based on previous code knowledge or inspection)
+            org.mockito.kotlin.verify(loader).saveGeneralSettings(org.mockito.kotlin.argThat {
+                this.layoutMode <= 3
+            })
+        }
 }

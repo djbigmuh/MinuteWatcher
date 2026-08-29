@@ -12,11 +12,13 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
@@ -187,8 +189,10 @@ class WidgetSettingsViewModel
                 AppLogger.e("Failed to save widget settings", e)
                 reduce { copy(saveResult = SaveResult.Failed()) }
             } finally {
-                reduce { copy(isSaving = false) }
-                saveMutex.unlock()
+                withContext(NonCancellable) {
+                    reduce { copy(isSaving = false) }
+                    saveMutex.unlock()
+                }
             }
         }
 

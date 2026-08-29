@@ -820,6 +820,28 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `updateTrafficUsage resets timeout error on next call`() =
+        runTest {
+            val mutexField = TrafficTracker::class.java.getDeclaredField("trafficMutex")
+            mutexField.isAccessible = true
+            val trafficMutex = mutexField[tracker] as kotlinx.coroutines.sync.Mutex
+
+            trafficMutex.lock()
+            val job1 = launch { tracker.updateTrafficUsage() }
+            testScheduler.advanceTimeBy(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS + 1000)
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            trafficMutex.unlock()
+            job1.join()
+
+            // Next call should reset status to Idle then potentially to Active if successful
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            tracker.updateTrafficUsage()
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+        }
+
+    @Test
     fun `updateTrafficUsage and resetBaseline are serialized via simChangeLock`() =
         runTest {
             val id = "sim_0"

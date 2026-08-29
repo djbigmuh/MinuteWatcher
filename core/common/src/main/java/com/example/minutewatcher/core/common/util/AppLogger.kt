@@ -26,7 +26,7 @@ object AppLogger {
     private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
     private const val LOG_FILE_NAME = "logs.txt"
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
-    private const val LOG_QUEUE_CAPACITY = 4096
+    private const val LOG_QUEUE_CAPACITY = 8192
     private const val DROPPED_LOGS_REPORT_INTERVAL = 50L
 
     @Volatile
@@ -198,7 +198,7 @@ object AppLogger {
                 fileLock.unlock()
             }
         } else {
-            Log.w(TAG, "Critical log dropped: file lock contended")
+            Log.w(TAG, "Critical log dropped from file (lock contention): [${entry.level}] ${entry.message}")
         }
     }
 

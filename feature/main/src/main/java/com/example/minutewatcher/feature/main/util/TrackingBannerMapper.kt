@@ -31,12 +31,12 @@ object TrackingBannerMapper {
             determinePhonePermissionState(
                 phoneGranted,
                 phonePermanentlyDenied,
-                settings.wasPhonePermissionRequestedBefore,
             )
 
         if (!settings.onboardingCompleted) {
             return TrackingBannerState(
                 phonePermissionState = phonePermissionState,
+                notificationsGrantedActual = notificationsGranted,
                 // Ошибки показываем всегда
                 showTrafficErrorBanner = isTrafficError(traffic),
                 showCallsErrorBanner = isCallsError(calls),
@@ -70,6 +70,7 @@ object TrackingBannerMapper {
                     notificationsGranted,
                     settings,
                 ),
+            notificationsGrantedActual = notificationsGranted,
             observationFailed = observationFailed,
             isStorageDegraded = isStorageDegraded,
         )
@@ -78,12 +79,10 @@ object TrackingBannerMapper {
     private fun determinePhonePermissionState(
         granted: Boolean,
         permanentlyDenied: Boolean,
-        requested: Boolean,
     ): PermissionUiState =
         when {
             granted -> PermissionUiState.GRANTED
             permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-            requested -> PermissionUiState.DENIED
             else -> PermissionUiState.NOT_REQUESTED
         }
 
@@ -93,10 +92,9 @@ object TrackingBannerMapper {
     ): PermissionUiState {
         val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
         return when {
-            !showNotifications -> PermissionUiState.GRANTED
             granted -> PermissionUiState.GRANTED
-            settings.notificationPermissionRequested && !granted -> PermissionUiState.PERMANENTLY_DENIED
-            settings.notificationPermissionRequested -> PermissionUiState.DENIED
+            !showNotifications -> PermissionUiState.GRANTED
+            settings.notificationPermissionRequested -> PermissionUiState.PERMANENTLY_DENIED
             else -> PermissionUiState.NOT_REQUESTED
         }
     }
@@ -107,12 +105,12 @@ object TrackingBannerMapper {
             (status.type != TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
 
     private fun isTrafficFallback(status: TrackingStatus?): Boolean =
-        status is TrackingStatus.Error &&
-            status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
+        (status is TrackingStatus.Error) &&
+            (status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
 
     private fun getTrafficFallbackSlot(status: TrackingStatus?): Int =
-        if (status is TrackingStatus.Error &&
-            status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION
+        if ((status is TrackingStatus.Error) &&
+            (status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
         ) {
             status.slotIndex ?: -1
         } else {
@@ -120,15 +118,15 @@ object TrackingBannerMapper {
         }
 
     private fun isCallsError(status: TrackingStatus?): Boolean =
-        status is TrackingStatus.Error &&
-            status.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+        (status is TrackingStatus.Error) &&
+            (status.type != TrackingStatus.ErrorType.PERMISSION_MISSING)
 
     private fun isAppSearchErrorToShow(
         status: TrackingStatus?,
         retryCount: Int,
         dismissed: Boolean,
     ): Boolean {
-        if (status !is TrackingStatus.Error || dismissed) return false
+        if ((status !is TrackingStatus.Error) || dismissed) return false
 
         return when (status.type) {
             TrackingStatus.ErrorType.NOT_SUPPORTED -> false
@@ -148,6 +146,6 @@ object TrackingBannerMapper {
     private const val MAX_APPSEARCH_RETRY_COUNT = 3
 
     private fun isShortcutsError(status: TrackingStatus?): Boolean =
-        status is TrackingStatus.Error &&
-            status.type != TrackingStatus.ErrorType.NOT_SUPPORTED
+        (status is TrackingStatus.Error) &&
+            (status.type != TrackingStatus.ErrorType.NOT_SUPPORTED)
 }
