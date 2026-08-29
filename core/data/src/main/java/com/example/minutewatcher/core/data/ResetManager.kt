@@ -109,7 +109,7 @@ class ResetManager
                     // 1. Skip if we checked this identity recently (e.g. within the last hour)
                     // This check is the primary protection against redundant work from concurrent callers.
                     val lastCheck = lastResetCheck[identity]
-                    if ((lastCheck != null) && (nowElapsed - lastCheck < CHECK_INTERVAL_MS)) {
+                    if ((lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)) {
                         false
                     } else {
                         // Mark as checked immediately to ensure next concurrent call skips.

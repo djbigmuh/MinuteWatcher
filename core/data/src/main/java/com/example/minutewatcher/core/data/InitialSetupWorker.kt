@@ -30,8 +30,7 @@ class InitialSetupWorker
                 // This does not require phone permission and must not be blocked by migration.
                 deps.callTracker.onBoot()
 
-                val migrationResult = checkAndPerformMigrations()
-                if (migrationResult != null) return migrationResult
+                checkAndPerformMigrations()?.let { return it }
 
                 // Perform auto-reset immediately after boot/migration. Skip internal notify as we do it at the end.
                 try {
@@ -49,7 +48,7 @@ class InitialSetupWorker
                 val activeSimsForTraffic = getActiveSimsWithRetry()
                 val defaultDataSubId = deps.permissionManager.getDefaultDataSubscriptionId()
                 activeSimsForTraffic
-                    .filter { it.subscriptionId == defaultDataSubId || it.isDefaultData }
+                    .filter { (it.subscriptionId == defaultDataSubId) || it.isDefaultData }
                     .forEach { info ->
                         deps.trafficTracker.resetBaseline(info.identity.stableId)
                     }
@@ -112,11 +111,11 @@ class InitialSetupWorker
                 AppLogger.d("Migration deferred: permission missing but legacy data exists")
             } else {
                 if (!v1Completed) {
-                    deps.migrationFlagsRepository.setMigrationV1Completed(true)
+                    deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
                     deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
                     AppLogger.d("Migration V1 skipped: no legacy data found")
                 }
-                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
             }
         return null
@@ -124,7 +123,7 @@ class InitialSetupWorker
 
     private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
             val activeSims = getActiveSimsWithRetry()
-            val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
+        val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
 
         val hasLegacyData =
             try {
@@ -139,19 +138,19 @@ class InitialSetupWorker
                     AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
                 } else {
                     if (!v1Completed) {
-                        deps.migrationFlagsRepository.setMigrationV1Completed(true)
+                        deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
                         deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
                         AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
                     }
-                    deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                    deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                     deps.migrationService.markSchemaCurrent()
                 }
             } else {
                 activeSims.forEach { info ->
                     deps.migrationService.migrateLegacyData(info.identity)
                 }
-                deps.migrationFlagsRepository.setMigrationV1Completed(true)
-                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+                deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
                 AppLogger.d("Identity migrations completed in InitialSetupWorker")
             }
@@ -159,8 +158,7 @@ class InitialSetupWorker
         }
 
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
-            val firstAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout()
-            if (firstAttempt != null) return firstAttempt
+            deps.simIdentityRepository.observeActiveSims().firstWithTimeout()?.let { return it }
 
             AppLogger.w("InitialSetupWorker: observeActiveSims timed out, retrying with 15s...")
 

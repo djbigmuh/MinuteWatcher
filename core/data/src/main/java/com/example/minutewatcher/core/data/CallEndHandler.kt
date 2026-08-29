@@ -47,7 +47,7 @@ internal class CallEndHandler
             }
 
             callMutex.withLock {
-                if (subId == -1 && !isCallTrackingEnabled()) {
+                if ((subId == -1) && !isCallTrackingEnabled()) {
                     // If tracking is disabled and subId is unknown (-1), we clear all pending sessions
                     // to ensure no orphaned sessions remain when tracking is turned back on.
                     AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
@@ -219,8 +219,8 @@ internal class CallEndHandler
         return when {
             (savedBootTime > data.currentBootTime) ||
                 (
-                    savedBootTime > 0 &&
-                        data.currentBootTime - savedBootTime > Constants.Calls.MAX_CALL_DURATION_MS
+                    (savedBootTime > 0L) &&
+                        ((data.currentBootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS)
                     ) -> {
                 val message = "Call duration exceeded max limit for subId $subId"
                 AppLogger.w("CallTracker: $message, clearing session")
@@ -257,7 +257,7 @@ internal class CallEndHandler
                 false
             }
 
-            durationSeconds > Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND -> {
+            durationSeconds > (Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) -> {
                 AppLogger.w(
                     "CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId",
                 )
@@ -265,7 +265,7 @@ internal class CallEndHandler
                 false
             }
 
-            data.savedUptimeResult.getOrElse { 0L }.let { it > 0 && data.currentUptime < it } -> {
+            data.savedUptimeResult.getOrElse { 0L }.let { (it > 0L) && (data.currentUptime < it) } -> {
                 AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
                 cleanupCounters(subId)
                 false
@@ -300,7 +300,7 @@ internal class CallEndHandler
         statusFlow: MutableStateFlow<TrackingStatus>,
         cleanupCounters: suspend (Int) -> Unit,
     ) {
-        if (error is CancellationException) throw error
+        (error as? CancellationException)?.let { throw it }
         val message = "Timeout reading session data for subId $subId"
         AppLogger.e(message, error)
         statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message)
@@ -308,7 +308,7 @@ internal class CallEndHandler
     }
 
     private fun calculateDurationMinutes(seconds: Int): Int =
-        (seconds + Constants.Time.SECONDS_IN_MINUTE - 1) / Constants.Time.SECONDS_IN_MINUTE
+        ((seconds + Constants.Time.SECONDS_IN_MINUTE) - 1) / Constants.Time.SECONDS_IN_MINUTE
 
     internal data class CallEndData(
         val startTimeResult: Result<Long>,

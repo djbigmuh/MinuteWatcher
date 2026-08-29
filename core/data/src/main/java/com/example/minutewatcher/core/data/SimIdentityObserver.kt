@@ -78,10 +78,9 @@ internal class SimIdentityObserver
                         .map {
                             fetcher.fetchActiveSimsWithRetry(seed)
                         }.retryWhen { cause, attempt ->
-                            if (cause is CancellationException) throw cause
-
-                            when {
-                                cause is SeedUnavailableException -> {
+                            when (cause) {
+                                is CancellationException -> throw cause
+                                is SeedUnavailableException -> {
                                     AppLogger.w(
                                         "SimIdentityObserver: Seed still unavailable after " +
                                             "fetcher retries, waiting 5s (attempt $attempt)",
@@ -90,22 +89,26 @@ internal class SimIdentityObserver
                                     true
                                 }
 
-                                cause is IOException && attempt < MAX_FETCH_RETRIES -> {
-                                    val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
-                                    AppLogger.w(
-                                        "SimIdentityObserver: Error fetching sims, " +
-                                            "retrying in ${backoff}ms (attempt $attempt)",
-                                        cause,
-                                    )
-                                    delay(backoff.milliseconds)
-                                    true
+                                is IOException -> {
+                                    if (attempt < MAX_FETCH_RETRIES) {
+                                        val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
+                                        AppLogger.w(
+                                            "SimIdentityObserver: Error fetching sims, " +
+                                                "retrying in ${backoff}ms (attempt $attempt)",
+                                            cause,
+                                        )
+                                        delay(backoff.milliseconds)
+                                        true
+                                    } else {
+                                        false
+                                    }
                                 }
 
                                 else -> false
                             }
                         }
                 }.retryWhen { cause, attempt ->
-                    if (cause is CancellationException) throw cause
+                    (cause as? CancellationException)?.let { throw it }
                     if (cause is SecurityException) return@retryWhen false
 
                     if (attempt < 5) {
@@ -121,7 +124,7 @@ internal class SimIdentityObserver
                         false
                     }
                 }.catch { e ->
-                    if (e is CancellationException) throw e
+                    (e as? CancellationException)?.let { throw it }
                     if (e is SecurityException) {
                         AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), emitting empty list")
                     } else {

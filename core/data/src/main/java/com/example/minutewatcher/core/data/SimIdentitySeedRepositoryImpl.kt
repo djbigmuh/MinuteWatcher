@@ -38,7 +38,7 @@ class SimIdentitySeedRepositoryImpl
 
         private val seedMutex = Mutex()
 
-        private val _isEphemeralSeedActive = MutableStateFlow(false)
+    private val _isEphemeralSeedActive = MutableStateFlow(value = false)
         override val isEphemeralSeedActive: StateFlow<Boolean> = _isEphemeralSeedActive.asStateFlow()
 
     // Access is guarded by seedMutex

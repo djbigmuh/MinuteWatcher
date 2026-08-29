@@ -162,8 +162,9 @@ open class CallTracker
                 writeCallDuration = { id, dur, fallback, notif ->
                     settingsHandler.writeCallDuration(id, dur, fallback, notif)
                 },
-                isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
-            )
+            ) {
+                settingsHandler.isCallTrackingEnabled()
+            }
         }
 
     private suspend fun clearSessionsAndRefresh(tag: String) {
