@@ -226,7 +226,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
 
             verify(dataChangeNotifier, times(2)).notifyDataChanged(
                 updateWidget = eq(value = true),
-                force = eq(value = false)
+                force = eq(value = false),
             )
         }
 

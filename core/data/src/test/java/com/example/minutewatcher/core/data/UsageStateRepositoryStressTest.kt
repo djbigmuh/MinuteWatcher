@@ -121,7 +121,7 @@ class UsageStateRepositoryStressTest {
             // Verify notifyRefresh was called, but likely fewer than 100 times due to tryLock
             verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(
                 isManual = eq(value = true),
-                suppressWidgetUpdate = any()
+                suppressWidgetUpdate = any(),
             )
         }
 

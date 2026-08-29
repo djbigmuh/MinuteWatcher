@@ -134,7 +134,7 @@ class InitialSetupWorkerTest {
     fun `doWork skips migration V1 when no permission and no legacy data`() =
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
-            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
 
             Shadows.shadowOf(context as Application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
@@ -142,9 +142,9 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(migrationFlagsRepository).setMigrationV1Completed(true)
+            verify(migrationFlagsRepository).setMigrationV1Completed(completed = true)
             verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(completed = true)
             verify(migrationService).markSchemaCurrent()
         }
 
@@ -152,7 +152,7 @@ class InitialSetupWorkerTest {
     fun `doWork defers migration when no permission but legacy data exists`() =
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
-            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             whenever(migrationService.hasLegacyData()).thenReturn(true)
 
             Shadows.shadowOf(context as Application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
@@ -160,7 +160,7 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(migrationFlagsRepository, never()).setMigrationV1Completed(true)
+            verify(migrationFlagsRepository, never()).setMigrationV1Completed(completed = true)
             verify(migrationService, never()).markSchemaCurrent()
         }
 
@@ -168,7 +168,7 @@ class InitialSetupWorkerTest {
     fun `doWork defers migration when permission granted but no active sims and legacy data exists`() =
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
-            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             whenever(migrationService.hasLegacyData(any())).thenReturn(true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
@@ -177,7 +177,7 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(migrationFlagsRepository, never()).setMigrationV1Completed(true)
+            verify(migrationFlagsRepository, never()).setMigrationV1Completed(completed = true)
             verify(migrationService, never()).markSchemaCurrent()
         }
 
@@ -186,7 +186,8 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
-            val activeSim = ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", true, true)
+            val activeSim =
+                ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
@@ -195,8 +196,8 @@ class InitialSetupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(migrationService).migrateLegacyData(activeSim.identity)
-            verify(migrationFlagsRepository).setMigrationV1Completed(true)
-            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(true)
+            verify(migrationFlagsRepository).setMigrationV1Completed(completed = true)
+            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(completed = true)
             verify(migrationService).markSchemaCurrent()
         }
 

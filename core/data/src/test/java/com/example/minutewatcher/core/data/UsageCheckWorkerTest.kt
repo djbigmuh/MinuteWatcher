@@ -173,7 +173,9 @@ class UsageCheckWorkerTest {
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(value = false))
+            whenever(
+                simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity),
+            ).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
@@ -245,7 +247,9 @@ class UsageCheckWorkerTest {
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 900f, trafficLimitMb = 1024)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(value = false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(value = false))
+            whenever(
+                simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity),
+            ).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
@@ -304,7 +308,9 @@ class UsageCheckWorkerTest {
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(value = false))
+            whenever(
+                simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity),
+            ).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
@@ -421,7 +427,9 @@ class UsageCheckWorkerTest {
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 950f, trafficLimitMb = 1000)))
             whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(value = false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(value = false))
+            whenever(
+                simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity),
+            ).thenReturn(flowOf(value = false))
 
             worker.doWork()
 
@@ -512,7 +520,9 @@ class UsageCheckWorkerTest {
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 90, minutesLimit = 100)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
-            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(value = false))
+            whenever(
+                simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity),
+            ).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 

@@ -546,7 +546,7 @@ class WidgetUpdaterImplTest {
             // We use verify with times(2) because it was called with false once in handleLimitExceeded and once in performSingleUpdate
             verify(renderer, org.mockito.kotlin.times(2)).renderAll(
                 context = eq(context),
-                forceFull = eq(value = false)
+                forceFull = eq(value = false),
             )
             assertTrue("Limit flag should still be set", mockSettings.value.widgetLimitExceeded)
         }

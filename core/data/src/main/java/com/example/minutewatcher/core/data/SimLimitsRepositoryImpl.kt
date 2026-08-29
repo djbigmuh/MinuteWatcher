@@ -101,7 +101,7 @@ class SimLimitsRepositoryImpl
                 AppLogger.w("getAutoReset called with invalid identity: $identity")
                 return kotlinx.coroutines.flow.flowOf(value = false)
             }
-            return get(DataStoreKeys.autoResetKey(identity), false)
+            return get(DataStoreKeys.autoResetKey(identity), defaultValue = false)
         }
 
         /**

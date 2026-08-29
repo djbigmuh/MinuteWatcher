@@ -118,26 +118,27 @@ class ResetManager
                     }
                 }
 
-            if (!shouldCheck) return false
+            var success = false
+            if (shouldCheck) {
+                // 2. Perform the reset check and operation OUTSIDE the global lock.
+                // Operations for individual SIMs are already synchronized in repositories.
+                val usage =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        simUsageRepository.getSimUsage(identity).first()
+                    }
 
-            // 2. Perform the reset check and operation OUTSIDE the global lock.
-            // Operations for individual SIMs are already synchronized in repositories.
-            val usage =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    simUsageRepository.getSimUsage(identity).first()
+                if (usage == null) {
+                    AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+                } else {
+                    val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
+
+                    if (resetPerformed) {
+                        resetIdentities.add(identity)
+                    }
+                    success = true
                 }
-
-            if (usage == null) {
-                AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
-                return false
             }
-
-            val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
-
-            if (resetPerformed) {
-                resetIdentities.add(identity)
-            }
-            return true
+            return success
         }
 
         private suspend fun cleanupStaleCheckTimestamps(

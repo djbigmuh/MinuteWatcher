@@ -90,7 +90,7 @@ class TrafficBaselineManager
             val currentDataSubId =
                 try {
                     permissionManager.getDefaultDataSubscriptionId()
-                } catch (ignored: Exception) {
+                } catch (_: Exception) {
                     -1
                 }
             if (currentDataSubId != -1) {
@@ -101,46 +101,6 @@ class TrafficBaselineManager
                         onSync()
                     }
                 }
-            }
-        }
-
-        @Suppress("ReturnCount")
-        suspend fun handleBaselineRetry(
-            target: TargetInfo,
-            targetIdentity: String,
-            statsResult: StatsResult,
-            status: MutableStateFlow<TrackingStatus>,
-            onSuccess: suspend (Int) -> Unit,
-        ): Boolean {
-            val currentRetryCount = baselineNeedsRetry[targetIdentity] ?: return false
-
-            if (statsResult is StatsResult.Success) {
-                val currentBytes = statsResult.bytes
-                baselineNeedsRetry.remove(targetIdentity)
-                simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to $currentBytes")
-                onSuccess(target.dataSubId)
-                status.value = TrackingStatus.Active
-                return true
-            } else {
-                val nextRetryCount = currentRetryCount + 1
-                if (nextRetryCount >= MAX_BASELINE_RETRIES) {
-                    AppLogger.e("Traffic baseline reset failed for $targetIdentity after $nextRetryCount attempts")
-                    baselineNeedsRetry.remove(targetIdentity)
-                    status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                            "Baseline reset failed for $targetIdentity",
-                        )
-                } else {
-                    AppLogger.w(
-                        "Stats still unavailable for $targetIdentity (attempt $nextRetryCount), will retry later",
-                    )
-                    baselineNeedsRetry[targetIdentity] = nextRetryCount
-                    status.value =
-                        TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Stats unavailable, retry pending")
-                }
-                return true
             }
         }
 
