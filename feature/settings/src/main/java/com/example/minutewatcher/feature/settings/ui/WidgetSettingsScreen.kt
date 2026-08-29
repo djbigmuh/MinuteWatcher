@@ -148,7 +148,7 @@ private fun WidgetSettingsContent(
     onSave: suspend () -> Unit,
     onBack: () -> Unit,
 ) {
-    var showColorPicker by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(value = false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val successMessage = stringResource(id = R.string.settings_saved_toast)
@@ -201,8 +201,9 @@ private fun WidgetSettingsContent(
             state = settings,
             uiState = screenUiState,
             viewModel = viewModel,
-            onShowColorPicker = { showColorPicker = true },
-        )
+        ) {
+            showColorPicker = true
+        }
     }
 }
 

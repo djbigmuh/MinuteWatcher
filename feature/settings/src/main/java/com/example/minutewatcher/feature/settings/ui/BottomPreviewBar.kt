@@ -34,7 +34,7 @@ fun BottomPreviewBar(
     onSave: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val isSavingLocal = remember { mutableStateOf(false) }
+    val isSavingLocal = remember { mutableStateOf(value = false) }
 
     Column(
         modifier =
