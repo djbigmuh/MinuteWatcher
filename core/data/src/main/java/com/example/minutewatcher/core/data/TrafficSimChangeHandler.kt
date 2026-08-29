@@ -43,7 +43,7 @@ class TrafficSimChangeHandler
                 inMemoryLastDataSubId.set(
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                         callSessionRepository.getLastDataSubId().first()
-                    } ?: -1
+                    } ?: -1,
                 )
             }
         }

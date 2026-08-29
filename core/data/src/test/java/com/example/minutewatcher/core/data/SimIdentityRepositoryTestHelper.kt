@@ -24,20 +24,22 @@ object SimIdentityRepositoryTestHelper {
         val cache = SimIdentityCache(timeProvider)
         val fetcher = ActiveSimsFetcher(discovery, persistence)
 
-        val observer = SimIdentityObserver(
-            discovery = discovery,
-            seedRepository = seedRepository,
-            appSettingsRepository = appSettingsRepository,
-            mockSimProvider = mockSimProvider,
-            fetcher = fetcher,
-            scope = scope,
-            cache = cache,
-        )
-        val resolver = SimIdentityResolver(
-            discovery = discovery,
-            persistence = persistence,
-            cache = cache,
-        )
+        val observer =
+            SimIdentityObserver(
+                discovery = discovery,
+                seedRepository = seedRepository,
+                appSettingsRepository = appSettingsRepository,
+                mockSimProvider = mockSimProvider,
+                fetcher = fetcher,
+                scope = scope,
+                cache = cache,
+            )
+        val resolver =
+            SimIdentityResolver(
+                discovery = discovery,
+                persistence = persistence,
+                cache = cache,
+            )
 
         return SimIdentityRepositoryImpl(
             observer = observer,

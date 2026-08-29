@@ -104,8 +104,7 @@ internal class SimIdentityObserver
                                 else -> false
                             }
                         }
-                }
-                .retryWhen { cause, attempt ->
+                }.retryWhen { cause, attempt ->
                     if (cause is CancellationException) throw cause
                     if (cause is SecurityException) return@retryWhen false
 
@@ -121,8 +120,7 @@ internal class SimIdentityObserver
                     } else {
                         false
                     }
-                }
-                .catch { e ->
+                }.catch { e ->
                     if (e is CancellationException) throw e
                     if (e is SecurityException) {
                         AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), emitting empty list")
