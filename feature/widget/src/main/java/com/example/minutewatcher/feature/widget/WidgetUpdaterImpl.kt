@@ -67,11 +67,15 @@ class WidgetUpdaterImpl
             if (existing != null) {
                 AppLogger.d("WidgetUpdater: update already in progress, waiting")
                 return try {
-                    val success = withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        existing.await()
+                    val success =
+                        withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                            existing.await()
+                        }
+                    if (success) {
+                        WidgetUpdateResult.Success(wasCoalesced = true)
+                    } else {
+                        WidgetUpdateResult.Failure(wasCoalesced = true)
                     }
-                    if (success) WidgetUpdateResult.Success(wasCoalesced = true)
-                    else WidgetUpdateResult.Failure(wasCoalesced = true)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
