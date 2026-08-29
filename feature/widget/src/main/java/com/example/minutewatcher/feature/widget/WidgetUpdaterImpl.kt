@@ -127,9 +127,13 @@ class WidgetUpdaterImpl
                         "Proceeding to simplified update with background flag update.",
                 )
                 limitManager.setWidgetLimitExceeded(value = true)
-                executeUpdate {
+                val result = executeUpdate {
                     safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
                 }
+                if (result is WidgetUpdateResult.Failure) {
+                    limitManager.setWidgetLimitExceeded(value = false)
+                }
+                result
             }
 
             settings.widgetLimitExceeded -> WidgetUpdateResult.Failure(isRetryable = false)
@@ -192,13 +196,18 @@ class WidgetUpdaterImpl
             limitManager.setWidgetLimitExceeded(value = true)
         }
 
-        return executeUpdate {
+        val result = executeUpdate {
             val s =
                 retryManager.updateWithRetry {
                     handleUpdateResult(safeUpdateInternal(context, isFullAttempt = false, isProbe = false))
                 }
             if (s) UpdateResult.Success(wasFull = false) else UpdateResult.GenericFailure(isRetryable = false)
         }
+
+        if (result is WidgetUpdateResult.Failure) {
+            limitManager.setWidgetLimitExceeded(value = false)
+        }
+        return result
     }
 
         private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =

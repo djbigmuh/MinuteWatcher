@@ -80,7 +80,6 @@ class SimIdentitySeedRepositoryImpl
                     try {
                         val recovered = dataStore.getOrCreateSeedInternal(generator)
                         _isEphemeralSeedActive.value = false
-                        cachedEphemeralSeed = null
                         AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
                         return@withLock recovered
                     } catch (e: CancellationException) {

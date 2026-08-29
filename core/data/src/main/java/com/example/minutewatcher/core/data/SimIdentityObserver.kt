@@ -104,12 +104,35 @@ internal class SimIdentityObserver
                                 else -> false
                             }
                         }
-                }.catch { e ->
+                }
+                .retryWhen { cause, attempt ->
+                    if (cause is CancellationException) throw cause
+                    if (cause is SecurityException) return@retryWhen false
+
+                    if (attempt < 5) {
+                        val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
+                        AppLogger.w(
+                            "SimIdentityObserver: Retrying physicalActiveSims flow due to error ($attempt/5), " +
+                                "delay ${backoff}ms",
+                            cause,
+                        )
+                        delay(backoff.milliseconds)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .catch { e ->
                     if (e is CancellationException) throw e
-                    AppLogger.e("SimIdentityObserver: Terminal error in physicalActiveSims", e)
+                    if (e is SecurityException) {
+                        AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), emitting empty list")
+                    } else {
+                        AppLogger.e(
+                            "SimIdentityObserver: Terminal error in physicalActiveSims after retries, flow terminated",
+                            e,
+                        )
+                    }
                     emit(emptyList())
-                    // Не пробрасываем — позволяем потоку завершиться штатно.
-                    // Восстановление возможно через подписку заново (Eagerly перезапустит при сбое).
                 }
 
         @OptIn(ExperimentalCoroutinesApi::class)

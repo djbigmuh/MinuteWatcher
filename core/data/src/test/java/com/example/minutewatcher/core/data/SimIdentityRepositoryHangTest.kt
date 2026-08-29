@@ -108,7 +108,7 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds1"),
                     seedRepository = seedRepository,
@@ -154,7 +154,7 @@ class SimIdentityRepositoryHangTest {
                 }
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds2"),
                     seedRepository = hangingSeedRepo,
@@ -204,7 +204,7 @@ class SimIdentityRepositoryHangTest {
                 }
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds3"),
                     seedRepository = hangingSeedRepo,
@@ -232,7 +232,7 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds4"),
                     seedRepository =
@@ -271,7 +271,7 @@ class SimIdentityRepositoryHangTest {
         runTest(testDispatcher) {
             val migrationStarted = AtomicBoolean(false)
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds5"),
                     seedRepository = seedRepository,
@@ -319,7 +319,7 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds6"),
                     seedRepository = seedRepository,
@@ -347,7 +347,7 @@ class SimIdentityRepositoryHangTest {
             whenever(hangingDataStore.data).thenReturn(MutableSharedFlow())
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = hangingDataStore,
                     seedRepository = seedRepository,
@@ -398,7 +398,7 @@ class SimIdentityRepositoryHangTest {
                 }
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds7"),
                     seedRepository = seedRepo,

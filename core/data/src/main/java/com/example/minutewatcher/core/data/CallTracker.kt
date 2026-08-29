@@ -125,6 +125,8 @@ open class CallTracker
 
                 val activeSubIdsSet = activeCalls.toSet()
                 attributionResolver.retainOnlyActiveSubIds(activeSubIdsSet)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException refreshing status", e)
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)

@@ -118,7 +118,7 @@ class SimIdentityRepositorySeedTest {
                 }
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,
@@ -182,7 +182,7 @@ class SimIdentityRepositorySeedTest {
                 }
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,
@@ -246,7 +246,7 @@ class SimIdentityRepositorySeedTest {
                 }
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,

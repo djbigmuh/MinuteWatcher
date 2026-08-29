@@ -87,7 +87,7 @@ class SimIdentitySeedRaceTest {
             }
 
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
@@ -129,7 +129,7 @@ class SimIdentitySeedRaceTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,

@@ -111,7 +111,7 @@ class SimIdentityRepositoryRegistrationTest {
         }
 
     private fun createRepository() =
-        SimIdentityRepositoryImpl(
+        SimIdentityRepositoryTestHelper.createRepository(
             discoveryDeps = discoveryDeps,
             dataStore = dataStore,
             seedRepository = seedRepository,

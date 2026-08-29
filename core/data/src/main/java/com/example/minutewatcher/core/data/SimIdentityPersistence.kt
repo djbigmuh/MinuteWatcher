@@ -13,11 +13,14 @@ import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,7 +52,7 @@ class SimIdentityPersistence
             if (validIdentities.isEmpty()) return
 
             try {
-                kotlinx.coroutines.withTimeoutOrNull(
+                withTimeout(
                     (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
                 ) {
                     saveMutex.withLock {
@@ -70,9 +73,10 @@ class SimIdentityPersistence
                             updatePreferences(toActuallyUpdate, prefs)
                         }
                     }
-                } ?: run {
-                    AppLogger.e("SimIdentityPersistence: Save operation timed out (mutex or IO)")
                 }
+            } catch (e: TimeoutCancellationException) {
+                AppLogger.e("SimIdentityPersistence: Save operation timed out (mutex or IO)")
+                throw IOException("Save operation timed out", e)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

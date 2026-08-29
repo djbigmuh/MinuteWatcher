@@ -18,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,10 +69,14 @@ class IdentityMigrationService
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                // Re-throw IOException to allow caller to retry upon transient failures.
+                throw e
             } catch (e: Exception) {
                 // Migration logic is protected against corrupted DataStore state.
-                // Errors result in skipping migration to maintain app stability.
-                AppLogger.e("IdentityMigrationService: Failed to check for legacy data", e)
+                // Critical errors resulting in permanent data failure should be logged and skipped
+                // to avoid blocking app initialization indefinitely.
+                AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
                 false
             }
 

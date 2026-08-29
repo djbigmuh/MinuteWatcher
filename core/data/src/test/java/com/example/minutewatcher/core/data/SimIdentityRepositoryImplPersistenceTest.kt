@@ -117,7 +117,7 @@ class SimIdentityRepositoryImplPersistenceTest {
                 }
 
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore =
                         mock<DataStore<Preferences>> {
@@ -198,7 +198,7 @@ class SimIdentityRepositoryImplPersistenceTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
 
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore =
                         mock<DataStore<Preferences>> {

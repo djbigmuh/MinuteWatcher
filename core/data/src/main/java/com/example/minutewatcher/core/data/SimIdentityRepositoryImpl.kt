@@ -1,16 +1,9 @@
 package com.example.minutewatcher.core.data
 
-import androidx.annotation.VisibleForTesting
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
-import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
@@ -42,35 +35,6 @@ class SimIdentityRepositoryImpl
         private val persistence: SimIdentityPersistence,
     ) : SimIdentityRepository {
         private val activeSimsMutex = Mutex()
-
-        @VisibleForTesting
-        constructor(
-            discoveryDeps: SimDiscoveryDependencies,
-            dataStore: DataStore<Preferences>,
-            seedRepository: SimIdentitySeedRepository,
-            appSettingsRepository: AppSettingsRepository,
-            migrationService: IdentityMigrationService,
-            mockSimProvider: MockSimProvider,
-            timeProvider: TimeProvider,
-            scope: CoroutineScope,
-        ) : this(
-            createComponents(
-                discoveryDeps,
-                dataStore,
-                seedRepository,
-                appSettingsRepository,
-                migrationService,
-                mockSimProvider,
-                timeProvider,
-                scope,
-            ),
-        )
-
-        private constructor(components: SimIdentityComponents) : this(
-            components.observer,
-            components.resolver,
-            components.persistence,
-        )
 
         override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
@@ -111,49 +75,4 @@ class SimIdentityRepositoryImpl
             identity: String,
             code: String,
         ) = persistence.setSimCode(identity, code)
-
-        private data class SimIdentityComponents(
-            val observer: SimIdentityObserver,
-            val resolver: SimIdentityResolver,
-            val persistence: SimIdentityPersistence,
-        )
-
-        companion object {
-            @Suppress("LongParameterList")
-            private fun createComponents(
-                discoveryDeps: SimDiscoveryDependencies,
-                dataStore: DataStore<Preferences>,
-                seedRepository: SimIdentitySeedRepository,
-                appSettingsRepository: AppSettingsRepository,
-                migrationService: IdentityMigrationService,
-                mockSimProvider: MockSimProvider,
-                timeProvider: TimeProvider,
-                scope: CoroutineScope,
-            ): SimIdentityComponents {
-                val discovery = SimIdentityDiscovery(discoveryDeps)
-                val persistence = SimIdentityPersistence(dataStore, migrationService)
-                val cache = SimIdentityCache(timeProvider)
-                val fetcher = ActiveSimsFetcher(discovery, persistence)
-
-                return SimIdentityComponents(
-                    observer =
-                        SimIdentityObserver(
-                            discovery = discovery,
-                            seedRepository = seedRepository,
-                            appSettingsRepository = appSettingsRepository,
-                            mockSimProvider = mockSimProvider,
-                            fetcher = fetcher,
-                            scope = scope,
-                            cache = cache,
-                        ),
-                    resolver =
-                        SimIdentityResolver(
-                            discovery = discovery,
-                            persistence = persistence,
-                            cache = cache,
-                        ),
-                    persistence = persistence,
-                )
-            }
-        }
     }

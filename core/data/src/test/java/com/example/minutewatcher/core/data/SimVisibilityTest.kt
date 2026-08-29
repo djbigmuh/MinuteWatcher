@@ -85,7 +85,7 @@ class SimVisibilityTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps,
                     dataStore,
                     seedRepository,
@@ -106,7 +106,7 @@ class SimVisibilityTest {
             // Initially no permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,

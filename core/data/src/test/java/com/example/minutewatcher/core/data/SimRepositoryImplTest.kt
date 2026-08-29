@@ -108,7 +108,7 @@ class SimRepositoryImplTest {
     fun testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage() =
         runTest {
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
@@ -143,7 +143,7 @@ class SimRepositoryImplTest {
     fun testGetIdentity_DoesNotTriggerEditWhenUnchanged() =
         runTest {
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
@@ -240,7 +240,7 @@ class SimRepositoryImplTest {
     fun testGetSimIdentity_Throws_WhenPermissionsMissing() =
         runTest {
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,
@@ -267,7 +267,7 @@ class SimRepositoryImplTest {
                 .thenThrow(RuntimeException("Test disk full"))
 
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = mockDataStore,
                     seedRepository = seedRepository,
@@ -297,7 +297,7 @@ class SimRepositoryImplTest {
     fun `getSimIdentity with invalid slot throws IllegalArgumentException`() =
         runTest {
             val identityRepo =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepository,

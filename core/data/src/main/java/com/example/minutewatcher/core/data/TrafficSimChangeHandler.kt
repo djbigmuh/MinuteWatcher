@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -31,18 +33,19 @@ class TrafficSimChangeHandler
         private val baselineManager: TrafficBaselineManager,
     ) {
         private val simChangeMutex = Mutex()
-        private var inMemoryLastDataSubId: Int = -1
-    private var lastDataSubIdLoaded: Boolean = false
+    private val inMemoryLastDataSubId = AtomicInteger(-1)
+    private val lastDataSubIdLoaded = AtomicBoolean(false)
 
         suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 
         suspend fun ensureInMemoryLastDataSubId() {
-            if (lastDataSubIdLoaded) return
-            inMemoryLastDataSubId =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    callSessionRepository.getLastDataSubId().first()
-                } ?: -1
-            lastDataSubIdLoaded = true
+            if (lastDataSubIdLoaded.compareAndSet(false, true)) {
+                inMemoryLastDataSubId.set(
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        callSessionRepository.getLastDataSubId().first()
+                    } ?: -1
+                )
+            }
         }
 
         suspend fun handleSimChangeIfNeeded(
@@ -50,7 +53,7 @@ class TrafficSimChangeHandler
             status: MutableStateFlow<TrackingStatus>,
         ): String? {
             ensureInMemoryLastDataSubId()
-            val savedLastDataSubId = inMemoryLastDataSubId
+            val savedLastDataSubId = inMemoryLastDataSubId.get()
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
             val isSimChanged =
@@ -148,9 +151,9 @@ class TrafficSimChangeHandler
         }
 
         suspend fun updateLastDataSubId(dataSubId: Int) {
-            lastDataSubIdLoaded = true
-            if ((dataSubId == -1) || (dataSubId == inMemoryLastDataSubId)) return
-            inMemoryLastDataSubId = dataSubId
+            lastDataSubIdLoaded.set(true)
+            if ((dataSubId == -1) || (dataSubId == inMemoryLastDataSubId.get())) return
+            inMemoryLastDataSubId.set(dataSubId)
             try {
                 callSessionRepository.setLastDataSubId(dataSubId)
             } catch (e: CancellationException) {

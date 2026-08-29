@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import java.io.IOException
 
 @HiltWorker
 class InitialSetupWorker
@@ -29,14 +30,15 @@ class InitialSetupWorker
                 // This does not require phone permission and must not be blocked by migration.
                 deps.callTracker.onBoot()
 
-                checkAndPerformMigrations()
+                val migrationResult = checkAndPerformMigrations()
+                if (migrationResult != null) return migrationResult
 
                 // Perform auto-reset immediately after boot/migration. Skip internal notify as we do it at the end.
                 try {
                     deps.autoResetUseCase.performAutoReset(shouldNotify = false)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: java.io.IOException) {
+                } catch (e: IOException) {
                     AppLogger.w("InitialSetupWorker: Auto-reset failed with IO error, retrying. ${e.message}")
                     return Result.retry()
                 } catch (e: Exception) {
@@ -66,7 +68,7 @@ class InitialSetupWorker
                 return Result.success()
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: java.io.IOException) {
+            } catch (e: IOException) {
                 AppLogger.w("InitialSetupWorker: Network or storage error, retrying. ${e.message}")
                 return Result.retry()
             } catch (e: SecurityException) {
@@ -78,27 +80,35 @@ class InitialSetupWorker
             }
         }
 
-        private suspend fun checkAndPerformMigrations() {
+    private suspend fun checkAndPerformMigrations(): Result? {
             val migrationV1Completed =
                 deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
-                    ?: throw java.io.IOException("DataStore timeout reading migrationV1 flag")
+                    ?: throw IOException("DataStore timeout reading migrationV1 flag")
             val migrationStabilityCompleted =
                 deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
-                    ?: throw java.io.IOException("DataStore timeout reading migrationStability flag")
+                    ?: throw IOException("DataStore timeout reading migrationStability flag")
 
-            if (migrationV1Completed && migrationStabilityCompleted) return
+        if (migrationV1Completed && migrationStabilityCompleted) return null
 
             val hasPermission = deps.permissionManager.hasPhoneStatePermission()
 
-            if (!hasPermission) {
+        return if (!hasPermission) {
                 handleMigrationWithoutPermission(migrationV1Completed)
             } else {
                 handleMigrationWithPermission(migrationV1Completed)
             }
         }
 
-        private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean) {
-            if (deps.migrationService.hasLegacyData()) {
+    private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
+        val hasLegacyData =
+            try {
+                deps.migrationService.hasLegacyData()
+            } catch (e: IOException) {
+                AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
+                return Result.retry()
+            }
+
+        if (hasLegacyData) {
                 AppLogger.d("Migration deferred: permission missing but legacy data exists")
             } else {
                 if (!v1Completed) {
@@ -109,14 +119,23 @@ class InitialSetupWorker
                 deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
                 deps.migrationService.markSchemaCurrent()
             }
+        return null
         }
 
-        private suspend fun handleMigrationWithPermission(v1Completed: Boolean) {
+    private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
             val activeSims = getActiveSimsWithRetry()
             val activeIdentities = activeSims.map { it.identity.stableId }.toSet()
 
+        val hasLegacyData =
+            try {
+                deps.migrationService.hasLegacyData(activeIdentities)
+            } catch (e: IOException) {
+                AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
+                return Result.retry()
+            }
+
             if (activeSims.isEmpty()) {
-                if (deps.migrationService.hasLegacyData(activeIdentities)) {
+                if (hasLegacyData) {
                     AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
                 } else {
                     if (!v1Completed) {
@@ -136,6 +155,7 @@ class InitialSetupWorker
                 deps.migrationService.markSchemaCurrent()
                 AppLogger.d("Identity migrations completed in InitialSetupWorker")
             }
+        return null
         }
 
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
@@ -145,6 +165,6 @@ class InitialSetupWorker
             AppLogger.w("InitialSetupWorker: observeActiveSims timed out, retrying with 15s...")
 
             val secondAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout(15000L)
-            return secondAttempt ?: throw java.io.IOException("Timeout observing active SIMs")
+            return secondAttempt ?: throw IOException("Timeout observing active SIMs")
         }
     }

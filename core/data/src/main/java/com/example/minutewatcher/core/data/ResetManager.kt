@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,14 +61,14 @@ class ResetManager
 
             val activeSims =
                 simIdentityRepository.observeActiveSims().firstWithTimeout()
-                    ?: throw java.io.IOException("Timeout observing active SIMs during auto-reset check")
+                    ?: throw IOException("Timeout observing active SIMs during auto-reset check")
 
             if (activeSims.isEmpty()) {
                 AppLogger.w("ResetManager: No active SIMs detected during auto-reset check.")
             }
 
             val resetIdentities = mutableSetOf<String>()
-            var ioException: java.io.IOException? = null
+            var ioException: IOException? = null
             var successCount = 0
 
             for (simInfo in activeSims) {
@@ -77,7 +78,7 @@ class ResetManager
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: java.io.IOException) {
+                } catch (e: IOException) {
                     AppLogger.e("ResetManager: reset failed for SIM ${simInfo.identity.stableId}, continuing", e)
                     ioException = e
                 } catch (e: Exception) {
@@ -102,31 +103,36 @@ class ResetManager
             resetIdentities: MutableSet<String>,
         ): Boolean {
             val identity = simInfo.identity.stableId
-            val resetPerformed =
+
+            val shouldCheck =
                 resetMutex.withLock {
                     // 1. Skip if we checked this identity recently (e.g. within the last hour)
                     // This check is the primary protection against redundant work from concurrent callers.
                     val lastCheck = lastResetCheck[identity]
                     if ((lastCheck != null) && (nowElapsed - lastCheck < CHECK_INTERVAL_MS)) {
-                        return@withLock false
+                        false
+                    } else {
+                        // Mark as checked immediately to ensure next concurrent call skips.
+                        lastResetCheck[identity] = nowElapsed
+                        true
                     }
-
-                    // 2. Perform the reset check and operation
-                    val usage =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            simUsageRepository.getSimUsage(identity).first()
-                        }
-
-                    if (usage == null) {
-                        AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
-                        return@withLock false
-                    }
-
-                    // Mark as checked immediately before proceeding to ensure next concurrent call skips.
-                    lastResetCheck[identity] = nowElapsed
-
-                    checkAndPerformResetForSimInternal(simInfo, now, usage)
                 }
+
+            if (!shouldCheck) return false
+
+            // 2. Perform the reset check and operation OUTSIDE the global lock.
+            // Operations for individual SIMs are already synchronized in repositories.
+            val usage =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    simUsageRepository.getSimUsage(identity).first()
+                }
+
+            if (usage == null) {
+                AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+                return false
+            }
+
+            val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
 
             if (resetPerformed) {
                 resetIdentities.add(identity)
@@ -144,7 +150,7 @@ class ResetManager
         }
 
         private fun handleAutoResetResult(
-            ioException: java.io.IOException?,
+            ioException: IOException?,
             successCount: Int,
             totalActiveSims: Int,
         ) {

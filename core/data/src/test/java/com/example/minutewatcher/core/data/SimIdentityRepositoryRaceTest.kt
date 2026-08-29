@@ -162,7 +162,7 @@ class SimIdentityRepositoryRaceTest {
                 override suspend fun getOrCreateSeed(generator: () -> String): String = "gen"
             }
 
-        return SimIdentityRepositoryImpl(
+        return SimIdentityRepositoryTestHelper.createRepository(
             discoveryDeps = discoveryDeps,
             dataStore = testDataStore,
             seedRepository = seedRepo,
@@ -224,7 +224,7 @@ class SimIdentityRepositoryRaceTest {
                     permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) },
                 )
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = localDiscoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,
@@ -288,7 +288,7 @@ class SimIdentityRepositoryRaceTest {
                     permissionStateNotifier = mock { on { changes } doReturn flowOf(Unit) },
                 )
             val repository =
-                SimIdentityRepositoryImpl(
+                SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = localDiscoveryDeps,
                     dataStore = dataStore,
                     seedRepository = seedRepo,
