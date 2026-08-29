@@ -155,7 +155,7 @@ class ResetManager
             totalActiveSims: Int,
         ) {
             if (ioException != null) {
-                if (successCount == 0 && totalActiveSims > 0) {
+                if ((successCount == 0) && (totalActiveSims > 0)) {
                     throw ioException
                 } else {
                     AppLogger.w(

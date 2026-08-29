@@ -45,7 +45,7 @@ open class DataStoreRetryHelper
                         withTimeoutOrNull(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS.milliseconds) {
                             reader().first()
                         }
-                    if (result != null) return Result.success(result)
+                    result?.let { return Result.success(it) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

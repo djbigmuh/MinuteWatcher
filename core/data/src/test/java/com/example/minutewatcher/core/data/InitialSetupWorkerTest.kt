@@ -59,7 +59,7 @@ class InitialSetupWorkerTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext<Application>()
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+        whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
@@ -119,7 +119,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork returns success when migration already completed`() =
         runTest {
-            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(true))
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(true))
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 

@@ -116,8 +116,10 @@ internal class CallStartHandler
                 val savedBootTime = data.bootTimeResult.getOrElse { 0L }
                 val isStale =
                     (savedBootTime > data.bootTime) ||
-                        ((savedBootTime > 0) &&
-                            ((data.bootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS))
+                        (
+                            (savedBootTime > 0) &&
+                                ((data.bootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS)
+                            )
 
                 if (!isStale) {
                     AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
@@ -147,7 +149,7 @@ internal class CallStartHandler
             statusFlow: MutableStateFlow<TrackingStatus>,
             cleanupCounters: suspend (Int) -> Unit,
         ) {
-            if (error is CancellationException) throw error
+            (error as? CancellationException)?.let { throw it }
             val message = "Timeout reading session data for subId $targetSubId"
             AppLogger.e(message, error)
             statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message)

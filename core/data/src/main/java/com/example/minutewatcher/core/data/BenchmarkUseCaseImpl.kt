@@ -8,6 +8,8 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
+import kotlinx.coroutines.CancellationException
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -73,7 +75,7 @@ class BenchmarkUseCaseImpl
             }
 
             // Prevent background migrations during benchmarks
-            migrationFlagsRepository.setMigrationV1Completed(true)
-            migrationFlagsRepository.setMigrationIdentityStabilityCompleted(true)
+            migrationFlagsRepository.setMigrationV1Completed(completed = true)
+            migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
         }
     }

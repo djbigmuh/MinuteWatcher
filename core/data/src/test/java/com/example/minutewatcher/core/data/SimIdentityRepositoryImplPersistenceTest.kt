@@ -63,7 +63,7 @@ class SimIdentityRepositoryImplPersistenceTest {
             val realDataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                    produceFile = { tmpFolder.newFile("test_ds.preferences_pb") },
+                    produceFile = { tmpFolder.newFile("test_ds.preferences_pb") }
                 )
             val countingDataStore = CountingDataStore(realDataStore)
             val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
@@ -144,7 +144,7 @@ class SimIdentityRepositoryImplPersistenceTest {
             job.cancel()
 
             // Check for duplicates
-            for (i in 0 until results.size - 1) {
+            for (i in 0 until (results.size - 1)) {
                 val areEqual = results[i] == results[i + 1]
                 assert(!areEqual) { "Duplicate emission at index $i: ${results[i]}" }
             }
