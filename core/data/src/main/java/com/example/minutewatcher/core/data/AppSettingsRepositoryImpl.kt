@@ -51,7 +51,7 @@ class AppSettingsRepositoryImpl
             dataStore.data
                 .map { prefs -> prefs.toAppSettings() }
                 .retryWhen { cause, attempt ->
-                    if (cause is IOException && attempt < 3) {
+                    if ((cause is IOException) && (attempt < 3)) {
                         AppLogger.w("DataStore error in appSettingsState, retrying ($attempt)...")
                         delay(1000.milliseconds)
                         true

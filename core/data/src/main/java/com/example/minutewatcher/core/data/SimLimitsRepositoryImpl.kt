@@ -99,7 +99,7 @@ class SimLimitsRepositoryImpl
         override fun getAutoReset(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getAutoReset called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(false)
+                return kotlinx.coroutines.flow.flowOf(value = false)
             }
             return get(DataStoreKeys.autoResetKey(identity), false)
         }

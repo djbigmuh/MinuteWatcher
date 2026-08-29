@@ -86,10 +86,12 @@ class SimIdentityPersistence
 
         private fun filterValidIdentities(identities: List<SimIdentity>): List<SimIdentity> =
             identities
+                .asSequence()
                 .filter {
                     (it.source != IdentitySource.SLOT_FALLBACK) &&
                         (!SimConstants.isInvalid(it.stableId))
                 }.distinctBy { it.stableId }
+                .toList()
 
         private fun applyOptimizationAndFilterUpdates(
             identities: List<SimIdentity>,

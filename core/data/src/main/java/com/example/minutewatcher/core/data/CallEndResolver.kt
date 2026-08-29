@@ -129,21 +129,20 @@ internal class CallEndResolver(
         return when {
             activeSubIds.size == 1 -> activeSubIds.first()
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                activeSubIds
-                    .asSequence()
-                    .filter { id ->
-                        if (ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.READ_PHONE_STATE,
-                            ) == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
-                            state == TelephonyManager.CALL_STATE_IDLE
-                        } else {
-                            false
-                        }
-                    }.singleOrNull()
+                activeSubIds.singleOrNull { id ->
+                    if (ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.READ_PHONE_STATE,
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
+                        state == TelephonyManager.CALL_STATE_IDLE
+                    } else {
+                        false
+                    }
+                }
             }
+
             else -> null
         }
     }

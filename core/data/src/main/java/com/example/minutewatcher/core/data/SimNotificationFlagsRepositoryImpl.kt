@@ -37,9 +37,9 @@ class SimNotificationFlagsRepositoryImpl
         override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedLowMinutes called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(false)
+                return kotlinx.coroutines.flow.flowOf(value = false)
             }
-            return getData(DataStoreKeys.notifiedLowMinutesKey(identity), false)
+            return getData(DataStoreKeys.notifiedLowMinutesKey(identity), defaultValue = false)
         }
 
         /**
@@ -67,9 +67,9 @@ class SimNotificationFlagsRepositoryImpl
         override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedLowTraffic called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(false)
+                return kotlinx.coroutines.flow.flowOf(value = false)
             }
-            return getData(DataStoreKeys.notifiedLowTrafficKey(identity), false)
+            return getData(DataStoreKeys.notifiedLowTrafficKey(identity), defaultValue = false)
         }
 
         /**
@@ -97,9 +97,9 @@ class SimNotificationFlagsRepositoryImpl
         override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedExhaustedMinutes called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(false)
+                return kotlinx.coroutines.flow.flowOf(value = false)
             }
-            return getData(DataStoreKeys.notifiedExhaustedMinutesKey(identity), false)
+            return getData(DataStoreKeys.notifiedExhaustedMinutesKey(identity), defaultValue = false)
         }
 
         /**
@@ -127,9 +127,9 @@ class SimNotificationFlagsRepositoryImpl
         override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getNotifiedExhaustedTraffic called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(false)
+                return kotlinx.coroutines.flow.flowOf(value = false)
             }
-            return getData(DataStoreKeys.notifiedExhaustedTrafficKey(identity), false)
+            return getData(DataStoreKeys.notifiedExhaustedTrafficKey(identity), defaultValue = false)
         }
 
         /**

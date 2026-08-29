@@ -32,7 +32,6 @@ class DataRefreshNotifierImpl
          * @param isManual True if the refresh was triggered by the user.
          * @param suppressWidgetUpdate True if widget update should be skipped.
          * Safe to call from any coroutine context.
-         * @throws CancellationException if emission is cancelled.
          */
         override suspend fun notifyRefresh(
             isManual: Boolean,

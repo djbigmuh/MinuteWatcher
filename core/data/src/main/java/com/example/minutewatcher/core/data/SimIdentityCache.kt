@@ -29,7 +29,7 @@ class SimIdentityCache
             manualResolutionCache.compute(slot) { _, value ->
                 if (value == null) return@compute null
                 val (identity, timestamp) = value
-                if (now - timestamp < MANUAL_RESOLUTION_CACHE_TTL_MS) {
+                if ((now - timestamp) < MANUAL_RESOLUTION_CACHE_TTL_MS) {
                     result = identity
                     value // Keep entry
                 } else {

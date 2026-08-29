@@ -158,7 +158,10 @@ class InitialSetupWorker
         }
 
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
-            deps.simIdentityRepository.observeActiveSims().firstWithTimeout()?.let { return it }
+            deps.simIdentityRepository
+                .observeActiveSims()
+                .firstWithTimeout()
+                ?.let { return it }
 
             AppLogger.w("InitialSetupWorker: observeActiveSims timed out, retrying with 15s...")
 

@@ -172,7 +172,7 @@ class CallSessionRepositoryImpl
         override suspend fun getActiveCallSubIds(): List<Int> {
             val prefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: return emptyList()
             return prefs.asMap().entries.mapNotNull { (key, value) ->
-                if (key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX) && (value as? Long ?: 0L) > 0L) {
+                if ((key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX)) && (((value as? Long) ?: 0L) > 0L)) {
                     key.name.removePrefix(DataStoreKeys.CALL_START_TIME_PREFIX).toIntOrNull()
                 } else {
                     null

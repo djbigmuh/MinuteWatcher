@@ -58,7 +58,7 @@ class WorkScheduler
             val constraints =
                 Constraints
                     .Builder()
-                    .setRequiresBatteryNotLow(true)
+                    .setRequiresBatteryNotLow(requiresBatteryNotLow = true)
                     .build()
 
             val workRequest =

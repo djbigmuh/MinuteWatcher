@@ -22,8 +22,9 @@ internal class CallTrackingSettingsHandler
                 retryHelper
                     .readWithRetry(
                         label = "isCallTrackingEnabled",
-                        reader = { appSettingsRepository.getAppSettings() },
-                    ).getOrThrow()
+                    ) {
+                        appSettingsRepository.getAppSettings()
+                    }.getOrThrow()
             return settings.callTrackingEnabled
         }
 

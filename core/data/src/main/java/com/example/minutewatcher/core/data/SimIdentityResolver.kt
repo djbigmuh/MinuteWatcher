@@ -73,10 +73,7 @@ internal class SimIdentityResolver
                         cache.removeManual(slot)
                         return@withLock it.identity
                     }
-                    val currentCached = cache.getManual(slot)
-                    if (currentCached != null) {
-                        return@withLock currentCached
-                    }
+                    cache.getManual(slot)?.let { return@withLock it }
 
                     cache.putManual(slot, identity)
                     identity

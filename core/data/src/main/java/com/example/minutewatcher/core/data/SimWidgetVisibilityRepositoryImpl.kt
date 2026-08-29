@@ -68,18 +68,17 @@ class SimWidgetVisibilityRepositoryImpl
                 identities
                     .asSequence()
                     .filter { !it.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX) }
-                    .map { identity ->
-                        identity to
-                            SimSettingsState(
-                                showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
-                                showIcon = prefs[DataStoreKeys.showSimIconKey(identity)] ?: true,
-                                showName = prefs[DataStoreKeys.showSimNameKey(identity)] ?: true,
-                                showMinutes = prefs[DataStoreKeys.showMinutesKey(identity)] ?: true,
-                                showMinutesLimit = prefs[DataStoreKeys.showMinutesLimitKey(identity)] ?: false,
-                                showTraffic = prefs[DataStoreKeys.showTrafficKey(identity)] ?: true,
-                                showTrafficLimit = prefs[DataStoreKeys.showTrafficLimitKey(identity)] ?: false,
-                            )
-                    }.toMap()
+                    .associateWith { identity ->
+                        SimSettingsState(
+                            showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
+                            showIcon = prefs[DataStoreKeys.showSimIconKey(identity)] ?: true,
+                            showName = prefs[DataStoreKeys.showSimNameKey(identity)] ?: true,
+                            showMinutes = prefs[DataStoreKeys.showMinutesKey(identity)] ?: true,
+                            showMinutesLimit = prefs[DataStoreKeys.showMinutesLimitKey(identity)] ?: false,
+                            showTraffic = prefs[DataStoreKeys.showTrafficKey(identity)] ?: true,
+                            showTrafficLimit = prefs[DataStoreKeys.showTrafficLimitKey(identity)] ?: false,
+                        )
+                    }
             }
 
         /**

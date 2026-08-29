@@ -38,7 +38,7 @@ class SimUsageResetLogic
                 val remainingMb =
                     maxOf(
                         0.0,
-                        (trafficLimitMb.toDouble() + trafficAdjGb * Constants.MB_PER_GB) - trafficUsedMb,
+                        ((trafficLimitMb.toDouble() + (trafficAdjGb * Constants.MB_PER_GB)) - trafficUsedMb),
                     )
                 val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
 

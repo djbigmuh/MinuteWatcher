@@ -63,7 +63,11 @@ class UsageStateRepositoryImpl
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                 .distinctUntilChanged()
                 .flatMapLatest { sims ->
-                    val activeSlots = sims.map { it.slotIndex }.toSet()
+                    val activeSlots =
+                        sims
+                            .asSequence()
+                            .map { it.slotIndex }
+                            .toSet()
                     SimCardMapper.cleanupSlots(activeSlots)
 
                     if (sims.isEmpty()) {
@@ -107,10 +111,11 @@ class UsageStateRepositoryImpl
             observeSimUsages()
                 .map { usages ->
                     usages
+                        .asSequence()
                         .filter { it.slotIndex in Constants.SimConstants.SUPPORTED_SLOT_INDICES }
                         .map { usage ->
                             SimCardMapper.map(context, usage.slotIndex, usage)
-                        }
+                        }.toList()
                 }
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =
@@ -233,19 +238,20 @@ class UsageStateRepositoryImpl
                         true
                     } else {
                         if (lastNotifyTimestamp < startTimestamp) {
-                            try {
-                                deps.dataRefreshNotifier.notifyRefresh(isManual = true)
-                                lastNotifyTimestamp = startTimestamp
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.w(
-                                    "UsageStateRepository: notifyRefresh failed, continuing with snapshot wait",
-                                    e,
-                                )
-                                // We still set it to avoid redundant retries for the same state
-                                lastNotifyTimestamp = startTimestamp
-                            }
+                            lastNotifyTimestamp =
+                                try {
+                                    deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+                                    startTimestamp
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.w(
+                                        "UsageStateRepository: notifyRefresh failed, continuing with snapshot wait",
+                                        e,
+                                    )
+                                    // We still set it to avoid redundant retries for the same state
+                                    startTimestamp
+                                }
                         }
                         false
                     }

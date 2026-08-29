@@ -74,13 +74,11 @@ class WidgetSettingsRepository
                 }
 
                 val simStates = loadSimStatesInternal(activeSims)
-                if (simStates == null) {
-                    return@coroutineScope getFallbackWidgetSettings(
+                    ?: return@coroutineScope getFallbackWidgetSettings(
                         settings,
                         settingsLoadFailed = false,
                         simListLoadFailed = true,
                     )
-                }
 
                 WidgetSettingsState(
                     layoutMode = settings.widgetLayoutMode,

@@ -34,7 +34,8 @@ class MigrationFlagsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun isMigrationV1Completed(): Flow<Boolean> = getData(DataStoreKeys.MIGRATION_V1_COMPLETED, false)
+        override fun isMigrationV1Completed(): Flow<Boolean> =
+            getData(DataStoreKeys.MIGRATION_V1_COMPLETED, defaultValue = false)
 
         /**
          * Updates the V1 migration completion status.
@@ -52,7 +53,7 @@ class MigrationFlagsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun isMigrationIdentityStabilityCompleted(): Flow<Boolean> =
-            getData(DataStoreKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, false)
+            getData(DataStoreKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED, defaultValue = false)
 
         /**
          * Updates the identity stability migration completion status.

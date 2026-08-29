@@ -215,8 +215,10 @@ class IdentityMigrationService
                             prefs
                                 .asMap()
                                 .keys
+                                .asSequence()
                                 .filter { it.name.startsWith("subscription_id_icc_") }
                                 .filter { prefs[it] == subId }
+                                .toList()
                         keysToRemove.forEach { prefs.remove(it) }
                     }
                 }
@@ -261,9 +263,11 @@ class IdentityMigrationService
                         simPrefs
                             .asMap()
                             .keys
+                            .asSequence()
                             .filter { it.name.startsWith("subscription_id_icc_") }
                             .filter { simPrefs[it] == subId }
                             .map { it.name.removePrefix("subscription_id_") }
+                            .toList()
 
                     iccIdentities.forEach { suffixes.add("_$it") }
                 }
@@ -289,8 +293,7 @@ class IdentityMigrationService
                     val baseName = oldKey.name.removeSuffix(legacySuffix)
                     val newKeyName = baseName + newSuffix
 
-                    val result = prefs.migrateTypedKey(oldKey, newKeyName, storeName)
-                    when (result) {
+                    when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
                         MigrationResult.SUCCESS -> {
                             migratedCount++
                             prefs.remove(oldKey)
@@ -306,13 +309,13 @@ class IdentityMigrationService
                     }
                 }
             }
-            if (migratedCount > 0 || conflictCount > 0) {
+            if ((migratedCount > 0) || (conflictCount > 0)) {
                 AppLogger.d(
                     "Migrated legacy data ($legacySuffix) from $storeName for slot $slot " +
                         "to identity $identity: $migratedCount keys, $conflictCount conflicts",
                 )
             }
-            return migratedCount > 0 || conflictCount > 0
+            return (migratedCount > 0) || (conflictCount > 0)
         }
 
         private enum class MigrationResult {
