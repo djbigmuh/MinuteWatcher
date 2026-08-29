@@ -45,6 +45,7 @@ open class CallTracker
         private val permissionStateNotifier: PermissionStateNotifier,
     ) : TrackingStatusProvider {
     override val key: String = "calls"
+
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
@@ -54,9 +55,9 @@ open class CallTracker
                 launch {
                     refreshStatus(force = true)
                 }
+                }
             }
         }
-    }
 
         private val callMutex = Mutex()
         private val callEndResolver =
@@ -183,7 +184,7 @@ open class CallTracker
             if (operationCompleted) {
                 refreshStatus(force = true)
             }
-        }
+            }
     }
 
     fun onBoot() {
@@ -195,16 +196,16 @@ open class CallTracker
             } catch (e: Exception) {
                 AppLogger.e("CallTracker: boot cleanup failed", e)
             }
+            }
         }
-    }
 
     override suspend fun recover() {
-        try {
-            clearSessionsAndRefresh("recovery")
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("CallTracker: recovery failed", e)
+            try {
+                clearSessionsAndRefresh("recovery")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("CallTracker: recovery failed", e)
+            }
         }
     }
-}
