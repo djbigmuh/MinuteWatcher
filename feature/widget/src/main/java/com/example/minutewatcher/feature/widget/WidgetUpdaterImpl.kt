@@ -65,23 +65,7 @@ class WidgetUpdaterImpl
         while (!activeUpdate.compareAndSet(null, deferred)) {
             val existing = activeUpdate.get()
             if (existing != null) {
-                AppLogger.d("WidgetUpdater: update already in progress, waiting")
-                return try {
-                    val success =
-                        withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                            existing.await()
-                        }
-                    if (success) {
-                        WidgetUpdateResult.Success(wasCoalesced = true)
-                    } else {
-                        WidgetUpdateResult.Failure(wasCoalesced = true)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("WidgetUpdater: joined update failed or timed out", e)
-                    WidgetUpdateResult.Failure(wasCoalesced = true)
-                }
+                return joinExistingUpdate(existing)
             }
         }
 
@@ -107,6 +91,26 @@ class WidgetUpdaterImpl
                 wasCoalesced = false,
                 isRetryable = (updateResult as? UpdateResult.GenericFailure)?.isRetryable ?: false,
             )
+        }
+    }
+
+    private suspend fun joinExistingUpdate(existing: CompletableDeferred<Boolean>): WidgetUpdateResult {
+        AppLogger.d("WidgetUpdater: update already in progress, waiting")
+        return try {
+            val success =
+                withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                    existing.await()
+                }
+            if (success) {
+                WidgetUpdateResult.Success(wasCoalesced = true)
+            } else {
+                WidgetUpdateResult.Failure(wasCoalesced = true)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.w("WidgetUpdater: joined update failed or timed out", e)
+            WidgetUpdateResult.Failure(wasCoalesced = true)
         }
     }
 
