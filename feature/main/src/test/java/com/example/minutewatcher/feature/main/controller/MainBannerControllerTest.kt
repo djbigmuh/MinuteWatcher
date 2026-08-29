@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main.controller
 
-import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -32,7 +31,6 @@ class MainBannerControllerTest {
     private val permissionRepository: PermissionRepository = mock()
     private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
-    private val permissionManager: PermissionManager = mock()
 
     private val phonePermissionFlow = MutableStateFlow(value = true)
     private val usageStatsPermissionFlow = MutableStateFlow(value = true)
@@ -51,7 +49,6 @@ class MainBannerControllerTest {
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(appSettingsFlow)
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(trackingStatusFlow)
         whenever(seedRepository.isEphemeralSeedActive).thenReturn(isEphemeralSeedActiveFlow.asStateFlow())
-        whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
     }
 
     private fun createController(scope: CoroutineScope) =
@@ -60,7 +57,6 @@ class MainBannerControllerTest {
             permissionRepository = permissionRepository,
             appSettingsRepository = appSettingsRepository,
             seedRepository = seedRepository,
-            permissionManager = permissionManager,
             scope = scope,
         )
 
@@ -140,27 +136,10 @@ class MainBannerControllerTest {
         }
 
     @Test
-    fun `notification banner hidden when actual permission is granted despite flow state`() =
-        runTest(UnconfinedTestDispatcher()) {
-            // Given: Flow says NOT granted, but actual check says GRANTED
-            notificationPermissionFlow.value = false
-            whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
-            appSettingsFlow.value = AppSettings(onboardingCompleted = true, notifyLowMinutes = true)
-
-            val controller = createController(backgroundScope)
-            backgroundScope.launch { controller.trackingBannerState.collect {} }
-            testScheduler.runCurrent()
-
-            // Then: Banner should be GRANTED (hidden)
-            assertEquals(PermissionUiState.GRANTED, controller.trackingBannerState.value.notificationPermissionState)
-        }
-
-    @Test
     fun `notification banner hidden when notifications disabled in settings`() =
         runTest(UnconfinedTestDispatcher()) {
             // Given: Permission NOT granted, but notifications DISABLED in settings
             notificationPermissionFlow.value = false
-            whenever(permissionManager.hasNotificationPermission()).thenReturn(false)
             appSettingsFlow.value =
                 AppSettings(
                     onboardingCompleted = true,

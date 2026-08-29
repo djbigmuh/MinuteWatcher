@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
@@ -20,8 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -49,7 +47,6 @@ class MainBannerController
         private val permissionRepository: PermissionRepository,
         private val appSettingsRepository: AppSettingsRepository,
         private val seedRepository: SimIdentitySeedRepository,
-        private val permissionManager: PermissionManager,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val appSearchRetryCount = MutableStateFlow(value = 0)
@@ -113,22 +110,17 @@ class MainBannerController
                 seedRepository.isEphemeralSeedActive,
             ) { snapshot, retry, dismissed, settings, ephemeralActive ->
                 FlowData(snapshot, retry, dismissed, settings, ephemeralActive)
-            }.flatMapLatest { data ->
-                flow {
-                    emit(
-                        TrackingBannerMapper.mapToBannerState(
-                            statusMap = data.snapshot.statusMap,
-                            phoneGranted = data.snapshot.phoneGranted,
-                            usageGranted = data.snapshot.usageGranted,
-                            notificationsGranted = data.snapshot.notificationsGranted,
-                            notificationsGrantedActual = permissionManager.hasNotificationPermission(),
-                            settings = data.settings,
-                            appSearchRetryCount = data.retry,
-                            appSearchBannerDismissed = data.dismissed,
-                            isStorageDegraded = data.ephemeralActive,
-                        ),
-                    )
-                }
+            }.map { data ->
+                TrackingBannerMapper.mapToBannerState(
+                    statusMap = data.snapshot.statusMap,
+                    phoneGranted = data.snapshot.phoneGranted,
+                    usageGranted = data.snapshot.usageGranted,
+                    notificationsGranted = data.snapshot.notificationsGranted,
+                    settings = data.settings,
+                    appSearchRetryCount = data.retry,
+                    appSearchBannerDismissed = data.dismissed,
+                    isStorageDegraded = data.ephemeralActive,
+                )
             }
         }.distinctUntilChanged()
             .stateIn(

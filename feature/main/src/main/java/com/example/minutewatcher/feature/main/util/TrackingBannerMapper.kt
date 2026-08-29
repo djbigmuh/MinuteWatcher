@@ -12,7 +12,6 @@ object TrackingBannerMapper {
         phoneGranted: Boolean,
         usageGranted: Boolean,
         notificationsGranted: Boolean,
-        notificationsGrantedActual: Boolean,
         settings: AppSettings,
         appSearchRetryCount: Int = 0,
         appSearchBannerDismissed: Boolean = false,
@@ -48,7 +47,6 @@ object TrackingBannerMapper {
 
         val appSearchErrorType = (appsearch as? TrackingStatus.Error)?.type
 
-        val notificationPermanentlyDenied = settings.notificationPermissionRequested && !notificationsGranted
         return TrackingBannerState(
             phonePermissionState = phonePermissionState,
             showUsageAccessBanner = !usageGranted,
@@ -70,8 +68,6 @@ object TrackingBannerMapper {
             notificationPermissionState =
                 determineNotificationPermissionState(
                     notificationsGranted,
-                    notificationsGrantedActual,
-                    notificationPermanentlyDenied,
                     settings,
                 ),
             observationFailed = observationFailed,
@@ -93,21 +89,16 @@ object TrackingBannerMapper {
 
     private fun determineNotificationPermissionState(
         granted: Boolean,
-        notificationsGrantedActual: Boolean,
-        permanentlyDenied: Boolean,
         settings: AppSettings,
     ): PermissionUiState {
         val showNotifications = settings.notifyLowMinutes || settings.notifyLowTraffic
-        val result =
-            when {
-                !showNotifications -> PermissionUiState.GRANTED
-                granted || notificationsGrantedActual -> PermissionUiState.GRANTED
-                permanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
-                settings.notificationPermissionRequested -> PermissionUiState.DENIED
-                else -> PermissionUiState.NOT_REQUESTED
-            }
-
-        return result
+        return when {
+            !showNotifications -> PermissionUiState.GRANTED
+            granted -> PermissionUiState.GRANTED
+            settings.notificationPermissionRequested && !granted -> PermissionUiState.PERMANENTLY_DENIED
+            settings.notificationPermissionRequested -> PermissionUiState.DENIED
+            else -> PermissionUiState.NOT_REQUESTED
+        }
     }
 
     private fun isTrafficError(status: TrackingStatus?): Boolean =

@@ -41,9 +41,20 @@ object SimCardMapper {
     /**
      * Счётчики вызовов для каждого слота, обеспечивающие версионность кэша.
      */
-    private val slotCallCounters = ConcurrentHashMap<Int, AtomicLong>()
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal val slotCallCounters = ConcurrentHashMap<Int, AtomicLong>()
 
     private const val MAX_LOGGED_SIZE = Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS
+
+    /**
+     * Clears cache entries for slots that are no longer active.
+     *
+     * @param activeSlots The set of currently active SIM slot indices.
+     */
+    fun cleanupSlots(activeSlots: Set<Int>) {
+        negativeLogged.keys.removeAll { it !in activeSlots }
+        slotCallCounters.keys.removeAll { it !in activeSlots }
+    }
 
     fun map(
         context: Context,

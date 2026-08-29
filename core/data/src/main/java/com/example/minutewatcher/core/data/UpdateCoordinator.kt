@@ -58,7 +58,7 @@ class UpdateCoordinator
         TrackingStatusProvider {
         override val key: String = "widget_observation"
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
     private var lastSnapshotHash: Int? = null
@@ -165,59 +165,59 @@ class UpdateCoordinator
         }
 
     @Suppress("ReturnCount")
-        private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+    private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
         if (!currentCoroutineContext().isActive) return
-            val newHash = SnapshotUtils.calculateContentHash(snapshot)
+        val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
-            if (snapshot.suppressWidgetUpdate) {
-                widgetUpdateMutex.withLock {
-                    lastSnapshotHash = newHash
+        if (snapshot.suppressWidgetUpdate) {
+            widgetUpdateMutex.withLock {
+                lastSnapshotHash = newHash
+            }
+            return
+        }
+
+        val shouldUpdate =
+            widgetUpdateMutex.withLock {
+                if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                    AppLogger.d(
+                        "UpdateCoordinator: widget update suppressed due to too many failures " +
+                            "($consecutiveUpdateFailures)",
+                    )
+                    return@withLock false
                 }
-                return
+
+                if (newHash == lastSnapshotHash) {
+                    AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
+                    return@withLock false
+                }
+                true
             }
 
-            val shouldUpdate =
-                widgetUpdateMutex.withLock {
-                    if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                        AppLogger.d(
-                            "UpdateCoordinator: widget update suppressed due to too many failures " +
-                                "($consecutiveUpdateFailures)",
-                        )
-                        return@withLock false
-                    }
+        if (!shouldUpdate) return
 
-                    if (newHash == lastSnapshotHash) {
-                        AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                        return@withLock false
-                    }
-                    true
-                }
-
-            if (!shouldUpdate) return
-
-            // Обновление виджета при отсутствии активных SIM выполняется
-            // намеренно — виджет должен корректно отобразить состояние
-            // "No SIM" или "No Data".
+        // Обновление виджета при отсутствии активных SIM выполняется
+        // намеренно — виджет должен корректно отобразить состояние
+        // "No SIM" или "No Data".
         val result =
-                catchingCancellation(
-                    block = {
-                        withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                            widgetUpdater.updateAll()
-                        } ?: WidgetUpdateResult.Failure(isRetryable = false)
-                    },
-                    onError = { e ->
-                        AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-                    },
-                ) ?: WidgetUpdateResult.Failure(isRetryable = false)
+            catchingCancellation(
+                block = {
+                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                        widgetUpdater.updateAll()
+                    } ?: WidgetUpdateResult.Failure(isRetryable = false)
+                },
+                onError = { e ->
+                    AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+                },
+            ) ?: WidgetUpdateResult.Failure(isRetryable = false)
 
-            widgetUpdateMutex.withLock {
-                if (result.isSuccess) {
-                    handleUpdateSuccess(newHash)
-                } else if ((result is WidgetUpdateResult.Failure) && (!result.wasCoalesced)) {
-                    handleUpdateFailure()
-                }
+        widgetUpdateMutex.withLock {
+            if (result.isSuccess) {
+                handleUpdateSuccess(newHash)
+            } else if ((result is WidgetUpdateResult.Failure) && (!result.wasCoalesced)) {
+                handleUpdateFailure()
             }
         }
+    }
 
         private fun handleUpdateSuccess(newHash: Int) {
             lastSnapshotHash = newHash
@@ -271,35 +271,35 @@ class UpdateCoordinator
         }
 
     private suspend fun performForcedUpdate(): Boolean =
-            widgetUpdateMutex.withLock {
-                try {
-                    val snapshot = usageStateRepository.observeSnapshot().value
-                    var result = widgetUpdater.updateAll()
+        widgetUpdateMutex.withLock {
+            try {
+                val snapshot = usageStateRepository.observeSnapshot().value
+                var result = widgetUpdater.updateAll()
 
-                    if (!result.isSuccess) {
-                        AppLogger.w("Force widget update failed, retrying once immediately")
-                        result = widgetUpdater.updateAll()
-                    }
+                if (!result.isSuccess) {
+                    AppLogger.w("Force widget update failed, retrying once immediately")
+                    result = widgetUpdater.updateAll()
+                }
 
-                    if (result.isSuccess) {
-                        consecutiveUpdateFailures = 0
-                        if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                            lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
-                        }
-                        true
-                    } else {
-                        consecutiveUpdateFailures++
-                        AppLogger.w(
-                            "Force widget update reported failure ($consecutiveUpdateFailures), hash not updated",
-                        )
-                        false
+                if (result.isSuccess) {
+                    consecutiveUpdateFailures = 0
+                    if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                        lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("Force widget update failed, hash not updated", e)
-                    lastSnapshotHash = null
+                    true
+                } else {
+                    consecutiveUpdateFailures++
+                    AppLogger.w(
+                        "Force widget update reported failure ($consecutiveUpdateFailures), hash not updated",
+                    )
                     false
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("Force widget update failed, hash not updated", e)
+                lastSnapshotHash = null
+                false
             }
+        }
     }

@@ -63,6 +63,9 @@ class UsageStateRepositoryImpl
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                 .distinctUntilChanged()
                 .flatMapLatest { sims ->
+                    val activeSlots = sims.map { it.slotIndex }.toSet()
+                    SimCardMapper.cleanupSlots(activeSlots)
+
                     if (sims.isEmpty()) {
                         flowOf(emptyList())
                     } else {

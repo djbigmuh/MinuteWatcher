@@ -154,21 +154,21 @@ open class CallTracker
 
     private suspend fun clearSessionsAndRefresh(tag: String) {
         var operationCompleted = false
-            try {
-                callMutex.withLock {
-                    sessionCleaner.clearAllSessions()
-                    AppLogger.d("CallTracker: cleared all sessions during $tag")
-                }
-                operationCompleted = true
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Error during $tag", e)
-            } finally {
-                if (operationCompleted) {
-                    refreshStatus(force = true)
-                }
+        try {
+            callMutex.withLock {
+                sessionCleaner.clearAllSessions()
+                AppLogger.d("CallTracker: cleared all sessions during $tag")
             }
+            operationCompleted = true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Error during $tag", e)
+        } finally {
+            if (operationCompleted) {
+                refreshStatus(force = true)
+            }
+        }
     }
 
     fun onBoot() {
@@ -180,16 +180,16 @@ open class CallTracker
             } catch (e: Exception) {
                 AppLogger.e("CallTracker: boot cleanup failed", e)
             }
-            }
+        }
     }
 
     override suspend fun recover() {
-            try {
-                clearSessionsAndRefresh("recovery")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("CallTracker: recovery failed", e)
-            }
+        try {
+            clearSessionsAndRefresh("recovery")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("CallTracker: recovery failed", e)
         }
     }
+}

@@ -61,29 +61,24 @@ class WidgetUpdaterImpl
 
     @Suppress("ReturnCount")
     private suspend fun executeUpdate(block: suspend () -> UpdateResult): WidgetUpdateResult {
-        activeUpdate.get()?.let { currentDeferred ->
-            AppLogger.d("WidgetUpdater: update already in progress, waiting")
-            return try {
-                val success =
-                    withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        currentDeferred.await()
+        val deferred = CompletableDeferred<Boolean>()
+        while (!activeUpdate.compareAndSet(null, deferred)) {
+            val existing = activeUpdate.get()
+            if (existing != null) {
+                AppLogger.d("WidgetUpdater: update already in progress, waiting")
+                return try {
+                    val success = withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                        existing.await()
                     }
-                if (success) {
-                    WidgetUpdateResult.Success(wasCoalesced = true)
-                } else {
+                    if (success) WidgetUpdateResult.Success(wasCoalesced = true)
+                    else WidgetUpdateResult.Failure(wasCoalesced = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("WidgetUpdater: joined update failed or timed out", e)
                     WidgetUpdateResult.Failure(wasCoalesced = true)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("WidgetUpdater: joined update failed or timed out", e)
-                WidgetUpdateResult.Failure(wasCoalesced = true)
             }
-        }
-
-        val deferred = CompletableDeferred<Boolean>()
-        if (!activeUpdate.compareAndSet(null, deferred)) {
-            return executeUpdate(block)
         }
 
         var success = false

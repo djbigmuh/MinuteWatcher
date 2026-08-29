@@ -153,6 +153,32 @@ class SimCardMapperTest {
         assertTrue(id1Version > newerVersion)
     }
 
+    @Test
+    fun `cleanupSlots removes inactive slots from cache`() {
+        val slot0 = 0
+        val slot1 = 1
+        val usage0 = createNegativeSimUsage("id0", slot0)
+        val usage1 = createNegativeSimUsage("id1", slot1)
+
+        // Populate cache
+        SimCardMapper.map(context, slot0, usage0)
+        SimCardMapper.map(context, slot1, usage1)
+
+        assertTrue(SimCardMapper.negativeLogged.containsKey(slot0))
+        assertTrue(SimCardMapper.slotCallCounters.containsKey(slot0))
+        assertTrue(SimCardMapper.negativeLogged.containsKey(slot1))
+        assertTrue(SimCardMapper.slotCallCounters.containsKey(slot1))
+
+        // Cleanup slot 0
+        SimCardMapper.cleanupSlots(setOf(slot1))
+
+        // Verify slot 0 removed, slot 1 remains
+        assertTrue(!SimCardMapper.negativeLogged.containsKey(slot0))
+        assertTrue(!SimCardMapper.slotCallCounters.containsKey(slot0))
+        assertTrue(SimCardMapper.negativeLogged.containsKey(slot1))
+        assertTrue(SimCardMapper.slotCallCounters.containsKey(slot1))
+    }
+
     private fun createNegativeSimUsage(
         identity: String,
         slot: Int,
