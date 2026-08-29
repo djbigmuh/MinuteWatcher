@@ -208,7 +208,7 @@ class WidgetSettingsViewModel
         private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
             val settings = currentState.settings
             return when {
-                currentState.isLoadError || settings?.settingsLoadFailed == true -> {
+                currentState.isLoadError || (settings?.settingsLoadFailed == true) -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
                     SaveResult.Failed("Settings were not loaded")
                 }

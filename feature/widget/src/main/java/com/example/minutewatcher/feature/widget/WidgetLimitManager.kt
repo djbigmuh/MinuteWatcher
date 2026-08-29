@@ -28,7 +28,7 @@ class WidgetLimitManager
 
         fun shouldProbe(): Boolean {
             val count = exceededUpdateCounter.incrementAndGet()
-            return count % PROBE_INTERVAL_UPDATES == 0L
+            return (count % PROBE_INTERVAL_UPDATES) == 0L
         }
 
         fun resetCounter() {

@@ -88,7 +88,7 @@ class MainInitializationController
                         AppLogger.e("initializeApp: attempt ${attempt + 1} failed with exception", e)
                     }
 
-                    if (attempt < MAX_INIT_RETRIES - 1) {
+                    if (attempt < (MAX_INIT_RETRIES - 1)) {
                         AppLogger.d("initializeApp: retrying in ${retryDelay}ms...")
                         delay(retryDelay.milliseconds)
                         retryDelay *= 2

@@ -71,7 +71,7 @@ class MainSimDataController
                 .map { models ->
                     if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
                 }.retryWhen { cause, attempt ->
-                    if (cause is CancellationException) throw cause
+                    (cause as? CancellationException)?.let { throw it }
                     if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
                         val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
                         delay(delayMs.milliseconds)
@@ -168,7 +168,8 @@ class MainSimDataController
                     val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
                     if (!widgetSuccess) {
                         AppLogger.w(
-                            "MainSimDataController: Data saved, but widget update notification failed for $operationName (slot $slot)",
+                            "MainSimDataController: Data saved, but widget update notification " +
+                                "failed for $operationName (slot $slot)",
                         )
                         return OperationError("Data saved, but widget not updated", slot)
                     }

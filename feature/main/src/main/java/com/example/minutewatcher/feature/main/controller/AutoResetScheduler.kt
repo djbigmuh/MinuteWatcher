@@ -90,7 +90,7 @@ class AutoResetScheduler
                 val effectiveFailCount =
                     if (isInitialOrReboot || (elapsed > FAIL_COUNT_RESET_INTERVAL_MS)) 0 else failCount
 
-                if (isInitialOrReboot || elapsed > AUTO_RESET_CHECK_INTERVAL_MS) {
+                if (isInitialOrReboot || (elapsed > AUTO_RESET_CHECK_INTERVAL_MS)) {
                     if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
                         autoResetUseCase.performAutoReset(shouldNotify = false)
                         savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now

@@ -103,7 +103,7 @@ class MainSimRefreshController
                 // Обновление уже выполняется другим вызовом — не дублируем
                 return
             }
-            if (outcome is RefreshOutcome.Completed && outcome.result is RefreshResult.Success) {
+            if ((outcome is RefreshOutcome.Completed) && (outcome.result is RefreshResult.Success)) {
                 onNotifyChanged(force)
             }
         }
