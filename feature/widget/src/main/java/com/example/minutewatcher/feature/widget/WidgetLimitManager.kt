@@ -1,10 +1,14 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
@@ -20,11 +24,20 @@ class WidgetLimitManager
     @Inject
     constructor(
         private val appSettingsRepository: AppSettingsRepository,
+        @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val exceededUpdateCounter = AtomicLong(0L)
 
     @Volatile
     private var cachedLimitExceeded: Boolean? = null
+
+    init {
+        scope.launch {
+            appSettingsRepository.observeAppSettings().collectLatest { settings ->
+                cachedLimitExceeded = settings.widgetLimitExceeded
+            }
+        }
+    }
 
         fun shouldProbe(): Boolean {
             val count = exceededUpdateCounter.incrementAndGet()
@@ -34,6 +47,13 @@ class WidgetLimitManager
         fun resetCounter() {
             exceededUpdateCounter.set(0L)
         }
+
+    /**
+     * Updates the in-memory cache of the limit exceeded flag without writing to DataStore.
+     */
+    fun updateCache(value: Boolean) {
+        cachedLimitExceeded = value
+    }
 
     fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 

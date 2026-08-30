@@ -73,9 +73,9 @@ class IdentityMigrationService
                 // Re-throw IOException to allow caller to retry upon transient failures.
                 throw e
             } catch (e: Exception) {
-                // Migration logic is protected against corrupted DataStore state.
-                // Critical errors resulting in permanent data failure should be logged and skipped
+                // Logic errors or corrupted state that we want to skip migration for
                 // to avoid blocking app initialization indefinitely.
+                @Suppress("TooGenericExceptionCaught")
                 AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
                 false
             }

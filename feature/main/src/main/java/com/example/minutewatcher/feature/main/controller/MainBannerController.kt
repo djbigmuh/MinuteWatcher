@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
@@ -24,11 +25,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
@@ -157,24 +156,7 @@ class MainBannerController
         private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
             initMutex.withLock {
                 lastTrackingStatusFlow = statusFlow
-                job?.cancel()
-                val completed =
-                    try {
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            job?.join()
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("MainBannerController: failed to join previous observation job", e)
-                        null
-                    }
-                if (completed == null) {
-                    AppLogger.w(
-                        "MainBannerController: previous observation job did not terminate in time, forcing cancel",
-                    )
-                    job?.cancel()
-                }
+                job.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                 job =
                     scope.launch {
                         catchingCancellation(
@@ -212,13 +194,13 @@ class MainBannerController
      * **Thread Safety:** Safe to call from any coroutine context.
      */
     suspend fun recover() {
-        initialize()
-        val flow = lastTrackingStatusFlow
-        if (flow == null) {
-            AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
-        } else {
+        initMutex.withLock {
+            val flow = lastTrackingStatusFlow
+            if (flow == null) {
+                AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
+                return
+            }
             setupObservation(flow)
-            isObservationStarted.set(true)
         }
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false

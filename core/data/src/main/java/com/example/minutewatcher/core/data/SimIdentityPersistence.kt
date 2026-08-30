@@ -79,8 +79,6 @@ class SimIdentityPersistence
                 throw IOException("Save operation timed out", e)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                AppLogger.e("SimIdentityPersistence: Failed to update DataStore", e)
             }
         }
 

@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.settings.ui
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -84,15 +85,8 @@ class WidgetSettingsViewModel
         private fun loadSettings() {
             viewModelScope.launch {
                 loadMutex.withLock {
-                    loadJob?.let { job ->
-                        if (job.isActive) {
-                            job.cancel()
-                            if (withTimeoutOrNull(LOAD_TIMEOUT) { job.join() } == null) {
-                                AppLogger.w("loadSettings: previous load job join timed out, continuing")
-                            }
-                        }
-                        loadJob = null
-                    }
+                    loadJob.cancelAndJoinWithTimeout(LOAD_TIMEOUT.inWholeMilliseconds)
+                    loadJob = null
 
                     loadJob =
                         launch {
@@ -185,10 +179,9 @@ class WidgetSettingsViewModel
                 return
             }
 
-            consumeSaveResult()
-            reduce { copy(isSaving = true) }
-
             try {
+                consumeSaveResult()
+                reduce { copy(isSaving = true) }
                 val currentStateSnapshot = state.value
                 val result = performSaveInternal(currentStateSnapshot)
                 reduce { copy(saveResult = result) }

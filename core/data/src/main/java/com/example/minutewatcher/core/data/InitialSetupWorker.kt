@@ -103,7 +103,7 @@ class InitialSetupWorker
     private suspend fun fetchMigrationV1Flag(): Boolean =
         try {
             deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             AppLogger.e("InitialSetupWorker: Critical error reading migrationV1 flag", e)
             throw IOException("Failed to read migrationV1 flag", e)
         } ?: throw IOException("DataStore timeout reading migrationV1 flag")
@@ -111,7 +111,7 @@ class InitialSetupWorker
     private suspend fun fetchMigrationStabilityFlag(): Boolean =
         try {
             deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             AppLogger.e("InitialSetupWorker: Critical error reading migrationStability flag", e)
             throw IOException("Failed to read migrationStability flag", e)
         } ?: throw IOException("DataStore timeout reading migrationStability flag")

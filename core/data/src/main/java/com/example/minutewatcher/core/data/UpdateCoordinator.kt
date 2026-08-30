@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
@@ -18,7 +19,6 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -100,24 +100,8 @@ class UpdateCoordinator
             initMutex.withLock {
                 val oldJob = observationJob.get()
                 if (oldJob != null) {
-                    try {
-                        val completed =
-                            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                oldJob.cancelAndJoin()
-                            }
-                        if (completed == null) {
-                            AppLogger.w(
-                                "UpdateCoordinator: previous observation job did not terminate in time, forcing cancel",
-                            )
-                            oldJob.cancel()
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("UpdateCoordinator: failed to join previous observation job", e)
-                    } finally {
-                        observationJob.compareAndSet(oldJob, null)
-                    }
+                    oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    observationJob.compareAndSet(oldJob, null)
                 }
 
                 val handler =

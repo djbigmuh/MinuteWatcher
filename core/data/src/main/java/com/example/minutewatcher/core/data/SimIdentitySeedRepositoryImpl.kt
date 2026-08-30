@@ -84,7 +84,7 @@ class SimIdentitySeedRepositoryImpl
                         return@withLock recovered
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: Exception) {
+                    } catch (e: java.io.IOException) {
                         AppLogger.w("DataStore still unavailable, continuing with ephemeral seed", e)
                     }
                 }
@@ -96,7 +96,7 @@ class SimIdentitySeedRepositoryImpl
                     currentSeed
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (e: java.io.IOException) {
                     AppLogger.e(
                         "DataStore unreachable for seed, falling back to ephemeral session seed. " +
                             "Warning: Identity stable IDs may change on next restart, leading to data loss.",

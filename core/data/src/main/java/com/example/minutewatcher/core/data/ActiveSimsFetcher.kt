@@ -40,6 +40,8 @@ internal class ActiveSimsFetcher
             repeat(MAX_FETCH_RETRIES) { attempt ->
                 try {
                     return getActiveSimsInternal(seed)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     handleFetchRetryException(e, attempt, retryDelay)
                     retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
@@ -71,8 +73,6 @@ internal class ActiveSimsFetcher
                 throw e
             } catch (e: IOException) {
                 throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to save identity info for active SIMs", e)
             }
 
             return createActiveSimInfoList(infoList, identities)
@@ -118,7 +118,6 @@ internal class ActiveSimsFetcher
                     AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
                     delay(delay.milliseconds)
                 }
-                is CancellationException -> throw e
                 is SecurityException -> {
                     AppLogger.e("ActiveSimsFetcher: permission error fetching active SIMs", e)
                     throw e

@@ -65,35 +65,25 @@ internal class CallEndResolver(
     }
 
     @Suppress("MissingPermission")
-    private fun isDeviceIdle(activeSubIds: List<Int>): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_PHONE_STATE,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            AppLogger.w("Permission not granted, skipping API call for isDeviceIdle")
+            return false
+        }
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             activeSubIds.all { id ->
-                if (ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_PHONE_STATE,
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
-                    state == TelephonyManager.CALL_STATE_IDLE
-                } else {
-                    AppLogger.w("Permission not granted, skipping API call for isDeviceIdle")
-                    false
-                }
+                telephonyManager.createForSubscriptionId(id).callStateForSubscription == TelephonyManager.CALL_STATE_IDLE
             }
         } else {
             @Suppress("DEPRECATION")
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val state = telephonyManager.callState
-                state == TelephonyManager.CALL_STATE_IDLE
-            } else {
-                AppLogger.w("Permission not granted, skipping API call for isDeviceIdle (legacy)")
-                false
-            }
+            telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
         }
+    }
 
     private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
         AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
@@ -130,16 +120,7 @@ internal class CallEndResolver(
             activeSubIds.size == 1 -> activeSubIds.first()
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 activeSubIds.singleOrNull { id ->
-                    if (ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.READ_PHONE_STATE,
-                        ) == PackageManager.PERMISSION_GRANTED
-                    ) {
-                        val state = telephonyManager.createForSubscriptionId(id).callStateForSubscription
-                        state == TelephonyManager.CALL_STATE_IDLE
-                    } else {
-                        false
-                    }
+                    telephonyManager.createForSubscriptionId(id).callStateForSubscription == TelephonyManager.CALL_STATE_IDLE
                 }
             }
 

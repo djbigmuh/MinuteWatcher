@@ -137,7 +137,9 @@ class WidgetUpdaterImpl
                             .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                             // If fetching fails, use the latest observed state.
                             ?: appSettingsRepository.observeAppSettings().value
-                    settings.widgetLimitExceeded
+                    val value = settings.widgetLimitExceeded
+                    limitManager.updateCache(value)
+                    value
                 }
 
             val mode =
