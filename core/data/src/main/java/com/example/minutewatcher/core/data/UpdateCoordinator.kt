@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
-import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -63,6 +62,7 @@ class UpdateCoordinator
 
     private var lastSnapshotHash: Int? = null
     private var consecutiveUpdateFailures = 0
+    private val observationRestartCount = java.util.concurrent.atomic.AtomicInteger(0)
     private val widgetUpdateMutex = Mutex()
     private val initMutex = Mutex()
 
@@ -79,6 +79,7 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         override suspend fun recover() {
+            observationRestartCount.set(0)
             if (!isObservationStarted.get()) {
                 ensureObservationStarted()
             } else {
@@ -122,14 +123,28 @@ class UpdateCoordinator
                     return
                 }
 
-                // Мониторинг завершения: если наблюдение упало — перезапускаем через 5 секунд.
+                // Мониторинг завершения: если наблюдение упало — перезапускаем с экспоненциальной задержкой.
                 scope.launch {
                     newJob.join()
                     if (observationJob.get() !== newJob) return@launch
                     if (!isObservationStarted.get()) return@launch
 
-                    AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
-                    kotlinx.coroutines.delay(5000.milliseconds)
+                    val restartCount = observationRestartCount.incrementAndGet()
+                    if (restartCount >= MAX_OBSERVATION_RESTARTS) {
+                        AppLogger.e("UpdateCoordinator: observation restart limit reached ($restartCount)")
+                        _status.value = TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Widget observation failed permanently after $restartCount restarts"
+                        )
+                        return@launch
+                    }
+
+                    val delayMs = calculateRestartDelay(restartCount)
+                    AppLogger.w(
+                        "UpdateCoordinator: observation terminated unexpectedly, " +
+                            "scheduling restart #$restartCount in ${delayMs}ms",
+                    )
+                    kotlinx.coroutines.delay(delayMs.milliseconds)
 
                     if (isObservationStarted.get() && (observationJob.get() === newJob)) {
                         restartObservation()
@@ -137,6 +152,11 @@ class UpdateCoordinator
                 }
             }
         }
+
+    private fun calculateRestartDelay(restartCount: Int): Long {
+        val exponent = (restartCount - 1).coerceAtMost(4)
+        return (INITIAL_RESTART_DELAY_MS * (1 shl exponent)).coerceAtMost(MAX_RESTART_DELAY_MS)
+    }
 
         /**
          * Restarts the observation of usage state snapshots.
@@ -186,16 +206,25 @@ class UpdateCoordinator
         // Обновление виджета при отсутствии активных SIM выполняется
         // намеренно — виджет должен корректно отобразить состояние
         // "No SIM" или "No Data".
-        val result =
-            catchingCancellation(
-                block = {
-                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        widgetUpdater.updateAll()
-                    } ?: WidgetUpdateResult.Failure(isRetryable = false)
-                },
-            ) { e ->
-                    AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-            } ?: WidgetUpdateResult.Failure(isRetryable = false)
+        val result = try {
+            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                widgetUpdater.updateAll()
+            } ?: run {
+                val error = TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Widget update timed out after ${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms"
+                )
+                _status.value = error
+                WidgetUpdateResult.Failure(isRetryable = true)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
+            val error = classifyException(e)
+            _status.value = error
+            WidgetUpdateResult.Failure(isRetryable = isRetryableException(e))
+        }
 
         widgetUpdateMutex.withLock {
             if (result.isSuccess) {
@@ -206,9 +235,48 @@ class UpdateCoordinator
         }
     }
 
+    private fun classifyException(e: Exception): TrackingStatus.Error {
+        return when {
+            isRemoteViewsLimitException(e) -> TrackingStatus.Error(
+                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                "Widget size limit exceeded. Try reducing SIM count or removing other widgets."
+            )
+
+            e is SecurityException -> TrackingStatus.Error(
+                TrackingStatus.ErrorType.PERMISSION_MISSING,
+                "Permission denied during widget update: ${e.message}"
+            )
+
+            else -> TrackingStatus.Error(
+                TrackingStatus.ErrorType.DATABASE_ERROR,
+                e.message ?: "Unknown widget update error"
+            )
+        }
+    }
+
+    private fun isRetryableException(e: Exception): Boolean {
+        return when {
+            isRemoteViewsLimitException(e) -> false
+            e is SecurityException -> false
+            e is IllegalArgumentException -> true
+            e is IllegalStateException -> false
+            else -> true
+        }
+    }
+
+    private fun isRemoteViewsLimitException(e: Throwable): Boolean {
+        var current: Throwable? = e
+        while (current != null) {
+            if (current is android.os.TransactionTooLargeException) return true
+            current = current.cause
+        }
+        return false
+    }
+
         private fun handleUpdateSuccess(newHash: Int) {
             lastSnapshotHash = newHash
             _status.value = TrackingStatus.Active
+            observationRestartCount.set(0)
             if (consecutiveUpdateFailures > 0) {
                 AppLogger.d("UpdateCoordinator: widget update recovered, resetting failure counter")
                 consecutiveUpdateFailures = 0
@@ -223,11 +291,13 @@ class UpdateCoordinator
             )
             if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
                 AppLogger.e("UpdateCoordinator: reached max consecutive failures. Updates suppressed.")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Widget observation failed after $consecutiveUpdateFailures consecutive errors",
-                    )
+                if (_status.value !is TrackingStatus.Error) {
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Widget observation failed after $consecutiveUpdateFailures consecutive errors",
+                        )
+                }
             }
         }
 
@@ -289,4 +359,10 @@ class UpdateCoordinator
                 false
             }
         }
+
+    private companion object {
+        private const val MAX_OBSERVATION_RESTARTS = 5
+        private const val INITIAL_RESTART_DELAY_MS = 5000L
+        private const val MAX_RESTART_DELAY_MS = 80_000L
+    }
     }

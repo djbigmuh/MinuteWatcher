@@ -87,40 +87,39 @@ class MainBannerController
                 )
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Suppress("UNCHECKED_CAST")
     val trackingBannerState: StateFlow<TrackingBannerState> =
-        run {
-            val permissionsFlow =
-                combine(
-                    trackingStatus,
-                    permissionRepository.phoneStatePermissionGranted,
-                    permissionRepository.usageStatsPermissionGranted,
-                    permissionRepository.notificationPermissionGranted,
-                ) { status, phone, usage, notif ->
-                    PermissionsSnapshot(status, phone, usage, notif)
-                }
-
-            val appSettingsFlow = appSettingsRepository.observeAppSettings()
-
-            combine(
-                permissionsFlow,
-                appSearchRetryCount,
-                appSearchBannerDismissed,
-                appSettingsFlow,
-                seedRepository.isEphemeralSeedActive,
-            ) { snapshot, retry, dismissed, settings, ephemeralActive ->
-                FlowData(snapshot, retry, dismissed, settings, ephemeralActive)
-            }.map { data ->
-                TrackingBannerMapper.mapToBannerState(
-                    statusMap = data.snapshot.statusMap,
-                    phoneGranted = data.snapshot.phoneGranted,
-                    usageGranted = data.snapshot.usageGranted,
-                    notificationsGranted = data.snapshot.notificationsGranted,
-                    settings = data.settings,
-                    appSearchRetryCount = data.retry,
-                    appSearchBannerDismissed = data.dismissed,
-                    isStorageDegraded = data.ephemeralActive,
-                )
-            }
+        combine(
+            trackingStatus,
+            permissionRepository.phoneStatePermissionGranted,
+            permissionRepository.usageStatsPermissionGranted,
+            permissionRepository.notificationPermissionGranted,
+            appSearchRetryCount,
+            appSearchBannerDismissed,
+            appSettingsRepository.observeAppSettings(),
+            seedRepository.isEphemeralSeedActive,
+        ) { params: Array<Any?> ->
+            BannerInputs(
+                statusMap = params[0] as Map<String, TrackingStatus>,
+                phoneGranted = params[1] as Boolean,
+                usageGranted = params[2] as Boolean,
+                notificationsGranted = params[3] as Boolean,
+                retry = params[4] as Int,
+                dismissed = params[5] as Boolean,
+                settings = params[6] as com.example.minutewatcher.core.model.AppSettings,
+                ephemeralActive = params[7] as Boolean,
+            )
+        }.map { data ->
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = data.statusMap,
+                phoneGranted = data.phoneGranted,
+                usageGranted = data.usageGranted,
+                notificationsGranted = data.notificationsGranted,
+                settings = data.settings,
+                appSearchRetryCount = data.retry,
+                appSearchBannerDismissed = data.dismissed,
+                isStorageDegraded = data.ephemeralActive,
+            )
         }.distinctUntilChanged()
             .stateIn(
                 scope = scope,
@@ -128,8 +127,11 @@ class MainBannerController
                 initialValue = TrackingBannerState(),
             )
 
-    private data class FlowData(
-        val snapshot: PermissionsSnapshot,
+    private data class BannerInputs(
+        val statusMap: Map<String, TrackingStatus>,
+        val phoneGranted: Boolean,
+        val usageGranted: Boolean,
+        val notificationsGranted: Boolean,
         val retry: Int,
         val dismissed: Boolean,
         val settings: com.example.minutewatcher.core.model.AppSettings,
@@ -180,13 +182,6 @@ class MainBannerController
                     }
             }
         }
-
-        private data class PermissionsSnapshot(
-            val statusMap: Map<String, TrackingStatus>,
-            val phoneGranted: Boolean,
-            val usageGranted: Boolean,
-            val notificationsGranted: Boolean,
-        )
 
     /**
      * Attempts to recover tracking observation.

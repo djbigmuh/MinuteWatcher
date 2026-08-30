@@ -294,8 +294,8 @@ class SimRepositoryImplTest {
             assertEquals(0, sims.first().slotIndex)
         }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `getSimIdentity with invalid slot throws IllegalArgumentException`() =
+    @Test(expected = com.example.minutewatcher.core.domain.InvalidSlotException::class)
+    fun `getSimIdentity with invalid slot throws InvalidSlotException`() =
         runTest {
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(

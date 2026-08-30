@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -34,7 +35,9 @@ internal class SimIdentityResolver
             seedFlow: Flow<SeedResult>,
             activeSimsMutex: Mutex,
         ): SimIdentity {
-            require(slot in SimConstants.SUPPORTED_SLOT_INDICES) { "Invalid slot $slot" }
+            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                throw InvalidSlotException(slot)
+            }
 
             // 1. Initial fast check under lock
             activeSimsMutex.withLock {

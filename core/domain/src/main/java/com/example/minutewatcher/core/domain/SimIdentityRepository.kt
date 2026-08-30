@@ -17,6 +17,7 @@ interface SimIdentityRepository {
     /**
      * Returns the identity string for the given slot.
      *
+     * @throws InvalidSlotException if the slot index is invalid.
      * @throws SimNotFoundException if no SIM is in the slot.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
@@ -26,6 +27,7 @@ interface SimIdentityRepository {
     /**
      * Returns the full [SimIdentity] for the given slot.
      *
+     * @throws InvalidSlotException if the slot index is invalid.
      * @throws SimNotFoundException if no SIM is in the slot.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
@@ -102,6 +104,13 @@ interface SimIdentityRepository {
 class SimNotFoundException(
     val slot: Int,
 ) : IllegalStateException("No active SIM in slot $slot")
+
+/**
+ * Исключение, выбрасываемое при передаче невалидного индекса слота SIM.
+ */
+class InvalidSlotException(
+    val slot: Int,
+) : IllegalArgumentException("Invalid SIM slot index: $slot")
 
 /**
  * Исключение, выбрасываемое при недоступности identity seed (сбой хранилища).

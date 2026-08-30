@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
@@ -365,6 +366,11 @@ class MainSimDataController
             operationName: String,
         ): OperationError =
             when (e) {
+                is InvalidSlotException -> {
+                    AppLogger.e("InvalidSlotException during $operationName for slot $slot", e)
+                    OperationError("Invalid SIM slot index: $slot", slot)
+                }
+
                 is SeedUnavailableException -> {
                     AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
                     OperationError("Storage unavailable for slot ${e.slot}. Retry later.", e.slot)

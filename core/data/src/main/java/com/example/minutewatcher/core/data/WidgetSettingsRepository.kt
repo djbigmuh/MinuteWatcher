@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotFoundException
@@ -243,6 +244,9 @@ class WidgetSettingsRepository
                     failedSlots.add(slot)
                 } catch (e: SimNotFoundException) {
                     AppLogger.w("saveSimSettings: SIM not found in slot $slot. Skipping this SIM.", e)
+                    failedSlots.add(slot)
+                } catch (e: InvalidSlotException) {
+                    AppLogger.w("saveSimSettings: invalid slot $slot. Skipping this SIM.", e)
                     failedSlots.add(slot)
                 }
             }

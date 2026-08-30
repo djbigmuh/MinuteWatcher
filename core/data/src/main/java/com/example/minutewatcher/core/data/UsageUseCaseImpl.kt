@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
@@ -110,6 +111,8 @@ class UsageUseCaseImpl
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: InvalidSlotException) {
+                AppLogger.w("UsageUseCaseImpl: adjustMinutes failed - invalid slot $slot", e)
             } catch (e: Exception) {
                 AppLogger.e("UsageUseCaseImpl: adjustMinutes failed for slot $slot", e)
             }
@@ -149,6 +152,8 @@ class UsageUseCaseImpl
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: InvalidSlotException) {
+                AppLogger.w("UsageUseCaseImpl: adjustTraffic failed - invalid slot $slot", e)
             } catch (e: Exception) {
                 AppLogger.e("UsageUseCaseImpl: adjustTraffic failed for slot $slot", e)
             }
@@ -167,6 +172,8 @@ class UsageUseCaseImpl
                 trafficTracker.resetBaseline(identity)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: InvalidSlotException) {
+                AppLogger.w("UsageUseCaseImpl: resetCounters failed - invalid slot $slot", e)
             } catch (e: Exception) {
                 AppLogger.e("UsageUseCaseImpl: resetCounters failed for slot $slot", e)
             }

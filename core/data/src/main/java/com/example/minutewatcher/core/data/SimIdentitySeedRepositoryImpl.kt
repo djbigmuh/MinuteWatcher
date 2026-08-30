@@ -17,8 +17,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of [SimIdentitySeedRepository] using AOSP DataStore.
@@ -78,25 +80,36 @@ class SimIdentitySeedRepositoryImpl
                 // Если активен эфемерный сид, пробуем вернуться к персистентному
                 if (isEphemeral) {
                     try {
-                        val recovered = dataStore.getOrCreateSeedInternal(generator)
-                        _isEphemeralSeedActive.value = false
-                        AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
-                        return@withLock recovered
+                        val recovered =
+                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                dataStore.getOrCreateSeedInternal(generator)
+                            }
+                        if (recovered != null) {
+                            _isEphemeralSeedActive.value = false
+                            AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+                            return@withLock recovered
+                        } else {
+                            AppLogger.w("DataStore recovery timed out, continuing with ephemeral seed")
+                        }
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: java.io.IOException) {
+                    } catch (e: Exception) {
                         AppLogger.w("DataStore still unavailable, continuing with ephemeral seed", e)
                     }
                 }
 
                 try {
-                    val currentSeed = dataStore.getOrCreateSeedInternal(generator)
+                    val currentSeed =
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            dataStore.getOrCreateSeedInternal(generator)
+                        } ?: throw java.io.IOException("Timeout accessing seed in DataStore")
+
                     _isEphemeralSeedActive.value = false
                     cachedEphemeralSeed = null
                     currentSeed
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: java.io.IOException) {
+                } catch (e: Exception) {
                     AppLogger.e(
                         "DataStore unreachable for seed, falling back to ephemeral session seed. " +
                             "Warning: Identity stable IDs may change on next restart, leading to data loss.",

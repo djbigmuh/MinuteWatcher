@@ -352,6 +352,43 @@ class UpdateCoordinatorTest {
     }
 
     @Test
+    fun `processSnapshot preserves specific error on TransactionTooLargeException`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Wrap in Exception as classifyException takes Exception
+            val limitExceededException = Exception(android.os.TransactionTooLargeException())
+            whenever(widgetUpdater.updateAll()).thenThrow(limitExceededException)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // Emit new snapshot
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 1000L, content = "Large"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        }
+    }
+
+    @Test
     @Suppress("TooGenericExceptionThrown")
     fun `observation restarts after exception in reactive path`() {
         runTest {
@@ -410,6 +447,66 @@ class UpdateCoordinatorTest {
             // Verify second update (on Crash snapshot) and third update (on Success snapshot) succeeded
             // total: 1 (crash) + 1 (automatic restart on same snapshot) + 1 (new snapshot) = 3
             verify(widgetUpdater, times(3)).updateAll()
+
+            supervisorJob.cancel()
+        }
+    }
+
+    @Test
+    fun `observation stops restarting after 5 consecutive crashes`() {
+        runTest {
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val supervisorScope = CoroutineScope(testDispatcher + supervisorJob)
+
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    supervisorScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Throw on every update attempt to force observation crash
+            whenever(widgetUpdater.updateAll()).thenThrow(Throwable("Persistent crash"))
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+            coordinator.status
+            testScheduler.runCurrent()
+
+            // 1. Emit snapshot to trigger observation loop
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "CrashLoop"))
+
+            // Allow time for 5 crashes and 4 restarts (since 5th restart is suppressed)
+            // Delays:
+            // 1st crash -> restart #1 in 5s
+            // 2nd crash -> restart #2 in 10s
+            // 3rd crash -> restart #3 in 20s
+            // 4th crash -> restart #4 in 40s
+            // 5th crash -> limit reached, no more restarts
+
+            val totalWaitTime = (5 + 10 + 20 + 40 + 5) * 1000L // ~80s total + some buffer
+            testScheduler.advanceTimeBy(totalWaitTime.milliseconds)
+            testScheduler.advanceUntilIdle()
+
+            // Status should be Error
+            val status = coordinator.status.value
+            assertTrue("Status should be Error after max restarts", status is TrackingStatus.Error)
+            assertEquals(
+                "Widget observation failed permanently after 5 restarts",
+                (status as TrackingStatus.Error).message
+            )
+
+            // Verify number of calls to updateAll.
+            // Each observation attempt calls updateAll once after debounce.
+            // 1 initial + 4 restarts = 5 calls total.
+            verify(widgetUpdater, times(5)).updateAll()
 
             supervisorJob.cancel()
         }

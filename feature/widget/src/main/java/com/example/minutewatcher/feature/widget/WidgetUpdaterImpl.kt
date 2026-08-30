@@ -116,17 +116,28 @@ class WidgetUpdaterImpl
                 settings == null -> {
                     AppLogger.e(
                         "WidgetUpdater: Timeout fetching settings after LimitExceeded. " +
-                            "Proceeding to simplified update with background flag update.",
+                            "Attempting FULL update to confirm state.",
                     )
-                    limitManager.setWidgetLimitExceeded(value = true)
-                    val updateResult = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
-                    if (updateResult is UpdateResult.Success) {
-                        WidgetUpdateResult.Success(wasCoalesced = false)
-                    } else {
-                        WidgetUpdateResult.Failure(
-                            wasCoalesced = false,
-                            isRetryable = (updateResult as? UpdateResult.GenericFailure)?.isRetryable ?: false,
-                        )
+                    // 1. Try FULL update because settings are missing and we don't know the intended mode.
+                    val fullResult = safeUpdateInternal(context, isFullAttempt = true, isProbe = false)
+                    when (fullResult) {
+                        is UpdateResult.Success -> WidgetUpdateResult.Success(wasCoalesced = false)
+                        is UpdateResult.LimitExceeded -> {
+                            // 2. Confirmed LimitExceeded, now set the flag and try SIMPLIFIED.
+                            AppLogger.w("Confirmed LimitExceeded after timeout. Switching to simplified.")
+                            limitManager.setWidgetLimitExceeded(value = true)
+                            val simplifiedResult = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
+                            if (simplifiedResult is UpdateResult.Success) {
+                                WidgetUpdateResult.Success(wasCoalesced = false)
+                            } else {
+                                WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = false)
+                            }
+                        }
+
+                        else -> {
+                            // 3. Other errors after timeout are treated as retryable.
+                            WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = true)
+                        }
                     }
                 }
 

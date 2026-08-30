@@ -33,6 +33,8 @@ object AppLogger {
     private var isFileLoggingEnabled = BuildConfig.DEBUG
     private const val LOG_BUFFER_SIZE = 8192
     private const val WORKER_RETRY_DELAY_MS = 1000L
+    private const val MAX_RETRY_DELAY_MS = 5000L
+    private const val MAX_WRITE_FAILURES = 10
 
     @Volatile private var logDir: File? = null
 
@@ -48,6 +50,8 @@ object AppLogger {
     private val condition = lock.newCondition()
     private val droppedCount = AtomicLong(0)
     private val workerRestartCount = AtomicLong(0)
+    private val consecutiveWriteFailures = AtomicLong(0)
+    private val currentWriteRetryDelay = AtomicLong(WORKER_RETRY_DELAY_MS)
 
     private const val MAX_WORKER_CRASHES = 3
 
@@ -287,7 +291,9 @@ object AppLogger {
     private fun processWorkerEntry(entry: LogEntry) {
         try {
             writeEntryToFile(entry)
-            // После успешной записи сбрасываем счётчик крахов
+            // Success
+            consecutiveWriteFailures.set(0)
+            currentWriteRetryDelay.set(WORKER_RETRY_DELAY_MS)
             if (workerRestartCount.get() > 0) {
                 workerRestartCount.set(0)
             }
@@ -297,14 +303,27 @@ object AppLogger {
                 if (entry.isCritical) criticalQueue.addFirst(entry) else normalQueue.addFirst(entry)
                 condition.signalAll()
             }
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "AppLogger: failed to write log entry, re-queued", e)
-            }
-            // Добавляем задержку перед повтором, чтобы не забить CPU при фатальной ошибке диска
-            try {
-                Thread.sleep(WORKER_RETRY_DELAY_MS)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
+
+            val failures = consecutiveWriteFailures.incrementAndGet()
+            if (failures >= MAX_WRITE_FAILURES) {
+                isFileLoggingEnabled = false
+                Log.e(TAG, "AppLogger: file logging disabled due to too many failures ($failures)")
+            } else {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "AppLogger: failed to write log entry, re-queued. Failure count: $failures", e)
+                }
+
+                val delay = currentWriteRetryDelay.get()
+                // Добавляем задержку перед повтором, чтобы не забить CPU при фатальной ошибке диска
+                try {
+                    Thread.sleep(delay)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+
+                // Update delay with exponential backoff
+                val nextDelay = (delay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
+                currentWriteRetryDelay.set(nextDelay)
             }
         }
     }
