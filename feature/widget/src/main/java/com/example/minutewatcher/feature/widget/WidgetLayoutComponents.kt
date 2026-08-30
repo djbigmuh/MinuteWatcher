@@ -83,7 +83,7 @@ internal fun WidgetMainContent(
             WidgetMessage(context.getString(R.string.refresh_error), noDataColor)
         }
 
-        uiState.settingsLoadFailed -> {
+        uiState.settingsLoadFailed || uiState.simListLoadFailed -> {
             WidgetMessage(context.getString(R.string.settings_load_error), noDataColor)
         }
 

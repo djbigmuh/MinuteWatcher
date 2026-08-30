@@ -94,7 +94,7 @@ object WidgetSimUiFactory {
         val status = ColorProvider.getUsageStatus(rem.toFloat(), limit.toFloat())
 
         val showMinutes = (config?.showMinutes ?: true) && entity != null && hasData
-        val showLimit = (config?.showMinutesLimit ?: false) && limit > 0
+        val showLimit = (config?.showMinutesLimit ?: true) && limit > 0
 
         return PackageUiData(
             show = showMinutes,
@@ -108,7 +108,7 @@ object WidgetSimUiFactory {
                 },
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = strings.fractionFormat.format(limit.toString()),
+            limitText = strings.fractionFormat.format(limit),
             usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
             limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
@@ -135,7 +135,7 @@ object WidgetSimUiFactory {
         val status = ColorProvider.getUsageStatus(remGb, limitGb)
 
         val showTraffic = (config?.showTraffic ?: true) && entity != null && hasData
-        val showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f
+        val showLimit = (config?.showTrafficLimit ?: true) && limitGb > 0f
 
         return PackageUiData(
             show = showTraffic,

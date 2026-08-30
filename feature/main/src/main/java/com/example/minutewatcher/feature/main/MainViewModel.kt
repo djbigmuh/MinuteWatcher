@@ -13,6 +13,7 @@ import com.example.minutewatcher.feature.main.controller.MainViewModelController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
@@ -53,6 +54,8 @@ class MainViewModel
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
 
+    private var hasCheckedLimits = false
+
         init {
             initController.initializeApp(
                 scope = viewModelScope,
@@ -69,6 +72,29 @@ class MainViewModel
                         throw e
                     } catch (e: Exception) {
                         AppLogger.e("MainViewModel: Error processing data refresh event", e)
+                    }
+                }
+            }
+
+            viewModelScope.launch {
+                combine(uiState, appSettings) { state, settings ->
+                    state to settings
+                }.collect { (state, settings) ->
+                    if (state is SimCardListState.Success && settings.onboardingCompleted && !hasCheckedLimits) {
+                        val allNoLimits = state.simCards.all { !it.isMinutesLimitSet && !it.isTrafficLimitSet }
+                        if (allNoLimits && state.simCards.isNotEmpty()) {
+                            hasCheckedLimits = true
+                            val firstSim = state.simCards[0]
+                            setLimitDialog(
+                                LimitDialogData(
+                                    firstSim.slot,
+                                    firstSim.operatorName,
+                                    firstSim.minutesLimit,
+                                    firstSim.trafficLimitMb,
+                                    firstSim.rolloverEnabled,
+                                ),
+                            )
+                        }
                     }
                 }
             }

@@ -78,6 +78,7 @@ object WidgetUiMapper {
                     !state.widgetLimitExceeded,
             useSystemColors = state.transparency > Constants.Widget.TRANSPARENCY_SYSTEM_COLORS_THRESHOLD,
             settingsLoadFailed = state.settingsLoadFailed,
+            simListLoadFailed = state.simListLoadFailed,
             refreshFailed = refreshFailed,
             isSnapshotEmpty = snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP,
         )

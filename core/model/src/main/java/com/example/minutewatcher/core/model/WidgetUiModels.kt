@@ -30,6 +30,7 @@ data class WidgetUiState(
     val showSeparator: Boolean = false,
     val useSystemColors: Boolean = false,
     val settingsLoadFailed: Boolean = false,
+    val simListLoadFailed: Boolean = false,
     val refreshFailed: Boolean = false,
     val isSnapshotEmpty: Boolean = false,
 )

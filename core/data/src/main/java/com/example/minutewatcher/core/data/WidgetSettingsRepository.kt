@@ -16,6 +16,8 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -63,9 +65,12 @@ class WidgetSettingsRepository
                 val activeSims =
                     simIdentityRepository
                         .observeActiveSims()
+                        .filter { it.isNotEmpty() }
                         .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-                if (activeSims == null) {
-                    AppLogger.e("WidgetSettingsRepository: failed to load active SIMs")
+                        ?: simIdentityRepository.observeActiveSims().first()
+                if (activeSims.isEmpty() && settings.widgetLimitExceeded) {
+                    // If no SIMs found, but widget limit was exceeded, still return current settings
+                    // but with empty simStates to avoid infinite refresh loops.
                     return@coroutineScope getFallbackWidgetSettings(
                         settings,
                         settingsLoadFailed = false,

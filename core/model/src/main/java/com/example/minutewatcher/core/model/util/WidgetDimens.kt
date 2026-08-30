@@ -10,7 +10,7 @@ object WidgetDimens {
     const val FONT_SINGLE_VALUE = 12f
     const val FONT_MULTI_NAME = 12f
     const val FONT_MULTI_VALUE = 14f
-    const val FONT_LIMIT = 10f
+    const val FONT_LIMIT = 11f
     const val FONT_FULL = 11f
     const val SPACING_DEFAULT = 4
     const val SPACING_SMALL = 2
