@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
-import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -21,6 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -83,22 +83,26 @@ class TrafficTracker
         }
 
         suspend fun updateTrafficUsage() {
-            catchingCancellation(
-                block = {
-                    val currentStatus = _status.value
-                    val isTimeoutError =
-                        (currentStatus is TrackingStatus.Error) &&
-                            (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN)
-                    if (isTimeoutError) {
-                        _status.value = TrackingStatus.Idle
-                    }
+            try {
+                val currentStatus = _status.value
+                val isTimeoutError =
+                    (currentStatus is TrackingStatus.Error) &&
+                        (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN)
+                if (isTimeoutError) {
+                    _status.value = TrackingStatus.Idle
+                }
 
-                    if (!permissionChecker.checkPermissions(_status)) return@catchingCancellation
+                if (!permissionChecker.checkPermissions(_status)) return
 
-                    val activeSims = fetchActiveSims()
-                    handleActiveSims(activeSims)
-                },
-            ) { e -> errorHandler.handleUpdateError(e, _status) }
+                val activeSims = fetchActiveSims()
+                handleActiveSims(activeSims)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                errorHandler.handleUpdateError(e, _status)
+            } catch (e: SecurityException) {
+                errorHandler.handleUpdateError(e, _status)
+            }
         }
 
         private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
@@ -125,9 +129,12 @@ class TrafficTracker
                 processActiveSimsTraffic(activeSims)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: handleActiveSims failed", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            } catch (e: IOException) {
+                AppLogger.e("TrafficTracker: handleActiveSims storage error", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            } catch (e: SecurityException) {
+                AppLogger.e("TrafficTracker: handleActiveSims permission error", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             }
         }
 
@@ -154,13 +161,16 @@ class TrafficTracker
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: processActiveSimsTraffic failed", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            } catch (e: IOException) {
+                AppLogger.e("TrafficTracker: processActiveSimsTraffic storage error", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            } catch (e: SecurityException) {
+                AppLogger.e("TrafficTracker: processActiveSimsTraffic permission error", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             }
         }
 
-    @Suppress("ReturnCount", "LongMethod", "TooGenericExceptionCaught")
+    @Suppress("ReturnCount", "LongMethod")
         private suspend fun performTrafficUpdate(
             target: TargetInfo,
             targetIdentity: String,
@@ -245,16 +255,32 @@ class TrafficTracker
                         }
                         _status.value = TrackingStatus.Active
                         true
-                } catch (e: Exception) {
-                    AppLogger.e("TrafficTracker: Error during traffic update at phase $phase for $targetIdentity", e)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: IOException) {
+                    AppLogger.e(
+                        "TrafficTracker: Storage error during traffic update at phase $phase for $targetIdentity",
+                        e
+                    )
                     _status.value =
                         TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Traffic update failed at $phase: ${e.message}",
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Traffic update storage failure at $phase: ${e.message}",
                         )
                     false
-                    }
+                } catch (e: SecurityException) {
+                    AppLogger.e(
+                        "TrafficTracker: Permission error during traffic update at phase $phase for $targetIdentity",
+                        e
+                    )
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                            "Traffic update permission failure at $phase: ${e.message}",
+                        )
+                    false
                 }
+            }
         } ?: run {
                 AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
                 _status.value =

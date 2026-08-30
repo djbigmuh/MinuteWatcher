@@ -222,7 +222,13 @@ class UpdateCoordinator
             AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
             val error = classifyException(e)
             _status.value = error
-            WidgetUpdateResult.Failure(isRetryable = isRetryableException(e))
+            val isRetryable = isRetryableException(e)
+            val reason = when {
+                isRemoteViewsLimitException(e) -> WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
+                !isRetryable -> WidgetUpdateResult.FailureReason.TERMINAL
+                else -> WidgetUpdateResult.FailureReason.TRANSIENT
+            }
+            WidgetUpdateResult.Failure(isRetryable = isRetryable, reason = reason)
         }
 
         widgetUpdateMutex.withLock {
@@ -231,8 +237,25 @@ class UpdateCoordinator
                 observationRestartCount.set(0)
                 consecutiveUpdateFailures = 0
             } else if (result is WidgetUpdateResult.Failure && !result.wasCoalesced) {
-                lastSnapshotHash = null
-                handleUpdateFailure()
+                when (result.reason) {
+                    WidgetUpdateResult.FailureReason.TRANSIENT -> {
+                        lastSnapshotHash = null
+                        handleUpdateFailure()
+                    }
+
+                    WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
+                        _status.value = TrackingStatus.Error(
+                            TrackingStatus.ErrorType.NOT_SUPPORTED,
+                            "Widget size limit exceeded. Try reducing SIM count or removing other widgets."
+                        )
+                        AppLogger.w("UpdateCoordinator: terminal limit exceeded, keeping current hash")
+                    }
+
+                    WidgetUpdateResult.FailureReason.TERMINAL -> {
+                        // For terminal failures we don't reset hash to avoid immediate retry loops
+                        AppLogger.w("UpdateCoordinator: terminal failure encountered, keeping current hash")
+                    }
+                }
             }
         }
     }
@@ -338,9 +361,12 @@ class UpdateCoordinator
                     }
                     true
                 } else {
-                    consecutiveUpdateFailures++
+                    val isRetryable = (result as? WidgetUpdateResult.Failure)?.isRetryable ?: true
+                    if (isRetryable) {
+                        consecutiveUpdateFailures++
+                    }
                     AppLogger.w(
-                        "Force widget update reported failure ($consecutiveUpdateFailures), hash not updated",
+                        "Force widget update reported failure ($consecutiveUpdateFailures), isRetryable=$isRetryable",
                     )
                     false
                 }
@@ -348,7 +374,9 @@ class UpdateCoordinator
                 throw e
             } catch (e: Exception) {
                 AppLogger.w("Force widget update failed, hash not updated", e)
-                lastSnapshotHash = null
+                if (isRetryableException(e)) {
+                    lastSnapshotHash = null
+                }
                 false
             }
         }

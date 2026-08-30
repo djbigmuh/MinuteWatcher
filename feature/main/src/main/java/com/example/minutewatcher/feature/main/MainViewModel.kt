@@ -63,18 +63,6 @@ class MainViewModel
             }
 
             viewModelScope.launch {
-                controllers.dataRefreshNotifier.refreshFlow.collect {
-                    try {
-                        lastRefreshAt = timeProvider.now()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("MainViewModel: Error processing data refresh event", e)
-                    }
-                }
-            }
-
-            viewModelScope.launch {
                 combine(
                     uiState,
                     appSettings,
@@ -198,12 +186,13 @@ class MainViewModel
             controllers.refresh.refreshSimCardsNow(
                 scope = viewModelScope,
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
+                onSuccess = { lastRefreshAt = timeProvider.now() },
                 onComplete = onComplete,
             )
         }
 
-        private suspend fun refreshAndNotify(force: Boolean = false) {
-            controllers.refresh.refreshAndNotify(
+    private suspend fun refreshAndNotify(force: Boolean = false): Boolean {
+        return controllers.refresh.refreshAndNotify(
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
                 force = force,
             )
@@ -220,7 +209,11 @@ class MainViewModel
                 scope = viewModelScope,
                 initController = initController,
                 lastRefreshAt = lastRefreshAt,
-                onRefreshNeeded = { refreshAndNotify(force = false) },
+                onRefreshNeeded = {
+                    if (refreshAndNotify(force = false)) {
+                        lastRefreshAt = timeProvider.now()
+                    }
+                },
             ) {
                 lastRefreshAt = it
             }

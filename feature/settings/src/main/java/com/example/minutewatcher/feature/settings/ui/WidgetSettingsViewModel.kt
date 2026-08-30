@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.settings.ui
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -14,8 +13,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -85,30 +86,41 @@ class WidgetSettingsViewModel
         private fun loadSettings() {
             viewModelScope.launch {
                 loadMutex.withLock {
-                    loadJob.cancelAndJoinWithTimeout(LOAD_TIMEOUT.inWholeMilliseconds)
-                    loadJob = null
+                    val jobToCancel = loadJob
+                    if (jobToCancel != null) {
+                        val result = withTimeoutOrNull<Unit>(LOAD_TIMEOUT) {
+                            jobToCancel.cancelAndJoin()
+                        }
+                        if (result == null) {
+                            AppLogger.w("WidgetSettingsViewModel: loadJob cancellation timed out, proceeding")
+                        }
+                    }
 
-                    loadJob =
-                        launch {
-                            try {
-                                val loaded =
-                                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                        loader.load()
-                                    }
-                                ensureActive()
-                                if (loaded != null) {
+                    loadJob = launch {
+                        try {
+                            val loaded = withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                                loader.load()
+                            }
+                            ensureActive()
+                            if (loaded != null) {
+                                if (coroutineContext.isActive) {
                                     reduce { copy(settings = loaded, isLoadError = false) }
-                                } else {
-                                    AppLogger.e("Failed to load widget settings: timeout")
+                                }
+                            } else {
+                                AppLogger.e("Failed to load widget settings: timeout")
+                                if (coroutineContext.isActive) {
                                     reduce { copy(isLoadError = true) }
                                 }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to load widget settings", e)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to load widget settings", e)
+                            if (coroutineContext.isActive) {
                                 reduce { copy(isLoadError = true) }
                             }
                         }
+                    }
                 }
             }
         }

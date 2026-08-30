@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,13 +15,23 @@ class TrafficErrorHandler
             e: Throwable,
             statusFlow: MutableStateFlow<TrackingStatus>,
         ) {
-            if (e is SecurityException) {
-                AppLogger.e("SecurityException in TrafficTracker", e)
-                statusFlow.value =
-                    TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            } else {
-                AppLogger.e("Error updating traffic", e)
-                statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            when (e) {
+                is SecurityException -> {
+                    AppLogger.e("SecurityException in TrafficTracker", e)
+                    statusFlow.value =
+                        TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                }
+
+                is IOException -> {
+                    AppLogger.e("IOException in TrafficTracker", e)
+                    statusFlow.value =
+                        TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                }
+
+                else -> {
+                    AppLogger.e("Error updating traffic", e)
+                    statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                }
             }
         }
 

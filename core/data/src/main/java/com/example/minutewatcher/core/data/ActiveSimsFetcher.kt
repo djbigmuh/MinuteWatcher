@@ -30,24 +30,32 @@ internal class ActiveSimsFetcher
         /**
          * Fetches active SIMs with exponential backoff retry logic.
          *
+         * Retries only transient storage errors (IOException) and unavailable identity seeds.
+         * Programming errors (like NPE) are rethrown immediately without retry.
+         *
          * @param seed The identity seed result.
          * @return List of active SIM info.
-         * @throws IOException if terminal DataStore error occurs.
+         * @throws IOException if terminal storage error occurs.
          */
         suspend fun fetchActiveSimsWithRetry(seed: SeedResult): List<ActiveSimInfo> {
             var retryDelay = Constants.Flow.RETRY_DELAY_MS
             val maxDelay = Constants.Flow.LONG_TIMEOUT_MS * MAX_DELAY_MULTIPLIER
-            repeat(MAX_FETCH_RETRIES) { attempt ->
+            repeat(MAX_FETCH_ATTEMPTS + 1) { attempt ->
                 try {
                     return getActiveSimsInternal(seed)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (e: SecurityException) {
+                    handleFetchRetryException(e, attempt, retryDelay)
+                } catch (e: SeedUnavailableException) {
+                    handleFetchRetryException(e, attempt, retryDelay)
+                    retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
+                } catch (e: IOException) {
                     handleFetchRetryException(e, attempt, retryDelay)
                     retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
                 }
             }
-            throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries")
+            throw IOException("Terminal DataStore error after ${MAX_FETCH_ATTEMPTS + 1} attempts")
         }
 
         @Suppress("ReturnCount", "ThrowsCount")
@@ -107,13 +115,13 @@ internal class ActiveSimsFetcher
         ) {
             when (e) {
                 is SeedUnavailableException -> {
-                    if (attempt == (MAX_FETCH_RETRIES - 1)) throw e
+                    if (attempt == MAX_FETCH_ATTEMPTS) throw e
                     AppLogger.w("ActiveSimsFetcher: Seed unavailable, retrying fetch (attempt ${attempt + 1})")
                     delay(delay.milliseconds)
                 }
                 is IOException -> {
-                    if (attempt == (MAX_FETCH_RETRIES - 1)) {
-                        throw IOException("Terminal DataStore error after $MAX_FETCH_RETRIES retries", e)
+                    if (attempt == MAX_FETCH_ATTEMPTS) {
+                        throw IOException("Terminal DataStore error after ${MAX_FETCH_ATTEMPTS + 1} attempts", e)
                     }
                     AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
                     delay(delay.milliseconds)
@@ -122,16 +130,16 @@ internal class ActiveSimsFetcher
                     AppLogger.e("ActiveSimsFetcher: permission error fetching active SIMs", e)
                     throw e
                 }
-                else -> {
-                    AppLogger.e("Failed to fetch active SIMs", e)
-                    delay(delay.milliseconds)
-                }
+                else -> throw e
             }
         }
 
         companion object {
             private const val MAX_DELAY_MULTIPLIER = 3
-            private const val MAX_FETCH_RETRIES = 5
+
+            /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
+            private const val MAX_FETCH_ATTEMPTS = 4
+
             private const val RETRY_DELAY_MULTIPLIER = 2
         }
     }

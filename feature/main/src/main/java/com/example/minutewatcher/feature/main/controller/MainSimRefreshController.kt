@@ -97,14 +97,17 @@ class MainSimRefreshController
         suspend fun refreshAndNotify(
             onNotifyChanged: suspend (Boolean) -> Unit,
             force: Boolean = false,
-        ) {
+        ): Boolean {
             val outcome = refreshSimCardsInternal()
             if (outcome is RefreshOutcome.SkippedAlreadyInProgress) {
                 // Обновление уже выполняется другим вызовом — не дублируем
-                return
+                return false
             }
-            if ((outcome is RefreshOutcome.Completed) && (outcome.result is RefreshResult.Success)) {
+            return if ((outcome is RefreshOutcome.Completed) && (outcome.result is RefreshResult.Success)) {
                 onNotifyChanged(force)
+                true
+            } else {
+                false
             }
         }
 
@@ -115,11 +118,14 @@ class MainSimRefreshController
         fun refreshSimCardsNow(
             scope: CoroutineScope,
             onNotifyChanged: suspend (Boolean) -> Unit,
+            onSuccess: () -> Unit = {},
             onComplete: () -> Unit = {},
         ) {
             scope.launch {
                 try {
-                    refreshAndNotify(onNotifyChanged, force = false)
+                    if (refreshAndNotify(onNotifyChanged, force = false)) {
+                        onSuccess()
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

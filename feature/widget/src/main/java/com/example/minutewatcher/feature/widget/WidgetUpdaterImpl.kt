@@ -49,16 +49,22 @@ class WidgetUpdaterImpl
                     } else if (lastOutcome is UpdateOutcome.LimitExceeded) {
                         handleLimitExceeded()
                     } else {
+                        val isRetryable = lastOutcome == UpdateOutcome.Retry
                         WidgetUpdateResult.Failure(
                             wasCoalesced = false,
-                            isRetryable = lastOutcome == UpdateOutcome.Retry,
+                            isRetryable = isRetryable,
+                            reason = if (isRetryable) WidgetUpdateResult.FailureReason.TRANSIENT else WidgetUpdateResult.FailureReason.TERMINAL,
                         )
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("WidgetUpdater: updateAll failed", e)
-                    WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = false)
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = false,
+                        isRetryable = false,
+                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                    )
                 }
             }
 
@@ -78,7 +84,11 @@ class WidgetUpdaterImpl
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("WidgetUpdater: update failed with unexpected exception", e)
-                    WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = false)
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = false,
+                        isRetryable = false,
+                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                    )
                 } finally {
                     activeUpdate.compareAndSet(deferred, null)
                 }
@@ -102,7 +112,11 @@ class WidgetUpdaterImpl
                 throw e
             } catch (e: Exception) {
                 AppLogger.w("WidgetUpdater: joined update failed or timed out", e)
-                WidgetUpdateResult.Failure(wasCoalesced = true)
+                WidgetUpdateResult.Failure(
+                    wasCoalesced = true,
+                    isRetryable = true,
+                    reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                )
             }
         }
 
@@ -130,18 +144,29 @@ class WidgetUpdaterImpl
                             if (simplifiedResult is UpdateResult.Success) {
                                 WidgetUpdateResult.Success(wasCoalesced = false)
                             } else {
-                                WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = false)
+                                WidgetUpdateResult.Failure(
+                                    wasCoalesced = false,
+                                    isRetryable = false,
+                                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
+                                )
                             }
                         }
 
                         else -> {
                             // 3. Other errors after timeout are treated as retryable.
-                            WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = true)
+                            WidgetUpdateResult.Failure(
+                                wasCoalesced = false,
+                                isRetryable = true,
+                                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                            )
                         }
                     }
                 }
 
-                settings.widgetLimitExceeded -> WidgetUpdateResult.Failure(isRetryable = false)
+                settings.widgetLimitExceeded -> WidgetUpdateResult.Failure(
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
+                )
                 else -> performSimplifiedUpdate(isFallback = true)
             }
         }
@@ -211,7 +236,11 @@ class WidgetUpdaterImpl
             return if (success) {
                 WidgetUpdateResult.Success(wasCoalesced = false)
             } else {
-                WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = false)
+                WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
+                )
             }
         }
 

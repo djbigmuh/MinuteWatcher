@@ -81,26 +81,26 @@ internal class SimIdentityObserver
                             when (cause) {
                                 is CancellationException -> throw cause
                                 is SeedUnavailableException -> {
-                                    if (attempt < MAX_SEED_UNAVAILABLE_RETRIES) {
+                                    if (attempt < MAX_SEED_RETRY_ATTEMPTS) {
                                         AppLogger.w(
-                                            "SimIdentityObserver: Seed unavailable, retry ${attempt + 1}/$MAX_SEED_UNAVAILABLE_RETRIES",
+                                            "SimIdentityObserver: Seed unavailable, retry ${attempt + 1}/$MAX_SEED_RETRY_ATTEMPTS",
                                         )
                                         delay(5000.milliseconds)
                                         true
                                     } else {
                                         AppLogger.e(
-                                            "SimIdentityObserver: Seed unavailable after $MAX_SEED_UNAVAILABLE_RETRIES retries, stopping",
+                                            "SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, stopping",
                                         )
                                         false
                                     }
                                 }
 
                                 is IOException -> {
-                                    if (attempt < MAX_FETCH_RETRIES) {
+                                    if (attempt < MAX_FETCH_RETRY_ATTEMPTS) {
                                         val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
                                         AppLogger.w(
                                             "SimIdentityObserver: Error fetching sims, " +
-                                                "retrying in ${backoff}ms (attempt $attempt)",
+                                                "retrying in ${backoff}ms (attempt ${attempt + 1})",
                                             cause,
                                         )
                                         delay(backoff.milliseconds)
@@ -117,10 +117,10 @@ internal class SimIdentityObserver
                     (cause as? CancellationException)?.let { throw it }
                     if (cause is SecurityException) return@retryWhen false
 
-                    if (attempt < 5) {
+                    if (attempt < MAX_FLOW_RETRY_ATTEMPTS) {
                         val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
                         AppLogger.w(
-                            "SimIdentityObserver: Retrying physicalActiveSims flow due to error ($attempt/5), " +
+                            "SimIdentityObserver: Retrying physicalActiveSims flow due to error (${attempt + 1}/$MAX_FLOW_RETRY_ATTEMPTS), " +
                                 "delay ${backoff}ms",
                             cause,
                         )
@@ -171,8 +171,16 @@ internal class SimIdentityObserver
 
         companion object {
             private const val INITIAL_BACKOFF_MS = 1000L
-            private const val MAX_FETCH_RETRIES = 3L
-            private const val MAX_SEED_UNAVAILABLE_RETRIES = 10L
+
+            /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
+            private const val MAX_FETCH_RETRY_ATTEMPTS = 3L
+
+            /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
+            private const val MAX_SEED_RETRY_ATTEMPTS = 10L
+
+            /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
+            private const val MAX_FLOW_RETRY_ATTEMPTS = 5L
+
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
         }
