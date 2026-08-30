@@ -4,8 +4,11 @@ import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,9 +25,11 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetLimitManagerTest {
+    private val testScope = TestScope(UnconfinedTestDispatcher())
     private val appSettingsRepository: AppSettingsRepository = mock()
     private lateinit var manager: WidgetLimitManager
     private val settingsFlow = MutableStateFlow(AppSettings())
@@ -33,7 +38,7 @@ class WidgetLimitManagerTest {
     fun setup() {
         initTestLogger()
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
-        manager = WidgetLimitManager(appSettingsRepository)
+        manager = WidgetLimitManager(appSettingsRepository, testScope)
     }
 
     @Test

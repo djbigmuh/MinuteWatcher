@@ -241,10 +241,12 @@ object AppLogger {
 
     private fun workerLoop() {
         try {
-            while (true) {
+            while (isFileLoggingEnabled) {
                 val entry = pollEntry() ?: continue
                 processWorkerEntry(entry)
             }
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
         } catch (e: Exception) {
             lock.withLock {
                 isWorkerStarted = false
@@ -254,7 +256,7 @@ object AppLogger {
             if (count > MAX_WORKER_CRASHES) {
                 isFileLoggingEnabled = false
                 Log.e(TAG, "AppLogger: too many worker crashes, file logging disabled")
-            } else {
+            } else if (isFileLoggingEnabled) {
                 // Автоматический перезапуск через задержку
                 Thread {
                     try {
@@ -282,7 +284,7 @@ object AppLogger {
 
     private fun pollEntry(): LogEntry? =
         lock.withLock {
-            while (criticalQueue.isEmpty() && normalQueue.isEmpty()) {
+            while (criticalQueue.isEmpty() && normalQueue.isEmpty() && isFileLoggingEnabled) {
                 condition.await()
             }
             criticalQueue.pollFirst() ?: normalQueue.pollFirst()
@@ -381,6 +383,45 @@ object AppLogger {
         } catch (_: Exception) {
         }
         logWriter = null
+    }
+
+    /**
+     * Gracefully shuts down the logger, flushing any remaining entries in the queue.
+     */
+    fun shutdown() {
+        isFileLoggingEnabled = false
+        lock.withLock {
+            condition.signalAll()
+        }
+        val thread = workerThread
+        if (thread != null) {
+            thread.interrupt()
+            try {
+                thread.join(1000)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }
+        fileLock.withLock {
+            flushRemainingLogsUnlocked()
+            closeWriterUnlocked()
+        }
+        workerThread = null
+    }
+
+    private fun flushRemainingLogsUnlocked() {
+        lock.withLock {
+            while (criticalQueue.isNotEmpty() || normalQueue.isNotEmpty()) {
+                val entry = criticalQueue.pollFirst() ?: normalQueue.pollFirst()
+                if (entry != null) {
+                    try {
+                        writeEntryToFileUnlocked(entry)
+                    } catch (_: Exception) {
+                        // Best effort during shutdown
+                    }
+                }
+            }
+        }
     }
 
     @VisibleForTesting

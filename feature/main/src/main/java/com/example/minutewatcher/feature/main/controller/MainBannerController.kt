@@ -43,9 +43,9 @@ class MainBannerController
     @Inject
     constructor(
         trackingStatusRepository: TrackingStatusRepository,
-        private val permissionRepository: PermissionRepository,
-        private val appSettingsRepository: AppSettingsRepository,
-        private val seedRepository: SimIdentitySeedRepository,
+        permissionRepository: PermissionRepository,
+        appSettingsRepository: AppSettingsRepository,
+        seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val appSearchRetryCount = MutableStateFlow(value = 0)

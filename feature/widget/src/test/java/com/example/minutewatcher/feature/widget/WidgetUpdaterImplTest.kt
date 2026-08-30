@@ -9,6 +9,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,10 +32,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class WidgetUpdaterImplTest {
     private lateinit var context: Context
+    private val testScope = TestScope(UnconfinedTestDispatcher())
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val renderer: WidgetRenderer = mock()
     private val retryManager = WidgetUpdateRetryManager()
-    private val limitManager = WidgetLimitManager(appSettingsRepository)
+    private val limitManager = WidgetLimitManager(appSettingsRepository, testScope)
     private val errorClassifier = WidgetErrorClassifier()
 
     private lateinit var updater: WidgetUpdaterImpl

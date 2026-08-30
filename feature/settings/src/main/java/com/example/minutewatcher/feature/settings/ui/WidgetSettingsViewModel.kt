@@ -169,20 +169,19 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            // Wait for the lock with a timeout instead of immediate rejection.
-            // This handles rapid concurrent save triggers (e.g. double clicks) gracefully
-            // by serializing them if they are fast enough, or reporting "already in progress"
-            // only if the storage is truly bogged down.
-            val lockAcquired =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    saveMutex.lock()
-                    true
+            val acquired = saveMutex.tryLock()
+            if (!acquired) {
+                // Ждём освобождения с таймаутом
+                val waited =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        saveMutex.lock()
+                        true
+                    }
+                if (waited == null) {
+                    AppLogger.w("saveAndNotify: already in progress, timeout waiting for mutex")
+                    reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
+                    return
                 }
-
-            if (lockAcquired == null) {
-                AppLogger.w("saveAndNotify: already in progress, timeout waiting for mutex")
-                reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
-                return
             }
 
             try {

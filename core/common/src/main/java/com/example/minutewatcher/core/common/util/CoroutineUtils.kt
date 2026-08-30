@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.common.util
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Utility function to execute a block and catch exceptions while ensuring
@@ -35,12 +36,12 @@ suspend fun Job?.cancelAndJoinWithTimeout(timeoutMs: Long) {
     this?.let { job ->
         job.cancel()
         try {
-            withTimeoutOrNull(timeoutMs) {
+            withTimeoutOrNull(timeoutMs.milliseconds) {
                 job.join()
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Ignore other exceptions during join
         } ?: run {
             // Timeout occurred, job might be stuck

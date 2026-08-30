@@ -156,13 +156,11 @@ class ResetManager
             totalActiveSims: Int,
         ) {
             if (ioException != null) {
-                if ((successCount == 0) && (totalActiveSims > 0)) {
-                    throw ioException
-                } else {
+                if (successCount < totalActiveSims) {
                     AppLogger.w(
-                        "ResetManager: auto-reset partially failed, but at least one SIM " +
-                            "succeeded. Retrying via worker is skipped.",
+                        "ResetManager: auto-reset partially failed ($successCount/$totalActiveSims succeeded), propagating",
                     )
+                    throw ioException
                 }
             }
         }

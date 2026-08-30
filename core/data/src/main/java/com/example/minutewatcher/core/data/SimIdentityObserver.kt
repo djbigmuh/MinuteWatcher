@@ -81,12 +81,18 @@ internal class SimIdentityObserver
                             when (cause) {
                                 is CancellationException -> throw cause
                                 is SeedUnavailableException -> {
-                                    AppLogger.w(
-                                        "SimIdentityObserver: Seed still unavailable after " +
-                                            "fetcher retries, waiting 5s (attempt $attempt)",
-                                    )
-                                    delay(5000.milliseconds)
-                                    true
+                                    if (attempt < MAX_SEED_UNAVAILABLE_RETRIES) {
+                                        AppLogger.w(
+                                            "SimIdentityObserver: Seed unavailable, retry ${attempt + 1}/$MAX_SEED_UNAVAILABLE_RETRIES",
+                                        )
+                                        delay(5000.milliseconds)
+                                        true
+                                    } else {
+                                        AppLogger.e(
+                                            "SimIdentityObserver: Seed unavailable after $MAX_SEED_UNAVAILABLE_RETRIES retries, stopping",
+                                        )
+                                        false
+                                    }
                                 }
 
                                 is IOException -> {
@@ -166,6 +172,7 @@ internal class SimIdentityObserver
         companion object {
             private const val INITIAL_BACKOFF_MS = 1000L
             private const val MAX_FETCH_RETRIES = 3L
+            private const val MAX_SEED_UNAVAILABLE_RETRIES = 10L
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
         }

@@ -72,6 +72,11 @@ class MinuteWatcherApp :
         }
     }
 
+    override fun onTerminate() {
+        AppLogger.shutdown()
+        super.onTerminate()
+    }
+
     override val workManagerConfiguration: Configuration
         get() =
             Configuration

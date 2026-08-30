@@ -119,27 +119,26 @@ class InitialSetupWorker
         } ?: throw IOException("DataStore timeout reading migrationStability flag")
 
     private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
-        val hasLegacyData =
-            try {
-                deps.migrationService.hasLegacyData()
-            } catch (e: IOException) {
-                AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
-                return Result.retry()
-            }
+        val hasLegacyData = try {
+            deps.migrationService.hasLegacyData()
+        } catch (e: IOException) {
+            AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
+            return Result.retry()
+        }
 
         if (hasLegacyData) {
-                AppLogger.d("Migration deferred: permission missing but legacy data exists")
-            } else {
-                if (!v1Completed) {
-                    deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-                    deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                    AppLogger.d("Migration V1 skipped: no legacy data found")
-                }
-            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-                deps.migrationService.markSchemaCurrent()
+            AppLogger.d("Migration deferred: permission missing but legacy data exists")
+        } else {
+            if (!v1Completed) {
+                deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+                deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                AppLogger.d("Migration V1 skipped: no legacy data found")
             }
-        return null
+            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+            deps.migrationService.markSchemaCurrent()
         }
+        return null
+    }
 
     private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
         var activeSims: List<ActiveSimInfo>? = null

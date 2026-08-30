@@ -178,9 +178,7 @@ class UpdateCoordinator
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         if (snapshot.suppressWidgetUpdate) {
-            widgetUpdateMutex.withLock {
-                lastSnapshotHash = newHash
-            }
+            widgetUpdateMutex.withLock { lastSnapshotHash = newHash }
             return
         }
 
@@ -198,6 +196,7 @@ class UpdateCoordinator
                     AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                     return@withLock false
                 }
+                lastSnapshotHash = newHash
                 true
             }
 
@@ -228,8 +227,11 @@ class UpdateCoordinator
 
         widgetUpdateMutex.withLock {
             if (result.isSuccess) {
-                handleUpdateSuccess(newHash)
-            } else if ((result is WidgetUpdateResult.Failure) && (!result.wasCoalesced)) {
+                _status.value = TrackingStatus.Active
+                observationRestartCount.set(0)
+                consecutiveUpdateFailures = 0
+            } else if (result is WidgetUpdateResult.Failure && !result.wasCoalesced) {
+                lastSnapshotHash = null
                 handleUpdateFailure()
             }
         }
@@ -273,15 +275,6 @@ class UpdateCoordinator
         return false
     }
 
-        private fun handleUpdateSuccess(newHash: Int) {
-            lastSnapshotHash = newHash
-            _status.value = TrackingStatus.Active
-            observationRestartCount.set(0)
-            if (consecutiveUpdateFailures > 0) {
-                AppLogger.d("UpdateCoordinator: widget update recovered, resetting failure counter")
-                consecutiveUpdateFailures = 0
-            }
-        }
 
         private fun handleUpdateFailure() {
             consecutiveUpdateFailures++
