@@ -327,6 +327,7 @@ class UpdateCoordinator
 
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
+                    observationRestartCount.set(0)
                     if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
                         lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
                     }

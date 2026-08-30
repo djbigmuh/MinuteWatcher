@@ -168,19 +168,14 @@ class MainSimDataController
                 try {
                     val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
                     if (!widgetSuccess) {
-                        AppLogger.w(
-                            "MainSimDataController: Data saved, but widget update notification " +
-                                "failed for $operationName (slot $slot)",
-                        )
-                        return OperationError("Data saved, but widget not updated", slot)
+                        AppLogger.w("MainSimDataController: Data saved, but widget update failed for slot $slot")
                     }
-                    null
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
-                    OperationError("Data saved, but widget refresh failed", slot)
                 }
+                null
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

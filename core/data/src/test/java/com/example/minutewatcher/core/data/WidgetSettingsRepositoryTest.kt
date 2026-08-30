@@ -193,30 +193,40 @@ class WidgetSettingsRepositoryTest {
         }
 
     @Test
-    @Suppress("UNUSED_VARIABLE")
+    fun `load returns success with empty simStates on devices without SIM`() =
+        runTest {
+            val appSettingsFlow = flowOf(AppSettings())
+            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
+
+            // observeActiveSims emits empty list (no SIMs)
+            val activeSimsFlow = flowOf(emptyList<ActiveSimInfo>())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
+
+            val result = repository.load()
+
+            assertTrue("simStates should be empty", result.simStates.isEmpty())
+            assertFalse("settingsLoadFailed should be false", result.settingsLoadFailed)
+            assertFalse("simListLoadFailed should be false for empty list", result.simListLoadFailed)
+
+            // getSimSettingsBatch should NOT be called for empty SIM list
+            @Suppress("UnusedFlow")
+            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
+        }
+
+    @Test
     fun `load returns fallback with simListLoadFailed when observeActiveSims times out`() =
         runTest {
             val appSettingsFlow = flowOf(AppSettings())
             whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
 
-            // observeActiveSims never emits and stays empty
-            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1)
-            activeSimsFlow.tryEmit(emptyList())
+            // observeActiveSims never emits
+            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>()
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
-
-            val batchSettingsFlow = flowOf(emptyMap<String, SimSettingsState>())
-            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(batchSettingsFlow)
 
             val result = repository.load()
 
-            assertTrue("simStates should be empty on load failure", result.simStates.isEmpty())
-            assertTrue("General settings should be loaded successfully", !result.settingsLoadFailed)
-            assertTrue("SIM list should be marked as failed", result.simListLoadFailed)
-
-            // getSimSettingsBatch не должен вызываться при таймауте observeActiveSims,
-            // так как список SIM не был получен и загружать настройки не для чего.
-            @Suppress("UnusedFlow")
-            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
+            assertTrue("simStates should be empty on timeout", result.simStates.isEmpty())
+            assertTrue("SIM list should be marked as failed on timeout", result.simListLoadFailed)
         }
 
     @Test

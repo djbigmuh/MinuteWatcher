@@ -17,7 +17,6 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -65,16 +64,15 @@ class WidgetSettingsRepository
                 val activeSims =
                     simIdentityRepository
                         .observeActiveSims()
-                        .filter { it.isNotEmpty() }
                         .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
 
-                if (activeSims == null || (activeSims.isEmpty() && settings.widgetLimitExceeded)) {
-                    // If no SIMs found (timeout), or empty list with limit exceeded,
+                if (activeSims == null) {
+                    // If no SIMs found (timeout),
                     // return fallback to avoid infinite loops.
                     return@coroutineScope getFallbackWidgetSettings(
                         settings,
                         settingsLoadFailed = false,
-                        simListLoadFailed = activeSims == null,
+                        simListLoadFailed = true,
                     )
                 }
 
@@ -102,6 +100,8 @@ class WidgetSettingsRepository
             }
 
         private suspend fun loadSimStatesInternal(activeSims: List<ActiveSimInfo>): Map<Int, SimSettingsState>? {
+            if (activeSims.isEmpty()) return emptyMap()
+
             // Use the captured activeSims to load settings.
             // While the list of active SIMs could theoretically change between these calls,
             // we maintain consistency by mapping the results back to the identities we just identified.

@@ -112,7 +112,7 @@ class MainSimDataControllerTest {
         }
 
     @Test
-    fun `executeSimOperation reports partial success when widget update fails`() =
+    fun `executeSimOperation succeeds even when widget update fails`() =
         testScope.runTest {
             val slot = 0
             val identity = "sim_0"
@@ -125,7 +125,6 @@ class MainSimDataControllerTest {
             testScheduler.runCurrent()
 
             val error = controller.lastOperationError.value
-            assertEquals("Data saved, but widget not updated", error?.message)
-            assertEquals(slot, error?.slot)
+            assertNull("Operation should be successful even if widget update fails", error)
         }
 }

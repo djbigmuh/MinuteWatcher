@@ -166,19 +166,16 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            val acquired = saveMutex.tryLock()
+            val acquired =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    saveMutex.lock()
+                    true
+                } ?: false
+
             if (!acquired) {
-                // Ждём освобождения с таймаутом
-                val waited =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        saveMutex.lock()
-                        true
-                    }
-                if (waited == null) {
-                    AppLogger.w("saveAndNotify: already in progress, timeout waiting for mutex")
-                    reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
-                    return
-                }
+                AppLogger.w("saveAndNotify: already in progress, timeout waiting for mutex")
+                reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
+                return
             }
 
             try {

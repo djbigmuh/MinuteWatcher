@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -63,7 +62,7 @@ class AppSettingsRepositoryImpl
                     emit(AppSettings())
                 }.stateIn(
                     scope,
-                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    SharingStarted.Eagerly,
                     AppSettings(),
                 )
 
@@ -81,17 +80,22 @@ class AppSettingsRepositoryImpl
          * Ensures a fresh read from DataStore by waiting for the first emission
          * if the internal flow is not currently active.
          */
-        override suspend fun getAppSettingsOnce(): AppSettings = appSettingsState.first()
+        override suspend fun getAppSettingsOnce(): AppSettings {
+            return try {
+                dataStore.data.first().toAppSettings()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("getAppSettingsOnce: failed to read from DataStore, returning defaults", e)
+                AppSettings()
+            }
+        }
 
         /**
          * Returns a state flow of application settings.
          *
-         * Initialized using [SharingStarted.WhileSubscribed] to conserve resources
-         * when no UI components or background services are observing settings.
-         * Use [getAppSettingsOnce] for a guaranteed fresh atomic read.
-         *
-         * If the DataStore has not yet been loaded, the flow emits the initial [AppSettings]
-         * (default values). Once the first emit from DataStore succeeds, the state is updated.
+         * Initialized using [SharingStarted.Eagerly] to ensure the value is always fresh
+         * and available immediately without "flashing" defaults upon subscription.
          *
          * Safe to call from any coroutine context.
          */

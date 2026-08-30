@@ -188,4 +188,21 @@ class SettingsRepositoryImplTest {
             assertEquals(false, settingsList[0].onboardingCompleted)
             assertEquals(true, settingsList[1].onboardingCompleted)
         }
+
+    @Test
+    fun testGetAppSettingsOnce_ReturnsFreshDataWithoutSubscribers() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            // 1. Initial default value
+            assertEquals(false, repository.getAppSettingsOnce().onboardingCompleted)
+
+            // 2. Update directly via DataStore (bypassing repository for pure test)
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.ONBOARDING_COMPLETED] = true
+            }
+
+            // 3. getAppSettingsOnce should return the new value
+            assertEquals(true, repository.getAppSettingsOnce().onboardingCompleted)
+        }
 }

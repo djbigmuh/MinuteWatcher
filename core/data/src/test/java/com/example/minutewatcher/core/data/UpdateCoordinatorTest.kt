@@ -512,6 +512,88 @@ class UpdateCoordinatorTest {
         }
     }
 
+    @Test
+    fun `forced update resets observation restart counter`() {
+        runTest {
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val supervisorScope = CoroutineScope(testDispatcher + supervisorJob)
+
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    supervisorScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Setup: 4 crashes, then success, then 1 crash
+            var callCount = 0
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                callCount++
+                // Calls 1, 2, 3, 4 will fail (observation loop crashes and restarts)
+                // Forced update (manual) will call it twice if it fails first time,
+                // so we need to be careful with the sequence.
+                // In performForcedUpdate: retries once if fails.
+
+                // Let's make it more deterministic:
+                // Calls from observation loop will be triggered by snapshot emissions.
+                if (callCount <= 4) throw Throwable("Observation crash $callCount")
+                WidgetUpdateResult.Success()
+            }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+            coordinator.status
+            testScheduler.runCurrent()
+
+            // 1. Trigger 4 crashes via observation loop
+            // Delay sequence: 5s, 10s, 20s, 40s
+            for (i in 1..4) {
+                snapshotFlow.emit(createSnapshot(timestamp = i * 1000L, content = "Crash $i"))
+                testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+                testScheduler.runCurrent()
+
+                // Wait for restart delay
+                val delay = (5000L * (1 shl (i - 1))).coerceAtMost(80000L)
+                testScheduler.advanceTimeBy(delay.milliseconds)
+                testScheduler.runCurrent()
+            }
+
+            // At this point callCount should be 4 and observationRestartCount should be 4
+
+            // 2. Perform successful forced update
+            // Reset mock to return success now
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            val forcedSuccess = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.advanceUntilIdle()
+            assertTrue("Forced update should succeed", forcedSuccess)
+
+            // 3. Trigger 5th crash via observation loop
+            whenever(widgetUpdater.updateAll()).thenThrow(Throwable("5th Crash"))
+            snapshotFlow.emit(createSnapshot(timestamp = 6000L, content = "Crash 5"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // 4. Wait for restart delay for the 5th crash (which is actually the 1st after reset)
+            testScheduler.advanceTimeBy(5000.milliseconds)
+            testScheduler.runCurrent()
+
+            // If it wasn't reset, it would have hit the limit (5) and set status to Error.
+            // But it should have been reset to 0 by forced update, so now it's 1.
+            val status = coordinator.status.value
+            assertTrue("Status should NOT be Error because counter was reset", status !is TrackingStatus.Error)
+
+            supervisorJob.cancel()
+        }
+    }
+
     private fun createEmptySnapshot() =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),

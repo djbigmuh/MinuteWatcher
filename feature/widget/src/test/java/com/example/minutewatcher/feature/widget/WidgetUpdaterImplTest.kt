@@ -337,52 +337,12 @@ class WidgetUpdaterImplTest {
         }
 
     @Test
-    fun `handleLimitExceeded attempts FULL update first on settings timeout`() =
+    fun `handleLimitExceeded sets flag and attempts simplified update`() =
         runTest {
             var callCount = 0
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
-            // settings timeout
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(emptyFlow())
-
-            val rendererMock = object : WidgetRenderer {
-                override suspend fun renderAll(context: Context, forceFull: Boolean) {
-                    callCount++
-                    if (callCount == 1) {
-                        // 1. Initial attempt (before handleLimitExceeded)
-                        assertTrue("First attempt should be FULL", forceFull)
-                        throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-                    }
-                    if (callCount == 2) {
-                        // 2. handleLimitExceeded's confirmation attempt
-                        assertTrue("Confirmation attempt after timeout should be FULL", forceFull)
-                        // Success this time! (maybe data changed or it was a transient size error)
-                    }
-                }
-            }
-
-            val updater = WidgetUpdaterImpl(
-                context, appSettingsRepository, rendererMock,
-                retryManager, limitManager, errorClassifier
-            )
-
-            val result = updater.updateAll()
-
-            assertTrue("updateAll should succeed when confirmation FULL update succeeds", result.isSuccess)
-            assertEquals(2, callCount)
-            assertFalse(
-                "Limit flag should NOT be set when FULL update succeeds",
-                mockSettings.value.widgetLimitExceeded
-            )
-        }
-
-    @Test
-    fun `handleLimitExceeded confirm limit and switches to simplified on settings timeout`() =
-        runTest {
-            var callCount = 0
-            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(emptyFlow())
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -397,11 +357,7 @@ class WidgetUpdaterImplTest {
                         throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
                     }
                     if (callCount == 2) {
-                        assertTrue("2nd attempt (confirmation) should be FULL", forceFull)
-                        throw IllegalArgumentException("Still too large", android.os.TransactionTooLargeException())
-                    }
-                    if (callCount == 3) {
-                        assertFalse("3rd attempt (fallback) should be SIMPLIFIED", forceFull)
+                        assertFalse("2nd attempt (fallback) should be SIMPLIFIED", forceFull)
                     }
                 }
             }
@@ -413,82 +369,44 @@ class WidgetUpdaterImplTest {
 
             val result = updater.updateAll()
 
-            assertTrue("updateAll should succeed after confirmed limit and simplified fallback", result.isSuccess)
-            assertEquals(3, callCount)
-            assertTrue("Limit flag should be set after confirmed limit", mockSettings.value.widgetLimitExceeded)
+            assertTrue("updateAll should succeed after simplified fallback", result.isSuccess)
+            assertEquals(2, callCount)
+            assertTrue("Limit flag should be set", mockSettings.value.widgetLimitExceeded)
         }
 
     @Test
-    fun `handleLimitExceeded returns retryable Failure on non-limit error during settings timeout`() =
+    fun `resolveRenderMode defaults to FULL on settings timeout`() =
+        runTest {
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(emptyFlow())
+
+            updater.updateAll()
+
+            // Verification of FULL mode (forceFull = true)
+            verify(renderer).renderAll(context, forceFull = true)
+        }
+
+    @Test
+    fun `updateAll returns LIMIT_EXCEEDED failure if simplified fallback also fails`() =
         runTest {
             var callCount = 0
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(emptyFlow())
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
-            val rendererMock = object : WidgetRenderer {
-                override suspend fun renderAll(context: Context, forceFull: Boolean) {
-                    callCount++
-                    if (callCount == 1) {
-                        throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-                    }
-                    if (callCount == 2) {
-                        // Generic error during confirmation
-                        throw RuntimeException("Generic failure")
-                    }
+            whenever(renderer.renderAll(any(), any())).thenAnswer {
+                callCount++
+                if (callCount == 1) {
+                    throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                } else {
+                    throw RuntimeException("Simplified also failed")
                 }
             }
-
-            val updater = WidgetUpdaterImpl(
-                context, appSettingsRepository, rendererMock,
-                retryManager, limitManager, errorClassifier
-            )
 
             val result = updater.updateAll()
 
             assertFalse(result.isSuccess)
             val failure = result as WidgetUpdateResult.Failure
-            assertTrue("Failure should be retryable after generic error during timeout", failure.isRetryable)
-            assertEquals(2, callCount)
-        }
-
-    @Test
-    fun `handleLimitExceeded returns Stop if already exceeded and not timed out`() =
-        runTest {
-            var callCount = 0
-            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = true))
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
-
-            val updater =
-                WidgetUpdaterImpl(
-                    context,
-                    appSettingsRepository,
-                    renderer =
-                        object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceFull: Boolean,
-                            ) {
-                                callCount++
-                                throw IllegalArgumentException(
-                                    "RemoteViews too large",
-                                    android.os.TransactionTooLargeException(),
-                                )
-                            }
-                        },
-                    retryManager = retryManager,
-                    limitManager = limitManager,
-                    errorClassifier = errorClassifier,
-                )
-
-            val result = updater.updateAll()
-
-            assertFalse(
-                "updateAll should return failure if simplified update fails and already exceeded",
-                result.isSuccess,
-            )
-            assertEquals("performWidgetUpdate should be called only once", 1, callCount)
+            assertEquals(WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED, failure.reason)
         }
 
     @Test

@@ -17,13 +17,11 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -32,7 +30,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -118,15 +115,15 @@ class UsageStateRepositoryStressTest {
             assertTrue("Expected at least one success, but got $successCount", successCount > 0)
             assertTrue("All calls should complete without deadlock", (successCount + timeoutCount) == 100)
 
-            // Verify notifyRefresh was called, but likely fewer than 100 times due to tryLock
-            verify(dataRefreshNotifier, atLeastOnce()).notifyRefresh(
+            // Verify notifyRefresh was called exactly 100 times
+            verify(dataRefreshNotifier, org.mockito.kotlin.times(100)).notifyRefresh(
                 isManual = eq(value = true),
                 suppressWidgetUpdate = any(),
             )
         }
 
     @Test
-    fun `concurrent refresh calls share the same update and only trigger notify once`() =
+    fun `concurrent refresh calls all trigger notify`() =
         runTest {
             val deps =
                 UsageRepositoryDependencies(
@@ -155,15 +152,15 @@ class UsageStateRepositoryStressTest {
             // All should be successful
             assertTrue(completedResults.all { it is RefreshResult.Success })
 
-            // notifyRefresh should be called only ONCE because others will see the updated timestamp
+            // notifyRefresh should be called for EACH call
             verify(
                 dataRefreshNotifier,
-                org.mockito.kotlin.times(1),
+                org.mockito.kotlin.times(10),
             ).notifyRefresh(isManual = eq(value = true), suppressWidgetUpdate = any())
         }
 
     @Test
-    fun `refresh returns success immediately if snapshot already updated while waiting for lock`() =
+    fun `refresh does not share updates and triggers notify for each call`() =
         runTest {
             val deps =
                 UsageRepositoryDependencies(
@@ -184,10 +181,7 @@ class UsageStateRepositoryStressTest {
 
             val job1 = async { repository.refresh() }
 
-            // Wait a bit to ensure job1 has the lock
-            kotlinx.coroutines.delay(50.milliseconds)
-
-            // 2. Trigger another refresh while job1 is still running
+            // 2. Trigger another refresh
             val job2 = async { repository.refresh() }
 
             val result1 = job1.await()
@@ -196,13 +190,10 @@ class UsageStateRepositoryStressTest {
             assertTrue(result1 is RefreshResult.Success)
             assertTrue(result2 is RefreshResult.Success)
 
-            // They should have the same snapshot timestamp
-            assertEquals(result1.snapshot.timestamp, result2.snapshot.timestamp)
-
-            // notifyRefresh called only once
+            // notifyRefresh called for each job
             verify(
                 dataRefreshNotifier,
-                org.mockito.kotlin.times(1),
+                org.mockito.kotlin.times(2),
             ).notifyRefresh(isManual = eq(value = true), suppressWidgetUpdate = any())
         }
 }

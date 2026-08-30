@@ -135,8 +135,12 @@ class WidgetSettingsViewModelTest {
             testScheduler.runCurrent()
             assertTrue(vm.state.value.isSaving)
 
-            // Второй вызов теперь не блокируется, а сразу возвращает AlreadyInProgress через tryLock()
-            vm.saveAndNotify()
+            // Второй вызов ждёт освобождения мьютекса с таймаутом
+            val secondSave = launch { vm.saveAndNotify() }
+            testScheduler.runCurrent()
+
+            // Продвигаем время на SHORT_TIMEOUT_MS, чтобы сработал таймаут ожидания мьютекса
+            testScheduler.advanceTimeBy(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
             testScheduler.runCurrent()
 
             // Теперь AlreadyInProgress IS set in the state
@@ -146,9 +150,9 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // After first save completes, it should be Success
-            // (Note: AlreadyInProgress was replaced by Success when it finished)
             assertEquals(SaveResult.Success, vm.state.value.saveResult)
             assertFalse(vm.state.value.isSaving)
+            secondSave.join()
         }
 
     @Test

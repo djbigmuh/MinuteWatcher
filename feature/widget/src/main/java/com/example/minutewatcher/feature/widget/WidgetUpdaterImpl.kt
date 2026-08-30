@@ -126,77 +126,22 @@ class WidgetUpdaterImpl
         }
 
         private suspend fun handleLimitExceeded(): WidgetUpdateResult {
-            val settings =
-                appSettingsRepository
-                    .getAppSettings()
-                    .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-
-            return when {
-                settings == null -> {
-                    AppLogger.e(
-                        "WidgetUpdater: Timeout fetching settings after LimitExceeded. " +
-                            "Attempting FULL update to confirm state.",
-                    )
-                    // 1. Try FULL update because settings are missing and we don't know the intended mode.
-                    val fullResult = safeUpdateInternal(context, isFullAttempt = true, isProbe = false)
-                    when (fullResult) {
-                        is UpdateResult.Success -> WidgetUpdateResult.Success(wasCoalesced = false)
-                        is UpdateResult.LimitExceeded -> {
-                            // 2. Confirmed LimitExceeded, now set the flag and try SIMPLIFIED.
-                            AppLogger.w("Confirmed LimitExceeded after timeout. Switching to simplified.")
-                            limitManager.setWidgetLimitExceeded(value = true)
-                            val simplifiedResult = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
-                            if (simplifiedResult is UpdateResult.Success) {
-                                WidgetUpdateResult.Success(wasCoalesced = false)
-                            } else {
-                                WidgetUpdateResult.Failure(
-                                    wasCoalesced = false,
-                                    isRetryable = false,
-                                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
-                                )
-                            }
-                        }
-
-                        else -> {
-                            // 3. Other errors after timeout are treated as retryable.
-                            WidgetUpdateResult.Failure(
-                                wasCoalesced = false,
-                                isRetryable = true,
-                                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                            )
-                        }
-                    }
-                }
-
-                settings.widgetLimitExceeded -> WidgetUpdateResult.Failure(
+            limitManager.setWidgetLimitExceeded(value = true)
+            // Немедленная попытка в упрощённом режиме
+            val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
+            return if (result is UpdateResult.Success) {
+                WidgetUpdateResult.Success(wasCoalesced = false)
+            } else {
+                WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
                     isRetryable = false,
                     reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
                 )
-                else -> performSimplifiedUpdate(isFallback = true)
             }
         }
 
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
-            val isExceeded =
-                limitManager.isLimitExceeded() ?: run {
-                    val settings =
-                        appSettingsRepository
-                            .getAppSettings()
-                            .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                            // If fetching fails, use the latest observed state.
-                            ?: appSettingsRepository.observeAppSettings().value
-                    val value = settings.widgetLimitExceeded
-                    limitManager.updateCache(value)
-                    value
-                }
-
-            val mode =
-                if (isExceeded) {
-                    if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
-                } else {
-                    limitManager.resetCounter()
-                    RenderMode.FULL
-                }
+            val mode = resolveRenderMode()
 
             AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
             return when (mode) {
@@ -227,29 +172,32 @@ class WidgetUpdaterImpl
             }
         }
 
-        private suspend fun performSimplifiedUpdate(isFallback: Boolean = false): WidgetUpdateResult {
-            if (isFallback) {
-                AppLogger.w("Widget update failed due to size limit. Rendering with simplified layout (fallback).")
-                limitManager.setWidgetLimitExceeded(value = true)
-            }
-
-            val success =
-                retryManager.updateWithRetry {
-                    handleUpdateResult(safeUpdateInternal(context, isFullAttempt = false, isProbe = false))
+    private suspend fun resolveRenderMode(): RenderMode {
+        val isExceeded =
+            limitManager.isLimitExceeded() ?: run {
+                val settings =
+                    appSettingsRepository
+                        .getAppSettings()
+                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                if (settings == null) {
+                    AppLogger.w("WidgetUpdater: settings timeout in resolveRenderMode, defaulting to FULL")
+                    return RenderMode.FULL
+                }
+                val value = settings.widgetLimitExceeded
+                limitManager.updateCache(value)
+                value
                 }
 
-            return if (success) {
-                WidgetUpdateResult.Success(wasCoalesced = false)
+        return if (isExceeded) {
+            if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
             } else {
-                WidgetUpdateResult.Failure(
-                    wasCoalesced = false,
-                    isRetryable = false,
-                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
-                )
+            limitManager.resetCounter()
+            RenderMode.FULL
             }
         }
 
-        private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
+
+    private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {
                 is UpdateResult.Success -> {
                     if (result.wasFull) {

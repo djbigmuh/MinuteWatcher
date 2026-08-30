@@ -76,27 +76,43 @@ internal class SimIdentityObserver
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
                 .flatMapLatest { seed ->
-                    discovery
-                        .observeSubscriptionChanges()
-                        .map {
-                            fetcher.fetchActiveSimsWithRetry(seed)
-                        }.retryWhen { cause, attempt ->
-                            when (cause) {
-                                is CancellationException -> throw cause
-                                is SeedUnavailableException -> {
-                                    if (attempt < MAX_SEED_RETRY_ATTEMPTS) {
-                                        AppLogger.w(
-                                            "SimIdentityObserver: Seed unavailable, retry ${attempt + 1}/$MAX_SEED_RETRY_ATTEMPTS",
-                                        )
-                                        delay(5000.milliseconds)
-                                        true
-                                    } else {
-                                        AppLogger.e(
-                                            "SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, stopping",
-                                        )
-                                        false
-                                    }
+                    if (seed is SeedResult.Fallback) {
+                        // Если сид не готов, даем короткую паузу на случай, если Real сид придет сразу после Fallback
+                        // (например, DataStore медленно ответил, но ответил).
+                        flow {
+                            val realSeed =
+                                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                    seedFlow.filter { it is SeedResult.Real }.first() as SeedResult.Real
                                 }
+                            if (realSeed != null) {
+                                discovery.observeSubscriptionChanges()
+                                    .map { fetcher.fetchActiveSimsWithRetry(realSeed) }.collect { emit(it) }
+                            } else {
+                                AppLogger.e("SimIdentityObserver: No Real seed after Fallback timeout. Emitting empty SIM list.")
+                                emit(emptyList())
+                            }
+                        }
+                    } else {
+                        discovery
+                            .observeSubscriptionChanges()
+                            .map {
+                                fetcher.fetchActiveSimsWithRetry(seed)
+                            }
+                    }.retryWhen { cause, attempt ->
+                        when (cause) {
+                            is CancellationException -> throw cause
+                            is SeedUnavailableException -> {
+                                if (attempt < MAX_SEED_RETRY_ATTEMPTS) {
+                                    val backoff = Constants.Flow.RETRY_DELAY_MS * (1 shl attempt.toInt())
+                                    AppLogger.w(
+                                        "SimIdentityObserver: Seed unavailable, retry ${attempt + 1}/$MAX_SEED_RETRY_ATTEMPTS, delay ${backoff}ms",
+                                    )
+                                    delay(backoff.milliseconds)
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
 
                                 is IOException -> {
                                     if (attempt < MAX_FETCH_RETRY_ATTEMPTS) {
@@ -115,7 +131,16 @@ internal class SimIdentityObserver
 
                                 else -> false
                             }
+                    }.catch { e ->
+                        if (e is SeedUnavailableException) {
+                            AppLogger.e(
+                                "SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, emitting empty list",
+                            )
+                            emit(emptyList())
+                        } else {
+                            throw e
                         }
+                    }
                 }.retryWhen { cause, attempt ->
                     (cause as? CancellationException)?.let { throw it }
                     if (cause is SecurityException) return@retryWhen false
@@ -179,7 +204,7 @@ internal class SimIdentityObserver
             private const val MAX_FETCH_RETRY_ATTEMPTS = 3L
 
             /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
-            private const val MAX_SEED_RETRY_ATTEMPTS = 10L
+            private const val MAX_SEED_RETRY_ATTEMPTS = 3L
 
             /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
             private const val MAX_FLOW_RETRY_ATTEMPTS = 5L

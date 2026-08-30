@@ -32,8 +32,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,8 +52,6 @@ class UsageStateRepositoryImpl
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
-        private val refreshMutex = Mutex()
-        private var lastNotifyTimestamp = -1L
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
             deps.simIdentityRepository
@@ -216,42 +212,18 @@ class UsageStateRepositoryImpl
         /**
          * Forcefully refreshes usage data and returns the resulting snapshot.
          *
-         * Обеспечивает последовательное выполнение через [refreshMutex]. Если несколько
-         * вызовов происходят одновременно, они ждут своей очереди. Если за время ожидания
-         * снимок уже обновился, повторный запрос не отправляется.
-         *
          * Uses [Constants.Data.SNAPSHOT_TIMEOUT_MS] for snapshot update detection.
          *
          * @return [RefreshResult] containing the new snapshot on success, or the previous one on timeout.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * Sequential execution is enforced via [refreshMutex].
          * @throws kotlinx.coroutines.CancellationException if the refresh is cancelled.
          */
         override suspend fun refresh(): RefreshResult {
             val startTimestamp = snapshotFlow.value.timestamp
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
-            val alreadyUpdated = refreshMutex.withLock {
-                if (snapshotFlow.value.timestamp > startTimestamp) {
-                    true
-                } else {
-                    if (lastNotifyTimestamp < startTimestamp) {
-                        lastNotifyTimestamp = startTimestamp
-                        false
-                    } else {
-                        // Already in progress or just updated
-                        false
-                    }
-                }
-            }
-
-            if (alreadyUpdated) {
-                return RefreshResult.Success(snapshotFlow.value)
-            }
-
-            // Вызываем уведомление вне мьютекса, чтобы не блокировать другие вызовы refresh
-            // на время эмиссии в SharedFlow.
+            // Вызываем уведомление.
             try {
                 deps.dataRefreshNotifier.notifyRefresh(isManual = true)
             } catch (e: CancellationException) {
@@ -267,7 +239,7 @@ class UsageStateRepositoryImpl
             return if (newSnapshot != null) {
                 RefreshResult.Success(newSnapshot)
             } else {
-                AppLogger.w("UsageStateRepository: refresh timed out after ${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms, returning current snapshot")
+                AppLogger.w("UsageStateRepository: refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot")
                 RefreshResult.Timeout(snapshotFlow.value)
             }
         }
