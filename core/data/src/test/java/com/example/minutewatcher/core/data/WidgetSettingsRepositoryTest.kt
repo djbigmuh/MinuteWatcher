@@ -199,8 +199,9 @@ class WidgetSettingsRepositoryTest {
             val appSettingsFlow = flowOf(AppSettings())
             whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
 
-            // observeActiveSims never emits
-            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>()
+            // observeActiveSims never emits and stays empty
+            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1)
+            activeSimsFlow.tryEmit(emptyList())
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
 
             val batchSettingsFlow = flowOf(emptyMap<String, SimSettingsState>())

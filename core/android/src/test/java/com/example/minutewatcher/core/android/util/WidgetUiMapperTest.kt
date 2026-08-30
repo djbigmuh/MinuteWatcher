@@ -105,7 +105,8 @@ class WidgetUiMapperTest {
 
         val sim0 = uiState.simUiStates[0]
         assertEquals(0, sim0.slot)
-        assertEquals("100 min.", sim0.minutesText)
+        assertEquals("100", sim0.minutesText)
+        assertEquals("/200 min.", sim0.minutesLimitText)
         assertTrue(sim0.showMinutesLimit)
         assertEquals(Color.WHITE, sim0.textColor)
 
@@ -113,7 +114,7 @@ class WidgetUiMapperTest {
         val limitComponent =
             sim0.layoutSpec.rows
                 .flatMap { it.components }
-                .find { it is SimLayoutComponent.Text && it.text == "/200" }
+                .find { it is SimLayoutComponent.Text && it.text == "/200 min." }
         assertTrue("Limit should be present in layout spec", limitComponent != null)
 
         // Verify full text fields

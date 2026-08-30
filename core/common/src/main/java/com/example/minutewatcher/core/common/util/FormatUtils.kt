@@ -48,13 +48,12 @@ object FormatUtils {
         limitGb: Float,
         showLimit: Boolean,
         unit: String,
-    ): String {
-        return if (showLimit && limitGb > 0) {
+    ): String =
+        if (showLimit && limitGb > 0) {
             "${formatTrafficGb(remainingGb)} / ${formatTrafficGb(limitGb)} $unit".replace("  ", " ")
         } else {
             "${formatTrafficGb(remainingGb)} $unit".replace("  ", " ")
         }
-    }
 
     fun formatMinutesDisplay(
         context: Context,
@@ -78,13 +77,12 @@ object FormatUtils {
         limit: Int,
         showLimit: Boolean,
         unit: String,
-    ): String {
-        return if (showLimit && limit > 0) {
+    ): String =
+        if (showLimit && limit > 0) {
             "$remaining / $limit $unit".replace("  ", " ")
         } else {
             "$remaining $unit".replace("  ", " ")
         }
-    }
 
     fun formatMinutesPlural(
         context: Context,

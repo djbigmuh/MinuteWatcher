@@ -17,7 +17,6 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -67,14 +66,14 @@ class WidgetSettingsRepository
                         .observeActiveSims()
                         .filter { it.isNotEmpty() }
                         .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-                        ?: simIdentityRepository.observeActiveSims().first()
-                if (activeSims.isEmpty() && settings.widgetLimitExceeded) {
-                    // If no SIMs found, but widget limit was exceeded, still return current settings
-                    // but with empty simStates to avoid infinite refresh loops.
+
+                if (activeSims == null || (activeSims.isEmpty() && settings.widgetLimitExceeded)) {
+                    // If no SIMs found (timeout), or empty list with limit exceeded,
+                    // return fallback to avoid infinite loops.
                     return@coroutineScope getFallbackWidgetSettings(
                         settings,
                         settingsLoadFailed = false,
-                        simListLoadFailed = true,
+                        simListLoadFailed = activeSims == null,
                     )
                 }
 

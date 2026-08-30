@@ -95,20 +95,17 @@ object WidgetSimUiFactory {
         val showMinutes = (config?.showMinutes ?: true) && entity != null && hasData
         val showLimit = (config?.showMinutesLimit ?: true) && limit > 0
 
-        val remText = if (showLimit) rem.toString() else formatWithSuffix(rem.toString(), strings.minutesAbbr)
-        val limitText =
-            if (showLimit) {
-                "${strings.fractionFormat.format(limit)} ${strings.minutesAbbr}".trim()
-            } else {
-                ""
-            }
-
         return PackageUiData(
             show = showMinutes,
-            text = remText,
+            text = if (showLimit) rem.toString() else formatWithSuffix(rem.toString(), strings.minutesAbbr),
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = limitText,
+            limitText =
+                if (showLimit) {
+                    "${strings.fractionFormat.format(limit)} ${strings.minutesAbbr}".trim()
+                } else {
+                    ""
+                },
             usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
             limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
@@ -122,56 +119,55 @@ object WidgetSimUiFactory {
     ): PackageUiData {
         val limitBytes = entity?.limit ?: 0L
         val limitGb = (limitBytes.toDouble() / Constants.BYTES_PER_GB).toFloat()
-        val remGb =
-            if (limitBytes >
-                0
-            ) {
-                maxOf(0f, ((entity?.remaining ?: 0L).toDouble() / Constants.BYTES_PER_GB).toFloat())
-            } else {
-                -1f
-            }
+        val remGb = calculateRemainingGb(entity, limitBytes)
         val usedGb = ((entity?.used ?: 0L).toDouble() / Constants.BYTES_PER_GB).toFloat()
-        val hasData = limitGb > 0f || usedGb > 0f
+
         val status = ColorProvider.getUsageStatus(remGb, limitGb)
-
-        val showTraffic = (config?.showTraffic ?: true) && entity != null && hasData
+        val showTraffic = (config?.showTraffic ?: true) && entity != null && (limitGb > 0f || usedGb > 0f)
         val showLimit = (config?.showTrafficLimit ?: true) && limitGb > 0f
-
-        val remText =
-            if (showLimit) {
-                FormatUtils.formatTrafficGb(remGb)
-            } else {
-                formatWithSuffix(FormatUtils.formatTrafficGb(remGb), strings.gbAbbr)
-            }
-
-        val limitText =
-            if (showLimit) {
-                "${strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb))} ${strings.gbAbbr}".trim()
-            } else {
-                ""
-            }
 
         return PackageUiData(
             show = showTraffic,
-            text = if (entity != null && limitGb > 0f) remText else "-",
+            text = formatTrafficText(entity, limitGb, remGb, showLimit, strings.gbAbbr),
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = limitText,
-            usedFull =
-                "${strings.usedText}: ${
-                    formatWithSuffix(
-                        FormatUtils.formatTrafficGb(usedGb),
-                        strings.gbAbbr,
-                    )
-                }",
-            limitFull =
-                "${strings.limitText}: ${
-                    formatWithSuffix(
-                        FormatUtils.formatTrafficGb(limitGb),
-                        strings.gbAbbr,
-                    )
-                }",
+            limitText =
+                if (showLimit) {
+                    "${strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb))} ${strings.gbAbbr}".trim()
+                } else {
+                    ""
+                },
+            usedFull = "${strings.usedText}: ${
+                formatWithSuffix(
+                    FormatUtils.formatTrafficGb(usedGb),
+                    strings.gbAbbr,
+                )
+            }",
+            limitFull = "${strings.limitText}: ${
+                formatWithSuffix(FormatUtils.formatTrafficGb(limitGb), strings.gbAbbr)
+            }",
         )
+    }
+
+    private fun calculateRemainingGb(
+        entity: SemanticEntity?,
+        limitBytes: Long,
+    ): Float {
+        if (limitBytes <= 0) return -1f
+        val remBytes = entity?.remaining ?: 0L
+        return maxOf(0f, (remBytes.toDouble() / Constants.BYTES_PER_GB).toFloat())
+    }
+
+    private fun formatTrafficText(
+        entity: SemanticEntity?,
+        limitGb: Float,
+        remGb: Float,
+        showLimit: Boolean,
+        unit: String,
+    ): String {
+        if (entity == null || limitGb <= 0f) return "-"
+        val formattedRem = FormatUtils.formatTrafficGb(remGb)
+        return if (showLimit) formattedRem else formatWithSuffix(formattedRem, unit)
     }
 
     private fun formatWithSuffix(

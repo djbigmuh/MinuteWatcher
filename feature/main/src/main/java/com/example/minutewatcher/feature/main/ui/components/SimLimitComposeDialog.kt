@@ -161,11 +161,12 @@ private class SimLimitState(
     mutableStateOf(
         TextFieldValue(
             text = initialTrafficText,
-            selection = if (initialTrafficText == "0" || initialTrafficText == "0.0") {
-                TextRange(0, initialTrafficText.length)
-            } else {
-                TextRange.Zero
-            },
+            selection =
+                if (initialTrafficText == "0" || initialTrafficText == "0.0") {
+                    TextRange(0, initialTrafficText.length)
+                } else {
+                    TextRange.Zero
+                },
         ),
     )
     var rolloverEnabled by mutableStateOf(initialRolloverEnabled)
@@ -181,6 +182,9 @@ private class SimLimitState(
     }
 
     companion object {
+        private const val MAX_MINUTES_CHARS = 6
+        private const val MAX_TRAFFIC_CHARS = 10
+
         val Saver: Saver<SimLimitState, *> =
             listSaver(
                 save = {
@@ -230,20 +234,18 @@ private class SimLimitState(
     }
 
     fun onMinutesChange(newValue: TextFieldValue) {
-        if (newValue.text.length > 6) return
+        if (newValue.text.length > MAX_MINUTES_CHARS) return
 
         val old = minutesText
         var processed = newValue
 
         // If it was "0" and user typed a digit, just replace it regardless of selection
-        if (old.text == "0" && newValue.text.length == 2 && newValue.text != "0") {
+        if (shouldReplaceInitialZero(old, newValue)) {
             val typed = newValue.text.filter { it != '0' }.ifEmpty { "0" }
             if (typed.all { it.isDigit() }) {
                 processed = newValue.copy(text = typed, selection = TextRange(typed.length))
             }
-        } else if (old.selection.start == 0 && old.selection.end == old.text.length &&
-            old.text.isNotEmpty() && newValue.text.length > old.text.length
-        ) {
+        } else if (isFullSelectionOverwrite(old, newValue)) {
             val added = newValue.text.removePrefix(old.text).ifEmpty { newValue.text.removeSuffix(old.text) }
             if (added.isNotEmpty() && added != newValue.text) {
                 processed = newValue.copy(text = added, selection = TextRange(added.length))
@@ -255,14 +257,28 @@ private class SimLimitState(
         minutesError = null
     }
 
+    private fun shouldReplaceInitialZero(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+    ): Boolean = old.text == "0" && newValue.text.length == 2 && newValue.text != "0"
+
+    private fun isFullSelectionOverwrite(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+    ): Boolean =
+        old.selection.start == 0 &&
+            old.selection.end == old.text.length &&
+            old.text.isNotEmpty() &&
+            newValue.text.length > old.text.length
+
     fun onTrafficChange(newValue: TextFieldValue) {
-        if (newValue.text.length > 10) return
+        if (newValue.text.length > MAX_TRAFFIC_CHARS) return
 
         val old = trafficText
         var processed = newValue
 
         // If it was "0" or "0.0" and user typed a digit, just replace it
-        if ((old.text == "0" || old.text == "0.0") && newValue.text.length > old.text.length) {
+        if (shouldReplaceInitialTrafficZero(old, newValue)) {
             val typedChar = newValue.text.find { it !in old.text }
             if (typedChar != null && typedChar.isDigit()) {
                 val newText = typedChar.toString()
@@ -271,9 +287,7 @@ private class SimLimitState(
         }
 
         // Standard selection overwrite logic
-        if (processed == newValue && old.selection.start == 0 && old.selection.end == old.text.length &&
-            old.text.isNotEmpty() && newValue.text.length > old.text.length
-        ) {
+        if (processed == newValue && isFullSelectionOverwrite(old, newValue)) {
             val added = newValue.text.removePrefix(old.text).ifEmpty { newValue.text.removeSuffix(old.text) }
             if (added.isNotEmpty() && added != newValue.text) {
                 processed = newValue.copy(text = added, selection = TextRange(added.length))
@@ -281,12 +295,20 @@ private class SimLimitState(
         }
 
         val normalized = processed.text.replace(",", ".")
-        val filteredText = normalized.filterIndexed { index, c ->
-            c.isDigit() || (c == '.' && normalized.indexOf('.') == index)
-        }
+        val filteredText = filterTrafficDigits(normalized)
         trafficText = processed.copy(text = filteredText)
         trafficError = null
     }
+
+    private fun shouldReplaceInitialTrafficZero(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+    ): Boolean = (old.text == "0" || old.text == "0.0") && newValue.text.length > old.text.length
+
+    private fun filterTrafficDigits(text: String): String =
+        text.filterIndexed { index, c ->
+            c.isDigit() || (c == '.' && text.indexOf('.') == index)
+        }
 }
 
 @Composable
