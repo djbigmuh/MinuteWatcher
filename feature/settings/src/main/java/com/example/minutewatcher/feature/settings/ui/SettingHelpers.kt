@@ -57,13 +57,14 @@ fun SettingLabel(text: String) {
 fun CheckboxSetting(
     label: String,
     checked: Boolean,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .clickable(enabled = enabled, onClick = { onCheckedChange(!checked) })
                 .padding(vertical = 4.dp),

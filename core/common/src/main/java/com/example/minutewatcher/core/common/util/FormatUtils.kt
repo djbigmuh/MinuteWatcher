@@ -49,11 +49,10 @@ object FormatUtils {
         showLimit: Boolean,
         unit: String,
     ): String {
-        val rem = "${formatTrafficGb(remainingGb)}$unit"
         return if (showLimit && limitGb > 0) {
-            "$rem / ${formatTrafficGb(limitGb)}$unit"
+            "${formatTrafficGb(remainingGb)} / ${formatTrafficGb(limitGb)} $unit".replace("  ", " ")
         } else {
-            rem
+            "${formatTrafficGb(remainingGb)} $unit".replace("  ", " ")
         }
     }
 
@@ -80,11 +79,10 @@ object FormatUtils {
         showLimit: Boolean,
         unit: String,
     ): String {
-        val rem = "$remaining$unit"
         return if (showLimit && limit > 0) {
-            "$rem / $limit$unit"
+            "$remaining / $limit $unit".replace("  ", " ")
         } else {
-            rem
+            "$remaining $unit".replace("  ", " ")
         }
     }
 

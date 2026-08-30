@@ -54,8 +54,6 @@ class MainViewModel
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
 
-    private var hasCheckedLimits = false
-
         init {
             initController.initializeApp(
                 scope = viewModelScope,
@@ -77,28 +75,39 @@ class MainViewModel
             }
 
             viewModelScope.launch {
-                combine(uiState, appSettings) { state, settings ->
-                    state to settings
-                }.collect { (state, settings) ->
-                    if (state is SimCardListState.Success && settings.onboardingCompleted && !hasCheckedLimits) {
-                        val allNoLimits = state.simCards.all { !it.isMinutesLimitSet && !it.isTrafficLimitSet }
-                        if (allNoLimits && state.simCards.isNotEmpty()) {
-                            hasCheckedLimits = true
-                            val firstSim = state.simCards[0]
-                            setLimitDialog(
-                                LimitDialogData(
-                                    firstSim.slot,
-                                    firstSim.operatorName,
-                                    firstSim.minutesLimit,
-                                    firstSim.trafficLimitMb,
-                                    firstSim.rolloverEnabled,
-                                ),
-                            )
-                        }
+                combine(
+                    uiState,
+                    appSettings,
+                    showUsageAccessDialog,
+                    showLimitDialog,
+                    showOnboardingDialog,
+                ) { params: Array<Any?> ->
+                    DataForPrompt(
+                        state = params[0] as SimCardListState,
+                        settings = params[1] as AppSettings,
+                        usageAccess = params[2] as Boolean,
+                        limitDialog = params[3] as LimitDialogData?,
+                        onboardingDialogShowing = params[4] as Boolean,
+                    )
+                }.collect { data ->
+                    val onboardingCompleted = data.settings.onboardingCompleted
+
+                    // Logic for showing Onboarding Dialog
+                    if (!onboardingCompleted && !data.onboardingDialogShowing && !data.usageAccess) {
+                        AppLogger.d("MainViewModel: Triggering onboarding dialog")
+                        dialogController.setShowOnboardingDialog(true)
                     }
                 }
             }
         }
+
+    private data class DataForPrompt(
+        val state: SimCardListState,
+        val settings: AppSettings,
+        val usageAccess: Boolean,
+        val limitDialog: LimitDialogData?,
+        val onboardingDialogShowing: Boolean,
+    )
 
         // Delegate Dialog/Banner Actions
         fun setLimitDialog(data: LimitDialogData?) = dialogController.setLimitDialog(data)

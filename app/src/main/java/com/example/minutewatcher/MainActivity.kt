@@ -355,11 +355,16 @@ class MainActivity : AppCompatActivity() {
         viewModel.onActivityResume()
 
         val phoneGranted = permissionManager.hasPhoneStatePermission()
+        val usageGranted = permissionManager.hasUsageStatsPermission()
 
         checkPermissionChanges()
 
-        if (phoneGranted && permissionManager.hasUsageStatsPermission()) {
-            permissionHandler.checkNotifications(autoRequest = false)
+        if (phoneGranted) {
+            if (!usageGranted) {
+                viewModel.setUsageAccessDialog(true)
+            } else {
+                permissionHandler.checkNotifications(autoRequest = false)
+            }
         }
     }
 

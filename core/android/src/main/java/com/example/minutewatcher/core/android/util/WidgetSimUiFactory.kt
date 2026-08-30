@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.android.util
 
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSettingsState
@@ -96,19 +95,20 @@ object WidgetSimUiFactory {
         val showMinutes = (config?.showMinutes ?: true) && entity != null && hasData
         val showLimit = (config?.showMinutesLimit ?: true) && limit > 0
 
+        val remText = if (showLimit) rem.toString() else formatWithSuffix(rem.toString(), strings.minutesAbbr)
+        val limitText =
+            if (showLimit) {
+                "${strings.fractionFormat.format(limit)} ${strings.minutesAbbr}".trim()
+            } else {
+                ""
+            }
+
         return PackageUiData(
             show = showMinutes,
-            text =
-                if (entity != null &&
-                    (limit > 0 || entity.sourceType == DataSourceType.MANUAL)
-                ) {
-                    formatWithSuffix(rem.toString(), strings.minutesAbbr)
-                } else {
-                    "-"
-                },
+            text = remText,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = strings.fractionFormat.format(limit),
+            limitText = limitText,
             usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
             limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
@@ -137,17 +137,26 @@ object WidgetSimUiFactory {
         val showTraffic = (config?.showTraffic ?: true) && entity != null && hasData
         val showLimit = (config?.showTrafficLimit ?: true) && limitGb > 0f
 
+        val remText =
+            if (showLimit) {
+                FormatUtils.formatTrafficGb(remGb)
+            } else {
+                formatWithSuffix(FormatUtils.formatTrafficGb(remGb), strings.gbAbbr)
+            }
+
+        val limitText =
+            if (showLimit) {
+                "${strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb))} ${strings.gbAbbr}".trim()
+            } else {
+                ""
+            }
+
         return PackageUiData(
             show = showTraffic,
-            text =
-                if (entity != null && limitGb > 0f) {
-                    formatWithSuffix(FormatUtils.formatTrafficGb(remGb), strings.gbAbbr)
-                } else {
-                    "-"
-                },
+            text = if (entity != null && limitGb > 0f) remText else "-",
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb)),
+            limitText = limitText,
             usedFull =
                 "${strings.usedText}: ${
                     formatWithSuffix(

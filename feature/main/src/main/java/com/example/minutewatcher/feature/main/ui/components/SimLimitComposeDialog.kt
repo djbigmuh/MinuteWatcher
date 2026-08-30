@@ -27,8 +27,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
@@ -145,19 +150,43 @@ private class SimLimitState(
     initialTrafficText: String,
     initialRolloverEnabled: Boolean,
 ) {
-    var minutesText by mutableStateOf(initialMinutesText)
-    var trafficText by mutableStateOf(initialTrafficText)
+    var minutesText by
+    mutableStateOf(
+        TextFieldValue(
+            text = initialMinutesText,
+            selection = if (initialMinutesText == "0") TextRange(0, initialMinutesText.length) else TextRange.Zero,
+        ),
+    )
+    var trafficText by
+    mutableStateOf(
+        TextFieldValue(
+            text = initialTrafficText,
+            selection = if (initialTrafficText == "0" || initialTrafficText == "0.0") {
+                TextRange(0, initialTrafficText.length)
+            } else {
+                TextRange.Zero
+            },
+        ),
+    )
     var rolloverEnabled by mutableStateOf(initialRolloverEnabled)
     var minutesError by mutableStateOf<String?>(null)
     var trafficError by mutableStateOf<String?>(null)
+
+    fun selectAllMinutes() {
+        minutesText = minutesText.copy(selection = TextRange(0, minutesText.text.length))
+    }
+
+    fun selectAllTraffic() {
+        trafficText = trafficText.copy(selection = TextRange(0, trafficText.text.length))
+    }
 
     companion object {
         val Saver: Saver<SimLimitState, *> =
             listSaver(
                 save = {
                     listOf(
-                        it.minutesText,
-                        it.trafficText,
+                        it.minutesText.text,
+                        it.trafficText.text,
                         it.rolloverEnabled,
                         it.minutesError ?: "",
                         it.trafficError ?: "",
@@ -179,8 +208,8 @@ private class SimLimitState(
     fun validate(msgs: ValidationMessages): SimLimitValidationResult {
         val result =
             SimLimitValidator.validate(
-                minutesText,
-                trafficText,
+                minutesText.text,
+                trafficText.text,
                 msgs.required,
                 msgs.invalidNumber,
                 msgs.minutesRange,
@@ -200,41 +229,103 @@ private class SimLimitState(
         return result
     }
 
-    fun onMinutesChange(text: String) {
-        minutesText = text
+    fun onMinutesChange(newValue: TextFieldValue) {
+        if (newValue.text.length > 6) return
+
+        val old = minutesText
+        var processed = newValue
+
+        // If it was "0" and user typed a digit, just replace it regardless of selection
+        if (old.text == "0" && newValue.text.length == 2 && newValue.text != "0") {
+            val typed = newValue.text.filter { it != '0' }.ifEmpty { "0" }
+            if (typed.all { it.isDigit() }) {
+                processed = newValue.copy(text = typed, selection = TextRange(typed.length))
+            }
+        } else if (old.selection.start == 0 && old.selection.end == old.text.length &&
+            old.text.isNotEmpty() && newValue.text.length > old.text.length
+        ) {
+            val added = newValue.text.removePrefix(old.text).ifEmpty { newValue.text.removeSuffix(old.text) }
+            if (added.isNotEmpty() && added != newValue.text) {
+                processed = newValue.copy(text = added, selection = TextRange(added.length))
+            }
+        }
+
+        val filteredText = processed.text.filter { it.isDigit() }
+        minutesText = processed.copy(text = filteredText)
         minutesError = null
     }
 
-    fun onTrafficChange(text: String) {
-        trafficText = text
+    fun onTrafficChange(newValue: TextFieldValue) {
+        if (newValue.text.length > 10) return
+
+        val old = trafficText
+        var processed = newValue
+
+        // If it was "0" or "0.0" and user typed a digit, just replace it
+        if ((old.text == "0" || old.text == "0.0") && newValue.text.length > old.text.length) {
+            val typedChar = newValue.text.find { it !in old.text }
+            if (typedChar != null && typedChar.isDigit()) {
+                val newText = typedChar.toString()
+                processed = newValue.copy(text = newText, selection = TextRange(newText.length))
+            }
+        }
+
+        // Standard selection overwrite logic
+        if (processed == newValue && old.selection.start == 0 && old.selection.end == old.text.length &&
+            old.text.isNotEmpty() && newValue.text.length > old.text.length
+        ) {
+            val added = newValue.text.removePrefix(old.text).ifEmpty { newValue.text.removeSuffix(old.text) }
+            if (added.isNotEmpty() && added != newValue.text) {
+                processed = newValue.copy(text = added, selection = TextRange(added.length))
+            }
+        }
+
+        val normalized = processed.text.replace(",", ".")
+        val filteredText = normalized.filterIndexed { index, c ->
+            c.isDigit() || (c == '.' && normalized.indexOf('.') == index)
+        }
+        trafficText = processed.copy(text = filteredText)
         trafficError = null
     }
 }
 
 @Composable
 private fun DialogFields(state: SimLimitState) {
+    val minutesFocusRequester = remember { FocusRequester() }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        minutesFocusRequester.requestFocus()
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = state.minutesText,
-            onValueChange = { if (it.length <= 6) state.onMinutesChange(it.filter { c -> c.isDigit() }) },
+            onValueChange = { state.onMinutesChange(it) },
             label = { Text(stringResource(id = R.string.set_minutes_limit)) },
             placeholder = { Text("0") },
             isError = state.minutesError != null,
             supportingText = { state.minutesError?.let { Text(text = it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             suffix = { Text(text = stringResource(id = R.string.unit_minutes)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .focusRequester(minutesFocusRequester)
+                    .onFocusChanged { if (it.isFocused) state.selectAllMinutes() },
         )
         OutlinedTextField(
             value = state.trafficText,
-            onValueChange = { if (it.length <= 10) state.onTrafficChange(it.replace(",", ".")) },
+            onValueChange = { state.onTrafficChange(it) },
             label = { Text(stringResource(id = R.string.set_traffic_limit)) },
             placeholder = { Text("0") },
             isError = state.trafficError != null,
             supportingText = { state.trafficError?.let { Text(text = it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             suffix = { Text(text = stringResource(id = R.string.unit_gigabytes)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (it.isFocused) state.selectAllTraffic() },
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
