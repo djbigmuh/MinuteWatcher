@@ -114,7 +114,13 @@ class UpdateCoordinator
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                     .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
                     .onEach { snapshot ->
-                        processSnapshot(snapshot)
+                        try {
+                            processSnapshot(snapshot)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
+                        }
                     }
                     .launchIn(scope + handler)
 
@@ -209,19 +215,13 @@ class UpdateCoordinator
             withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                 widgetUpdater.updateAll()
             } ?: run {
-                val error = TrackingStatus.Error(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Widget update timed out after ${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms"
-                )
-                _status.value = error
+                AppLogger.w("UpdateCoordinator: Widget update timed out after ${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms")
                 WidgetUpdateResult.Failure(isRetryable = true)
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            AppLogger.w("UpdateCoordinator: widget update failed in processSnapshot", e)
-            val error = classifyException(e)
-            _status.value = error
+            AppLogger.e("UpdateCoordinator: widget update failed in processSnapshot", e)
             val isRetryable = isRetryableException(e)
             val reason = when {
                 isRemoteViewsLimitException(e) -> WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
@@ -244,11 +244,7 @@ class UpdateCoordinator
                     }
 
                     WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
-                        _status.value = TrackingStatus.Error(
-                            TrackingStatus.ErrorType.NOT_SUPPORTED,
-                            "Widget size limit exceeded. Try reducing SIM count or removing other widgets."
-                        )
-                        AppLogger.w("UpdateCoordinator: terminal limit exceeded, keeping current hash")
+                        AppLogger.e("UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), keeping current hash")
                     }
 
                     WidgetUpdateResult.FailureReason.TERMINAL -> {
@@ -260,24 +256,6 @@ class UpdateCoordinator
         }
     }
 
-    private fun classifyException(e: Exception): TrackingStatus.Error {
-        return when {
-            isRemoteViewsLimitException(e) -> TrackingStatus.Error(
-                TrackingStatus.ErrorType.NOT_SUPPORTED,
-                "Widget size limit exceeded. Try reducing SIM count or removing other widgets."
-            )
-
-            e is SecurityException -> TrackingStatus.Error(
-                TrackingStatus.ErrorType.PERMISSION_MISSING,
-                "Permission denied during widget update: ${e.message}"
-            )
-
-            else -> TrackingStatus.Error(
-                TrackingStatus.ErrorType.DATABASE_ERROR,
-                e.message ?: "Unknown widget update error"
-            )
-        }
-    }
 
     private fun isRetryableException(e: Exception): Boolean {
         return when {
@@ -306,14 +284,7 @@ class UpdateCoordinator
                     "hash not updated",
             )
             if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                AppLogger.e("UpdateCoordinator: reached max consecutive failures. Updates suppressed.")
-                if (_status.value !is TrackingStatus.Error) {
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                            "Widget observation failed after $consecutiveUpdateFailures consecutive errors",
-                        )
-                }
+                AppLogger.e("UpdateCoordinator: reached max consecutive failures ($consecutiveUpdateFailures). Updates suppressed.")
             }
         }
 

@@ -84,9 +84,7 @@ object AppLogger {
 
     fun d(message: String) {
         logger.d(TAG, message)
-        if (isFileLoggingEnabled) {
-            logToFile("D", message)
-        }
+        logToFile("D", message)
     }
 
     fun w(
@@ -94,15 +92,13 @@ object AppLogger {
         throwable: Throwable? = null,
     ) {
         logger.w(TAG, message, throwable)
-        if (isFileLoggingEnabled) {
-            val fullMessage =
-                if (throwable != null) {
-                    "$message\n${throwable.stackTraceToString()}"
-                } else {
-                    message
-                }
-            logToFile("W", fullMessage)
-        }
+        val fullMessage =
+            if (throwable != null) {
+                "$message\n${throwable.stackTraceToString()}"
+            } else {
+                message
+            }
+        logToFile("W", fullMessage)
     }
 
     fun e(
@@ -110,15 +106,13 @@ object AppLogger {
         throwable: Throwable? = null,
     ) {
         logger.e(TAG, message, throwable)
-        if (isFileLoggingEnabled) {
-            val fullMessage =
-                if (throwable != null) {
-                    "$message\n${throwable.stackTraceToString()}"
-                } else {
-                    message
-                }
-            logToFile("E", fullMessage)
-        }
+        val fullMessage =
+            if (throwable != null) {
+                "$message\n${throwable.stackTraceToString()}"
+            } else {
+                message
+            }
+        logToFile("E", fullMessage)
     }
 
     /**
@@ -133,7 +127,7 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (logDir == null) return
+        if (!isFileLoggingEnabled || (logDir == null)) return
 
         val entry = LogEntry(level, message)
         var fallbackRequired = false

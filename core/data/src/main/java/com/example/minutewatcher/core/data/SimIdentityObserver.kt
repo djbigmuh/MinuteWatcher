@@ -19,9 +19,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -45,10 +46,8 @@ internal class SimIdentityObserver
         private val cache: SimIdentityCache,
     ) {
         val seedFlow: Flow<SeedResult> =
-            seedRepository.seedFlow
-                .filter { it.isNotEmpty() }
-                .map { SeedResult.Real(it) as SeedResult }
-                .onStart {
+            merge(
+                flow {
                     val initial =
                         withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
                             val current = seedRepository.seedFlow.first()
@@ -66,7 +65,11 @@ internal class SimIdentityObserver
                         )
                     }
                     emit(initial)
-                }.distinctUntilChanged()
+                },
+                seedRepository.seedFlow
+                    .filter { it.isNotEmpty() }
+                    .map { SeedResult.Real(it) as SeedResult }
+            ).distinctUntilChanged()
                 .shareIn(scope, SharingStarted.Lazily, replay = 1)
 
         @OptIn(ExperimentalCoroutinesApi::class)

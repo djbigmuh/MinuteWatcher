@@ -54,14 +54,12 @@ open class CallTracker
     init {
         scope.launch {
             permissionStateNotifier.changes.collect {
-                launch {
-                    try {
-                        refreshStatus(force = true)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
-                    }
+                try {
+                    refreshStatus(force = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
                 }
             }
         }

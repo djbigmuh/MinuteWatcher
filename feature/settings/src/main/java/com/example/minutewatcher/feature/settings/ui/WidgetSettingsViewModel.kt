@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.settings.ui
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -13,7 +14,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
@@ -86,17 +86,9 @@ class WidgetSettingsViewModel
         private fun loadSettings() {
             viewModelScope.launch {
                 loadMutex.withLock {
-                    val jobToCancel = loadJob
-                    if (jobToCancel != null) {
-                        val result = withTimeoutOrNull<Unit>(LOAD_TIMEOUT) {
-                            jobToCancel.cancelAndJoin()
-                        }
-                        if (result == null) {
-                            AppLogger.w("WidgetSettingsViewModel: loadJob cancellation timed out, proceeding")
-                        }
-                    }
+                    loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
-                    loadJob = launch {
+                    val newJob = launch {
                         try {
                             val loaded = withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
                                 loader.load()
@@ -121,6 +113,7 @@ class WidgetSettingsViewModel
                             }
                         }
                     }
+                    loadJob = newJob
                 }
             }
         }
@@ -129,16 +122,12 @@ class WidgetSettingsViewModel
          * Обновляет текущее состояние настроек виджета.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            viewModelScope.launch {
-                saveMutex.withLock {
-                    reduce {
-                        val currentSettings = settings ?: return@reduce this
-                        copy(
-                            isLoadError = false,
-                            settings = transform(currentSettings).copy(widgetLimitExceeded = false),
-                        )
-                    }
-                }
+            reduce {
+                val currentSettings = settings ?: return@reduce this
+                copy(
+                    isLoadError = false,
+                    settings = transform(currentSettings).copy(widgetLimitExceeded = false),
+                )
             }
         }
 
@@ -149,24 +138,20 @@ class WidgetSettingsViewModel
             slot: Int,
             transform: (SimSettingsState) -> SimSettingsState,
         ) {
-            viewModelScope.launch {
-                saveMutex.withLock {
-                    reduce {
-                        val currentSettings = settings ?: return@reduce this
-                        val updatedSimStates = currentSettings.simStates.toMutableMap()
-                        val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                        updatedSimStates[slot] = transform(currentSimState)
+            reduce {
+                val currentSettings = settings ?: return@reduce this
+                val updatedSimStates = currentSettings.simStates.toMutableMap()
+                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                updatedSimStates[slot] = transform(currentSimState)
 
-                        copy(
-                            isLoadError = false,
-                            settings =
-                                currentSettings.copy(
-                                    simStates = updatedSimStates,
-                                    widgetLimitExceeded = false,
-                                ),
-                        )
-                    }
-                }
+                copy(
+                    isLoadError = false,
+                    settings =
+                        currentSettings.copy(
+                            simStates = updatedSimStates,
+                            widgetLimitExceeded = false,
+                        ),
+                )
             }
         }
 

@@ -237,22 +237,27 @@ class UsageStateRepositoryImpl
                     true
                 } else {
                     if (lastNotifyTimestamp < startTimestamp) {
-                        lastNotifyTimestamp = try {
-                            deps.dataRefreshNotifier.notifyRefresh(isManual = true)
-                            startTimestamp
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
-                            startTimestamp
-                        }
+                        lastNotifyTimestamp = startTimestamp
+                        false
+                    } else {
+                        // Already in progress or just updated
+                        false
                     }
-                    false
                 }
             }
 
             if (alreadyUpdated) {
                 return RefreshResult.Success(snapshotFlow.value)
+            }
+
+            // Вызываем уведомление вне мьютекса, чтобы не блокировать другие вызовы refresh
+            // на время эмиссии в SharedFlow.
+            try {
+                deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
             }
 
             val newSnapshot = withTimeoutOrNull(timeout) {
@@ -262,7 +267,7 @@ class UsageStateRepositoryImpl
             return if (newSnapshot != null) {
                 RefreshResult.Success(newSnapshot)
             } else {
-                AppLogger.w("UsageStateRepository: refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot")
+                AppLogger.w("UsageStateRepository: refresh timed out after ${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms, returning current snapshot")
                 RefreshResult.Timeout(snapshotFlow.value)
             }
         }

@@ -168,7 +168,15 @@ class MainBannerController
         private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
             initMutex.withLock {
                 lastTrackingStatusFlow = statusFlow
-                job.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                val oldJob = job
+                if (oldJob != null) {
+                    oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    if (oldJob.isActive) {
+                        AppLogger.w("MainBannerController: previous observation job did not terminate in time")
+                        oldJob.cancel()
+                    }
+                    job = null
+                }
                 job =
                     scope.launch {
                         catchingCancellation(
@@ -199,14 +207,12 @@ class MainBannerController
      * **Thread Safety:** Safe to call from any coroutine context.
      */
     suspend fun recover() {
-        initMutex.withLock {
-            val flow = lastTrackingStatusFlow
-            if (flow == null) {
-                AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
-                return
-            }
-            setupObservation(flow)
+        val flow = initMutex.withLock { lastTrackingStatusFlow }
+        if (flow == null) {
+            AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
+            return
         }
+        setupObservation(flow)
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false
     }

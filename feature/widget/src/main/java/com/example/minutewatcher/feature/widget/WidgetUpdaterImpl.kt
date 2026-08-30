@@ -76,25 +76,30 @@ class WidgetUpdaterImpl
                 return joinExistingUpdate(existing)
             }
 
-            val result: WidgetUpdateResult =
-                try {
-                    block()
-                } catch (e: CancellationException) {
-                    deferred.completeExceptionally(e)
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetUpdater: update failed with unexpected exception", e)
+            var result: WidgetUpdateResult? = null
+            try {
+                result = block()
+            } catch (e: CancellationException) {
+                deferred.completeExceptionally(e)
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("WidgetUpdater: update failed with unexpected exception", e)
+                result =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
                         isRetryable = false,
                         reason = WidgetUpdateResult.FailureReason.TERMINAL,
                     )
-                } finally {
-                    activeUpdate.compareAndSet(deferred, null)
+            } finally {
+                result?.let {
+                    if (!deferred.isCompleted) {
+                        deferred.complete(it)
+                    }
                 }
+                activeUpdate.compareAndSet(deferred, null)
+            }
 
-            deferred.complete(result)
-            return result
+            return result!!
         }
 
         private suspend fun joinExistingUpdate(existing: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {

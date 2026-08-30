@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -33,11 +34,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * ShortcutManager manages dynamic shortcuts for SIM card usage data.
@@ -90,56 +89,47 @@ open class ShortcutManager
          */
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            job?.cancel()
-            try {
-                val completed =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        job?.join()
-                    }
-                if (completed == null) {
-                    AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
-                    job?.cancel()
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("ShortcutManager: failed to join previous observation job during initialize", e)
-            } finally {
-                job = null
-            }
-
-            initMutex.withLock {
-                setupObservation(snapshotFlow)
-            }
+            setupObservation(snapshotFlow)
         }
 
         @OptIn(FlowPreview::class)
-        private fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            lastSnapshotFlow = snapshotFlow
-            job =
-                scope.launch {
-                    _status.value = TrackingStatus.Active
-                    snapshotFlow
-                        .debounce { snapshot ->
-                            if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
-                        }.collect { snapshot ->
-                            try {
-                                withContext(ioDispatcher) {
-                                    updateShortcuts(snapshot)
-                                }
-                                _status.value = TrackingStatus.Active
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (
-                                @Suppress("TooGenericExceptionCaught")
-                                e: Exception,
-                            ) {
-                                AppLogger.e("Failed to update dynamic shortcuts", e)
-                                val type = classifyShortcutError(e)
-                                _status.value = TrackingStatus.Error(type, e.message)
-                            }
-                        }
+        private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+            initMutex.withLock {
+                lastSnapshotFlow = snapshotFlow
+                val oldJob = job
+                if (oldJob != null) {
+                    oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    if (oldJob.isActive) {
+                        AppLogger.w("ShortcutManager: previous observation job did not terminate in time")
+                        oldJob.cancel()
+                    }
+                    job = null
                 }
+                job =
+                    scope.launch {
+                        _status.value = TrackingStatus.Active
+                        snapshotFlow
+                            .debounce { snapshot ->
+                                if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                            }.collect { snapshot ->
+                                try {
+                                    withContext(ioDispatcher) {
+                                        updateShortcuts(snapshot)
+                                    }
+                                    _status.value = TrackingStatus.Active
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (
+                                    @Suppress("TooGenericExceptionCaught")
+                                    e: Exception,
+                                ) {
+                                    AppLogger.e("Failed to update dynamic shortcuts", e)
+                                    val type = classifyShortcutError(e)
+                                    _status.value = TrackingStatus.Error(type, e.message)
+                                }
+                            }
+                    }
+            }
         }
 
         /**
@@ -148,27 +138,8 @@ open class ShortcutManager
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         override suspend fun recover() {
-            job?.cancel()
-            try {
-                val completed =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        job?.join()
-                    }
-                if (completed == null) {
-                    AppLogger.w("ShortcutManager: previous observation job did not terminate in time, cancelling")
-                    job?.cancel()
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("ShortcutManager: failed to join previous observation job during recover", e)
-            } finally {
-                job = null
-            }
-
-            initMutex.withLock {
-                lastSnapshotFlow?.let { setupObservation(it) }
-            }
+            val flow = initMutex.withLock { lastSnapshotFlow }
+            flow?.let { setupObservation(it) }
         }
 
         /**
@@ -246,7 +217,7 @@ open class ShortcutManager
 
         private fun createMinutesShortcut(sim: SimSnapshot): ShortcutInfoCompat? {
             val entity = sim.entities[PackageType.MINUTES]
-            if (entity == null || entity.limit <= 0) return null
+            if (entity == null || (entity.limit <= 0)) return null
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
@@ -264,7 +235,7 @@ open class ShortcutManager
 
         private fun createTrafficShortcut(sim: SimSnapshot): ShortcutInfoCompat? {
             val entity = sim.entities[PackageType.DATA]
-            if (entity == null || entity.limit <= 0) return null
+            if (entity == null || (entity.limit <= 0)) return null
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
