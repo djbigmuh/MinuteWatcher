@@ -309,14 +309,14 @@ class IdentityMigrationServiceTest {
             assertFalse(service.hasLegacyData(activeIdentities = setOf(activeIdentity)))
         }
 
-    @Test
-    fun `hasLegacyData returns false on IOException`() =
+    @Test(expected = IOException::class)
+    fun `hasLegacyData throws IOException on DataStore error`() =
         testScope.runTest {
             val corruptedDataStore: DataStore<Preferences> = mock()
             whenever(corruptedDataStore.data).thenReturn(flow { throw IOException("Disk read error") })
 
             val service = IdentityMigrationService(corruptedDataStore, simDataStore)
-            assertFalse("Should fail-safe to false when DataStore is corrupted", service.hasLegacyData())
+            service.hasLegacyData()
         }
 
     @Test

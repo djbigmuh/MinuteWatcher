@@ -186,8 +186,9 @@ class MainViewModel
                 initController = initController,
                 lastRefreshAt = lastRefreshAt,
                 onRefreshNeeded = { refreshAndNotify(force = false) },
-                onUpdateLastRefreshAt = { lastRefreshAt = it },
-            )
+            ) {
+                lastRefreshAt = it
+            }
         }
 
         companion object {

@@ -47,7 +47,7 @@ internal fun WidgetContent(
     navigationProvider: NavigationProvider?,
 ) {
     val context = LocalContext.current
-    val alpha = Constants.Widget.ALPHA_FULL - uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT
+    val alpha = Constants.Widget.ALPHA_FULL - (uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT)
     val bgColor =
         Color(uiState.backgroundColor)
             .copy(alpha = alpha)

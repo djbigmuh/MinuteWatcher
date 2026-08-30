@@ -188,55 +188,77 @@ open class SemanticSearchManager
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
         suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean =
+        withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
             indexMutex.withLock {
-                val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
-                val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
+                performIndexSnapshotLocked(snapshot)
+            }
+        } ?: run {
+            AppLogger.e("AppSearch indexing timed out (mutex or I/O)")
+            resetLastSnapshotState()
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Indexing timeout")
+            false
+        }
 
-                if (hasActiveSims && (currentHash == lastSnapshotHash) && (snapshot.version == lastSnapshotVersion)) {
-                    return@withLock true
-                }
-                if (!hasActiveSims && (lastSnapshotHash == null)) return@withLock true
+    @Suppress("ReturnCount", "TooGenericExceptionCaught")
+    private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): Boolean {
+        val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
+        val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
 
-                if (!sessionManager.ensureSession({ _status.value = it })) {
-                    resetLastSnapshotState()
-                    return@withLock false
-                }
+        if (hasActiveSims &&
+            (currentHash == lastSnapshotHash) &&
+            (snapshot.version == lastSnapshotVersion)
+        ) {
+            return true
+        }
+        if (!hasActiveSims && (lastSnapshotHash == null)) return true
 
-                try {
-                    try {
-                        return@withLock executeIndexing(snapshot, currentHash)
-                    } catch (e: AppSearchException) {
-                        if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
-                            AppLogger.w("AppSearch schema mismatch, retrying with force override")
-                            sessionManager.closeSession()
-                            if (sessionManager.ensureSession({ _status.value = it }, forceOverride = true)) {
-                                return@withLock executeIndexing(snapshot, currentHash)
-                            }
-                        } else {
-                            AppLogger.e("AppSearch indexing failed", e)
-                        }
-                        throw e
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: AppSearchException) {
+        if (!sessionManager.ensureSession({ _status.value = it })) {
+            resetLastSnapshotState()
+            return false
+        }
+
+        return try {
+            executeIndexingInternal(snapshot, currentHash)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: AppSearchException) {
+            if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                tryHandleSchemaMismatch(snapshot, currentHash)
+            } else {
+                AppLogger.e("AppSearch indexing failed", e)
                     resetLastSnapshotState()
                     _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
                     false
-                } catch (e: Exception) {
-                    AppLogger.e("AppSearch non-AppSearch error during indexing", e)
-                    resetLastSnapshotState()
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    false
-                }
             }
+        } catch (e: Exception) {
+            AppLogger.e("AppSearch non-AppSearch error during indexing", e)
+            resetLastSnapshotState()
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            false
+        }
+    }
 
-        private fun resetLastSnapshotState() {
-            lastSnapshotHash = null
-            lastSnapshotVersion = null
+    private suspend fun tryHandleSchemaMismatch(
+        snapshot: GlobalSnapshot,
+        currentHash: Int?,
+    ): Boolean {
+        AppLogger.w("AppSearch schema mismatch, retrying with force override")
+        sessionManager.closeSession()
+        return if (sessionManager.ensureSession({ _status.value = it }, forceOverride = true)) {
+            try {
+                executeIndexingInternal(snapshot, currentHash)
+            } catch (e: Exception) {
+                AppLogger.e("AppSearch indexing failed after schema reset", e)
+                resetLastSnapshotState()
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                false
+            }
+        } else {
+            false
+        }
         }
 
-        private suspend fun executeIndexing(
+    private suspend fun executeIndexingInternal(
             snapshot: GlobalSnapshot,
             currentHash: Int?,
         ): Boolean =
@@ -244,46 +266,37 @@ open class SemanticSearchManager
                 // Ensure the session is valid and active immediately before usage.
                 // sessionManager.ensureSession is synchronized internally.
                 if (!sessionManager.ensureSession({ _status.value = it })) {
-                    AppLogger.e("AppSearch session could not be ensured in executeIndexing")
+                    AppLogger.e("AppSearch session could not be ensured in executeIndexingInternal")
                     return@withContext false
                 }
 
                 val currentSession =
                     sessionManager.session ?: run {
-                        AppLogger.e("AppSearch session is null in executeIndexing, skipping")
+                        AppLogger.e("AppSearch session is null in executeIndexingInternal, skipping")
                         return@withContext false
                     }
 
-                val result: Boolean? =
-                    try {
-                        withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
-                            indexer.performIndexUpdate(currentSession, snapshot)
-                            lastSnapshotHash = currentHash
-                            lastSnapshotVersion = snapshot.version
-                            _status.value = TrackingStatus.Active
-                            true
-                        }
-                    } catch (e: CancellationException) {
-                        resetLastSnapshotState()
-                        throw e
-                    } catch (e: AppSearchException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("AppSearch indexing error", e)
-                        resetLastSnapshotState()
-                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                        false
-                    }
-
-                if (result == null) {
-                    AppLogger.e("AppSearch indexing timed out")
-                    // Resetting state on timeout ensures that the next indexing attempt
-                    // is not skipped, preventing stale data from persisting if the
-                    // current partial update failed to complete.
+                try {
+                    indexer.performIndexUpdate(currentSession, snapshot)
+                    lastSnapshotHash = currentHash
+                    lastSnapshotVersion = snapshot.version
+                    _status.value = TrackingStatus.Active
+                    true
+                } catch (e: CancellationException) {
                     resetLastSnapshotState()
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Indexing timeout")
-                    return@withContext false
+                    throw e
+                } catch (e: AppSearchException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("AppSearch indexing error", e)
+                    resetLastSnapshotState()
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    false
                 }
-                result
             }
+
+    private fun resetLastSnapshotState() {
+        lastSnapshotHash = null
+        lastSnapshotVersion = null
+    }
     }

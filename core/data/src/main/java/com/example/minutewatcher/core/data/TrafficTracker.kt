@@ -147,8 +147,8 @@ class TrafficTracker
         ) {
             var phase = "initialization"
             val updateResult =
-                trafficMutex.withLock {
-                    withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                    trafficMutex.withLock {
                         phase = "usage fetch"
                         // Fetch Usage upfront
                         val usage =
@@ -157,7 +157,7 @@ class TrafficTracker
                                 .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
                                 ?: run {
                                     errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                                    return@withTimeoutOrNull false
+                                    return@withLock false
                                 }
 
                         phase = "identity check"
@@ -168,10 +168,10 @@ class TrafficTracker
                             simIdentityRepository
                                 .getActiveIdentities()
                                 .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                                ?: return@withTimeoutOrNull false
+                                ?: return@withLock false
                         if (targetIdentity !in activeIdentities) {
                             AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                            return@withTimeoutOrNull false
+                            return@withLock false
                         }
 
                         phase = "retry check"
@@ -183,7 +183,7 @@ class TrafficTracker
                         ) {
                             baselineManager.baselineNeedsRetry.remove(targetIdentity)
                             errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                            return@withTimeoutOrNull false
+                            return@withLock false
                         }
 
                         // Path A: Current state is Retry
@@ -191,7 +191,7 @@ class TrafficTracker
                             phase = "retry stats"
                             val statsResult = baselineManager.getCurrentMobileBytes(0L)
                             handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                            return@withTimeoutOrNull true
+                            return@withLock true
                         }
 
                         // Path B: Normal path
@@ -201,7 +201,7 @@ class TrafficTracker
 
                         if (statsResult !is StatsResult.Success) {
                             errorHandler.handleStatsFailure(statsResult, _status)
-                            return@withTimeoutOrNull false
+                            return@withLock false
                         }
 
                         phase = "baseline fetch"
@@ -209,7 +209,7 @@ class TrafficTracker
 
                         if (lastTotalBytes == null) {
                             errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                            return@withTimeoutOrNull false
+                            return@withLock false
                         }
 
                         phase = "atomic update"

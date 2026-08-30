@@ -51,7 +51,11 @@ object AppLogger {
 
     private const val MAX_WORKER_CRASHES = 3
 
-    @Volatile private var isWorkerStarted = false
+    @Volatile
+    private var isWorkerStarted = false
+
+    @Volatile
+    private var workerThread: Thread? = null
 
     private class LogEntry(
         val level: String,
@@ -203,19 +207,24 @@ object AppLogger {
     }
 
     private fun ensureWorkerStarted() {
-        if (isWorkerStarted || !isFileLoggingEnabled) return
+        if (!isFileLoggingEnabled) return
+        val current = workerThread
+        if ((current != null) && current.isAlive) return
+
         lock.withLock {
-            if (isWorkerStarted || !isFileLoggingEnabled) return
+            val fresh = workerThread
+            if (isFileLoggingEnabled && ((fresh == null) || !fresh.isAlive)) {
+                val count = workerRestartCount.get()
+                if (count > 0) {
+                    Log.w(TAG, "AppLogger: restarting worker thread (previous crash count: $count)")
+                }
 
-            val count = workerRestartCount.get()
-            if (count > 0) {
-                Log.w(TAG, "AppLogger: restarting worker thread (previous crash count: $count)")
+                isWorkerStarted = true
+                val thread = Thread({ workerLoop() }, "AppLogger-Worker")
+                workerThread = thread
+                thread.isDaemon = true
+                thread.start()
             }
-
-            isWorkerStarted = true
-            val thread = Thread({ workerLoop() }, "AppLogger-Worker")
-            thread.isDaemon = true
-            thread.start()
         }
     }
 

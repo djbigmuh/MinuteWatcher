@@ -45,7 +45,7 @@ class WidgetSettingsViewModelRaceTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
             val snapshotFlow = MutableStateFlow(snapshot)
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
-            whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 12))
+            whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 4))
 
             viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             runCurrent()
@@ -80,7 +80,7 @@ class WidgetSettingsViewModelRaceTest {
 
             // 2. Try to update settings while save is in progress
             // This update should be queued because updateSettings now uses saveMutex
-            viewModel.updateSettings { it.copy(fontSize = 20) }
+            viewModel.updateSettings { it.copy(fontSize = 2) }
             runCurrent()
 
             // 3. Allow save to complete
@@ -91,7 +91,7 @@ class WidgetSettingsViewModelRaceTest {
             // (Since the update was blocked by the lock)
             argumentCaptor<WidgetSettingsState>().apply {
                 verify(saver).save(capture(), any())
-                assertEquals(12, firstValue.fontSize)
+                assertEquals(4, firstValue.fontSize)
             }
 
             // 5. Trigger second save to verify the update was NOT lost and is now in memory
@@ -100,7 +100,7 @@ class WidgetSettingsViewModelRaceTest {
 
             argumentCaptor<WidgetSettingsState>().apply {
                 verify(saver, org.mockito.kotlin.times(2)).save(capture(), any())
-                assertEquals(20, lastValue.fontSize)
+                assertEquals(2, lastValue.fontSize)
             }
         }
 }

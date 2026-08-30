@@ -35,7 +35,7 @@ class MainResumeController
         ) {
             val now = timeProvider.elapsedRealtime()
             val last = lastResumeTimestamp.value
-            if (last != -1L && (now - last < RESUME_DEBOUNCE_MS)) {
+            if ((last != -1L) && (now - last < RESUME_DEBOUNCE_MS)) {
                 return
             }
             lastResumeTimestamp.value = now

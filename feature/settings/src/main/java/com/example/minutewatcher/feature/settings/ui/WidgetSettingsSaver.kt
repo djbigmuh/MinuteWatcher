@@ -50,45 +50,46 @@ class WidgetSettingsSaver
             // Выполняем защитную валидацию.
             val validatedState = WidgetSettingsState.validate(state)
 
-            val result =
-                try {
-                    saveGeneralSettings(validatedState)
+            return try {
+                saveGeneralSettings(validatedState)
+                val simResult = trySaveSimSettings(validatedState, skipSimSettings)
 
-                    val simResult =
-                        try {
-                            val failedSlots = saveSimSettings(validatedState, skipSimSettings)
-
-                            if (failedSlots.isEmpty()) {
-                                if (skipSimSettings) {
-                                    SaveResult.PartialSuccess(skippedSimSettings = true)
-                                } else {
-                                    SaveResult.Success
-                                }
-                            } else {
-                                val slotsString = failedSlots.joinToString(", ")
-                                SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to save SIM-specific widget settings", e)
-                            SaveResult.PartialFailure(
-                                "General settings saved, but SIM-specific settings failed due to an error.",
-                            )
-                        }
-
-                    withContext(NonCancellable) {
-                        notifyDataChanged()
-                    }
-                    simResult
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to save general widget settings", e)
-                    SaveResult.Failed()
+                withContext(NonCancellable) {
+                    notifyDataChanged()
                 }
+                simResult
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save general widget settings", e)
+                SaveResult.Failed()
+            }
+        }
 
-            return result
+    private suspend fun trySaveSimSettings(
+        state: WidgetSettingsState,
+        skipSimSettings: Boolean,
+    ): SaveResult =
+        try {
+            val failedSlots = saveSimSettings(state, skipSimSettings)
+
+            if (failedSlots.isEmpty()) {
+                if (skipSimSettings) {
+                    SaveResult.PartialSuccess(skippedSimSettings = true)
+                } else {
+                    SaveResult.Success
+                }
+            } else {
+                val slotsString = failedSlots.joinToString(", ")
+                SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Failed to save SIM-specific widget settings", e)
+            SaveResult.PartialFailure(
+                "General settings saved, but SIM-specific settings failed due to an error.",
+            )
         }
 
         private suspend fun notifyDataChanged() {

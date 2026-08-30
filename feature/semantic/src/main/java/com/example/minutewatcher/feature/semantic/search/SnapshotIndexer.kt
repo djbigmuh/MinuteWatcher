@@ -46,20 +46,8 @@ open class SnapshotIndexer
                 staleIds.addAll(possibleIds.filter { it !in currentIds })
             }
 
-            var removeException: Exception? = null
-            if (staleIds.isNotEmpty()) {
-                try {
-                    session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("SnapshotIndexer: failure during removeByDocumentId", e)
-                    removeException = e
-                }
-            }
-
             var putException: Exception? = null
-            if ((removeException == null) && documents.isNotEmpty()) {
+            if (documents.isNotEmpty()) {
                 try {
                     session.putDocuments(appSearchWrapper.createPutRequest(documents))
                 } catch (e: CancellationException) {
@@ -67,6 +55,18 @@ open class SnapshotIndexer
                 } catch (e: Exception) {
                     AppLogger.e("SnapshotIndexer: failure during putDocuments", e)
                     putException = e
+                }
+            }
+
+            var removeException: Exception? = null
+            if ((putException == null) && staleIds.isNotEmpty()) {
+                try {
+                    session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("SnapshotIndexer: failure during removeByDocumentId", e)
+                    removeException = e
                 }
             }
 

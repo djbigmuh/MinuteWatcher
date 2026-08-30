@@ -32,12 +32,16 @@ class AppLoggerRaceTest {
         // Wait a bit to ensure it started
         Thread.sleep(200)
 
-        // 2. Simulate worker crash by manually setting isWorkerStarted = false
-        // Since we can't easily crash the internal thread without reflection or specialized mocks,
-        // we'll use reflection to simulate the state after a crash but before restart.
-        val field = AppLogger::class.java.getDeclaredField("isWorkerStarted")
+        // 2. Simulate worker crash by manually setting workerThread to null
+        // Since we now check thread.isAlive, we must clear the reference to simulate a crash/death
+        val field = AppLogger::class.java.getDeclaredField("workerThread")
         field.isAccessible = true
-        field.set(AppLogger, false)
+        val oldThread = field.get(AppLogger) as? Thread
+        field.set(AppLogger, null)
+
+        // Kill the old thread so it doesn't count in our check
+        oldThread?.interrupt()
+        Thread.sleep(100)
 
         // 3. Try to start worker from multiple threads simultaneously
         val threadCount = 10

@@ -143,9 +143,9 @@ private fun resolveTextColor(
     sim: SimUiState,
     component: SimLayoutComponent.Text,
 ): ColorProvider =
-    if (uiState.useSystemColors && component.color == sim.textColor) {
+    if (uiState.useSystemColors && (component.color == sim.textColor)) {
         GlanceTheme.colors.onSurface
-    } else if (uiState.useSystemColors && component.color == sim.secondaryTextColor) {
+    } else if (uiState.useSystemColors && (component.color == sim.secondaryTextColor)) {
         GlanceTheme.colors.onSurfaceVariant
     } else {
         val composeColor =

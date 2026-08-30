@@ -9,13 +9,18 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class AutoResetSchedulerTest {
     private val savedStateHandle = SavedStateHandle()
@@ -25,6 +30,11 @@ class AutoResetSchedulerTest {
 
     @Before
     fun setup() {
+        val context: android.content.Context = mock()
+        whenever(context.filesDir).thenReturn(java.io.File("/tmp"))
+        com.example.minutewatcher.core.common.util.AppLogger
+            .init(context, mock())
+
         scheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
         whenever(timeProvider.elapsedRealtime()).thenReturn(10_000_000L)
     }
@@ -32,15 +42,17 @@ class AutoResetSchedulerTest {
     @Test
     fun `checkOnStart can be retried after RuntimeException`() =
         runTest {
-            whenever(autoResetUseCase.performAutoReset(any())).thenThrow(RuntimeException("Fail"))
+            // Setup consecutive calls: first fails, second succeeds
+            whenever(autoResetUseCase.performAutoReset(any()))
+                .thenThrow(RuntimeException("Fail"))
+                .thenReturn(Unit)
 
             // First attempt - fails
             scheduler.checkOnStart()
             verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(value = false))
             assertEquals(1, savedStateHandle.get<Int>("auto_reset_fail_count"))
 
-            // Second attempt - should try again
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
+            // Second attempt - should try again and succeed
             scheduler.checkOnStart()
             verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(value = false))
             assertEquals(0, savedStateHandle.get<Int>("auto_reset_fail_count"))
@@ -49,7 +61,7 @@ class AutoResetSchedulerTest {
     @Test(expected = CancellationException::class)
     fun `checkOnStart does not reset flag after CancellationException`() =
         runTest {
-            whenever(autoResetUseCase.performAutoReset(any())).thenThrow(CancellationException("Cancel"))
+            whenever(autoResetUseCase.performAutoReset(any())).thenAnswer { throw CancellationException("Cancel") }
 
             try {
                 scheduler.checkOnStart()

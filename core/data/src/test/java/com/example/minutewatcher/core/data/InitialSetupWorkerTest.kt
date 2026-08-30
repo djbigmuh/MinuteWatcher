@@ -58,6 +58,10 @@ class InitialSetupWorkerTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext<Application>()
+        val logger: com.example.minutewatcher.core.common.util.Logger = mock()
+        com.example.minutewatcher.core.common.util.AppLogger
+            .init(context, logger)
+
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
@@ -71,12 +75,20 @@ class InitialSetupWorkerTest {
                 capabilities = emptyList(),
             )
 
-        runTest {
+        kotlinx.coroutines.runBlocking {
+            whenever(migrationFlagsRepository.setMigrationV1Completed(any())).thenReturn(Unit)
+            whenever(migrationFlagsRepository.setMigrationV1Skipped(any())).thenReturn(Unit)
+            whenever(migrationFlagsRepository.setMigrationIdentityStabilityCompleted(any())).thenReturn(Unit)
+            whenever(migrationService.markSchemaCurrent()).thenReturn(Unit)
+            whenever(migrationService.hasLegacyData(any())).thenReturn(false)
+            whenever(migrationService.hasLegacyData()).thenReturn(false)
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),
             )
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
         }
 
         deps =
@@ -185,12 +197,19 @@ class InitialSetupWorkerTest {
     fun `doWork performs migration when active sims found`() =
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            // Ensure suspending functions are mocked explicitly
+            whenever(migrationService.hasLegacyData(any())).thenReturn(false)
+            whenever(migrationService.migrateLegacyData(any())).thenReturn(true)
 
             val result = createWorker().doWork()
 

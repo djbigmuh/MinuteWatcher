@@ -189,7 +189,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val now = timeProvider.now()
         val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
-        if (initialSnapshot.timestamp != 0L && !isStale) {
+        if ((initialSnapshot.timestamp != 0L) && !isStale) {
             return com.example.minutewatcher.core.domain.RefreshResult
                 .Success(initialSnapshot)
         }

@@ -18,25 +18,28 @@ class WidgetUpdateRetryManager
     constructor() {
         suspend fun updateWithRetry(updateBlock: suspend (Int) -> UpdateOutcome): Boolean {
             var currentDelay = Constants.Widget.RETRY_BACKOFF_MS
+            var success = false
+            var shouldStop = false
 
-            for (attempt in 1..Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+            var attempt = 1
+            while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && !success && !shouldStop) {
                 val outcome = updateBlock(attempt)
                 when (outcome) {
-                    is UpdateOutcome.Success -> return true
-                    is UpdateOutcome.LimitExceeded -> return false
-                    is UpdateOutcome.Stop -> return false
+                    is UpdateOutcome.Success -> success = true
+                    is UpdateOutcome.LimitExceeded, is UpdateOutcome.Stop -> shouldStop = true
                     is UpdateOutcome.Retry -> {
-                        if (attempt == Constants.Widget.MAX_UPDATE_ATTEMPTS) return false
-
-                        delay(currentDelay.milliseconds)
-                        currentDelay =
-                            min(
-                                Constants.Widget.MAX_RETRY_DELAY_MS,
-                                currentDelay * 2,
-                            )
+                        if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                            delay(currentDelay.milliseconds)
+                            currentDelay =
+                                min(
+                                    Constants.Widget.MAX_RETRY_DELAY_MS,
+                                    currentDelay * 2,
+                                )
+                        }
                     }
                 }
+                attempt++
             }
-            return false
+            return success
         }
     }

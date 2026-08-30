@@ -526,7 +526,7 @@ class WidgetUpdaterImplTest {
                     throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
                 } else {
                     // 2nd call and onwards: Simplified update -> also fails
-                    throw RuntimeException("Simplified failed")
+                    error("Simplified failed")
                 }
             }
 
@@ -542,9 +542,9 @@ class WidgetUpdaterImplTest {
             updater.updateAll()
 
             assertEquals("Should have called renderer again for simplified update", 3, callCount)
-            // Verify that the 3rd call was simplified (forceFull = false)
-            // We use verify with times(2) because it was called with false once in handleLimitExceeded and once in performSingleUpdate
-            verify(renderer, org.mockito.kotlin.times(2)).renderAll(
+            // Verify that the 3 calls were: 1st full (limit exceeded), 2nd fallback simplified,
+            // 3rd sequential simplified
+            verify(renderer, org.mockito.kotlin.times(3)).renderAll(
                 context = eq(context),
                 forceFull = eq(value = false),
             )

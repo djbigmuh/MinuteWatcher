@@ -181,7 +181,7 @@ class UsageCheckWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
-            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(eq(identity), notified = true)
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(eq(identity), eq(true))
         }
 
     @Test
@@ -255,7 +255,7 @@ class UsageCheckWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(1))
-            verify(simNotificationFlagsRepository).setNotifiedLowTraffic(eq(identity), notified = true)
+            verify(simNotificationFlagsRepository).setNotifiedLowTraffic(eq(identity), eq(true))
         }
 
     @Test
