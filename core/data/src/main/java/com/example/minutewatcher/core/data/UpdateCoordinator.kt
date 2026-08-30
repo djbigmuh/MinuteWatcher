@@ -104,18 +104,18 @@ class UpdateCoordinator
                     observationJob.compareAndSet(oldJob, null)
                 }
 
-                val handler =
-                    CoroutineExceptionHandler { _, cause ->
-                        AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+                val handler = CoroutineExceptionHandler { _, cause ->
+                    AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+                }
+
+                val newJob = usageStateRepository
+                    .observeSnapshot()
+                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    .onEach { snapshot ->
+                        processSnapshot(snapshot)
                     }
-                val newJob =
-                    usageStateRepository
-                        .observeSnapshot()
-                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                        .onEach { snapshot ->
-                            processSnapshot(snapshot)
-                        }.launchIn(scope + handler)
+                    .launchIn(scope + handler)
 
                 if (!observationJob.compareAndSet(null, newJob)) {
                     newJob.cancel()
@@ -125,16 +125,12 @@ class UpdateCoordinator
                 // Мониторинг завершения: если наблюдение упало — перезапускаем через 5 секунд.
                 scope.launch {
                     newJob.join()
-                    // Если текущий job изменился (т.е. setupObservation вызван снова), ничего не делаем.
                     if (observationJob.get() !== newJob) return@launch
-                    if (!isObservationStarted.get()) return@launch // Скоуп закрыт штатно
+                    if (!isObservationStarted.get()) return@launch
 
-                    // Если job завершился, хотя должен был работать вечно — это признак сбоя.
-                    // Перезапускаем через 5 секунд.
                     AppLogger.w("UpdateCoordinator: observation terminated unexpectedly, scheduling restart")
                     kotlinx.coroutines.delay(5000.milliseconds)
 
-                    // Повторная проверка перед перезапуском
                     if (isObservationStarted.get() && (observationJob.get() === newJob)) {
                         restartObservation()
                     }

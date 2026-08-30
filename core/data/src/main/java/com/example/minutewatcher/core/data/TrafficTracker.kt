@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,35 +121,54 @@ class TrafficTracker
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
             baselineManager.cleanupRetries(activeIdentities)
 
-            processActiveSimsTraffic(activeSims)
+            try {
+                processActiveSimsTraffic(activeSims)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: handleActiveSims failed", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            }
         }
 
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
-            val result = targetResolver.resolve(activeSims)
+            try {
+                val result = targetResolver.resolve(activeSims)
 
-            if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
-                baselineManager.cleanupRetries(emptySet())
-                errorHandler.handleInconsistentFirmware(_status)
-                return
-            }
+                if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
+                    baselineManager.cleanupRetries(emptySet())
+                    errorHandler.handleInconsistentFirmware(_status)
+                    return
+                }
 
-            val target = (result as TrafficTargetResolver.TargetResult.Success).target
+                if (result !is TrafficTargetResolver.TargetResult.Success) {
+                    AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
+                    return
+                }
 
-            simChangeHandler.withSimChangeLock {
-                val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
-                targetIdentity?.let { performTrafficUpdate(target, it) }
+                val target = result.target
+
+                simChangeHandler.withSimChangeLock {
+                    val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
+                    targetIdentity?.let { performTrafficUpdate(target, it) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: processActiveSimsTraffic failed", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
         }
 
-        @Suppress("ReturnCount", "LongMethod")
+    @Suppress("ReturnCount", "LongMethod", "TooGenericExceptionCaught")
         private suspend fun performTrafficUpdate(
             target: TargetInfo,
             targetIdentity: String,
-        ) {
+    ): Boolean {
             var phase = "initialization"
-            val updateResult =
-                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-                    trafficMutex.withLock {
+        return withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+            trafficMutex.withLock {
+                try {
                         phase = "usage fetch"
                         // Fetch Usage upfront
                         val usage =
@@ -225,18 +245,24 @@ class TrafficTracker
                         }
                         _status.value = TrackingStatus.Active
                         true
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficTracker: Error during traffic update at phase $phase for $targetIdentity", e)
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Traffic update failed at $phase: ${e.message}",
+                        )
+                    false
                     }
                 }
-
-            if (updateResult == null) {
+        } ?: run {
                 AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
-                // Note: Unlike SemanticSearchManager, TrafficTracker does not use a snapshot hash for
-                // indexing optimization (it tracks real-time usage), so there is no hash to reset here.
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Traffic update timeout ($phase)",
                     )
+            false
             }
         }
 

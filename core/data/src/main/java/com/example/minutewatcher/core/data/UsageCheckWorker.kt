@@ -23,6 +23,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltWorker
@@ -50,35 +51,35 @@ class UsageCheckWorker
          */
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
-                try {
-                    withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
-                        executeWork()
-                    } ?: run {
-                        AppLogger.e("UsageCheckWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
-                        Result.retry()
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: java.io.IOException) {
-                    AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
+                withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
+                    executeWork()
+                } ?: run {
+                    AppLogger.e("UsageCheckWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
                     Result.retry()
-                } catch (e: SecurityException) {
-                    AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
-                    Result.failure()
-                } catch (e: Exception) {
-                    AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
-                    Result.failure()
                 }
             }
 
-        private suspend fun executeWork(): Result {
+    private suspend fun executeWork(): Result {
+        return try {
             withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
                 deps.usageUseCase.refreshOperatorInfo()
             } ?: run {
                 AppLogger.w("UsageCheckWorker: refreshOperatorInfo timed out, continuing")
             }
-            return checkUsageAndNotify()
+            checkUsageAndNotify()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
+            Result.retry()
+        } catch (e: SecurityException) {
+            AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
+            Result.failure()
+        } catch (e: Exception) {
+            AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
+            Result.failure()
         }
+    }
 
         // @Suppress("ReturnCount") is required for early exits on permission checks and timeouts.
         @Suppress("ReturnCount")

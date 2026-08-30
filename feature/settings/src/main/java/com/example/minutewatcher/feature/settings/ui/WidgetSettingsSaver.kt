@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -20,6 +21,8 @@ class WidgetSettingsSaver
         private val loader: WidgetSettingsLoader,
         private val dataChangeNotifier: DataChangeNotifier,
     ) {
+    private val saveMutex = Mutex()
+
         /**
          * Сохраняет настройки виджета.
          *
@@ -42,27 +45,36 @@ class WidgetSettingsSaver
             state: WidgetSettingsState,
             skipSimSettings: Boolean = false,
         ): SaveResult {
-            if (state.settingsLoadFailed) {
-                AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
-                return SaveResult.Failed()
+            if (!saveMutex.tryLock()) {
+                AppLogger.w("WidgetSettingsSaver: save already in progress, skipping")
+                return SaveResult.AlreadyInProgress
             }
 
-            // Выполняем защитную валидацию.
-            val validatedState = WidgetSettingsState.validate(state)
-
-            return try {
-                saveGeneralSettings(validatedState)
-                val simResult = trySaveSimSettings(validatedState, skipSimSettings)
-
-                withContext(NonCancellable) {
-                    notifyDataChanged()
+            try {
+                if (state.settingsLoadFailed) {
+                    AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
+                    return SaveResult.Failed()
                 }
-                simResult
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to save general widget settings", e)
-                SaveResult.Failed()
+
+                // Выполняем защитную валидацию.
+                val validatedState = WidgetSettingsState.validate(state)
+
+                return try {
+                    saveGeneralSettings(validatedState)
+                    val simResult = trySaveSimSettings(validatedState, skipSimSettings)
+
+                    withContext(NonCancellable) {
+                        notifyDataChanged()
+                    }
+                    simResult
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to save general widget settings", e)
+                    SaveResult.Failed()
+                }
+            } finally {
+                saveMutex.unlock()
             }
         }
 

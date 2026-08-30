@@ -147,6 +147,7 @@ class TrafficSimChangeHandler
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to handle SIM change", e)
+                status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
         }
 

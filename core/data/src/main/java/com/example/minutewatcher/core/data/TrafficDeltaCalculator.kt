@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,11 +24,18 @@ class TrafficDeltaCalculator
             lastTotalBytes: Long,
             target: TargetInfo,
         ) {
-            if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
-                simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
-            } else {
-                handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
+            try {
+                if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
+                    simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
+                    AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
+                } else {
+                    handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity", e)
+                throw e
             }
         }
 
@@ -37,17 +45,24 @@ class TrafficDeltaCalculator
             lastTotalBytes: Long,
             slot: Int,
         ) {
-            val deltaBytes = currentBytes - lastTotalBytes
-            if (deltaBytes > 0L) {
-                val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
-                if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
-                    simUsageResetRepository.incrementTrafficAndSetBaseline(
-                        identity,
-                        deltaMB,
-                        currentBytes,
-                    )
-                    AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
+            try {
+                val deltaBytes = currentBytes - lastTotalBytes
+                if (deltaBytes > 0L) {
+                    val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
+                    if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
+                        simUsageResetRepository.incrementTrafficAndSetBaseline(
+                            identity,
+                            deltaMB,
+                            currentBytes,
+                        )
+                        AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficDeltaCalculator: Error calculating/persisting delta for $identity", e)
+                throw e
             }
         }
     }

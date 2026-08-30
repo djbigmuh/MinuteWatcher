@@ -52,7 +52,7 @@ class TrafficBaselineManager
                 }
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
 
-                // Sync data subId regardless of stats result to prevent stale attribution
+                // Синхронизируем data subId независимо от результата
                 syncLastDataSubIdIfNeeded(identity, onSuccess)
 
                 if (statsResult is StatsResult.Success) {
@@ -63,13 +63,12 @@ class TrafficBaselineManager
                     baselineNeedsRetry.remove(identity)
                     status.value = TrackingStatus.Active
                 } else {
-                    val message =
-                        if (statsResult is StatsResult.Error) {
-                            AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
-                            statsResult.exception.message
-                        } else {
-                            "Stats unavailable"
-                        }
+                    val message = if (statsResult is StatsResult.Error) {
+                        AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
+                        statsResult.exception.message
+                    } else {
+                        "Stats unavailable"
+                    }
                     status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                 }
             } catch (e: SecurityException) {

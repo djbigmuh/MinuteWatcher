@@ -1,6 +1,8 @@
 package com.example.minutewatcher.feature.widget
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.Constants
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +25,16 @@ class WidgetUpdateRetryManager
 
             var attempt = 1
             while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && !success && !shouldStop) {
-                val outcome = updateBlock(attempt)
+                val outcome =
+                    try {
+                        updateBlock(attempt)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetUpdateRetryManager: attempt $attempt failed with exception", e)
+                        UpdateOutcome.Retry
+                    }
+
                 when (outcome) {
                     is UpdateOutcome.Success -> success = true
                     is UpdateOutcome.LimitExceeded, is UpdateOutcome.Stop -> shouldStop = true

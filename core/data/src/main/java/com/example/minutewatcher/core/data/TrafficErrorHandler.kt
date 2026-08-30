@@ -68,8 +68,10 @@ class TrafficErrorHandler
         ) {
             val message =
                 if (statsResult is StatsResult.Error) {
+                    AppLogger.e("Traffic stats query failed", statsResult.exception)
                     statsResult.exception.message
                 } else {
+                    AppLogger.w("Traffic stats unavailable")
                     "Stats unavailable"
                 }
             statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)

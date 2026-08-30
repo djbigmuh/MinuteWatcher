@@ -89,16 +89,18 @@ class InitialSetupWorker
         val migrationV1Completed = fetchMigrationV1Flag()
         val migrationStabilityCompleted = fetchMigrationStabilityFlag()
 
-        if (migrationV1Completed && migrationStabilityCompleted) return null
+        if (migrationV1Completed && migrationStabilityCompleted) {
+            return null
+        }
 
-            val hasPermission = deps.permissionManager.hasPhoneStatePermission()
+        val hasPermission = deps.permissionManager.hasPhoneStatePermission()
 
         return if (!hasPermission) {
-                handleMigrationWithoutPermission(migrationV1Completed)
-            } else {
-                handleMigrationWithPermission(migrationV1Completed)
-            }
+            handleMigrationWithoutPermission(migrationV1Completed)
+        } else {
+            handleMigrationWithPermission(migrationV1Completed)
         }
+    }
 
     private suspend fun fetchMigrationV1Flag(): Boolean =
         try {

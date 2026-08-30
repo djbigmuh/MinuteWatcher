@@ -232,47 +232,37 @@ class UsageStateRepositoryImpl
             val startTimestamp = snapshotFlow.value.timestamp
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
-            val alreadyUpdated =
-                refreshMutex.withLock {
-                    if (snapshotFlow.value.timestamp > startTimestamp) {
-                        true
-                    } else {
-                        if (lastNotifyTimestamp < startTimestamp) {
-                            lastNotifyTimestamp =
-                                try {
-                                    deps.dataRefreshNotifier.notifyRefresh(isManual = true)
-                                    startTimestamp
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    AppLogger.w(
-                                        "UsageStateRepository: notifyRefresh failed, continuing with snapshot wait",
-                                        e,
-                                    )
-                                    // We still set it to avoid redundant retries for the same state
-                                    startTimestamp
-                                }
+            val alreadyUpdated = refreshMutex.withLock {
+                if (snapshotFlow.value.timestamp > startTimestamp) {
+                    true
+                } else {
+                    if (lastNotifyTimestamp < startTimestamp) {
+                        lastNotifyTimestamp = try {
+                            deps.dataRefreshNotifier.notifyRefresh(isManual = true)
+                            startTimestamp
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+                            startTimestamp
                         }
-                        false
                     }
+                    false
                 }
+            }
 
             if (alreadyUpdated) {
                 return RefreshResult.Success(snapshotFlow.value)
             }
 
-            val newSnapshot =
-                withTimeoutOrNull(timeout) {
-                    snapshotFlow.first { it.timestamp > startTimestamp }
-                }
+            val newSnapshot = withTimeoutOrNull(timeout) {
+                snapshotFlow.first { it.timestamp > startTimestamp }
+            }
 
             return if (newSnapshot != null) {
                 RefreshResult.Success(newSnapshot)
             } else {
-                AppLogger.w(
-                    "UsageStateRepository: refresh timed out after " +
-                        "${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot",
-                )
+                AppLogger.w("UsageStateRepository: refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot")
                 RefreshResult.Timeout(snapshotFlow.value)
             }
         }

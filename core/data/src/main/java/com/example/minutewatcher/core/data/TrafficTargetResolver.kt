@@ -27,9 +27,25 @@ class TrafficTargetResolver
 
         @Suppress("ReturnCount")
         fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
-            if (activeSims.isEmpty()) return TargetResult.NoActiveSims
-            val (targetSim, currentDataSubId) = resolveTargetSim(activeSims) ?: return TargetResult.InconsistentFirmware
-            return TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
+            return try {
+                if (activeSims.isEmpty()) {
+                    AppLogger.d("TrafficTargetResolver: No active SIMs provided")
+                    return TargetResult.NoActiveSims
+                }
+
+                val resolution = resolveTargetSim(activeSims)
+                if (resolution == null) {
+                    AppLogger.w("TrafficTargetResolver: Target SIM resolution failed (InconsistentFirmware)")
+                    return TargetResult.InconsistentFirmware
+                }
+
+                val (targetSim, currentDataSubId) = resolution
+                AppLogger.d("TrafficTargetResolver: Resolved target SIM to slot $targetSim (subId $currentDataSubId)")
+                TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTargetResolver: Unexpected error during resolution", e)
+                TargetResult.InconsistentFirmware
+            }
         }
 
         private fun resolveTargetSim(activeSims: List<ActiveSimInfo>): Pair<Int, Int>? {

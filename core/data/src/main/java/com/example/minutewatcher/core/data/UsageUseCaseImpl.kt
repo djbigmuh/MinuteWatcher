@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import com.example.minutewatcher.core.android.util.OperatorResolver
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
@@ -74,8 +75,7 @@ class UsageUseCaseImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                com.example.minutewatcher.core.common.util.AppLogger
-                    .e("Error refreshing operator info", e)
+                AppLogger.e("Error refreshing operator info", e)
             }
         }
 
@@ -91,21 +91,27 @@ class UsageUseCaseImpl
             slot: Int,
             remainingMinutes: Int,
         ) {
-            val identity = simIdentityRepository.getIdentity(slot)
-            adjustmentMutex.withLock {
-                val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
-                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val used = usage?.minutesUsed ?: 0
+            try {
+                val identity = simIdentityRepository.getIdentity(slot)
+                adjustmentMutex.withLock {
+                    val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
+                    val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                    val used = usage?.minutesUsed ?: 0
 
-                val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
-                val adj = (safeRemaining - limit).toLong() + used.toLong()
-                val safeAdj =
-                    adj
-                        .coerceIn(
-                            -Constants.MAX_MINUTES_LIMIT.toLong(),
-                            Constants.MAX_MINUTES_LIMIT.toLong(),
-                        ).toInt()
-                simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
+                    val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
+                    val adj = (safeRemaining - limit).toLong() + used.toLong()
+                    val safeAdj =
+                        adj
+                            .coerceIn(
+                                -Constants.MAX_MINUTES_LIMIT.toLong(),
+                                Constants.MAX_MINUTES_LIMIT.toLong(),
+                            ).toInt()
+                    simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UsageUseCaseImpl: adjustMinutes failed for slot $slot", e)
             }
         }
 
@@ -121,23 +127,30 @@ class UsageUseCaseImpl
             slot: Int,
             remainingGb: Float,
         ) {
-            val identity = simIdentityRepository.getIdentity(slot)
-            adjustmentMutex.withLock {
-                val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
-                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val usedMb = usage?.trafficUsedMb ?: 0f
+            try {
+                val identity = simIdentityRepository.getIdentity(slot)
+                adjustmentMutex.withLock {
+                    val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
+                    val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                    val usedMb = usage?.trafficUsedMb ?: 0f
 
-                val safeRemainingGb = remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
-                val mbPerGb = Constants.MB_PER_GB.toDouble()
-                val limitGb = limitMb.toDouble() / mbPerGb
-                val usedGb = usedMb.toDouble() / mbPerGb
-                val adj = safeRemainingGb - (limitGb - usedGb)
-                val safeAdj =
-                    adj.coerceIn(
-                        -Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
-                        Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
-                    )
-                simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj.toFloat())
+                    val safeRemainingGb =
+                        remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
+                    val mbPerGb = Constants.MB_PER_GB.toDouble()
+                    val limitGb = limitMb.toDouble() / mbPerGb
+                    val usedGb = usedMb.toDouble() / mbPerGb
+                    val adj = safeRemainingGb - (limitGb - usedGb)
+                    val safeAdj =
+                        adj.coerceIn(
+                            -Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
+                            Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
+                        )
+                    simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj.toFloat())
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UsageUseCaseImpl: adjustTraffic failed for slot $slot", e)
             }
         }
 
@@ -148,8 +161,14 @@ class UsageUseCaseImpl
          * @throws java.io.IOException if DataStore operations fail.
          */
         override suspend fun resetCounters(slot: Int) {
-            val identity = simIdentityRepository.getIdentity(slot)
-            simUsageResetRepository.resetSimUsageManual(identity)
-            trafficTracker.resetBaseline(identity)
+            try {
+                val identity = simIdentityRepository.getIdentity(slot)
+                simUsageResetRepository.resetSimUsageManual(identity)
+                trafficTracker.resetBaseline(identity)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UsageUseCaseImpl: resetCounters failed for slot $slot", e)
+            }
         }
     }

@@ -37,21 +37,28 @@ class WidgetUpdaterImpl
 
         override suspend fun updateAll(): WidgetUpdateResult =
             executeUpdate {
-                var lastOutcome: UpdateOutcome? = null
-                val s =
-                    retryManager.updateWithRetry { attempt ->
-                        performSingleUpdate(attempt).also { lastOutcome = it }
-                    }
+                try {
+                    var lastOutcome: UpdateOutcome? = null
+                    val s =
+                        retryManager.updateWithRetry { attempt ->
+                            performSingleUpdate(attempt).also { lastOutcome = it }
+                        }
 
-                if (s) {
-                    WidgetUpdateResult.Success(wasCoalesced = false)
-                } else if (lastOutcome is UpdateOutcome.LimitExceeded) {
-                    handleLimitExceeded()
-                } else {
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = lastOutcome == UpdateOutcome.Retry,
-                    )
+                    if (s) {
+                        WidgetUpdateResult.Success(wasCoalesced = false)
+                    } else if (lastOutcome is UpdateOutcome.LimitExceeded) {
+                        handleLimitExceeded()
+                    } else {
+                        WidgetUpdateResult.Failure(
+                            wasCoalesced = false,
+                            isRetryable = lastOutcome == UpdateOutcome.Retry,
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetUpdater: updateAll failed", e)
+                    WidgetUpdateResult.Failure(wasCoalesced = false, isRetryable = false)
                 }
             }
 
