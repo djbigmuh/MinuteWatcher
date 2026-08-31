@@ -427,7 +427,7 @@ class SimIdentityRepositoryHangTest {
             // 3. Advance time to trigger the withTimeoutOrNull around emitAll in seedFlow.
             // Since storedSeed (MutableSharedFlow) doesn't emit after our first emit,
             // the withTimeoutOrNull(10s) will eventually time out.
-            testScheduler.advanceTimeBy(15_000)
+            testScheduler.advanceTimeBy(15_000.milliseconds)
             testScheduler.runCurrent()
 
             // 4. New resolution attempt. It should still work using the last known seed

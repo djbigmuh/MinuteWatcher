@@ -29,6 +29,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
@@ -87,7 +88,7 @@ class ShortcutManagerTest {
             // Emit changes every 10 seconds.
             repeat(10) { i ->
                 timeProvider.advance(10_000)
-                testDispatcher.scheduler.advanceTimeBy(10_000)
+                testDispatcher.scheduler.advanceTimeBy(10_000.milliseconds)
                 flow.value =
                     createSnapshot(
                         listOf(
@@ -105,7 +106,7 @@ class ShortcutManagerTest {
                     )
             }
 
-            testDispatcher.scheduler.advanceTimeBy(31_000)
+            testDispatcher.scheduler.advanceTimeBy(31_000.milliseconds)
 
             val shortcuts = androidShortcutManager.dynamicShortcuts
             assertTrue("Op_" in shortcuts[0].longLabel.toString())
@@ -135,7 +136,7 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
-            testDispatcher.scheduler.advanceTimeBy(31_000)
+            testDispatcher.scheduler.advanceTimeBy(31_000.milliseconds)
 
             val shortcuts = androidShortcutManager.dynamicShortcuts
             assertEquals(1, shortcuts.size)
@@ -168,7 +169,7 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
-            testDispatcher.scheduler.advanceTimeBy(31_000)
+            testDispatcher.scheduler.advanceTimeBy(31_000.milliseconds)
 
             assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
         }

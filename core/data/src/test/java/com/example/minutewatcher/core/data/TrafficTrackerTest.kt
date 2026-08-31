@@ -33,6 +33,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("LargeClass")
@@ -190,7 +191,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             // Advance by more than LONG_TIMEOUT_MS
-            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
+            testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS + 1000).milliseconds)
             testScheduler.runCurrent()
 
             val status = tracker.status.value
@@ -207,7 +208,7 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            testScheduler.advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS + 1000)
+            testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS + 1000).milliseconds)
             testScheduler.runCurrent()
 
             val status = tracker.status.value
@@ -802,10 +803,10 @@ class TrafficTrackerTest {
 
             // Start update
             val job = launch { tracker.updateTrafficUsage() }
-            testScheduler.advanceTimeBy(100)
+            testScheduler.advanceTimeBy(100.milliseconds)
 
             // Advance time to trigger timeout (15s)
-            testScheduler.advanceTimeBy(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS + 1000)
+            testScheduler.advanceTimeBy((Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS + 1000).milliseconds)
 
             val status = tracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
@@ -828,7 +829,7 @@ class TrafficTrackerTest {
 
             trafficMutex.lock()
             val job1 = launch { tracker.updateTrafficUsage() }
-            testScheduler.advanceTimeBy(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS + 1000)
+            testScheduler.advanceTimeBy((Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS + 1000).milliseconds)
             assertTrue(tracker.status.value is TrackingStatus.Error)
             trafficMutex.unlock()
             job1.join()

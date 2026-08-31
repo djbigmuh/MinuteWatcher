@@ -269,7 +269,7 @@ class WidgetSettingsViewModelTest {
                     override suspend fun load(): WidgetSettingsState = WidgetSettingsState()
 
                     override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
-                        delay(Constants.Flow.LONG_TIMEOUT_MS * 2)
+                        delay((Constants.Flow.LONG_TIMEOUT_MS * 2).milliseconds)
                     }
 
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()

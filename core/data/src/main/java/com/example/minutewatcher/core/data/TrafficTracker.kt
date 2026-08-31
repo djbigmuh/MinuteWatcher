@@ -174,9 +174,9 @@ class TrafficTracker
     private suspend fun performTrafficUpdate(
         target: TargetInfo,
         targetIdentity: String,
-    ): Boolean {
+    ) {
         var phase = "initialization"
-        return trafficMutex.withLock {
+        trafficMutex.withLock {
             withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                 try {
                     phase = "usage fetch"
@@ -187,7 +187,7 @@ class TrafficTracker
                             .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
                             ?: run {
                                 errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                                return@withTimeoutOrNull false
+                                return@withTimeoutOrNull
                             }
 
                     phase = "identity check"
@@ -198,10 +198,10 @@ class TrafficTracker
                         simIdentityRepository
                             .getActiveIdentities()
                             .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                            ?: return@withTimeoutOrNull false
+                            ?: return@withTimeoutOrNull
                     if (targetIdentity !in activeIdentities) {
                         AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                        return@withTimeoutOrNull false
+                        return@withTimeoutOrNull
                     }
 
                     phase = "retry check"
@@ -213,7 +213,7 @@ class TrafficTracker
                     ) {
                         baselineManager.baselineNeedsRetry.remove(targetIdentity)
                         errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                        return@withTimeoutOrNull false
+                        return@withTimeoutOrNull
                     }
 
                     // Path A: Current state is Retry
@@ -221,7 +221,7 @@ class TrafficTracker
                         phase = "retry stats"
                         val statsResult = baselineManager.getCurrentMobileBytes(0L)
                         handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                        return@withTimeoutOrNull true
+                        return@withTimeoutOrNull
                     }
 
                     // Path B: Normal path
@@ -231,7 +231,7 @@ class TrafficTracker
 
                     if (statsResult !is StatsResult.Success) {
                         errorHandler.handleStatsFailure(statsResult, _status)
-                        return@withTimeoutOrNull false
+                        return@withTimeoutOrNull
                     }
 
                     phase = "baseline fetch"
@@ -239,7 +239,7 @@ class TrafficTracker
 
                     if (lastTotalBytes == null) {
                         errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                        return@withTimeoutOrNull false
+                        return@withTimeoutOrNull
                     }
 
                     phase = "atomic update"
@@ -254,31 +254,28 @@ class TrafficTracker
                         simChangeHandler.updateLastDataSubId(target.dataSubId)
                     }
                     _status.value = TrackingStatus.Active
-                    true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: IOException) {
                     AppLogger.e(
                         "TrafficTracker: Storage error during traffic update at phase $phase for $targetIdentity",
-                        e
+                        e,
                     )
                     _status.value =
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
                             "Traffic update storage failure at $phase: ${e.message}",
                         )
-                    false
                 } catch (e: SecurityException) {
                     AppLogger.e(
                         "TrafficTracker: Permission error during traffic update at phase $phase for $targetIdentity",
-                        e
+                        e,
                     )
                     _status.value =
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.PERMISSION_MISSING,
                             "Traffic update permission failure at $phase: ${e.message}",
                         )
-                    false
                 }
             } ?: run {
                 AppLogger.e("TrafficTracker: Traffic update timed out during $phase for $targetIdentity")
@@ -287,7 +284,6 @@ class TrafficTracker
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Traffic update timeout ($phase)",
                     )
-                false
             }
         }
     }

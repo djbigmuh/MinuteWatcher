@@ -25,6 +25,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -104,7 +105,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             // Act
             callTracker.onCallStarted(subId = 1)
             // Wait for internal readWithRetry attempts: 3 attempts, 500ms delay, 1000ms delay
-            testScheduler.advanceTimeBy(3000)
+            testScheduler.advanceTimeBy(3000.milliseconds)
             advanceUntilIdle()
 
             // Assert

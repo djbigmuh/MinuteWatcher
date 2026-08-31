@@ -386,7 +386,7 @@ class WidgetUpdaterImplTest {
         }
 
     @Test
-    fun `updateAll returns LIMIT_EXCEEDED failure if simplified fallback also fails`() =
+    fun `updateAll returns TRANSIENT failure if simplified fallback fails with retryable error`() =
         runTest {
             var callCount = 0
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
@@ -406,6 +406,28 @@ class WidgetUpdaterImplTest {
 
             assertFalse(result.isSuccess)
             val failure = result as WidgetUpdateResult.Failure
+            assertTrue("Should be retryable", failure.isRetryable)
+            assertEquals(WidgetUpdateResult.FailureReason.TRANSIENT, failure.reason)
+        }
+
+    @Test
+    fun `updateAll returns LIMIT_EXCEEDED failure if simplified fallback also exceeds limit`() =
+        runTest {
+            var callCount = 0
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            whenever(renderer.renderAll(any(), any())).thenAnswer {
+                callCount++
+                throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+            }
+
+            val result = updater.updateAll()
+
+            assertFalse(result.isSuccess)
+            val failure = result as WidgetUpdateResult.Failure
+            assertFalse("Should not be retryable", failure.isRetryable)
             assertEquals(WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED, failure.reason)
         }
 

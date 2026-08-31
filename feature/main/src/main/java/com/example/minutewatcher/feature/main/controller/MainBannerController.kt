@@ -172,8 +172,15 @@ class MainBannerController
                 if (oldJob != null) {
                     oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                     if (oldJob.isActive) {
-                        AppLogger.w("MainBannerController: previous observation job did not terminate in time")
+                        AppLogger.w("MainBannerController: previous observation job did not terminate in time, forcing cancel")
                         oldJob.cancel()
+                        try {
+                            oldJob.join()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // Джоб завершён принудительно
+                        }
                     }
                     job = null
                 }

@@ -76,30 +76,31 @@ class WidgetUpdaterImpl
                 return joinExistingUpdate(existing)
             }
 
-            var result: WidgetUpdateResult? = null
-            try {
-                result = block()
-            } catch (e: CancellationException) {
-                deferred.completeExceptionally(e)
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("WidgetUpdater: update failed with unexpected exception", e)
-                result =
+            val result: WidgetUpdateResult =
+                try {
+                    block()
+                } catch (e: CancellationException) {
+                    deferred.completeExceptionally(e)
+                    activeUpdate.compareAndSet(deferred, null)
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetUpdater: update failed with unexpected exception", e)
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
                         isRetryable = false,
                         reason = WidgetUpdateResult.FailureReason.TERMINAL,
                     )
-            } finally {
-                result?.let {
-                    if (!deferred.isCompleted) {
-                        deferred.complete(it)
-                    }
                 }
+
+            try {
+                if (!deferred.isCompleted) {
+                    deferred.complete(result)
+                }
+            } finally {
                 activeUpdate.compareAndSet(deferred, null)
             }
 
-            return result!!
+            return result
         }
 
         private suspend fun joinExistingUpdate(existing: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
@@ -128,15 +129,31 @@ class WidgetUpdaterImpl
         private suspend fun handleLimitExceeded(): WidgetUpdateResult {
             limitManager.setWidgetLimitExceeded(value = true)
             // Немедленная попытка в упрощённом режиме
-            val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
-            return if (result is UpdateResult.Success) {
-                WidgetUpdateResult.Success(wasCoalesced = false)
-            } else {
-                WidgetUpdateResult.Failure(
-                    wasCoalesced = false,
-                    isRetryable = false,
-                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
-                )
+            return when (val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)) {
+                is UpdateResult.Success -> {
+                    WidgetUpdateResult.Success(wasCoalesced = false)
+                }
+
+                is UpdateResult.LimitExceeded -> {
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = false,
+                        isRetryable = false,
+                        reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
+                    )
+                }
+
+                is UpdateResult.GenericFailure -> {
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = false,
+                        isRetryable = result.isRetryable,
+                        reason =
+                            if (result.isRetryable) {
+                                WidgetUpdateResult.FailureReason.TRANSIENT
+                            } else {
+                                WidgetUpdateResult.FailureReason.TERMINAL
+                            },
+                    )
+                }
             }
         }
 

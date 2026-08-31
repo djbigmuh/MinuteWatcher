@@ -21,6 +21,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -36,7 +37,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
 
             // Act
             callTracker.onCallStarted(subId = 1)
-            testScheduler.advanceTimeBy(3000)
+            testScheduler.advanceTimeBy(3000.milliseconds)
             advanceUntilIdle()
 
             // Assert: verify that error status was set and call start state was NOT saved
@@ -69,7 +70,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
 
             // Need to advance time for retries
             // delay(500), delay(1000)
-            testScheduler.advanceTimeBy(2000)
+            testScheduler.advanceTimeBy(2000.milliseconds)
             advanceUntilIdle()
 
             assertEquals(3, attempts)

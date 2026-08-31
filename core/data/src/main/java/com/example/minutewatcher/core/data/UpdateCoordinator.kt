@@ -102,6 +102,17 @@ class UpdateCoordinator
                 val oldJob = observationJob.get()
                 if (oldJob != null) {
                     oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    if (oldJob.isActive) {
+                        AppLogger.w("UpdateCoordinator: previous observation job did not terminate in time, forcing cancel")
+                        oldJob.cancel()
+                        try {
+                            oldJob.join()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // Джоб завершён принудительно
+                        }
+                    }
                     observationJob.compareAndSet(oldJob, null)
                 }
 
