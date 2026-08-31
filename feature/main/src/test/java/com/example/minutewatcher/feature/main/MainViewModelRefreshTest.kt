@@ -233,7 +233,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
     @Test
     fun `autoResetScheduler uses monotonic time and handles reboot`() =
         testScope.runTest {
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
             createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 

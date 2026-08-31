@@ -288,6 +288,27 @@ class ResetManagerTest {
             verify(dataChangeNotifier, times(1)).notifyDataChanged()
         }
 
+    @Test
+    fun `performAutoReset returns false on partial failure`() =
+        runTest {
+            val id0 = "sim_0"
+            val id1 = "sim_1"
+            val sim0 = createMockSimInfo(id0, 0)
+            val sim1 = createMockSimInfo(id1, 1)
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
+            whenever(simUsageRepository.getSimUsage(id0)).thenReturn(flowOf(createMockSimUsage(id0)))
+            whenever(simUsageRepository.getSimUsage(id1)).thenAnswer { throw java.io.IOException("Test failure") }
+
+            whenever(simUsageResetRepository.resetSimUsageIfDue(eq(id0), any(), any())).thenReturn(true)
+
+            val result = resetManager.performAutoReset()
+
+            assert(!result)
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(id0), any(), any())
+            verify(trafficTracker).resetBaseline(id0)
+        }
+
     private fun createMockSimInfo(
         identity: String,
         slot: Int,

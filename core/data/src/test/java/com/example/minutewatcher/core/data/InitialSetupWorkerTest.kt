@@ -88,7 +88,7 @@ class InitialSetupWorkerTest {
             )
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
         }
 
         deps =

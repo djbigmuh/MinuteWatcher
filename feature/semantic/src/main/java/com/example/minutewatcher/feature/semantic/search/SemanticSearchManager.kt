@@ -197,17 +197,28 @@ open class SemanticSearchManager
         }
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
-        suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean =
-        withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
-            indexMutex.withLock {
-                performIndexSnapshotLocked(snapshot)
-            }
-        } ?: run {
-            AppLogger.e("AppSearch indexing timed out (mutex or I/O)")
-            resetLastSnapshotState()
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Indexing timeout")
-            false
+    suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
+        val mutexAcquired = withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            indexMutex.lock()
+            true
+        } ?: false
+
+        if (!mutexAcquired) {
+            AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrency)")
+            return false
         }
+
+        return try {
+            withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
+                performIndexSnapshotLocked(snapshot)
+            } ?: run {
+                AppLogger.e("SemanticSearchManager: indexing operation timed out")
+                false
+            }
+        } finally {
+            indexMutex.unlock()
+        }
+    }
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): Boolean {

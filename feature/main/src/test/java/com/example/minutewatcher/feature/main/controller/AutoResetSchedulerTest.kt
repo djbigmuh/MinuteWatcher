@@ -45,7 +45,7 @@ class AutoResetSchedulerTest {
             // Setup consecutive calls: first fails, second succeeds
             whenever(autoResetUseCase.performAutoReset(any()))
                 .thenThrow(RuntimeException("Fail"))
-                .thenReturn(Unit)
+                .thenReturn(true)
 
             // First attempt - fails
             scheduler.checkOnStart()
@@ -76,7 +76,7 @@ class AutoResetSchedulerTest {
     @Test
     fun `checkOnStart does not run twice on success`() =
         runTest {
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(Unit)
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
 
             scheduler.checkOnStart()
             verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(value = false))

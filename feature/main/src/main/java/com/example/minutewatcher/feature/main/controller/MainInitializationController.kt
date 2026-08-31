@@ -73,6 +73,14 @@ class MainInitializationController
                             }
                             break
                         } else {
+                            if ((outcome is MainSimRefreshController.RefreshOutcome.Failed) && (outcome.exception is SecurityException)) {
+                                AppLogger.e(
+                                    "initializeApp: SecurityException during refresh, stopping",
+                                    outcome.exception
+                                )
+                                isSuccess = false
+                                break
+                            }
                             val alreadyInProgress =
                                 outcome is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress
                             if (alreadyInProgress) {
@@ -84,6 +92,10 @@ class MainInitializationController
                         isInitializationStarted.set(false)
                         _initializationState.value = InitializationState.Failed
                         throw e
+                    } catch (e: SecurityException) {
+                        AppLogger.e("initializeApp: SecurityException encountered, stopping initialization", e)
+                        isSuccess = false
+                        break
                     } catch (e: Exception) {
                         AppLogger.e("initializeApp: attempt ${attempt + 1} failed with exception", e)
                     }

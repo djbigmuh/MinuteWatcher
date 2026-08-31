@@ -76,6 +76,9 @@ class MainSimRefreshController
                         usageUseCase.refreshOperatorInfo()
                     } catch (e: CancellationException) {
                         throw e
+                    } catch (e: SecurityException) {
+                        AppLogger.e("refreshSimCardsInternal: SecurityException in refreshOperatorInfo", e)
+                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("refreshSimCardsInternal: refreshOperatorInfo failed, continuing", e)
                     }
@@ -83,6 +86,9 @@ class MainSimRefreshController
                     RefreshOutcome.Completed(result)
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: SecurityException) {
+                    AppLogger.e("SecurityException refreshing SIM cards", e)
+                    RefreshOutcome.Failed(e)
                 } catch (e: Exception) {
                     AppLogger.e("Error refreshing SIM cards", e)
                     RefreshOutcome.Failed(e)

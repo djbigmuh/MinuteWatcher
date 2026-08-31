@@ -52,16 +52,19 @@ class ResetManager
          *
          * @param shouldNotify True if a data change notification should be broadcasted after reset.
          * Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore operations fail.
+         * @return `true` if all SIMs were successfully processed, `false` otherwise.
          * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
          */
-        override suspend fun performAutoReset(shouldNotify: Boolean) {
+        override suspend fun performAutoReset(shouldNotify: Boolean): Boolean {
             val now = timeProvider.now()
             val nowElapsed = timeProvider.elapsedRealtime()
 
             val activeSims =
                 simIdentityRepository.observeActiveSims().firstWithTimeout()
-                    ?: throw IOException("Timeout observing active SIMs during auto-reset check")
+                    ?: run {
+                        AppLogger.e("ResetManager: Timeout observing active SIMs during auto-reset check")
+                        return false
+                    }
 
             if (activeSims.isEmpty()) {
                 AppLogger.w("ResetManager: No active SIMs detected during auto-reset check.")
@@ -101,7 +104,7 @@ class ResetManager
                 if (shouldNotify) dataChangeNotifier.notifyDataChanged()
             }
 
-            handleAutoResetResult(ioException, successCount, activeSims.size)
+            return handleAutoResetResult(ioException, successCount, activeSims.size)
         }
 
         private suspend fun processSingleSimReset(
@@ -162,15 +165,14 @@ class ResetManager
             ioException: IOException?,
             successCount: Int,
             totalActiveSims: Int,
-        ) {
+        ): Boolean {
             if (ioException != null) {
-                if (successCount < totalActiveSims) {
-                    AppLogger.w(
-                        "ResetManager: auto-reset partially failed ($successCount/$totalActiveSims succeeded), propagating",
-                    )
-                    throw ioException
-                }
+                AppLogger.w(
+                    "ResetManager: auto-reset partially failed ($successCount/$totalActiveSims succeeded)",
+                )
+                return false
             }
+            return true
         }
 
         private suspend fun checkAndPerformResetForSimInternal(

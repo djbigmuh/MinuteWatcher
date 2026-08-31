@@ -192,16 +192,24 @@ open class ShortcutManager
 
         /**
          * Классифицирует ошибку работы с ярлыками.
-         *
-         * **Строгое соблюдение API:** На AOSP [ShortcutManagerCompat] бросает
-         * [UnsupportedOperationException] при отсутствии поддержки ярлыков.
-         * Если кастомная прошивка бросает иной тип исключения — это проблема кастомной прошивки.
          */
         private fun classifyShortcutError(e: Exception): TrackingStatus.ErrorType =
-            if (e is UnsupportedOperationException) {
-                TrackingStatus.ErrorType.NOT_SUPPORTED
-            } else {
-                TrackingStatus.ErrorType.UNKNOWN
+            when {
+                e is UnsupportedOperationException -> {
+                    TrackingStatus.ErrorType.NOT_SUPPORTED
+                }
+
+                e is SecurityException -> {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING
+                }
+
+                (e is IllegalStateException) && (e.message?.contains("context", ignoreCase = true) == true) -> {
+                    TrackingStatus.ErrorType.NOT_SUPPORTED
+                }
+
+                else -> {
+                    TrackingStatus.ErrorType.UNKNOWN
+                }
             }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {

@@ -34,14 +34,14 @@ class InitialSetupWorker
 
                 // Perform auto-reset immediately after boot/migration. Skip internal notify as we do it at the end.
                 try {
-                    deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+                    val allReset = deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+                    if (!allReset) {
+                        AppLogger.w("InitialSetupWorker: Auto-reset partially failed, but continuing.")
+                    }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: IOException) {
-                    AppLogger.w("InitialSetupWorker: Auto-reset failed with IO error, retrying. ${e.message}")
-                    return Result.retry()
                 } catch (e: Exception) {
-                    AppLogger.w("InitialSetupWorker: Auto-reset failed with non-critical error, continuing.", e)
+                    AppLogger.w("InitialSetupWorker: Auto-reset failed with error, continuing.", e)
                 }
 
                 // Reset traffic baseline after reboot for the current default data SIM

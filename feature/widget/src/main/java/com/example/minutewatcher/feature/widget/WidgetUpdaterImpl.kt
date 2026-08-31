@@ -10,9 +10,8 @@ import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -35,24 +34,29 @@ class WidgetUpdaterImpl
         private val errorClassifier: WidgetErrorClassifier,
     ) : WidgetUpdater {
     private val updateMutex = Mutex()
-    private val activeResult = MutableStateFlow<WidgetUpdateResult?>(null)
-    private val isUpdating = MutableStateFlow(false)
+    private val currentUpdate = MutableStateFlow<CompletableDeferred<WidgetUpdateResult>?>(null)
 
     override suspend fun updateAll(): WidgetUpdateResult {
         // Если обновление уже идёт — ждём его результат
-        if (isUpdating.value) {
-            return joinInProgressUpdate()
+        val activeUpdate = currentUpdate.value
+        if (activeUpdate != null) {
+            return joinInProgressUpdate(activeUpdate)
         }
 
         if (!updateMutex.tryLock()) {
             // Другой поток захватил мьютекс между проверкой и захватом
-            return joinInProgressUpdate()
+            val retryUpdate = currentUpdate.value ?: return WidgetUpdateResult.Failure(
+                wasCoalesced = true,
+                isRetryable = true,
+                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+            )
+            return joinInProgressUpdate(retryUpdate)
         }
 
-        try {
-            isUpdating.value = true
-            activeResult.value = null
+        val deferred = CompletableDeferred<WidgetUpdateResult>()
+        currentUpdate.value = deferred
 
+        try {
             val result: WidgetUpdateResult =
                 try {
                     var lastOutcome: UpdateOutcome? = null
@@ -84,29 +88,40 @@ class WidgetUpdaterImpl
                     )
                 }
 
-            activeResult.value = result
-                return result
-            } finally {
-            isUpdating.value = false
+            deferred.complete(result)
+            return result
+        } finally {
+            currentUpdate.value = null
             updateMutex.unlock()
-            }
         }
+    }
 
-    private suspend fun joinInProgressUpdate(): WidgetUpdateResult {
-            AppLogger.d("WidgetUpdater: update already in progress, waiting")
-        return withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-            activeResult.filterNotNull().first()
-        }?.let { result ->
+    private suspend fun joinInProgressUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
+        AppLogger.d("WidgetUpdater: update already in progress, waiting")
+        return try {
+            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                deferred.await()
+            }?.let { result ->
                 when (result) {
                     is WidgetUpdateResult.Success -> result.copy(wasCoalesced = true)
                     is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
                 }
-        } ?: WidgetUpdateResult.Failure(
-            wasCoalesced = true,
-            isRetryable = true,
-            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-        )
+            } ?: WidgetUpdateResult.Failure(
+                wasCoalesced = true,
+                isRetryable = true,
+                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("WidgetUpdater: joinInProgressUpdate failed", e)
+            WidgetUpdateResult.Failure(
+                wasCoalesced = true,
+                isRetryable = true,
+                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+            )
         }
+    }
 
         private suspend fun handleLimitExceeded(): WidgetUpdateResult {
             limitManager.setWidgetLimitExceeded(value = true)

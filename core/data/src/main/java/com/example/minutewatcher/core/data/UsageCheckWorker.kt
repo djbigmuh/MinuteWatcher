@@ -86,7 +86,7 @@ class UsageCheckWorker
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
 
-            if (!tryPerformAutoReset()) return Result.retry()
+            tryPerformAutoReset()
 
             val refreshResult =
                 withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
@@ -107,16 +107,18 @@ class UsageCheckWorker
             }
         }
 
-        private suspend fun tryPerformAutoReset(): Boolean =
+    private suspend fun tryPerformAutoReset() {
             try {
-                deps.autoResetUseCase.performAutoReset(shouldNotify = false)
-                true
+                val allReset = deps.autoResetUseCase.performAutoReset(shouldNotify = false)
+                if (!allReset) {
+                    AppLogger.w("UsageCheckWorker: Auto-reset partially failed, continuing.")
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("Auto-reset failed in UsageCheckWorker, retrying", e)
-                false
+                AppLogger.e("UsageCheckWorker: Auto-reset failed with error, continuing", e)
             }
+    }
 
         private suspend fun handleRefreshTimeout(refreshResult: RefreshResult.Timeout): Result {
             val snapshot = refreshResult.snapshot

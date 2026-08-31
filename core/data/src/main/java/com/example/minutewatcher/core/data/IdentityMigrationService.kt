@@ -72,10 +72,10 @@ class IdentityMigrationService
             } catch (e: IOException) {
                 // Re-throw IOException to allow caller to retry upon transient failures.
                 throw e
-            } catch (e: Exception) {
-                // Logic errors or corrupted state that we want to skip migration for
-                // to avoid blocking app initialization indefinitely.
-                @Suppress("TooGenericExceptionCaught")
+            } catch (e: IllegalStateException) {
+                AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
+                false
+            } catch (e: IllegalArgumentException) {
                 AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
                 false
             }
