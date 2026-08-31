@@ -129,12 +129,16 @@ class WidgetSettingsViewModel
          * Обновляет текущее состояние настроек виджета.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            reduce {
-                val currentSettings = settings ?: return@reduce this
-                copy(
-                    isLoadError = false,
-                    settings = transform(currentSettings).copy(widgetLimitExceeded = false),
-                )
+            viewModelScope.launch {
+                saveMutex.withLock {
+                    reduce {
+                        val currentSettings = settings ?: return@reduce this
+                        copy(
+                            isLoadError = false,
+                            settings = transform(currentSettings).copy(widgetLimitExceeded = false),
+                        )
+                    }
+                }
             }
         }
 
@@ -145,20 +149,24 @@ class WidgetSettingsViewModel
             slot: Int,
             transform: (SimSettingsState) -> SimSettingsState,
         ) {
-            reduce {
-                val currentSettings = settings ?: return@reduce this
-                val updatedSimStates = currentSettings.simStates.toMutableMap()
-                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                updatedSimStates[slot] = transform(currentSimState)
+            viewModelScope.launch {
+                saveMutex.withLock {
+                    reduce {
+                        val currentSettings = settings ?: return@reduce this
+                        val updatedSimStates = currentSettings.simStates.toMutableMap()
+                        val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                        updatedSimStates[slot] = transform(currentSimState)
 
-                copy(
-                    isLoadError = false,
-                    settings =
-                        currentSettings.copy(
-                            simStates = updatedSimStates,
-                            widgetLimitExceeded = false,
-                        ),
-                )
+                        copy(
+                            isLoadError = false,
+                            settings =
+                                currentSettings.copy(
+                                    simStates = updatedSimStates,
+                                    widgetLimitExceeded = false,
+                                ),
+                        )
+                    }
+                }
             }
         }
 

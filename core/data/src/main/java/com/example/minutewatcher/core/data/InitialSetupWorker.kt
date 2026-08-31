@@ -190,13 +190,26 @@ class InitialSetupWorker
 
     private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
         try {
-                activeSims.forEach { info ->
-                    deps.migrationService.migrateLegacyData(info.identity)
+            var totalFailures = 0
+            activeSims.forEach { info ->
+                val outcome = deps.migrationService.migrateLegacyData(info.identity)
+                totalFailures += outcome.failures
+            }
+
+            if (totalFailures > 0) {
+                AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures total failures")
+                if (runAttemptCount < 3) {
+                    AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
+                    return Result.retry()
+                } else {
+                    AppLogger.e("InitialSetupWorker: Max migration attempts reached. Marking as completed despite failures.")
                 }
-                deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-                deps.migrationService.markSchemaCurrent()
-                AppLogger.d("Identity migrations completed in InitialSetupWorker")
+            }
+
+            deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+            deps.migrationService.markSchemaCurrent()
+            AppLogger.d("Identity migrations completed in InitialSetupWorker")
             null
         } catch (e: IOException) {
             AppLogger.w("InitialSetupWorker: Migration failed due to IO error, retrying", e)

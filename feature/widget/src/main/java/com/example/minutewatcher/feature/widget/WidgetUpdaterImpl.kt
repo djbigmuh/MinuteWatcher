@@ -11,9 +11,10 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -34,27 +35,41 @@ class WidgetUpdaterImpl
         private val errorClassifier: WidgetErrorClassifier,
     ) : WidgetUpdater {
     private val updateMutex = Mutex()
-    private val currentUpdate = MutableStateFlow<CompletableDeferred<WidgetUpdateResult>?>(null)
+    private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
     override suspend fun updateAll(): WidgetUpdateResult {
-        // Если обновление уже идёт — ждём его результат
-        val activeUpdate = currentUpdate.value
-        if (activeUpdate != null) {
+        // Step 1: Check for in-progress update.
+        // We only join if the update is not yet completed.
+        val activeUpdate = currentUpdate.get()
+        if (activeUpdate != null && !activeUpdate.isCompleted) {
             return joinInProgressUpdate(activeUpdate)
         }
 
+        // Step 2: Attempt to acquire lock for new update
         if (!updateMutex.tryLock()) {
-            // Другой поток захватил мьютекс между проверкой и захватом
-            val retryUpdate = currentUpdate.value ?: return WidgetUpdateResult.Failure(
-                wasCoalesced = true,
-                isRetryable = true,
-                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-            )
-            return joinInProgressUpdate(retryUpdate)
+            // Lock held by another thread. Coalesce if possible.
+            yield() // Give owner a chance to register the deferred
+            val retryUpdate = currentUpdate.get()
+            if (retryUpdate != null && !retryUpdate.isCompleted) {
+                return joinInProgressUpdate(retryUpdate)
+            }
+
+            // If still null or completed, the previous update just finished or is finishing.
+            // We wait for the lock to start a fresh update.
+            updateMutex.lock()
+
+            // After acquiring lock, check again if another thread started an update
+            // while we were waiting for the lock.
+            val postLockUpdate = currentUpdate.get()
+            if (postLockUpdate != null && !postLockUpdate.isCompleted) {
+                updateMutex.unlock()
+                return joinInProgressUpdate(postLockUpdate)
+            }
         }
 
+        // We hold the lock. Create and register deferred.
         val deferred = CompletableDeferred<WidgetUpdateResult>()
-        currentUpdate.value = deferred
+        currentUpdate.set(deferred)
 
         try {
             val result: WidgetUpdateResult =
@@ -79,8 +94,8 @@ class WidgetUpdaterImpl
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetUpdater: updateAll failed", e)
+                } catch (t: Throwable) {
+                    AppLogger.e("WidgetUpdater: updateAll failed", t)
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
                         isRetryable = false,
@@ -90,9 +105,25 @@ class WidgetUpdaterImpl
 
             deferred.complete(result)
             return result
+        } catch (t: Throwable) {
+            // Defensive: ensure deferred is completed if we crash/cancel
+            if (t !is CancellationException) {
+                deferred.complete(
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = false,
+                        isRetryable = false,
+                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                    ),
+                )
+            }
+            throw t
         } finally {
-            currentUpdate.value = null
+            // Step 3: Cleanup. Unlock FIRST, then clear reference using CAS.
+            // This ensures that any concurrent caller that fails tryLock()
+            // will see the deferred as non-null and join it properly.
+            // CAS ensures we don't overwrite a NEW update's deferred.
             updateMutex.unlock()
+            currentUpdate.compareAndSet(deferred, null)
         }
     }
 
@@ -256,7 +287,7 @@ class WidgetUpdaterImpl
             try {
                 val success =
                     withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        renderer.renderAll(context, forceFull = isProbe)
+                        renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
                         true
                     } ?: false
 

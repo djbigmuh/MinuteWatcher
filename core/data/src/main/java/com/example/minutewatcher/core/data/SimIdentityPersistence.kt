@@ -160,7 +160,10 @@ class SimIdentityPersistence
         private suspend fun migrateSingle(identity: SimIdentity) {
             if (!migratingIdentities.add(identity.stableId)) return
             try {
-                migrationService.migrateLegacyData(identity)
+                val outcome = migrationService.migrateLegacyData(identity)
+                if (outcome.failures > 0) {
+                    throw IOException("Migration failed for some keys of ${identity.stableId}")
+                }
                 migratedIdentities.add(identity.stableId)
             } finally {
                 migratingIdentities.remove(identity.stableId)

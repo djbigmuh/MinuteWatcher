@@ -188,9 +188,16 @@ object AppLogger {
         level: String,
     ) {
         // Synchronous fallback for critical logs when queue is full.
-        reportDropped()
         Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
-        if (fileLock.tryLock()) {
+        val acquired =
+            try {
+                fileLock.tryLock(500, TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                false
+            }
+
+        if (acquired) {
             try {
                 writeEntryToFileUnlocked(entry)
             } catch (e: Exception) {
@@ -201,7 +208,27 @@ object AppLogger {
                 fileLock.unlock()
             }
         } else {
-            Log.w(TAG, "Critical log dropped from file (lock contention): [${entry.level}] ${entry.message}")
+            // Last resort: attempt to re-queue the entry if any space became available
+            val reQueued =
+                lock.withLock {
+                    if (criticalQueue.size < LOG_QUEUE_CAPACITY) {
+                        criticalQueue.addLast(entry)
+                        condition.signalAll()
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+            if (reQueued) {
+                Log.w(TAG, "Critical log re-queued due to file lock contention: ${entry.message}")
+            } else {
+                reportDropped()
+                Log.w(
+                    TAG,
+                    "Critical log dropped from file (lock contention & queue full): [${entry.level}] ${entry.message}"
+                )
+            }
         }
     }
 

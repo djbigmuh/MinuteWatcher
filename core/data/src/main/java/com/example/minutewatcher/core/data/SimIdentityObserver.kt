@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
@@ -44,6 +45,7 @@ internal class SimIdentityObserver
         private val fetcher: ActiveSimsFetcher,
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
+        private val permissionStateNotifier: PermissionStateNotifier,
     ) {
         val seedFlow: Flow<SeedResult> =
             merge(
@@ -98,7 +100,13 @@ internal class SimIdentityObserver
                     }
                 }.retryWhen { cause, attempt ->
                     (cause as? CancellationException)?.let { throw it }
-                    if (cause is SecurityException) return@retryWhen false
+                    if (cause is SecurityException) {
+                        AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), waiting for re-grant")
+                        // Suspend until permission state changes
+                        permissionStateNotifier.changes.first()
+                        AppLogger.d("SimIdentityObserver: Permission change detected, retrying physicalActiveSims flow")
+                        return@retryWhen true
+                    }
 
                     val maxAttempts = when (cause) {
                         is SeedUnavailableException -> MAX_SEED_RETRY_ATTEMPTS
@@ -121,10 +129,6 @@ internal class SimIdentityObserver
                 }.catch { e ->
                     (e as? CancellationException)?.let { throw it }
                     when (e) {
-                        is SecurityException -> {
-                            AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), emitting empty list")
-                        }
-
                         is SeedUnavailableException -> {
                             AppLogger.e("SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, emitting empty list")
                         }

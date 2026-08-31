@@ -93,4 +93,66 @@ class MainInitializationControllerTest {
             verify(refreshController, times(3)).refreshSimCardsInternal()
             assertEquals(InitializationState.Failed, controller.initializationState.value)
         }
+
+    @Test
+    fun `test concurrent initializeApp only starts once`() =
+        testScope.runTest {
+            whenever(refreshController.refreshSimCardsInternal())
+                .thenReturn(
+                    MainSimRefreshController.RefreshOutcome.Completed(
+                        RefreshResult.Success(GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())),
+                    ),
+                )
+
+            // Simulate concurrent calls
+            repeat(5) {
+                controller.initializeApp(
+                    scope = this,
+                    lastRefreshAt = 0L,
+                    onUpdateLastRefreshAt = {},
+                )
+            }
+
+            advanceUntilIdle()
+
+            // Only 1 initialization (1 refresh call, or up to 3 retries if failed, but here it succeeds)
+            verify(refreshController, times(1)).refreshSimCardsInternal()
+            assertEquals(InitializationState.Completed, controller.initializationState.value)
+        }
+
+    @Test
+    fun `test concurrent initializeApp after failure only starts once`() =
+        testScope.runTest {
+            // 1. Fail first initialization
+            whenever(refreshController.refreshSimCardsInternal())
+                .thenReturn(MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress)
+
+            controller.initializeApp(scope = this, lastRefreshAt = 0L, onUpdateLastRefreshAt = {})
+            advanceUntilIdle()
+            assertEquals(InitializationState.Failed, controller.initializationState.value)
+
+            // 2. Mock success for retry
+            whenever(refreshController.refreshSimCardsInternal())
+                .thenReturn(
+                    MainSimRefreshController.RefreshOutcome.Completed(
+                        RefreshResult.Success(GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())),
+                    ),
+                )
+
+            // 3. Concurrent retry calls
+            repeat(5) {
+                controller.initializeApp(
+                    scope = this,
+                    lastRefreshAt = 0L,
+                    onUpdateLastRefreshAt = {},
+                )
+            }
+
+            advanceUntilIdle()
+
+            // One refresh for 1st attempt (failed after 3 retries), one refresh for 2nd attempt (succeeded)
+            // Total should be 3 (failed) + 1 (success) = 4
+            verify(refreshController, times(4)).refreshSimCardsInternal()
+            assertEquals(InitializationState.Completed, controller.initializationState.value)
+        }
 }

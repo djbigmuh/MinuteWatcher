@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.util.catchingCancellation
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -18,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -42,12 +44,17 @@ import javax.inject.Singleton
 class MainBannerController
     @Inject
     constructor(
-        trackingStatusRepository: TrackingStatusRepository,
+        private val trackingStatusRepository: TrackingStatusRepository,
         permissionRepository: PermissionRepository,
         appSettingsRepository: AppSettingsRepository,
         seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
-    ) {
+    ) : TrackingStatusProvider {
+    override val key: String = "banners"
+
+    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
         private val appSearchRetryCount = MutableStateFlow(value = 0)
         private val appSearchBannerDismissed = MutableStateFlow(value = false)
 
@@ -186,6 +193,7 @@ class MainBannerController
                 }
                 job =
                     scope.launch {
+                        _status.value = TrackingStatus.Active
                         catchingCancellation(
                             block = {
                                 statusFlow.collect { status ->
@@ -203,6 +211,7 @@ class MainBannerController
                             },
                         ) { e ->
                             AppLogger.e("MainBannerController: tracking status observation failed", e)
+                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                         }
                     }
             }
@@ -213,10 +222,11 @@ class MainBannerController
      *
      * **Thread Safety:** Safe to call from any coroutine context.
      */
-    suspend fun recover() {
+    override suspend fun recover() {
         val flow = initMutex.withLock { lastTrackingStatusFlow }
         if (flow == null) {
-            AppLogger.w("MainBannerController: cannot recover, lastTrackingStatusFlow is null")
+            AppLogger.w("MainBannerController: re-subscribing to tracking status during recover")
+            setupObservation(trackingStatus)
             return
         }
         setupObservation(flow)

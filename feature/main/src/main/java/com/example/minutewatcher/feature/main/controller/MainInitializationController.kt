@@ -44,9 +44,20 @@ class MainInitializationController
             lastRefreshAt: Long,
             onUpdateLastRefreshAt: (Long) -> Unit,
         ) {
-            // Guard: Allow if not started OR if failed (for retry from resume)
-            if (isInitializationStarted.get() && (_initializationState.value !is InitializationState.Failed)) return
-            isInitializationStarted.set(true)
+            // Attempt to claim initialization. If another call is already in progress
+            // (and hasn't failed), skip.
+            while (true) {
+                val currentState = _initializationState.value
+                if (isInitializationStarted.get() && currentState !is InitializationState.Failed) return
+
+                if (isInitializationStarted.compareAndSet(false, true)) {
+                    break // Successfully claimed
+                }
+                // If CAS failed, another thread claimed it — re-check condition
+                if (_initializationState.value !is InitializationState.Failed) return
+                // State is Failed and CAS failed — another thread is retrying, let it handle
+                return
+            }
 
             autoResetScheduler.setup()
             _initializationState.value = InitializationState.InProgress
@@ -122,6 +133,7 @@ class MainInitializationController
             if (isSuccess) {
                 _initializationState.value = InitializationState.Completed
             } else {
+                isInitializationStarted.set(false) // Allow retry on failure
                 _initializationState.value = InitializationState.Failed
             }
         }

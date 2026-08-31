@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,6 +67,7 @@ class UpdateCoordinator
 
     private val isObservationStarted = AtomicBoolean(false)
     private val observationJob = AtomicReference<Job?>(null)
+    private val monitoringJob = AtomicReference<Job?>(null)
 
     init {
         ensureObservationStarted()
@@ -77,6 +79,7 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         override suspend fun recover() {
+            monitoringJob.get()?.cancel()
             observationRestartCount.set(0)
             if (!isObservationStarted.get()) {
                 ensureObservationStarted()
@@ -96,6 +99,7 @@ class UpdateCoordinator
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
+            val currentJob = currentCoroutineContext()[Job]
             initMutex.withLock {
                 // Reset failure counter on observation restart to prevent permanent suppression
                 widgetUpdateMutex.withLock {
@@ -118,6 +122,12 @@ class UpdateCoordinator
                         }
                     }
                     observationJob.compareAndSet(oldJob, null)
+                }
+
+                // Cancel previous monitoring coroutine if it's not the current one
+                val oldMonitoringJob = monitoringJob.get()
+                if (oldMonitoringJob != null && oldMonitoringJob !== currentJob) {
+                    oldMonitoringJob.cancel()
                 }
 
                 val handler = CoroutineExceptionHandler { _, cause ->
@@ -145,7 +155,7 @@ class UpdateCoordinator
                 }
 
                 // Мониторинг завершения: если наблюдение упало — перезапускаем с экспоненциальной задержкой.
-                scope.launch {
+                val newMonitoringJob = scope.launch {
                     newJob.join()
                     if (observationJob.get() !== newJob) return@launch
                     if (!isObservationStarted.get()) return@launch
@@ -171,6 +181,7 @@ class UpdateCoordinator
                         restartObservation()
                     }
                 }
+                monitoringJob.set(newMonitoringJob)
             }
         }
 
@@ -259,12 +270,20 @@ class UpdateCoordinator
 
                     WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
                         AppLogger.e("UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), keeping current hash")
+                        _status.value = TrackingStatus.Error(
+                            TrackingStatus.ErrorType.NOT_SUPPORTED,
+                            "Widget size limit exceeded"
+                        )
                         handleUpdateFailure()
                     }
 
                     WidgetUpdateResult.FailureReason.TERMINAL -> {
                         // For terminal failures we don't reset hash to avoid immediate retry loops
                         AppLogger.w("UpdateCoordinator: terminal failure encountered, keeping current hash")
+                        _status.value = TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Terminal widget update failure"
+                        )
                         handleUpdateFailure()
                     }
                 }
@@ -301,6 +320,10 @@ class UpdateCoordinator
             )
             if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
                 AppLogger.e("UpdateCoordinator: reached max consecutive failures ($consecutiveUpdateFailures). Updates suppressed.")
+                _status.value = TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Widget updates suppressed after $consecutiveUpdateFailures failures"
+                )
             }
         }
 
@@ -356,7 +379,7 @@ class UpdateCoordinator
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
                     observationRestartCount.set(0)
-                    lastSnapshotHash = null
+                    lastSnapshotHash = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
                     true
                 } else {
                     val isRetryable = (result as? WidgetUpdateResult.Failure)?.isRetryable ?: true

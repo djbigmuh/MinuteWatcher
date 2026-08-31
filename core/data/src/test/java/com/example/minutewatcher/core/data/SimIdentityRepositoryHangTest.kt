@@ -293,7 +293,7 @@ class SimIdentityRepositoryHangTest {
             // We'll simulate "slowness" by launching another call immediately.
             whenever(migrationService.migrateLegacyData(any())).thenAnswer {
                 migrationStarted.set(true)
-                true
+                IdentityMigrationService.MigrationOutcome(migrated = 1)
             }
 
             // Act: First call

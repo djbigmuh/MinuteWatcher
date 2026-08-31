@@ -209,7 +209,11 @@ class InitialSetupWorkerTest {
 
             // Ensure suspending functions are mocked explicitly
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
-            whenever(migrationService.migrateLegacyData(any())).thenReturn(true)
+            whenever(migrationService.migrateLegacyData(any())).thenReturn(
+                IdentityMigrationService.MigrationOutcome(
+                    migrated = 1
+                )
+            )
 
             val result = createWorker().doWork()
 
@@ -257,5 +261,70 @@ class InitialSetupWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
             verify(trafficTracker).resetBaseline(eq("icc_1"))
             verify(trafficTracker, never()).resetBaseline(eq("icc_2"))
+        }
+
+    @Test
+    fun `doWork retries migration when failures occur`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
+            val activeSim =
+                ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            // Mock failure
+            whenever(migrationService.migrateLegacyData(any()))
+                .thenReturn(IdentityMigrationService.MigrationOutcome(failures = 1))
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(migrationService, never()).markSchemaCurrent()
+        }
+
+    @Test
+    fun `doWork completes migration after max retries even with failures`() =
+        runTest {
+            // Setup worker with attempt count 3
+            val worker = TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                .setRunAttemptCount(3)
+                .setWorkerFactory(
+                    object : androidx.work.WorkerFactory() {
+                        override fun createWorker(
+                            appContext: Context,
+                            workerClassName: String,
+                            workerParameters: androidx.work.WorkerParameters,
+                        ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                    },
+                ).build()
+
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
+            val activeSim =
+                ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+            whenever(usageStateRepository.refresh()).thenReturn(
+                com.example.minutewatcher.core.domain.RefreshResult.Success(
+                    mock()
+                )
+            )
+
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            // Mock failure
+            whenever(migrationService.migrateLegacyData(any()))
+                .thenReturn(IdentityMigrationService.MigrationOutcome(failures = 1))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationService).markSchemaCurrent()
         }
 }

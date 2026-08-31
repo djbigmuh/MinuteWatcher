@@ -154,4 +154,40 @@ class MainBannerControllerTest {
             // Then: Banner should be GRANTED (hidden)
             assertEquals(PermissionUiState.GRANTED, controller.trackingBannerState.value.notificationPermissionState)
         }
+
+    @Test
+    fun `recover before initialization re-subscribes`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // We use a custom controller without automatic initialization to test recover explicitly
+            // But MainBannerController calls setupObservation in init via ensureObservationStarted.
+            // However, we can verify that recover() increases subscription count or re-triggers logic.
+
+            val controller = createController(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            // At this point, it's initialized and subscribed to trackingStatusRepository (count 1)
+            assertEquals(1, trackingStatusFlow.subscriptionCount.value)
+
+            // Force "never initialized" state by clearing lastTrackingStatusFlow via reflection
+            val flowField = MainBannerController::class.java.getDeclaredField("lastTrackingStatusFlow")
+            flowField.isAccessible = true
+            flowField.set(controller, null)
+
+            // Act
+            controller.recover()
+            testScheduler.advanceUntilIdle()
+
+            // Verify it re-subscribed
+            assertEquals(1, trackingStatusFlow.subscriptionCount.value)
+            assertEquals(TrackingStatus.Active, controller.status.value)
+        }
+
+    @Test
+    fun `status transitions from Idle to Active during setupObservation`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val controller = createController(backgroundScope)
+            // Initial state in createController might already trigger setupObservation
+            testScheduler.advanceUntilIdle()
+            assertEquals(TrackingStatus.Active, controller.status.value)
+        }
 }

@@ -36,6 +36,21 @@ class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
+    data class MigrationOutcome(
+        val migrated: Int = 0,
+        val conflicts: Int = 0,
+        val failures: Int = 0,
+    ) {
+        operator fun plus(other: MigrationOutcome): MigrationOutcome =
+            MigrationOutcome(
+                migrated = this.migrated + other.migrated,
+                conflicts = this.conflicts + other.conflicts,
+                failures = this.failures + other.failures,
+            )
+
+        fun hasChanges(): Boolean = migrated > 0 || conflicts > 0
+    }
+
         private val migrationMutex = Mutex()
 
         /**
@@ -156,7 +171,7 @@ class IdentityMigrationService
          * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
-        suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): Boolean =
+        suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): MigrationOutcome =
             migrationMutex.withLock {
                 try {
                     performMigration(activeIdentity)
@@ -170,17 +185,17 @@ class IdentityMigrationService
 
         private suspend fun performMigration(
             activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
-        ): Boolean {
-            val slot = activeIdentity.slotIndex ?: return false
+        ): MigrationOutcome {
+            val slot = activeIdentity.slotIndex ?: return MigrationOutcome()
             val identity = activeIdentity.stableId
 
             val legacySuffixes = findLegacySuffixes(activeIdentity)
             val newSuffix = "_$identity"
 
-            val results = mutableListOf<Boolean>()
+            var totalOutcome = MigrationOutcome()
             for (legacySuffix in legacySuffixes) {
                 if (legacySuffix == newSuffix) continue
-                results.add(
+                totalOutcome +=
                     migrateDataStore(
                         appDataStore,
                         legacySuffix,
@@ -188,9 +203,8 @@ class IdentityMigrationService
                         "app_settings",
                         slot,
                         identity,
-                    ),
-                )
-                results.add(
+                    )
+                totalOutcome +=
                     migrateDataStore(
                         simDataStore,
                         legacySuffix,
@@ -198,12 +212,18 @@ class IdentityMigrationService
                         "sim_settings",
                         slot,
                         identity,
-                    ),
+                    )
+            }
+
+            if (totalOutcome.hasChanges()) {
+                AppLogger.d(
+                    "Migration completed for identity $identity: " +
+                        "${totalOutcome.migrated} keys migrated, ${totalOutcome.conflicts} conflicts",
                 )
             }
 
-            if (results.any { it }) {
-                AppLogger.d("Migration completed for identity $identity: ${results.count { it }} stores migrated")
+            if (totalOutcome.failures > 0) {
+                AppLogger.e("Migration for identity $identity finished with ${totalOutcome.failures} failures")
             }
 
             // Cleanup mapping keys that were used for this identity
@@ -224,7 +244,7 @@ class IdentityMigrationService
                 }
             }
 
-            return results.any { it }
+            return totalOutcome
         }
 
         private suspend fun findLegacySuffixes(
@@ -283,9 +303,10 @@ class IdentityMigrationService
             storeName: String,
             slot: Int,
             identity: String,
-        ): Boolean {
+        ): MigrationOutcome {
             var migratedCount = 0
             var conflictCount = 0
+            var failureCount = 0
             dataStore.edit { prefs ->
                 val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
@@ -298,24 +319,28 @@ class IdentityMigrationService
                             migratedCount++
                             prefs.remove(oldKey)
                         }
+
                         MigrationResult.CONFLICT -> {
                             conflictCount++
                             prefs.remove(oldKey)
                         }
+
                         MigrationResult.FAILURE -> {
-                            // Do not remove the old key if migration failed (e.g. unknown type),
-                            // to avoid silent data loss.
+                            failureCount++
+                            AppLogger.e(
+                                "IdentityMigrationService: failed to migrate key '${oldKey.name}' " +
+                                    "(type=${prefs[oldKey]?.let { it::class.simpleName } ?: "null"}) in $storeName",
+                            )
                         }
                     }
                 }
             }
-            if ((migratedCount > 0) || (conflictCount > 0)) {
-                AppLogger.d(
-                    "Migrated legacy data ($legacySuffix) from $storeName for slot $slot " +
-                        "to identity $identity: $migratedCount keys, $conflictCount conflicts",
-                )
-            }
-            return (migratedCount > 0) || (conflictCount > 0)
+
+            return MigrationOutcome(
+                migrated = migratedCount,
+                conflicts = conflictCount,
+                failures = failureCount,
+            )
         }
 
         private enum class MigrationResult {

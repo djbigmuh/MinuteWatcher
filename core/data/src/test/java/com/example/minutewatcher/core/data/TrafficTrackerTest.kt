@@ -887,6 +887,57 @@ class TrafficTrackerTest {
             assertEquals("Total query count should be 3", 3, updateCallCount)
             assertEquals("Final baseline should be 10000L", 10000L, lastTotalFlow.replayCache.first())
         }
+
+    @Test
+    fun `updateTrafficUsage with empty sims clears retry map`() =
+        runTest {
+            val id = "sim_0"
+            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
+            baselineManagerField.isAccessible = true
+            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
+
+            // 1. Manually put sim_0 into retry map
+            baselineManager.baselineNeedsRetry[id] = 1
+            assertTrue(baselineManager.baselineNeedsRetry.containsKey(id))
+
+            // 2. Mock active sims to be empty
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
+            // 3. Call updateTrafficUsage
+            tracker.updateTrafficUsage()
+
+            // 4. Verify it's cleared
+            assertFalse(
+                "sim_0 should be cleared from retry map",
+                baselineManager.baselineNeedsRetry.containsKey(id)
+            )
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+        }
+
+    @Test
+    fun `updateTrafficUsage with active sims cleans up other identities in retry map`() =
+        runTest {
+            val baselineManagerField = TrafficTracker::class.java.getDeclaredField("baselineManager")
+            baselineManagerField.isAccessible = true
+            val baselineManager = baselineManagerField[tracker] as TrafficBaselineManager
+
+            // 1. Manually put some other identity into retry map
+            baselineManager.baselineNeedsRetry["other_sim"] = 1
+            assertTrue(baselineManager.baselineNeedsRetry.containsKey("other_sim"))
+
+            // 2. sim_0 and sim_1 are active (from setupIdentityMocks)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            // 3. Call updateTrafficUsage
+            tracker.updateTrafficUsage()
+
+            // 4. Verify "other_sim" is cleared
+            assertFalse(
+                "other_sim should be cleared from retry map",
+                baselineManager.baselineNeedsRetry.containsKey("other_sim")
+            )
+        }
 }
 
 private fun createSimUsage(id: String) =

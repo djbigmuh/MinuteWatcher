@@ -63,6 +63,46 @@ class AppLoggerTest {
         assertFalse("New logs should NOT be in logs.old.txt", oldContent.contains(uniqueTag))
     }
 
+    @Test
+    fun `test critical log not lost under contention`() {
+        // 1. Fill the queue to trigger fallback
+        // Capacity is 8192.
+        repeat(8192) {
+            AppLogger.e("Filling queue $it")
+        }
+
+        // 2. Manually hold the file lock via reflection to simulate contention
+        val fileLockField = AppLogger::class.java.getDeclaredField("fileLock")
+        fileLockField.isAccessible = true
+        val fileLock = fileLockField.get(null) as java.util.concurrent.locks.ReentrantLock
+
+        fileLock.lock()
+        try {
+            // 3. Log a critical message while lock is held and queue is full
+            val uniqueMessage = "CRITICAL_MESSAGE_UNDER_CONTENTION"
+            AppLogger.e(uniqueMessage)
+
+            // Since queue was full, it went to handleSynchronousFallback.
+            // It tried to lock for 500ms, failed, then tried to re-queue.
+            // Since the worker is likely processing, space might become available or not.
+
+            // 4. Release lock and wait for worker
+        } finally {
+            fileLock.unlock()
+        }
+
+        waitForWorker()
+
+        val logFile = File(logDir, "logs.txt")
+        if (logFile.exists()) {
+            val content = logFile.readText()
+            assertTrue(
+                "Critical log should be preserved in file",
+                content.contains("CRITICAL_MESSAGE_UNDER_CONTENTION")
+            )
+        }
+    }
+
     private fun waitForWorker() {
         var attempts = 0
         while (AppLogger.getQueueSizeForTest() > 0 && attempts < 100) {

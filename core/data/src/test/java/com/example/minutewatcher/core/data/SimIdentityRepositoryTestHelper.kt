@@ -33,6 +33,7 @@ object SimIdentityRepositoryTestHelper {
                 fetcher = fetcher,
                 scope = scope,
                 cache = cache,
+                permissionStateNotifier = discoveryDeps.permissionStateNotifier,
             )
         val resolver =
             SimIdentityResolver(

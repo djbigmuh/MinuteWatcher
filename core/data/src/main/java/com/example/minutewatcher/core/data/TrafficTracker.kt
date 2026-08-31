@@ -115,15 +115,17 @@ class TrafficTracker
 
         private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
             if (activeSims.isEmpty()) {
-                baselineManager.cleanupRetries(emptySet())
                 trafficMutex.withLock {
+                    baselineManager.cleanupRetries(emptySet())
                     _status.value = TrackingStatus.Idle
                 }
                 return
             }
 
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
-            baselineManager.cleanupRetries(activeIdentities)
+            trafficMutex.withLock {
+                baselineManager.cleanupRetries(activeIdentities)
+            }
 
             try {
                 processActiveSimsTraffic(activeSims)

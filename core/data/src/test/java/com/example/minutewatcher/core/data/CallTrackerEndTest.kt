@@ -650,4 +650,20 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             assertTrue("Status should be Error", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
         }
+
+    @Test(expected = IllegalStateException::class)
+    fun `endCall throws IllegalStateException when called without mutex`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+
+            // Using reflection to call the private endCall method
+            val method = callTracker.javaClass.getDeclaredMethod("endCall", Int::class.java, Boolean::class.java)
+            method.isAccessible = true
+            try {
+                method.invoke(callTracker, 1, true)
+            } catch (e: java.lang.reflect.InvocationTargetException) {
+                throw e.targetException
+            }
+        }
 }

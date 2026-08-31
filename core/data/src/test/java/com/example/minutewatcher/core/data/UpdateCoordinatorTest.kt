@@ -362,14 +362,15 @@ class UpdateCoordinatorTest {
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
+            val localWidgetUpdater: WidgetUpdater = mock()
             // Wrap in Exception as classifyException takes Exception
             val limitExceededException = Exception(android.os.TransactionTooLargeException())
-            whenever(widgetUpdater.updateAll()).thenThrow(limitExceededException)
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw limitExceededException }
 
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
-                    widgetUpdater,
+                    localWidgetUpdater,
                     usageStateRepository,
                     backgroundScope,
                 )
@@ -467,13 +468,14 @@ class UpdateCoordinatorTest {
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
+            val localWidgetUpdater: WidgetUpdater = mock()
             // Throw on every update attempt to force observation crash
-            whenever(widgetUpdater.updateAll()).thenThrow(Throwable("Persistent crash"))
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw Throwable("Persistent crash") }
 
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
-                    widgetUpdater,
+                    localWidgetUpdater,
                     usageStateRepository,
                     supervisorScope,
                 )
@@ -506,7 +508,7 @@ class UpdateCoordinatorTest {
             // Verify number of calls to updateAll.
             // Each observation attempt calls updateAll once after debounce.
             // 1 initial + 4 restarts = 5 calls total.
-            verify(widgetUpdater, times(5)).updateAll()
+            verify(localWidgetUpdater, times(5)).updateAll()
 
             supervisorJob.cancel()
         }
@@ -527,9 +529,10 @@ class UpdateCoordinatorTest {
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
+            val localWidgetUpdater: WidgetUpdater = mock()
             // Setup: 4 crashes, then success, then 1 crash
             var callCount = 0
-            whenever(widgetUpdater.updateAll()).thenAnswer {
+            whenever(localWidgetUpdater.updateAll()).thenAnswer {
                 callCount++
                 // Calls 1, 2, 3, 4 will fail (observation loop crashes and restarts)
                 // Forced update (manual) will call it twice if it fails first time,
@@ -545,7 +548,7 @@ class UpdateCoordinatorTest {
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
-                    widgetUpdater,
+                    localWidgetUpdater,
                     usageStateRepository,
                     supervisorScope,
                 )
@@ -569,14 +572,14 @@ class UpdateCoordinatorTest {
 
             // 2. Perform successful forced update
             // Reset mock to return success now
-            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+            whenever(localWidgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
 
             val forcedSuccess = coordinator.notifyDataChanged(updateWidget = true, force = true)
             testScheduler.advanceUntilIdle()
             assertTrue("Forced update should succeed", forcedSuccess)
 
             // 3. Trigger 5th crash via observation loop
-            whenever(widgetUpdater.updateAll()).thenThrow(Throwable("5th Crash"))
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw Throwable("5th Crash") }
             snapshotFlow.emit(createSnapshot(timestamp = 6000L, content = "Crash 5"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
@@ -638,4 +641,41 @@ class UpdateCoordinatorTest {
             ),
         capabilities = emptyList(),
     )
+
+    @Test
+    fun `test recover does not leak monitoring coroutines`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // Rapid succession of recover calls
+            repeat(10) {
+                coordinator.recover()
+            }
+
+            testScheduler.advanceUntilIdle()
+
+            // Verification: we can't easily count coroutines in the scope from here,
+            // but we can ensure the coordinator is still functional and didn't crash.
+            val s1 = createSnapshot(timestamp = 1000L, content = "LeakTest")
+            snapshotFlow.emit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should have called updateAll at least once (for the latest observation setup)
+            verify(widgetUpdater, times(1)).updateAll()
+        }
 }

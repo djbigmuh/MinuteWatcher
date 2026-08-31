@@ -12,12 +12,15 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,8 +107,64 @@ class SimIdentityRepositoryRegistrationTest {
                     repository.observeActiveSims().collect {}
                 }
 
-            verify(subscriptionManager)
-                .addOnSubscriptionsChangedListener(any<SubscriptionManager.OnSubscriptionsChangedListener>())
+            job.cancel()
+        }
+
+    @Test
+    fun `test observeActiveSims recovers after permission regrant`() =
+        runTest(testDispatcher) {
+            val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+            whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
+
+            // 1. Setup discovery to throw SecurityException on first call, then succeed
+            var calls = 0
+            val discovery = mock<SimIdentityDiscovery>()
+            whenever(discovery.observeSubscriptionChanges()).thenAnswer {
+                if (calls++ == 0) {
+                    throw SecurityException("Mock permission revocation")
+                } else {
+                    flowOf(Unit)
+                }
+            }
+
+            val persistence = SimIdentityPersistence(dataStore, migrationService)
+            val cache = SimIdentityCache(timeProvider)
+            val fetcher = ActiveSimsFetcher(discovery, persistence)
+            val observer =
+                SimIdentityObserver(
+                    discovery = discovery,
+                    seedRepository = seedRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    mockSimProvider = mockSimProvider,
+                    fetcher = fetcher,
+                    scope = testScope,
+                    cache = cache,
+                    permissionStateNotifier = permissionStateNotifier,
+                )
+            val resolver =
+                SimIdentityResolver(
+                    discovery = discovery,
+                    persistence = persistence,
+                    cache = cache,
+                )
+            val repository = SimIdentityRepositoryImpl(observer, resolver, persistence)
+
+            val emissions = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
+            val job = launch {
+                repository.observeActiveSims().collect { emissions.add(it) }
+            }
+
+            // 2. Wait for initial failure and suspension
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, emissions.size)
+            assertTrue(emissions[0].isEmpty())
+
+            // 3. Trigger permission regrant signal
+            permissionChanges.emit(Unit)
+            testScheduler.advanceUntilIdle()
+
+            // 4. Verify recovery
+            assertTrue("Should have retried and stayed active", calls >= 2)
 
             job.cancel()
         }

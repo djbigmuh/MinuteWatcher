@@ -14,7 +14,7 @@ class WidgetErrorClassifier
     @Inject
     constructor() {
         fun classifyUpdateError(
-            e: Exception,
+            e: Throwable,
             isFullAttempt: Boolean,
         ): UpdateResult =
             when (e) {
@@ -48,6 +48,11 @@ class WidgetErrorClassifier
                     }
                 }
 
+                is Error -> {
+                    AppLogger.e("JVM Error updating widgets: ${e.message}", e)
+                    UpdateResult.GenericFailure(isRetryable = false)
+                }
+
                 else -> {
                     AppLogger.e("Generic widget update failure: ${e.message}", e)
                     UpdateResult.GenericFailure(isRetryable = true)
@@ -70,7 +75,7 @@ class WidgetErrorClassifier
         }
 
         private fun logLimitExceeded(
-            e: Exception,
+            e: Throwable,
             isFullAttempt: Boolean,
         ) {
             if (isFullAttempt) {

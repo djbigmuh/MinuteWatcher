@@ -20,7 +20,7 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
-class WidgetLimitManager
+open class WidgetLimitManager
     @Inject
     constructor(
         private val appSettingsRepository: AppSettingsRepository,
@@ -39,25 +39,25 @@ class WidgetLimitManager
         }
     }
 
-        fun shouldProbe(): Boolean {
+    open fun shouldProbe(): Boolean {
             val count = exceededUpdateCounter.incrementAndGet()
             return (count % PROBE_INTERVAL_UPDATES) == 0L
         }
 
-        fun resetCounter() {
+    open fun resetCounter() {
             exceededUpdateCounter.set(0L)
         }
 
     /**
      * Updates the in-memory cache of the limit exceeded flag without writing to DataStore.
      */
-    fun updateCache(value: Boolean) {
+    open fun updateCache(value: Boolean) {
         cachedLimitExceeded = value
     }
 
-    fun isLimitExceeded(): Boolean? = cachedLimitExceeded
+    open fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-        suspend fun setWidgetLimitExceeded(value: Boolean) {
+    open suspend fun setWidgetLimitExceeded(value: Boolean) {
             cachedLimitExceeded = value
             try {
                 val current = appSettingsRepository.observeAppSettings().value
