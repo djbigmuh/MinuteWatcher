@@ -161,6 +161,10 @@ open class CallTracker
         subId: Int,
         notify: Boolean = true,
     ) {
+        // Aссерт: метод должен вызываться из-под callMutex (performCallEnd → executeCallEndLogic → CallEndResolver)
+        check(callMutex.isLocked) {
+            "CallTracker.endCall must be called under callMutex (from performCallEnd)"
+        }
         endHandler.endCall(
             subId = subId,
             notify = notify,

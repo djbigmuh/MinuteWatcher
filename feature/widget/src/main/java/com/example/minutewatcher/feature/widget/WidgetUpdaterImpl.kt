@@ -10,10 +10,11 @@ import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -33,18 +34,34 @@ class WidgetUpdaterImpl
         private val limitManager: WidgetLimitManager,
         private val errorClassifier: WidgetErrorClassifier,
     ) : WidgetUpdater {
-        private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+    private val updateMutex = Mutex()
+    private val activeResult = MutableStateFlow<WidgetUpdateResult?>(null)
+    private val isUpdating = MutableStateFlow(false)
 
-        override suspend fun updateAll(): WidgetUpdateResult =
-            executeUpdate {
+    override suspend fun updateAll(): WidgetUpdateResult {
+        // Если обновление уже идёт — ждём его результат
+        if (isUpdating.value) {
+            return joinInProgressUpdate()
+        }
+
+        if (!updateMutex.tryLock()) {
+            // Другой поток захватил мьютекс между проверкой и захватом
+            return joinInProgressUpdate()
+        }
+
+        try {
+            isUpdating.value = true
+            activeResult.value = null
+
+            val result: WidgetUpdateResult =
                 try {
                     var lastOutcome: UpdateOutcome? = null
-                    val s =
+                    val success =
                         retryManager.updateWithRetry { attempt ->
                             performSingleUpdate(attempt).also { lastOutcome = it }
                         }
 
-                    if (s) {
+                    if (success) {
                         WidgetUpdateResult.Success(wasCoalesced = false)
                     } else if (lastOutcome is UpdateOutcome.LimitExceeded) {
                         handleLimitExceeded()
@@ -66,84 +83,66 @@ class WidgetUpdaterImpl
                         reason = WidgetUpdateResult.FailureReason.TERMINAL,
                     )
                 }
-            }
 
-        @Suppress("ReturnCount")
-        private suspend fun executeUpdate(block: suspend () -> WidgetUpdateResult): WidgetUpdateResult {
-            val deferred = CompletableDeferred<WidgetUpdateResult>()
-            while (!activeUpdate.compareAndSet(null, deferred)) {
-                val existing = activeUpdate.get() ?: continue
-                return joinExistingUpdate(existing)
-            }
-            try {
-                val result: WidgetUpdateResult =
-                    try {
-                        block()
-                    } catch (e: CancellationException) {
-                        deferred.completeExceptionally(e)
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("WidgetUpdater: update failed with unexpected exception", e)
-                        WidgetUpdateResult.Failure(
-                            wasCoalesced = false,
-                            isRetryable = false,
-                            reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                        )
-                    }
-                if (!deferred.isCompleted) {
-                    deferred.complete(result)
-                }
+            activeResult.value = result
                 return result
             } finally {
-                activeUpdate.compareAndSet(deferred, null)
+            isUpdating.value = false
+            updateMutex.unlock()
             }
         }
 
-        private suspend fun joinExistingUpdate(existing: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
+    private suspend fun joinInProgressUpdate(): WidgetUpdateResult {
             AppLogger.d("WidgetUpdater: update already in progress, waiting")
-            return try {
-                val result =
-                    withTimeout(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        existing.await()
-                    }
+        return withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+            activeResult.filterNotNull().first()
+        }?.let { result ->
                 when (result) {
                     is WidgetUpdateResult.Success -> result.copy(wasCoalesced = true)
                     is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("WidgetUpdater: joined update failed or timed out", e)
-                WidgetUpdateResult.Failure(
-                    wasCoalesced = true,
-                    isRetryable = true,
-                    reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                )
-            }
+        } ?: WidgetUpdateResult.Failure(
+            wasCoalesced = true,
+            isRetryable = true,
+            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+        )
         }
 
         private suspend fun handleLimitExceeded(): WidgetUpdateResult {
             limitManager.setWidgetLimitExceeded(value = true)
-            // Немедленная попытка в упрощённом режиме
-            return when (val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)) {
-                is UpdateResult.Success -> {
-                    WidgetUpdateResult.Success(wasCoalesced = false)
+
+            var lastOutcome: UpdateOutcome? = null
+            val success =
+                retryManager.updateWithRetry { _ ->
+                    when (val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)) {
+                        is UpdateResult.Success -> UpdateOutcome.Success()
+                        is UpdateResult.LimitExceeded -> UpdateOutcome.LimitExceeded.also { lastOutcome = it }
+                        is UpdateResult.GenericFailure -> {
+                            if (result.isRetryable) {
+                                UpdateOutcome.Retry.also { lastOutcome = it }
+                            } else {
+                                UpdateOutcome.Stop.also { lastOutcome = it }
+                            }
+                        }
+                    }
                 }
 
-                is UpdateResult.LimitExceeded -> {
+            return when {
+                success -> WidgetUpdateResult.Success(wasCoalesced = false)
+                lastOutcome is UpdateOutcome.LimitExceeded ->
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
                         isRetryable = false,
                         reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
                     )
-                }
 
-                is UpdateResult.GenericFailure -> {
+                else -> {
+                    val isRetryable = lastOutcome == UpdateOutcome.Retry
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
-                        isRetryable = result.isRetryable,
+                        isRetryable = isRetryable,
                         reason =
-                            if (result.isRetryable) {
+                            if (isRetryable) {
                                 WidgetUpdateResult.FailureReason.TRANSIENT
                             } else {
                                 WidgetUpdateResult.FailureReason.TERMINAL
@@ -254,7 +253,7 @@ class WidgetUpdaterImpl
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
 

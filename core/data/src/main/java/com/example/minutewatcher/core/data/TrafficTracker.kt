@@ -175,133 +175,138 @@ class TrafficTracker
         target: TargetInfo,
         targetIdentity: String,
     ) {
-        withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-            var phase = "initialization"
-            try {
-                // Phase 1: Read state under mutex
-                val (startTime, initialRetryCount) =
-                    trafficMutex.withLock {
-                        phase = "usage fetch"
-                        val usage =
-                            simUsageRepository
-                                .getSimUsage(targetIdentity)
-                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                                ?: run {
-                                    errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                                    return@withTimeoutOrNull
-                                }
-
-                        phase = "identity check"
-                        val activeIdentities =
-                            simIdentityRepository
-                                .getActiveIdentities()
-                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                                ?: return@withTimeoutOrNull
-
-                        if (targetIdentity !in activeIdentities) {
-                            AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                            return@withTimeoutOrNull
-                        }
-
-                        phase = "retry check"
-                        val retryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-                        if ((retryCount != null) &&
-                            (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
-                        ) {
-                            baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                            errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                            return@withTimeoutOrNull
-                        }
-
-                        val st = if (retryCount != null) 0L else usage.lastResetDate
-                        st to retryCount
-                    }
-
-                // Phase 2: System query OUTSIDE mutex
-                phase = "stats query"
-                val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-
-                // Phase 3: Verify and write under mutex
+        var phase = "initialization"
+        try {
+            // Phase 1: Read state under mutex (no timeout — waiting for mutex is not "work")
+            val state =
                 trafficMutex.withLock {
-                    phase = "state verification"
-                    val currentActive =
+                    phase = "usage fetch"
+                    val usage =
+                        simUsageRepository
+                            .getSimUsage(targetIdentity)
+                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                            ?: run {
+                                errorHandler.handleUsageReadTimeout(targetIdentity, _status)
+                                return@withLock null
+                            }
+
+                    phase = "identity check"
+                    val activeIdentities =
                         simIdentityRepository
                             .getActiveIdentities()
                             .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                            ?: return@withLock
-                    if (targetIdentity !in currentActive) {
-                        AppLogger.d("TrafficTracker: $targetIdentity deactivated during query, skipping")
-                        return@withLock
+                            ?: return@withLock null
+
+                    if (targetIdentity !in activeIdentities) {
+                        AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
+                        return@withLock null
                     }
 
-                    val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-                    if (currentRetryCount != initialRetryCount) {
-                        AppLogger.d("TrafficTracker: retry state changed during query for $targetIdentity, skipping")
-                        return@withLock
+                    phase = "retry check"
+                    val retryCount = baselineManager.baselineNeedsRetry[targetIdentity]
+                    if ((retryCount != null) &&
+                        (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
+                    ) {
+                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                        errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                        return@withLock null
                     }
 
-                    // Handle results
-                    if (initialRetryCount != null) {
-                        phase = "retry action"
-                        handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                    } else {
-                        if (statsResult !is StatsResult.Success) {
-                            errorHandler.handleStatsFailure(statsResult, _status)
+                    val st = if (retryCount != null) 0L else usage.lastResetDate
+                    st to retryCount
+                } ?: return
+
+            val startTime = state.first
+            val initialRetryCount = state.second
+
+            // Phase 2 + 3: Real work under timeout
+            val completed =
+                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                    // Phase 2: System query OUTSIDE mutex
+                    phase = "stats query"
+                    val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+
+                    // Phase 3: Verify and write under mutex
+                    trafficMutex.withLock {
+                        phase = "state verification"
+                        val currentActive =
+                            simIdentityRepository
+                                .getActiveIdentities()
+                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                                ?: return@withLock
+                        if (targetIdentity !in currentActive) {
+                            AppLogger.d("TrafficTracker: $targetIdentity deactivated during query, skipping")
                             return@withLock
                         }
 
-                        phase = "baseline fetch"
-                        val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-                        if (lastTotalBytes == null) {
-                            errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                        val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
+                        if (currentRetryCount != initialRetryCount) {
+                            AppLogger.d("TrafficTracker: retry state changed during query for $targetIdentity, skipping")
                             return@withLock
                         }
 
-                        phase = "atomic update"
-                        withContext(NonCancellable) {
-                            deltaCalculator.updateTrafficBaselineAndUsage(
-                                targetIdentity,
-                                statsResult.bytes,
-                                lastTotalBytes,
-                                target,
-                            )
-                            simChangeHandler.updateLastDataSubId(target.dataSubId)
+                        // Handle results
+                        if (initialRetryCount != null) {
+                            phase = "retry action"
+                            handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
+                        } else {
+                            if (statsResult !is StatsResult.Success) {
+                                errorHandler.handleStatsFailure(statsResult, _status)
+                                return@withLock
+                            }
+
+                            phase = "baseline fetch"
+                            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+                            if (lastTotalBytes == null) {
+                                errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                                return@withLock
+                            }
+
+                            phase = "atomic update"
+                            withContext(NonCancellable) {
+                                deltaCalculator.updateTrafficBaselineAndUsage(
+                                    targetIdentity,
+                                    statsResult.bytes,
+                                    lastTotalBytes,
+                                    target,
+                                )
+                                simChangeHandler.updateLastDataSubId(target.dataSubId)
+                            }
+                            _status.value = TrackingStatus.Active
                         }
-                        _status.value = TrackingStatus.Active
                     }
+                    true
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                AppLogger.e(
-                    "TrafficTracker: Storage error during traffic update at phase $phase for $targetIdentity",
-                    e,
-                )
+
+            if (completed == null) {
+                AppLogger.e("TrafficTracker: Traffic update timed out for $targetIdentity at phase $phase")
                 _status.value =
                     TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Traffic update storage failure at $phase: ${e.message}",
-                    )
-            } catch (e: SecurityException) {
-                AppLogger.e(
-                    "TrafficTracker: Permission error during traffic update at phase $phase for $targetIdentity",
-                    e,
-                )
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.PERMISSION_MISSING,
-                        "Traffic update permission failure at $phase: ${e.message}",
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Traffic update timeout",
                     )
             }
-        } ?: run {
-            // This run block is for the case when withTimeoutOrNull returns null
-            // We should NOT be under the lock here if we want to avoid blocking.
-            // But the phase might still be useful.
-            AppLogger.e("TrafficTracker: Traffic update timed out for $targetIdentity")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            AppLogger.e(
+                "TrafficTracker: Storage error during traffic update at phase $phase for $targetIdentity",
+                e,
+            )
             _status.value =
                 TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Traffic update timeout",
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Traffic update storage failure at $phase: ${e.message}",
+                )
+        } catch (e: SecurityException) {
+            AppLogger.e(
+                "TrafficTracker: Permission error during traffic update at phase $phase for $targetIdentity",
+                e,
+            )
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    "Traffic update permission failure at $phase: ${e.message}",
                 )
         }
     }

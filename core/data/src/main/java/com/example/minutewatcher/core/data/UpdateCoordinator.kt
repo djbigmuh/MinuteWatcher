@@ -18,7 +18,6 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
@@ -197,7 +195,6 @@ class UpdateCoordinator
 
     @Suppress("ReturnCount")
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
-        if (!currentCoroutineContext().isActive) return
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         if (snapshot.suppressWidgetUpdate) {
@@ -262,11 +259,13 @@ class UpdateCoordinator
 
                     WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
                         AppLogger.e("UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), keeping current hash")
+                        handleUpdateFailure()
                     }
 
                     WidgetUpdateResult.FailureReason.TERMINAL -> {
                         // For terminal failures we don't reset hash to avoid immediate retry loops
                         AppLogger.w("UpdateCoordinator: terminal failure encountered, keeping current hash")
+                        handleUpdateFailure()
                     }
                 }
             }
@@ -338,8 +337,14 @@ class UpdateCoordinator
                 var result = widgetUpdater.updateAll()
 
                 if (!result.isSuccess) {
-                    AppLogger.w("Force widget update failed, retrying once immediately")
-                    result = widgetUpdater.updateAll()
+                    val failure = result as? WidgetUpdateResult.Failure
+                    val isRetryable = failure?.isRetryable ?: false
+                    if (isRetryable) {
+                        AppLogger.w("Force widget update failed with retryable error, retrying once")
+                        result = widgetUpdater.updateAll()
+                    } else {
+                        AppLogger.w("Force widget update failed with terminal error, not retrying")
+                    }
                 }
 
                 if (result.isSuccess) {

@@ -103,6 +103,10 @@ open class SemanticSearchManager
         override suspend fun recover() {
             initMutex.withLock {
                 errorHandler.resetFailures()
+                indexMutex.withLock {
+                    lastSnapshotHash = null
+                    lastSnapshotVersion = null
+                }
                 val flow = lastSnapshotFlow ?: return
                 setupObservation(flow)
             }
@@ -247,16 +251,23 @@ open class SemanticSearchManager
         return if (sessionManager.ensureSession({ _status.value = it }, forceOverride = true)) {
             try {
                 executeIndexingInternal(snapshot, currentHash)
-            } catch (e: Exception) {
-                AppLogger.e("AppSearch indexing failed after schema reset", e)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: AppSearchException) {
+                AppLogger.e("AppSearch indexing failed after schema reset (code=${e.resultCode})", e)
                 resetLastSnapshotState()
                 _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                false
+            } catch (e: Exception) {
+                AppLogger.e("Unexpected error after schema reset", e)
+                resetLastSnapshotState()
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 false
             }
         } else {
             false
         }
-        }
+    }
 
     private suspend fun executeIndexingInternal(
             snapshot: GlobalSnapshot,
