@@ -71,38 +71,7 @@ class AutoResetScheduler
             if (!isCheckStarted.compareAndSet(false, true)) return
 
             try {
-                val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
-                val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
-
-                val now = timeProvider.elapsedRealtime()
-
-                val isInitialOrReboot: Boolean
-                val elapsed: Long
-
-                if (lastResetCheck == null) {
-                    isInitialOrReboot = true
-                    elapsed = 0
-                } else {
-                    elapsed = now - lastResetCheck
-                    isInitialOrReboot = elapsed < 0
-                }
-
-                val effectiveFailCount =
-                    if (isInitialOrReboot || (elapsed > FAIL_COUNT_RESET_INTERVAL_MS)) 0 else failCount
-
-                if (isInitialOrReboot || (elapsed > AUTO_RESET_CHECK_INTERVAL_MS)) {
-                    if (effectiveFailCount <= MAX_AUTO_RESET_RETRIES) {
-                        val allReset = autoResetUseCase.performAutoReset(shouldNotify = false)
-                        if (!allReset) {
-                            AppLogger.w("AutoResetScheduler: Auto-reset partially failed")
-                        }
-                        savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
-                        savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = if (allReset) 0 else (effectiveFailCount + 1)
-                    } else {
-                        AppLogger.e("Auto-reset skipped after $effectiveFailCount consecutive failures")
-                        savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
-                    }
-                }
+                performCheckInternal()
             } catch (e: CancellationException) {
                 isCheckStarted.set(false)
                 throw e
@@ -110,6 +79,40 @@ class AutoResetScheduler
                 AppLogger.e("Auto-reset failed during initialization", e)
                 val currentFailCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
                 savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = currentFailCount + 1
+                isCheckStarted.set(false)
+            }
+        }
+
+    private suspend fun performCheckInternal() {
+        val lastResetCheck = savedStateHandle.get<Long>(KEY_LAST_AUTO_RESET_CHECK)
+        val failCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
+        val now = timeProvider.elapsedRealtime()
+
+        val elapsed = if (lastResetCheck == null) 0L else (now - lastResetCheck)
+        val isInitialOrReboot = (lastResetCheck == null) || (elapsed < 0)
+
+        val effectiveFailCount =
+            if (isInitialOrReboot || (elapsed > FAIL_COUNT_RESET_INTERVAL_MS)) 0 else failCount
+
+        if (isInitialOrReboot || (elapsed > AUTO_RESET_CHECK_INTERVAL_MS)) {
+            executeAutoResetWithRetry(now, effectiveFailCount)
+        }
+    }
+
+    private suspend fun executeAutoResetWithRetry(
+        now: Long,
+        failCount: Int,
+    ) {
+        if (failCount <= MAX_AUTO_RESET_RETRIES) {
+            val allReset = autoResetUseCase.performAutoReset(shouldNotify = false)
+            if (!allReset) {
+                AppLogger.w("AutoResetScheduler: Auto-reset partially failed")
+            }
+            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
+            savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = if (allReset) 0 else (failCount + 1)
+        } else {
+            AppLogger.e("Auto-reset skipped after $failCount consecutive failures")
+            savedStateHandle[KEY_LAST_AUTO_RESET_CHECK] = now
             }
         }
 

@@ -107,10 +107,11 @@ open class SemanticSearchManager
                     lastSnapshotHash = null
                     lastSnapshotVersion = null
                 }
-                val flow = lastSnapshotFlow ?: run {
-                    AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
-                    return
-                }
+                val flow =
+                    lastSnapshotFlow ?: run {
+                        AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
+                        return
+                    }
                 setupObservation(flow)
             }
         }
@@ -198,10 +199,11 @@ open class SemanticSearchManager
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
-        val mutexAcquired = withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-            indexMutex.lock()
-            true
-        } ?: false
+        val mutexAcquired =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                indexMutex.lock()
+                true
+            } ?: false
 
         if (!mutexAcquired) {
             AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrency)")
@@ -231,7 +233,6 @@ open class SemanticSearchManager
         ) {
             return true
         }
-        if (!hasActiveSims && (lastSnapshotHash == null)) return true
 
         if (!sessionManager.ensureSession({ _status.value = it })) {
             resetLastSnapshotState()

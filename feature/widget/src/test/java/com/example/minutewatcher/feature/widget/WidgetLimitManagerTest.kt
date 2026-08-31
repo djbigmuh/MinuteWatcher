@@ -7,8 +7,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,7 +29,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetLimitManagerTest {
-    private val testScope = TestScope(UnconfinedTestDispatcher())
+    private val testDispatcher = StandardTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
     private val appSettingsRepository: AppSettingsRepository = mock()
     private lateinit var manager: WidgetLimitManager
     private val settingsFlow = MutableStateFlow(AppSettings())
@@ -44,11 +45,13 @@ class WidgetLimitManagerTest {
     @Test
     fun `isLimitExceeded returns null initially`() {
         assertEquals(null, manager.isLimitExceeded())
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(false, manager.isLimitExceeded())
     }
 
     @Test
     fun `isLimitExceeded returns value set by setWidgetLimitExceeded synchronously`() =
-        runTest {
+        runTest(testDispatcher) {
             manager.setWidgetLimitExceeded(true)
             assertEquals(true, manager.isLimitExceeded())
 
@@ -76,7 +79,7 @@ class WidgetLimitManagerTest {
 
     @Test
     fun `setWidgetLimitExceeded updates repository when value changes`() =
-        runTest {
+        runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
 
             manager.setWidgetLimitExceeded(true)
@@ -86,7 +89,7 @@ class WidgetLimitManagerTest {
 
     @Test
     fun `setWidgetLimitExceeded does not update repository when value is same`() =
-        runTest {
+        runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = true)
 
             manager.setWidgetLimitExceeded(true)
@@ -96,7 +99,7 @@ class WidgetLimitManagerTest {
 
     @Test
     fun `performProbeUpdate sets flag to true if probe fails`() =
-        runTest {
+        runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
 
             val result =
@@ -110,7 +113,7 @@ class WidgetLimitManagerTest {
 
     @Test
     fun `performProbeUpdate sets flag to false if probe succeeds`() =
-        runTest {
+        runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = true)
 
             val result =
@@ -124,7 +127,7 @@ class WidgetLimitManagerTest {
 
     @Test
     fun `performProbeUpdate does not set limit exceeded on CancellationException`() =
-        runTest {
+        runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
             org.mockito.Mockito.clearInvocations(appSettingsRepository)
 
@@ -142,7 +145,7 @@ class WidgetLimitManagerTest {
     @Test
     @Suppress("TooGenericExceptionThrown")
     fun `performProbeUpdate sets limit exceeded on regular Exception`() =
-        runTest {
+        runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
             org.mockito.Mockito.clearInvocations(appSettingsRepository)
 

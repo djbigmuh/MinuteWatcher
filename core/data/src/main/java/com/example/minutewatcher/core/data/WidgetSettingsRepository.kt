@@ -100,42 +100,27 @@ class WidgetSettingsRepository
             }
 
         private suspend fun loadSimStatesInternal(activeSims: List<ActiveSimInfo>): Map<Int, SimSettingsState>? {
-            if (activeSims.isEmpty()) return emptyMap()
+            val allIdentities =
+                (activeSims.map { it.identity.stableId } + activeSims.map { "sim_${it.slotIndex}" })
+                    .toSet()
+                    .toList()
 
-            // Use the captured activeSims to load settings.
-            // While the list of active SIMs could theoretically change between these calls,
-            // we maintain consistency by mapping the results back to the identities we just identified.
-            // Eventual consistency is acceptable for widget settings UI.
-            val realIdentities = activeSims.map { it.identity.stableId }
-            val fallbackIdentities = activeSims.map { "sim_${it.slotIndex}" }
-            val allIdentities = (realIdentities.asSequence() + fallbackIdentities.asSequence()).toSet().toList()
+            val batchSettings =
+                if (activeSims.isEmpty()) {
+                    emptyMap()
+                } else {
+                    simWidgetVisibilityRepository
+                        .getSimSettingsBatch(allIdentities)
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                }
 
-            val batchSettingsResult =
-                simWidgetVisibilityRepository
-                    .getSimSettingsBatch(allIdentities)
-                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-
-            if (batchSettingsResult == null) {
-                AppLogger.e("WidgetSettingsRepository: failed to load SIM visibility settings after timeout")
-                return null
-            }
-            // G-484: Using local variable to satisfy null check and ensure non-null usage below.
-            val batchSettings = batchSettingsResult
-
-            // Map results back to the activeSims list we started with to ensure
-            // the returned state only contains data for SIMs that were active at the start of the call.
-            return activeSims.associate { info ->
-                val identity = info.identity.stableId
-                val fallbackKey = "sim_${info.slotIndex}"
-
-                // Use default settings if specific settings for this identity are missing.
-                val stateSettings =
-                    if (identity == fallbackKey) {
-                        batchSettings[identity] ?: SimSettingsState()
-                    } else {
-                        batchSettings[identity] ?: batchSettings[fallbackKey] ?: SimSettingsState()
-                    }
-                info.slotIndex to stateSettings
+            return batchSettings?.let { batch ->
+                activeSims.associate { info ->
+                    val identity = info.identity.stableId
+                    val fallbackKey = "sim_${info.slotIndex}"
+                    val settings = batch[identity] ?: batch[fallbackKey] ?: SimSettingsState()
+                    info.slotIndex to settings
+                }
             }
         }
 

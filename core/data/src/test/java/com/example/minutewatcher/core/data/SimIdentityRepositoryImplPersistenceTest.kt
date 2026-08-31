@@ -40,7 +40,10 @@ class SimIdentityRepositoryImplPersistenceTest {
     val tmpFolder = TemporaryFolder()
 
     private val testDispatcher = UnconfinedTestDispatcher()
-    private val migrationService: IdentityMigrationService = mock()
+    private val migrationService: IdentityMigrationService =
+        mock {
+            on { migrateLegacyData(any()) } doReturn IdentityMigrationService.MigrationOutcome()
+        }
     private val timeProvider: TimeProvider =
         mock {
             on { elapsedRealtime() } doReturn 1000L
@@ -59,12 +62,12 @@ class SimIdentityRepositoryImplPersistenceTest {
 
     @Test
     fun `saveSimIdentitiesInfo does not call edit when data is identical`() =
-        runTest(testDispatcher) {
+        runTest {
             val realDataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
                 ) {
-                    tmpFolder.newFile("test_ds.preferences_pb")
+                    tmpFolder.newFile("test_ds_2.preferences_pb")
                 }
             val countingDataStore = CountingDataStore(realDataStore)
             val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID)
@@ -72,11 +75,13 @@ class SimIdentityRepositoryImplPersistenceTest {
             // 1. Initial save to populate DataStore
             val persistence = SimIdentityPersistence(countingDataStore, migrationService)
             persistence.saveSimIdentitiesInfo(listOf(identity))
+            testScheduler.advanceUntilIdle()
             val initialCount = countingDataStore.updateCount
-            assert(initialCount > 0)
+            assertTrue("Initial count should be > 0, was $initialCount", initialCount > 0)
 
             // 2. Save identical data
             persistence.saveSimIdentitiesInfo(listOf(identity))
+            testScheduler.advanceUntilIdle()
 
             // Verify updateCount didn't increase
             assertEquals("Should not call edit for identical data", initialCount, countingDataStore.updateCount)
@@ -229,6 +234,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // Trigger discovery update
             permissionChanges.emit(Unit)
+            testScheduler.advanceTimeBy(1000) // Pass debounce
             testScheduler.advanceUntilIdle()
 
             // 3. Check again

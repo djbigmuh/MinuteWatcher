@@ -167,7 +167,7 @@ abstract class MainViewModelTestFixtures {
     ): MainViewModelControllers {
         val bannerController =
             MainBannerController(
-                trackingStatusRepository = trackingStatusRepository,
+                trackingStatusRepository = { trackingStatusRepository },
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 seedRepository = seedRepository,

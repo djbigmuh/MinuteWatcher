@@ -4,18 +4,21 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -27,9 +30,11 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -70,35 +75,51 @@ internal class SimIdentityObserver
                 },
                 seedRepository.seedFlow
                     .filter { it.isNotEmpty() }
-                    .map { SeedResult.Real(it) as SeedResult }
+                    .map { SeedResult.Real(it) as SeedResult },
             ).retryWhen { cause, attempt ->
                 (cause as? CancellationException)?.let { throw it }
                 if (attempt < 3) {
                     AppLogger.w("SimIdentityObserver: seedFlow failed, retry ${attempt + 1}", cause)
                     delay((1000L * (attempt + 1)).milliseconds)
                     true
-                } else false
+                } else {
+                    false
+                }
             }.distinctUntilChanged()
                 .shareIn(
                     scope,
                     SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
-                    replay = 1
+                    replay = 1,
                 )
 
-        @OptIn(ExperimentalCoroutinesApi::class)
+    private val ioRetryCount = AtomicLong(0)
+    private val seedRetryCount = AtomicLong(0)
+    private val genericRetryCount = AtomicLong(0)
+
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
                 .flatMapLatest { seed ->
                     if (seed is SeedResult.Fallback) {
-                        flow { emit(emptyList()) }
+                        flow {
+                            delay(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+                            emit(emptyList())
+                        }
                     } else {
                         discovery
                             .observeSubscriptionChanges()
-                            .map {
-                                fetcher.fetchActiveSimsWithRetry(seed)
+                            .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
+                            .transformLatest {
+                                val result = fetcher.fetchActiveSimsWithRetry(seed)
+                                // Сброс счетчиков при успешной эмиссии
+                                ioRetryCount.set(0)
+                                seedRetryCount.set(0)
+                                genericRetryCount.set(0)
+                                emit(result)
                             }
                     }
-                }.retryWhen { cause, attempt ->
+                }.distinctUntilChanged()
+                .retryWhen { cause, _ ->
                     (cause as? CancellationException)?.let { throw it }
                     if (cause is SecurityException) {
                         AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), waiting for re-grant")
@@ -108,17 +129,19 @@ internal class SimIdentityObserver
                         return@retryWhen true
                     }
 
-                    val maxAttempts = when (cause) {
-                        is SeedUnavailableException -> MAX_SEED_RETRY_ATTEMPTS
-                        is IOException -> MAX_FETCH_RETRY_ATTEMPTS
-                        else -> MAX_FLOW_RETRY_ATTEMPTS
-                    }
+                    val (counter, maxAttempts) =
+                        when (cause) {
+                            is SeedUnavailableException -> seedRetryCount to MAX_SEED_RETRY_ATTEMPTS
+                            is IOException -> ioRetryCount to MAX_FETCH_RETRY_ATTEMPTS
+                            else -> genericRetryCount to MAX_FLOW_RETRY_ATTEMPTS
+                        }
 
-                    if (attempt < maxAttempts) {
-                        val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
+                    val currentAttempt = counter.getAndIncrement()
+                    if (currentAttempt < maxAttempts) {
+                        val backoff = INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
                         AppLogger.w(
                             "SimIdentityObserver: Retrying physicalActiveSims flow due to ${cause::class.simpleName} " +
-                                "(${attempt + 1}/$maxAttempts), delay ${backoff}ms",
+                                "(${(currentAttempt + 1)}/$maxAttempts), delay ${backoff}ms",
                             cause,
                         )
                         delay(backoff.milliseconds)
@@ -130,20 +153,25 @@ internal class SimIdentityObserver
                     (e as? CancellationException)?.let { throw it }
                     when (e) {
                         is SeedUnavailableException -> {
-                            AppLogger.e("SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, emitting empty list")
+                            AppLogger.e(
+                                "SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, " +
+                                    "emitting empty list",
+                            )
                         }
 
                         is IOException -> {
                             AppLogger.e(
-                                "SimIdentityObserver: Error fetching sims after $MAX_FETCH_RETRY_ATTEMPTS retries, emitting empty list",
-                                e
+                                "SimIdentityObserver: Error fetching sims after $MAX_FETCH_RETRY_ATTEMPTS retries, " +
+                                    "emitting empty list",
+                                e,
                             )
                         }
 
                         else -> {
                             AppLogger.e(
-                                "SimIdentityObserver: Terminal error in physicalActiveSims after retries, flow terminated",
-                                e
+                                "SimIdentityObserver: Terminal error in physicalActiveSims after retries, " +
+                                    "flow terminated",
+                                e,
                             )
                         }
                     }
@@ -178,6 +206,7 @@ internal class SimIdentityObserver
             }
 
         companion object {
+            private const val MAX_BACKOFF_EXPONENT = 4
             private const val INITIAL_BACKOFF_MS = 1000L
 
             /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */

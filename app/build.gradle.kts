@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
     alias(libs.plugins.androidxBaselineprofile)
+    alias(libs.plugins.screenshot)
 }
 
 java {
@@ -19,11 +20,13 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.example.minutewatcher"
-        versionCode = 311
-        versionName = "3.1.1"
+        versionCode = 320
+        versionName = "3.2.0"
         vectorDrawables {
             useSupportLibrary = true
         }
+        testInstrumentationRunner = "com.example.minutewatcher.HiltTestRunner"
+        experimentalProperties["android.experimental.enableScreenshotTest"] = true
     }
 
     buildTypes {
@@ -122,6 +125,12 @@ dependencies {
     implementation(libs.androidxLifecycleRuntimeCompose)
     implementation(libs.androidxLifecycleProcess)
 
+    // Hilt Testing
+    androidTestImplementation(libs.daggerHiltAndroidTesting)
+    kspAndroidTest(libs.daggerHiltCompiler)
+    testImplementation(libs.daggerHiltAndroidTesting)
+    kspTest(libs.daggerHiltCompiler)
+
     // DataStore
     implementation(libs.androidxDatastorePreferences)
     implementation(libs.kotlinxCoroutinesGuava)
@@ -157,4 +166,6 @@ dependencies {
     debugImplementation(platform(libs.androidxComposeBom))
     debugImplementation(libs.androidxUiTooling)
     debugImplementation(libs.androidxUiTestManifest)
+
+    screenshotTestImplementation(libs.screenshot.validation.api)
 }

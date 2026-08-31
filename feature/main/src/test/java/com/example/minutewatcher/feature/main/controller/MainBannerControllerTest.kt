@@ -53,7 +53,7 @@ class MainBannerControllerTest {
 
     private fun createController(scope: CoroutineScope) =
         MainBannerController(
-            trackingStatusRepository = trackingStatusRepository,
+            trackingStatusRepository = { trackingStatusRepository },
             permissionRepository = permissionRepository,
             appSettingsRepository = appSettingsRepository,
             seedRepository = seedRepository,

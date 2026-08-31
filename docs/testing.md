@@ -1,31 +1,77 @@
-# Testing Guidelines
+# Testing Strategy
 
-This document outlines the testing strategy and environment requirements for the MinuteWatcher project.
+This document describes the testing strategy for the MinuteWatcher project.
 
-## JVM Arguments for Unit Tests
+## Testing Stack
 
-The following `jvmArgs` are configured in the root `build.gradle.kts` for the `Test` tasks. These are required for stability across different JDK versions (specifically JDK 17 and 21) and for libraries like Robolectric and Mockito.
+- **Unit Testing**: JUnit 4
+- **Dependency Injection**: Hilt (with Hilt Testing for integration/instrumented tests)
+- **Mocking**: Mockito with Mockito-Kotlin
+- **UI Testing**:
+    - **Jetpack Compose**: Compose Testing APIs (run locally with Robolectric or on device)
+    - **Views**: Espresso
+- **Screenshot Testing**: Compose Preview Screenshot Testing (Experimental)
+- **E2E/Macrobenchmark**: UI Automator + Macrobenchmark
+- **Static Analysis**: Detekt + Ktlint
+- **Code Coverage**: JaCoCo
 
-### Required `add-opens` for Robolectric
+## Running Tests
 
-Robolectric uses internal JDK APIs to shadow Android framework classes. Starting with JDK 17, these internal APIs are protected, necessitating explicit `--add-opens` flags.
+### Local Unit Tests
 
-| JVM Argument | Reason |
-| :--- | :--- |
-| `--add-opens=java.base/jdk.internal.access=ALL-UNNAMED` | Internal JDK access for framework shadowing |
-| `--add-opens=java.base/java.io=ALL-UNNAMED` | Required for file-based resource loading in Robolectric |
-| `--add-opens=java.base/java.net=ALL-UNNAMED` | Required for shadowing networking components |
-| `--add-opens=java.base/java.util=ALL-UNNAMED` | Access to core collection internals for shadowing |
-| `--add-opens=java.base/java.lang=ALL-UNNAMED` | Reflection access for core Java classes |
-| `--add-opens=java.base/java.lang.reflect=ALL-UNNAMED` | Deep reflection access required by Robolectric/Mockito |
-| `--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED` | JAR protocol access for resource resolution |
-| `--add-opens=java.desktop/java.awt.font=ALL-UNNAMED` | Required for UI-related shadowing in Robolectric |
+Run all unit tests in the project:
 
-### Other Arguments
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew test
+```
 
-- `-Dnet.bytebuddy.experimental=true`: Allows Mockito to self-attach and function correctly on JDK 17+.
+### UI Tests (Robolectric)
 
-## Best Practices
+UI tests for Compose and Views can run locally using Robolectric. They are located in `src/test`.
 
-- **Robolectric Consistency**: Always run Robolectric tests with the configured `jvmArgs` to prevent `InaccessibleObjectException`.
-- **Fail on Empty**: By default, subprojects are configured with `failOnNoDiscoveredTests = true` to ensure tests are not accidentally skipped. The `:app` module is an exception (only has instrumentation tests).
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew :feature:settings:testDebugUnitTest
+```
+
+### Instrumented Tests (Device)
+
+Tests requiring a real device or emulator are located in `src/androidTest`.
+
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew connectedDebugAndroidTest
+```
+
+### Screenshot Tests
+
+#### Update References
+
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew updateDebugScreenshotTest
+```
+
+#### Validate
+
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew validateDebugScreenshotTest
+```
+
+### Static Analysis
+
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew detekt ktlintCheck
+```
+
+## Screenshot Testing Guidelines
+
+- **Screen-level tests**: Test each screen in 9 different sizes (Compact, Medium, Expanded combinations).
+- **Theme variations**: Mobile size (400x500) for all alternative themes.
+- **Font scales**: Mobile size (400x500) with font scale 1.5.
+- **Component-level tests**: Test reusable components in isolation with different themes and font scales.
+
+## Continuous Integration
+
+The following command should pass before any PR is merged:
+
+```bash
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew ktlintCheck detekt lintDebug testDebugUnitTest :app:assembleDebug
+```

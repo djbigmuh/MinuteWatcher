@@ -119,12 +119,13 @@ class InitialSetupWorker
         } ?: throw IOException("DataStore timeout reading migrationStability flag")
 
     private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
-        val hasLegacyData = try {
-            deps.migrationService.hasLegacyData()
-        } catch (e: IOException) {
-            AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
-            return Result.retry()
-        }
+        val hasLegacyData =
+            try {
+                deps.migrationService.hasLegacyData()
+            } catch (e: IOException) {
+                AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
+                return Result.retry()
+            }
 
         if (hasLegacyData) {
             AppLogger.d("Migration deferred: permission missing but legacy data exists")
@@ -198,11 +199,14 @@ class InitialSetupWorker
 
             if (totalFailures > 0) {
                 AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures total failures")
-                if (runAttemptCount < 3) {
+                if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
                     AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
                     return Result.retry()
                 } else {
-                    AppLogger.e("InitialSetupWorker: Max migration attempts reached. Marking as completed despite failures.")
+                    AppLogger.e(
+                        "InitialSetupWorker: Max migration attempts reached. " +
+                            "Marking as completed despite failures.",
+                    )
                 }
             }
 
@@ -227,4 +231,8 @@ class InitialSetupWorker
             val secondAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout(15000L)
             return secondAttempt ?: throw IOException("Timeout observing active SIMs")
         }
+
+    private companion object {
+        private const val MAX_MIGRATION_ATTEMPTS = 3
+    }
     }

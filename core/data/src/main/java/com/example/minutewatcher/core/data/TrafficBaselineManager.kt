@@ -63,12 +63,13 @@ class TrafficBaselineManager
                     baselineNeedsRetry.remove(identity)
                     status.value = TrackingStatus.Active
                 } else {
-                    val message = if (statsResult is StatsResult.Error) {
-                        AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
-                        statsResult.exception.message
-                    } else {
-                        "Stats unavailable"
-                    }
+                    val message =
+                        if (statsResult is StatsResult.Error) {
+                            AppLogger.e("Traffic stats baseline query failed", statsResult.exception)
+                            statsResult.exception.message
+                        } else {
+                            "Stats unavailable"
+                        }
                     status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
                 }
             } catch (e: SecurityException) {

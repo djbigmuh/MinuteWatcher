@@ -22,7 +22,7 @@ object SimIdentityRepositoryTestHelper {
         val discovery = SimIdentityDiscovery(discoveryDeps)
         val persistence = SimIdentityPersistence(dataStore, migrationService)
         val cache = SimIdentityCache(timeProvider)
-        val fetcher = ActiveSimsFetcher(discovery, persistence)
+        val fetcher = ActiveSimsFetcher(discovery, persistence, cache)
 
         val observer =
             SimIdentityObserver(

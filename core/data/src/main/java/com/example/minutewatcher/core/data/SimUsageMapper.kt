@@ -21,7 +21,7 @@ class SimUsageMapper
         ): SimUsage =
             SimUsage(
                 identity = identity,
-                slotIndex = prefs[DataStoreKeys.slotIndexKey(identity)] ?: 0,
+                slotIndex = prefs[DataStoreKeys.slotIndexKey(identity)] ?: -1,
                 subscriptionId = prefs[DataStoreKeys.subscriptionIdKey(identity)],
                 operator =
                     prefs[DataStoreKeys.customSimOperatorKey(identity)]

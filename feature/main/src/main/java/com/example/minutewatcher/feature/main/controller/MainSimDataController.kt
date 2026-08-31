@@ -162,8 +162,8 @@ class MainSimDataController
             slot: Int,
             operationName: String,
             block: suspend () -> Unit,
-        ): OperationError? {
-            return try {
+        ): OperationError? =
+            try {
                 performBlockWithRetry(slot, operationName, block)
                 try {
                     val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
@@ -181,7 +181,6 @@ class MainSimDataController
             } catch (e: Exception) {
                 handleOperationException(e, slot, operationName)
             }
-        }
 
         /**
          * Updates limits for the SIM in the specified slot.
@@ -368,7 +367,7 @@ class MainSimDataController
 
                 is SeedUnavailableException -> {
                     AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
-                    OperationError("Storage unavailable for slot ${e.slot}. Retry later.", e.slot)
+                    OperationError("Storage unavailable for slot ${e.slot ?: slot}. Retry later.", e.slot ?: slot)
                 }
 
                 is SimNotFoundException -> {

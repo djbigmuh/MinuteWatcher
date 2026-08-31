@@ -116,5 +116,6 @@ class InvalidSlotException(
  * Исключение, выбрасываемое при недоступности identity seed (сбой хранилища).
  */
 class SeedUnavailableException(
-    val slot: Int,
-) : IllegalStateException("Identity seed unavailable for slot $slot")
+    val slot: Int? = null,
+    message: String = "SIM identity seed unavailable",
+) : IllegalStateException(message)

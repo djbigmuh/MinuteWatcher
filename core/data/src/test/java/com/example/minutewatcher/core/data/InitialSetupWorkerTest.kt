@@ -211,8 +211,8 @@ class InitialSetupWorkerTest {
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
             whenever(migrationService.migrateLegacyData(any())).thenReturn(
                 IdentityMigrationService.MigrationOutcome(
-                    migrated = 1
-                )
+                    migrated = 1,
+                ),
             )
 
             val result = createWorker().doWork()
@@ -290,17 +290,18 @@ class InitialSetupWorkerTest {
     fun `doWork completes migration after max retries even with failures`() =
         runTest {
             // Setup worker with attempt count 3
-            val worker = TestListenableWorkerBuilder<InitialSetupWorker>(context)
-                .setRunAttemptCount(3)
-                .setWorkerFactory(
-                    object : androidx.work.WorkerFactory() {
-                        override fun createWorker(
-                            appContext: Context,
-                            workerClassName: String,
-                            workerParameters: androidx.work.WorkerParameters,
-                        ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
-                    },
-                ).build()
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setRunAttemptCount(3)
+                    .setWorkerFactory(
+                        object : androidx.work.WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: androidx.work.WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                        },
+                    ).build()
 
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
@@ -312,8 +313,8 @@ class InitialSetupWorkerTest {
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult.Success(
-                    mock()
-                )
+                    mock(),
+                ),
             )
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)

@@ -34,69 +34,67 @@ internal class SimIdentityResolver
             activeSimsCache: StateFlow<List<ActiveSimInfo>>,
             seedFlow: Flow<SeedResult>,
             activeSimsMutex: Mutex,
-        ): SimIdentity {
-            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                throw InvalidSlotException(slot)
-            }
-
-            // 1. Initial fast check under lock
+        ): SimIdentity =
             activeSimsMutex.withLock {
+                if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                    throw InvalidSlotException(slot)
+                }
+
+                // 1. Fast check
                 activeSimsCache.value.find { it.slotIndex == slot }?.let {
                     cache.removeManual(slot)
-                    return it.identity
+                    return@withLock it.identity
                 }
-                cache.getManual(slot)?.let { return it }
+                cache.getManual(slot)?.let { return@withLock it }
+
+                // 2. Resolve
+                val seedValue = resolveSeedInternal(seedFlow)
+                val resolvedIdentity = resolveIdentityInternal(slot, seedValue)
+                val identity = cache.getOrCreateCanonical(resolvedIdentity)
+
+                // 3. Update cache and persist
+                cache.putManual(slot, identity)
+                persistIdentity(slot, identity)
+
+                identity
             }
 
-            // 2. Resolve seed outside the main timeout
+    private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): String {
             val seed =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     seedFlow.firstOrNull()
                 } ?: SeedResult.Fallback
 
-            val seedValue =
-                when (seed) {
-                    is SeedResult.Real -> seed.value
-                    is SeedResult.Fallback -> throw SeedUnavailableException(slot)
-                }
+        return when (seed) {
+            is SeedResult.Real -> seed.value
+            is SeedResult.Fallback -> throw SeedUnavailableException()
+        }
+    }
 
-            // 3. Resolve identity with timeout
-            val identity =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                        SimIdentityUtils.createIdentityFromInfo(it, seedValue)
-                    } ?: throw SimNotFoundException(slot)
-                } ?: throw IOException("Timeout resolving identity for slot $slot")
+    private suspend fun resolveIdentityInternal(
+        slot: Int,
+        seedValue: String,
+    ): SimIdentity =
+        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+            discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
+                SimIdentityUtils.createIdentityFromInfo(it, seedValue)
+            } ?: throw SimNotFoundException(slot)
+        } ?: throw IOException("Timeout resolving identity for slot $slot")
 
-            // 3. Update cache and persistence outside the lock for performance
-            val finalIdentity =
-                activeSimsMutex.withLock {
-                    // Re-check if someone else resolved it while we were busy
-                    activeSimsCache.value.find { it.slotIndex == slot }?.let {
-                        cache.removeManual(slot)
-                        return@withLock it.identity
-                    }
-                    cache.getManual(slot)?.let { return@withLock it }
-
-                    cache.putManual(slot, identity)
-                    identity
-                }
-
-            // Persistence write outside the lock to keep mutex hold time minimal (<1ms)
-            if (finalIdentity == identity) {
-                try {
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        persistence.saveSimIdentitiesInfo(listOf(identity))
-                    } ?: run {
-                        AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
-                }
+    private suspend fun persistIdentity(
+        slot: Int,
+        identity: SimIdentity,
+    ) {
+        try {
+            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                persistence.saveSimIdentitiesInfo(listOf(identity))
+            } ?: run {
+                AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
             }
-
-            return finalIdentity
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
+        }
         }
     }

@@ -20,7 +20,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -92,15 +91,23 @@ class TrafficTracker
                     _status.value = TrackingStatus.Idle
                 }
 
-                if (!permissionChecker.checkPermissions(_status)) return
+                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                    if (!permissionChecker.checkPermissions(_status)) return@withTimeoutOrNull
 
-                val activeSims = fetchActiveSims()
-                handleActiveSims(activeSims)
+                    val activeSims = fetchActiveSims()
+                    handleActiveSims(activeSims)
+                } ?: run {
+                    AppLogger.e("TrafficTracker: Traffic update timed out")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Traffic update timeout",
+                        )
+                }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: IOException) {
-                errorHandler.handleUpdateError(e, _status)
-            } catch (e: SecurityException) {
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: Unexpected error during update", e)
                 errorHandler.handleUpdateError(e, _status)
             }
         }
@@ -127,48 +134,28 @@ class TrafficTracker
                 baselineManager.cleanupRetries(activeIdentities)
             }
 
-            try {
-                processActiveSimsTraffic(activeSims)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                AppLogger.e("TrafficTracker: handleActiveSims storage error", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-            } catch (e: SecurityException) {
-                AppLogger.e("TrafficTracker: handleActiveSims permission error", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            }
+            processActiveSimsTraffic(activeSims)
         }
 
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
-            try {
-                val result = targetResolver.resolve(activeSims)
+            val result = targetResolver.resolve(activeSims)
 
-                if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
-                    baselineManager.cleanupRetries(emptySet())
-                    errorHandler.handleInconsistentFirmware(_status)
-                    return
-                }
+            if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
+                baselineManager.cleanupRetries(emptySet())
+                errorHandler.handleInconsistentFirmware(_status)
+                return
+            }
 
-                if (result !is TrafficTargetResolver.TargetResult.Success) {
-                    AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
-                    return
-                }
+            if (result !is TrafficTargetResolver.TargetResult.Success) {
+                AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
+                return
+            }
 
-                val target = result.target
+            val target = result.target
 
-                simChangeHandler.withSimChangeLock {
-                    val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
-                    targetIdentity?.let { performTrafficUpdate(target, it) }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                AppLogger.e("TrafficTracker: processActiveSimsTraffic storage error", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-            } catch (e: SecurityException) {
-                AppLogger.e("TrafficTracker: processActiveSimsTraffic permission error", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            simChangeHandler.withSimChangeLock {
+                val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
+                targetIdentity?.let { performTrafficUpdate(target, it) }
             }
         }
 
@@ -178,8 +165,7 @@ class TrafficTracker
         targetIdentity: String,
     ) {
         var phase = "initialization"
-        try {
-            // Phase 1: Read state under mutex (no timeout — waiting for mutex is not "work")
+        // Phase 1: Read state under mutex
             val state =
                 trafficMutex.withLock {
                     phase = "usage fetch"
@@ -221,107 +207,72 @@ class TrafficTracker
             val startTime = state.first
             val initialRetryCount = state.second
 
-            // Phase 2 + 3: Real work under timeout
-            val completed =
-                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-                    // Phase 2: System query OUTSIDE mutex
-                    phase = "stats query"
-                    val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+        // Phase 2: System query OUTSIDE mutex
+        phase = "stats query"
+        val statsResult = baselineManager.getCurrentMobileBytes(startTime)
 
-                    // Phase 3: Verify and write under mutex
-                    trafficMutex.withLock {
-                        phase = "state verification"
-                        val currentActive =
-                            simIdentityRepository
-                                .getActiveIdentities()
-                                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                                ?: return@withLock
-                        if (targetIdentity !in currentActive) {
-                            AppLogger.d("TrafficTracker: $targetIdentity deactivated during query, skipping")
-                            return@withLock
-                        }
+        // Phase 3: Verify and write under mutex
+        trafficMutex.withLock {
+            phase = "state verification"
+            val currentActive =
+                simIdentityRepository
+                    .getActiveIdentities()
+                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                    ?: return@withLock
+            if (targetIdentity !in currentActive) {
+                AppLogger.d("TrafficTracker: $targetIdentity deactivated during query, skipping")
+                return@withLock
+            }
 
-                        val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-                        if (currentRetryCount != initialRetryCount) {
-                            AppLogger.d("TrafficTracker: retry state changed during query for $targetIdentity, skipping")
-                            return@withLock
-                        }
+            val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
+            if (currentRetryCount != initialRetryCount) {
+                AppLogger.d(
+                    "TrafficTracker: retry state changed during query for $targetIdentity, skipping",
+                )
+                return@withLock
+            }
 
-                        // Handle results
-                        if (initialRetryCount != null) {
-                            phase = "retry action"
-                            handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
-                        } else {
-                            if (statsResult !is StatsResult.Success) {
-                                errorHandler.handleStatsFailure(statsResult, _status)
-                                return@withLock
-                            }
-
-                            phase = "baseline fetch"
-                            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-                            if (lastTotalBytes == null) {
-                                errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                                return@withLock
-                            }
-
-                            phase = "atomic update"
-                            val writeSuccess =
-                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                    deltaCalculator.updateTrafficBaselineAndUsage(
-                                        targetIdentity,
-                                        statsResult.bytes,
-                                        lastTotalBytes,
-                                        target,
-                                    )
-                                    simChangeHandler.updateLastDataSubId(target.dataSubId)
-                                    true
-                                } ?: false
-
-                            if (!writeSuccess) {
-                                AppLogger.e("TrafficTracker: Traffic update write timed out for $targetIdentity")
-                                _status.value =
-                                    TrackingStatus.Error(
-                                        TrackingStatus.ErrorType.UNKNOWN,
-                                        "Traffic update write timeout",
-                                    )
-                                return@withLock
-                            }
-                            _status.value = TrackingStatus.Active
-                        }
-                    }
-                    true
+            // Handle results
+            if (initialRetryCount != null) {
+                phase = "retry action"
+                handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
+            } else {
+                if (statsResult !is StatsResult.Success) {
+                    errorHandler.handleStatsFailure(statsResult, _status)
+                    return@withLock
                 }
 
-            if (completed == null) {
-                AppLogger.e("TrafficTracker: Traffic update timed out for $targetIdentity at phase $phase")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Traffic update timeout",
-                    )
+                phase = "baseline fetch"
+                val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+                if (lastTotalBytes == null) {
+                    errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                    return@withLock
+                }
+
+                phase = "atomic update"
+                val writeSuccess =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        deltaCalculator.updateTrafficBaselineAndUsage(
+                            targetIdentity,
+                            statsResult.bytes,
+                            lastTotalBytes,
+                            target,
+                        )
+                        simChangeHandler.updateLastDataSubId(target.dataSubId)
+                        true
+                    } ?: false
+
+                if (!writeSuccess) {
+                    AppLogger.e("TrafficTracker: Traffic update write timed out for $targetIdentity")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Traffic update write timeout",
+                        )
+                    return@withLock
+                }
+                _status.value = TrackingStatus.Active
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: IOException) {
-            AppLogger.e(
-                "TrafficTracker: Storage error during traffic update at phase $phase for $targetIdentity",
-                e,
-            )
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Traffic update storage failure at $phase: ${e.message}",
-                )
-        } catch (e: SecurityException) {
-            AppLogger.e(
-                "TrafficTracker: Permission error during traffic update at phase $phase for $targetIdentity",
-                e,
-            )
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.PERMISSION_MISSING,
-                    "Traffic update permission failure at $phase: ${e.message}",
-                )
         }
     }
 

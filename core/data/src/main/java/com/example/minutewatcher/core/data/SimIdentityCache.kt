@@ -18,6 +18,14 @@ class SimIdentityCache
         private val timeProvider: TimeProvider,
     ) {
         private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
+    private val canonicalIdentities = ConcurrentHashMap<String, SimIdentity>()
+
+    /**
+     * Returns a canonical instance of the given identity.
+     * Ensures referential equality for identical SIMs across the module.
+     */
+    fun getOrCreateCanonical(identity: SimIdentity): SimIdentity =
+        canonicalIdentities.putIfAbsent(identity.stableId, identity) ?: identity
 
         /**
          * Returns cached identity if valid (TTL not expired).
@@ -43,7 +51,8 @@ class SimIdentityCache
             slot: Int,
             identity: SimIdentity,
         ) {
-            manualResolutionCache[slot] = identity to timeProvider.elapsedRealtime()
+            val canonical = getOrCreateCanonical(identity)
+            manualResolutionCache[slot] = canonical to timeProvider.elapsedRealtime()
         }
 
         fun removeManual(slot: Int) {
@@ -52,6 +61,8 @@ class SimIdentityCache
 
         fun cleanupManual(activeSlots: Set<Int>) {
             manualResolutionCache.keys.removeAll { it !in activeSlots }
+            // Optional: periodically cleanup canonicalIdentities if memory is a concern,
+            // but for few SIM cards it's fine to keep them.
         }
 
         companion object {

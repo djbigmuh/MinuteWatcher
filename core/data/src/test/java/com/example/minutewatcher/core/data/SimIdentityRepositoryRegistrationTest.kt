@@ -129,7 +129,7 @@ class SimIdentityRepositoryRegistrationTest {
 
             val persistence = SimIdentityPersistence(dataStore, migrationService)
             val cache = SimIdentityCache(timeProvider)
-            val fetcher = ActiveSimsFetcher(discovery, persistence)
+            val fetcher = ActiveSimsFetcher(discovery, persistence, cache)
             val observer =
                 SimIdentityObserver(
                     discovery = discovery,
@@ -150,9 +150,10 @@ class SimIdentityRepositoryRegistrationTest {
             val repository = SimIdentityRepositoryImpl(observer, resolver, persistence)
 
             val emissions = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
-            val job = launch {
-                repository.observeActiveSims().collect { emissions.add(it) }
-            }
+            val job =
+                launch {
+                    repository.observeActiveSims().collect { emissions.add(it) }
+                }
 
             // 2. Wait for initial failure and suspension
             testScheduler.advanceUntilIdle()

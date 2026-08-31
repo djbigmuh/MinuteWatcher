@@ -77,7 +77,8 @@ internal class CallEndResolver(
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             activeSubIds.all { id ->
-                telephonyManager.createForSubscriptionId(id).callStateForSubscription == TelephonyManager.CALL_STATE_IDLE
+                telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
+                    TelephonyManager.CALL_STATE_IDLE
             }
         } else {
             @Suppress("DEPRECATION")
@@ -120,7 +121,8 @@ internal class CallEndResolver(
             activeSubIds.size == 1 -> activeSubIds.first()
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 activeSubIds.singleOrNull { id ->
-                    telephonyManager.createForSubscriptionId(id).callStateForSubscription == TelephonyManager.CALL_STATE_IDLE
+                    telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
+                        TelephonyManager.CALL_STATE_IDLE
                 }
             }
 

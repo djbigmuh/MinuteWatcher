@@ -284,7 +284,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
                 .performAutoReset(shouldNotify = eq(value = false)) // One from VM init, one from scheduler.checkOnStart
 
             org.mockito.kotlin
-                .doReturn(Unit)
+                .doReturn(true)
                 .whenever(autoResetUseCase)
                 .performAutoReset(shouldNotify = eq(value = false))
 

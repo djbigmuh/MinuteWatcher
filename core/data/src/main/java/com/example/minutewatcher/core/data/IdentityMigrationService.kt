@@ -171,7 +171,9 @@ class IdentityMigrationService
          * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
-        suspend fun migrateLegacyData(activeIdentity: com.example.minutewatcher.core.model.SimIdentity): MigrationOutcome =
+        suspend fun migrateLegacyData(
+            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
+        ): MigrationOutcome =
             migrationMutex.withLock {
                 try {
                     performMigration(activeIdentity)
@@ -186,7 +188,7 @@ class IdentityMigrationService
         private suspend fun performMigration(
             activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
         ): MigrationOutcome {
-            val slot = activeIdentity.slotIndex ?: return MigrationOutcome()
+            if (activeIdentity.slotIndex == null) return MigrationOutcome()
             val identity = activeIdentity.stableId
 
             val legacySuffixes = findLegacySuffixes(activeIdentity)
@@ -201,8 +203,6 @@ class IdentityMigrationService
                         legacySuffix,
                         newSuffix,
                         "app_settings",
-                        slot,
-                        identity,
                     )
                 totalOutcome +=
                     migrateDataStore(
@@ -210,8 +210,6 @@ class IdentityMigrationService
                         legacySuffix,
                         newSuffix,
                         "sim_settings",
-                        slot,
-                        identity,
                     )
             }
 
@@ -301,8 +299,6 @@ class IdentityMigrationService
             legacySuffix: String,
             newSuffix: String,
             storeName: String,
-            slot: Int,
-            identity: String,
         ): MigrationOutcome {
             var migratedCount = 0
             var conflictCount = 0

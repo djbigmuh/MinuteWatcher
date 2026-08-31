@@ -658,10 +658,18 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             val callTracker = createTracker()
 
             // Using reflection to call the private endCall method
-            val method = callTracker.javaClass.getDeclaredMethod("endCall", Int::class.java, Boolean::class.java)
+            // Note: suspend method has an extra Continuation parameter in JVM signature
+            val method =
+                callTracker.javaClass.getDeclaredMethod(
+                    "endCall",
+                    Int::class.java,
+                    Boolean::class.java,
+                    kotlin.coroutines.Continuation::class.java,
+                )
             method.isAccessible = true
             try {
-                method.invoke(callTracker, 1, true)
+                // Pass null for continuation as it's not actually used for the check(...) call
+                method.invoke(callTracker, 1, true, null)
             } catch (e: java.lang.reflect.InvocationTargetException) {
                 throw e.targetException
             }

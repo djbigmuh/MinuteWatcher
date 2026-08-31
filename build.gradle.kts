@@ -1,5 +1,3 @@
-import org.gradle.api.reporting.ReportingExtension
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.androidApplication) apply false
@@ -59,6 +57,15 @@ subprojects {
                     languageVersion.set(JavaLanguageVersion.of(21))
                 }.map { it.metadata.installationPath }
             )
+        }
+    }
+
+    apply(plugin = "jacoco")
+
+    tasks.withType<JacocoReport>().configureEach {
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
         }
     }
 }

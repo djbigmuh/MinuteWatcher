@@ -191,12 +191,11 @@ class MainViewModel
             )
         }
 
-    private suspend fun refreshAndNotify(force: Boolean = false): Boolean {
-        return controllers.refresh.refreshAndNotify(
+    private suspend fun refreshAndNotify(force: Boolean = false): Boolean =
+        controllers.refresh.refreshAndNotify(
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
                 force = force,
             )
-        }
 
         private var lastRefreshAt: Long
             get() = savedStateHandle[KEY_LAST_REFRESH_TIME] ?: 0L

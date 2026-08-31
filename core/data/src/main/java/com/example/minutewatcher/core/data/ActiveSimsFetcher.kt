@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimIdentity
@@ -12,8 +13,6 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
-
-internal class SeedUnavailableException : IOException("Identity seed unavailable")
 
 /**
  * Handles fetching active SIMs with retry logic and DataStore persistence.
@@ -26,6 +25,7 @@ internal class ActiveSimsFetcher
     constructor(
         private val discovery: SimIdentityDiscovery,
         private val persistence: SimIdentityPersistence,
+        private val cache: SimIdentityCache,
     ) {
         /**
          * Fetches active SIMs with exponential backoff retry logic.
@@ -69,7 +69,11 @@ internal class ActiveSimsFetcher
                 }
 
             val infoList = discovery.getActiveSubscriptions()
-            val identities = infoList.map { SimIdentityUtils.createIdentityFromInfo(it, seedValue) }
+            val identities =
+                infoList.map { info ->
+                    val identity = SimIdentityUtils.createIdentityFromInfo(info, seedValue)
+                    cache.getOrCreateCanonical(identity)
+                }
 
             persistence.retainMigrated(identities.asSequence().map { it.stableId }.toSet())
 
@@ -79,8 +83,8 @@ internal class ActiveSimsFetcher
                 persistence.saveSimIdentitiesInfo(identities)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: IOException) {
-                throw e
+            } catch (e: Exception) {
+                AppLogger.e("ActiveSimsFetcher: non-terminal error saving identities, continuing", e)
             }
 
             return createActiveSimInfoList(infoList, identities)

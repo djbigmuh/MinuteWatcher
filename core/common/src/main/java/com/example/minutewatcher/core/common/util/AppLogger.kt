@@ -36,6 +36,9 @@ object AppLogger {
     private const val WORKER_RETRY_DELAY_MS = 1000L
     private const val MAX_RETRY_DELAY_MS = 5000L
     private const val MAX_WRITE_FAILURES = 10
+    private const val SYNC_FALLBACK_LOCK_TIMEOUT_MS = 500L
+    private const val SHUTDOWN_JOIN_TIMEOUT_MS = 1000L
+    private const val SHUTDOWN_FLUSH_LOCK_TIMEOUT_MS = 500L
 
     @Volatile private var logDir: File? = null
 
@@ -191,7 +194,7 @@ object AppLogger {
         Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
         val acquired =
             try {
-                fileLock.tryLock(500, TimeUnit.MILLISECONDS)
+                fileLock.tryLock(SYNC_FALLBACK_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
                 false
@@ -226,7 +229,7 @@ object AppLogger {
                 reportDropped()
                 Log.w(
                     TAG,
-                    "Critical log dropped from file (lock contention & queue full): [${entry.level}] ${entry.message}"
+                    "Critical log dropped from file (lock contention & queue full): [${entry.level}] ${entry.message}",
                 )
             }
         }
@@ -421,7 +424,7 @@ object AppLogger {
         if (thread != null) {
             thread.interrupt()
             try {
-                thread.join(1000)
+                thread.join(SHUTDOWN_JOIN_TIMEOUT_MS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
@@ -430,7 +433,7 @@ object AppLogger {
         if (thread?.isAlive == true) {
             // Worker is stuck (e.g. holding fileLock). Avoid deadlock by not attempting flush.
             // Just try to close the writer if possible.
-            if (fileLock.tryLock(500, TimeUnit.MILLISECONDS)) {
+            if (fileLock.tryLock(SHUTDOWN_FLUSH_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 try {
                     closeWriterUnlocked()
                 } finally {
@@ -447,20 +450,23 @@ object AppLogger {
     }
 
     private fun flushRemainingLogsUnlocked() {
-        if (lock.tryLock()) {
+        if (!lock.tryLock()) return
+        try {
+            while (criticalQueue.isNotEmpty() || normalQueue.isNotEmpty()) {
+                flushNextEntry()
+            }
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    private fun flushNextEntry() {
+        val entry = criticalQueue.pollFirst() ?: normalQueue.pollFirst()
+        if (entry != null) {
             try {
-                while (criticalQueue.isNotEmpty() || normalQueue.isNotEmpty()) {
-                    val entry = criticalQueue.pollFirst() ?: normalQueue.pollFirst()
-                    if (entry != null) {
-                        try {
-                            writeEntryToFileUnlocked(entry)
-                        } catch (_: Exception) {
-                            // Best effort during shutdown
-                        }
-                    }
-                }
-            } finally {
-                lock.unlock()
+                writeEntryToFileUnlocked(entry)
+            } catch (_: Exception) {
+                // Best effort during shutdown
             }
         }
     }

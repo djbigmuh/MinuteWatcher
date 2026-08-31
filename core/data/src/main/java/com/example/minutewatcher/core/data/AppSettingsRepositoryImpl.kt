@@ -80,8 +80,8 @@ class AppSettingsRepositoryImpl
          * Ensures a fresh read from DataStore by waiting for the first emission
          * if the internal flow is not currently active.
          */
-        override suspend fun getAppSettingsOnce(): AppSettings {
-            return try {
+        override suspend fun getAppSettingsOnce(): AppSettings =
+            try {
                 dataStore.data.first().toAppSettings()
             } catch (e: CancellationException) {
                 throw e
@@ -89,7 +89,6 @@ class AppSettingsRepositoryImpl
                 AppLogger.e("getAppSettingsOnce: failed to read from DataStore, returning defaults", e)
                 AppSettings()
             }
-        }
 
         /**
          * Returns a state flow of application settings.

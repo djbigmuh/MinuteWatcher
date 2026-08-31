@@ -75,6 +75,10 @@ dependencies {
     implementation(libs.androidxWorkRuntimeKtx)
     implementation(libs.androidxCoreKtx)
 
+    // Hilt Testing
+    testImplementation(libs.daggerHiltAndroidTesting)
+    kspTest(libs.daggerHiltCompiler)
+
     testImplementation(testFixtures(project(":core:common")))
     testImplementation(libs.junit)
     testImplementation(libs.mockingCore)

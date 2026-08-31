@@ -98,7 +98,7 @@ class AppLoggerTest {
             val content = logFile.readText()
             assertTrue(
                 "Critical log should be preserved in file",
-                content.contains("CRITICAL_MESSAGE_UNDER_CONTENTION")
+                content.contains("CRITICAL_MESSAGE_UNDER_CONTENTION"),
             )
         }
     }

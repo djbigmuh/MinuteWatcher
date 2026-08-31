@@ -131,7 +131,7 @@ class SimUsageRepositoryImpl
             dataStore.edit { prefs ->
                 val current = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 val newValue = current + deltaMb.toDouble()
-                val rounded = ((newValue * 100.0).roundToLong() / 100.0).toFloat()
+                val rounded = ((newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() / TRAFFIC_ROUNDING_FACTOR).toFloat()
                 prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded.coerceIn(0f, MAX_TRAFFIC_MB)
             }
         }
@@ -327,7 +327,7 @@ class SimUsageRepositoryImpl
                 // 1. Increment traffic
                 val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 val newValue = currentUsage + deltaMb.toDouble()
-                val rounded = ((newValue * 100.0).roundToLong() / 100.0).toFloat()
+                val rounded = ((newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() / TRAFFIC_ROUNDING_FACTOR).toFloat()
                 prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded.coerceIn(0f, MAX_TRAFFIC_MB)
 
                 // 2. Update baseline
@@ -343,5 +343,7 @@ class SimUsageRepositoryImpl
              * период, но защита предотвращает переполнение при ошибке.
              */
             private const val MAX_TRAFFIC_MB = 10_000_000f // ~10 ТБ
+
+            private const val TRAFFIC_ROUNDING_FACTOR = 100.0
         }
     }

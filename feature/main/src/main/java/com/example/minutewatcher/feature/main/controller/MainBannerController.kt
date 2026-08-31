@@ -44,7 +44,7 @@ import javax.inject.Singleton
 class MainBannerController
     @Inject
     constructor(
-        private val trackingStatusRepository: TrackingStatusRepository,
+        private val trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
         permissionRepository: PermissionRepository,
         appSettingsRepository: AppSettingsRepository,
         seedRepository: SimIdentitySeedRepository,
@@ -86,6 +86,7 @@ class MainBannerController
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
             trackingStatusRepository
+                .get()
                 .observeTrackingStatus()
                 .stateIn(
                     scope = scope,
@@ -179,7 +180,9 @@ class MainBannerController
                 if (oldJob != null) {
                     oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                     if (oldJob.isActive) {
-                        AppLogger.w("MainBannerController: previous observation job did not terminate in time, forcing cancel")
+                        AppLogger.w(
+                            "MainBannerController: previous observation job did not terminate in time, forcing cancel",
+                        )
                         oldJob.cancel()
                         try {
                             oldJob.join()

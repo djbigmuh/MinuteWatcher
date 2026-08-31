@@ -115,7 +115,7 @@ class UsageAccessNavigationTest {
         val dialogController = MainDialogController(savedStateHandle)
         val bannerController =
             MainBannerController(
-                trackingStatusRepository = trackingStatusRepository,
+                trackingStatusRepository = { trackingStatusRepository },
                 permissionRepository = permissionRepository,
                 appSettingsRepository = appSettingsRepository,
                 seedRepository = seedRepository,

@@ -59,8 +59,8 @@ class UsageCheckWorker
                 }
             }
 
-    private suspend fun executeWork(): Result {
-        return try {
+    private suspend fun executeWork(): Result =
+        try {
             withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
                 deps.usageUseCase.refreshOperatorInfo()
             } ?: run {
@@ -79,7 +79,6 @@ class UsageCheckWorker
             AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
             Result.failure()
         }
-    }
 
         // @Suppress("ReturnCount") is required for early exits on permission checks and timeouts.
         @Suppress("ReturnCount")
@@ -182,8 +181,8 @@ class UsageCheckWorker
                 }
 
             return appSettingsResult ?: run {
-                AppLogger.w("UsageCheckWorker: settings load failed, notifications disabled")
-                AppSettings(notifyLowMinutes = false, notifyLowTraffic = false)
+                AppLogger.w("UsageCheckWorker: settings load failed, using defaults")
+                AppSettings()
             }
         }
 

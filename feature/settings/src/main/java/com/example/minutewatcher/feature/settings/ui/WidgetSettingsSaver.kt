@@ -15,7 +15,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-class WidgetSettingsSaver
+open class WidgetSettingsSaver
     @Inject
     constructor(
         private val loader: WidgetSettingsLoader,
@@ -41,7 +41,7 @@ class WidgetSettingsSaver
          *   сохраняются (используется при simListLoadFailed).
          * @return [SaveResult] результат операции.
          */
-        suspend fun save(
+        open suspend fun save(
             state: WidgetSettingsState,
             skipSimSettings: Boolean = false,
         ): SaveResult {
@@ -50,31 +50,38 @@ class WidgetSettingsSaver
                 return SaveResult.AlreadyInProgress
             }
 
-            try {
-                if (state.settingsLoadFailed) {
-                    AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
-                    return SaveResult.Failed()
-                }
-
-                // Выполняем защитную валидацию.
-                val validatedState = WidgetSettingsState.validate(state)
-
-                return try {
-                    saveGeneralSettings(validatedState)
-                    val simResult = trySaveSimSettings(validatedState, skipSimSettings)
-
-                    withContext(NonCancellable) {
-                        notifyDataChanged()
-                    }
-                    simResult
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to save general widget settings", e)
-                    SaveResult.Failed()
-                }
+            return try {
+                performSave(state, skipSimSettings)
             } finally {
                 saveMutex.unlock()
+            }
+        }
+
+    private suspend fun performSave(
+        state: WidgetSettingsState,
+        skipSimSettings: Boolean,
+    ): SaveResult {
+        if (state.settingsLoadFailed) {
+            AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
+            return SaveResult.Failed()
+        }
+
+        // Выполняем защитную валидацию.
+        val validatedState = WidgetSettingsState.validate(state)
+
+        return try {
+            saveGeneralSettings(validatedState)
+            val simResult = trySaveSimSettings(validatedState, skipSimSettings)
+
+            withContext(NonCancellable) {
+                notifyDataChanged()
+            }
+            simResult
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Failed to save general widget settings", e)
+            SaveResult.Failed()
             }
         }
 

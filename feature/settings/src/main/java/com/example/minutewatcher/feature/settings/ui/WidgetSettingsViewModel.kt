@@ -16,7 +16,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -62,9 +61,6 @@ class WidgetSettingsViewModel
         // saveMutex — мьютекс для предотвращения конкурентных сохранений.
         private val saveMutex = Mutex()
 
-        // loadMutex — мьютекс для сериализации операций загрузки.
-        private val loadMutex = Mutex()
-
         private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
@@ -85,42 +81,34 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             viewModelScope.launch {
-                loadMutex.withLock {
+                saveMutex.withLock {
                     loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                    if (loadJob?.isActive == true) {
-                        loadJob?.cancel()
-                        try {
-                            loadJob?.join()
-                        } catch (_: Exception) {
-                        }
-                    }
 
-                    val newJob = launch {
-                        try {
-                            val loaded = withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                loader.load()
-                            }
-                            ensureActive()
-                            if (loaded != null) {
-                                if (coroutineContext.isActive) {
-                                    reduce { copy(settings = loaded, isLoadError = false) }
+                    loadJob =
+                        launch {
+                            try {
+                                val loaded =
+                                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                                        loader.load()
+                                    }
+                                ensureActive()
+                                saveMutex.withLock {
+                                    if (loaded != null) {
+                                        reduce { copy(settings = loaded, isLoadError = false) }
+                                    } else {
+                                        AppLogger.e("Failed to load widget settings: timeout")
+                                        reduce { copy(isLoadError = true) }
+                                    }
                                 }
-                            } else {
-                                AppLogger.e("Failed to load widget settings: timeout")
-                                if (coroutineContext.isActive) {
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to load widget settings", e)
+                                saveMutex.withLock {
                                     reduce { copy(isLoadError = true) }
                                 }
                             }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to load widget settings", e)
-                            if (coroutineContext.isActive) {
-                                reduce { copy(isLoadError = true) }
-                            }
                         }
-                    }
-                    loadJob = newJob
                 }
             }
         }
@@ -194,8 +182,7 @@ class WidgetSettingsViewModel
             }
 
             try {
-                consumeSaveResult()
-                reduce { copy(isSaving = true) }
+                reduce { copy(saveResult = null, isSaving = true) }
                 val currentStateSnapshot = state.value
                 val result = performSaveInternal(currentStateSnapshot)
                 reduce { copy(saveResult = result) }

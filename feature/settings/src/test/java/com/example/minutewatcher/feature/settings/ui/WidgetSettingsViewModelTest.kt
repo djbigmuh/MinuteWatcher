@@ -447,4 +447,91 @@ class WidgetSettingsViewModelTest {
                 assertEquals(Constants.Widget.MIN_FONT_SIZE, captured.fontSize)
             }
         }
+
+    @Test
+    fun `loadSettings does not update state while saveAndNotify is in progress`() =
+        runTest {
+            val loadDeferred1 = CompletableDeferred<WidgetSettingsState>()
+            val loadDeferred2 = CompletableDeferred<WidgetSettingsState>()
+            val saveGate = CompletableDeferred<Unit>()
+
+            val controlledLoader =
+                object : WidgetSettingsLoader {
+                    var loadCallCount = 0
+
+                    override suspend fun load(): WidgetSettingsState =
+                        if (loadCallCount++ == 0) {
+                            loadDeferred1.await()
+                        } else {
+                            loadDeferred2.await()
+                        }
+
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): WidgetSaveResult = WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        // Controlled by test
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+                }
+
+            val controlledSaver =
+                object : WidgetSettingsSaver(controlledLoader, mock()) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): SaveResult {
+                        saveGate.await()
+                        return SaveResult.Success
+                    }
+                }
+
+            // Create a NEW vm for this test to avoid shared state
+            val vm = WidgetSettingsViewModel(controlledLoader, controlledSaver, usageStateRepository)
+            runCurrent()
+
+            // 1. Complete initial load
+            loadDeferred1.complete(WidgetSettingsState(fontSize = 10))
+            testScheduler.advanceUntilIdle()
+            assertEquals(
+                10,
+                vm.state.value.settings
+                    ?.fontSize,
+            )
+
+            // 2. Start saveAndNotify. Locks saveMutex.
+            val saveJob = launch { vm.saveAndNotify() }
+            runCurrent()
+            assertTrue(vm.state.value.isSaving)
+
+            // 3. Trigger second load
+            vm.retryLoad()
+            runCurrent()
+
+            // 4. Complete second load I/O. The reduce call should wait for saveMutex.
+            loadDeferred2.complete(WidgetSettingsState(fontSize = 99))
+            runCurrent()
+
+            // 5. Verify state NOT updated yet, because saveMutex is held by saveJob
+            assertEquals(
+                10,
+                vm.state.value.settings
+                    ?.fontSize,
+            )
+
+            // 6. Complete save
+            saveGate.complete(Unit)
+            testScheduler.advanceUntilIdle()
+
+            // 7. Verify state updated
+            assertEquals(
+                99,
+                vm.state.value.settings
+                    ?.fontSize,
+            )
+            saveJob.join()
+        }
 }

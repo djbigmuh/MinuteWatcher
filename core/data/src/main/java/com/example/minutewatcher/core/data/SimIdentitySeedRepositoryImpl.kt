@@ -111,7 +111,8 @@ class SimIdentitySeedRepositoryImpl
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e(
-                        "CRITICAL: DataStore unavailable, using ephemeral seed. All SIM identities will change. Previous statistics will be orphaned.",
+                        "CRITICAL: DataStore unavailable, using ephemeral seed. " +
+                            "All SIM identities will change. Previous statistics will be orphaned.",
                         e,
                     )
                     _isEphemeralSeedActive.value = true

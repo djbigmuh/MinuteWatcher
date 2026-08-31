@@ -909,7 +909,7 @@ class TrafficTrackerTest {
             // 4. Verify it's cleared
             assertFalse(
                 "sim_0 should be cleared from retry map",
-                baselineManager.baselineNeedsRetry.containsKey(id)
+                baselineManager.baselineNeedsRetry.containsKey(id),
             )
             assertEquals(TrackingStatus.Idle, tracker.status.value)
         }
@@ -935,7 +935,7 @@ class TrafficTrackerTest {
             // 4. Verify "other_sim" is cleared
             assertFalse(
                 "other_sim should be cleared from retry map",
-                baselineManager.baselineNeedsRetry.containsKey("other_sim")
+                baselineManager.baselineNeedsRetry.containsKey("other_sim"),
             )
         }
 }

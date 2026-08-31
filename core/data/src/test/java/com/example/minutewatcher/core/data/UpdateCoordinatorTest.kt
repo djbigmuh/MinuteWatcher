@@ -43,6 +43,10 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class UpdateCoordinatorTest {
+    private class TestCrashException(
+        message: String,
+    ) : Throwable(message)
+
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -470,7 +474,7 @@ class UpdateCoordinatorTest {
 
             val localWidgetUpdater: WidgetUpdater = mock()
             // Throw on every update attempt to force observation crash
-            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw Throwable("Persistent crash") }
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw TestCrashException("Persistent crash") }
 
             val coordinator =
                 UpdateCoordinator(
@@ -502,7 +506,7 @@ class UpdateCoordinatorTest {
             assertTrue("Status should be Error after max restarts", status is TrackingStatus.Error)
             assertEquals(
                 "Widget observation failed permanently after 5 restarts",
-                (status as TrackingStatus.Error).message
+                (status as TrackingStatus.Error).message,
             )
 
             // Verify number of calls to updateAll.
@@ -541,7 +545,7 @@ class UpdateCoordinatorTest {
 
                 // Let's make it more deterministic:
                 // Calls from observation loop will be triggered by snapshot emissions.
-                if (callCount <= 4) throw Throwable("Observation crash $callCount")
+                if (callCount <= 4) throw TestCrashException("Observation crash $callCount")
                 WidgetUpdateResult.Success()
             }
 
@@ -579,7 +583,7 @@ class UpdateCoordinatorTest {
             assertTrue("Forced update should succeed", forcedSuccess)
 
             // 3. Trigger 5th crash via observation loop
-            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw Throwable("5th Crash") }
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw TestCrashException("5th Crash") }
             snapshotFlow.emit(createSnapshot(timestamp = 6000L, content = "Crash 5"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()

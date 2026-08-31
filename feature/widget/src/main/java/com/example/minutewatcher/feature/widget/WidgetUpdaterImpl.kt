@@ -24,6 +24,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Delegates responsibilities to specialized managers for modularity.
  */
 @Singleton
+@Suppress("TooManyFunctions")
 class WidgetUpdaterImpl
     @Inject
     constructor(
@@ -39,95 +40,131 @@ class WidgetUpdaterImpl
 
     override suspend fun updateAll(): WidgetUpdateResult {
         // Step 1: Check for in-progress update.
-        // We only join if the update is not yet completed.
-        val activeUpdate = currentUpdate.get()
-        if (activeUpdate != null && !activeUpdate.isCompleted) {
-            return joinInProgressUpdate(activeUpdate)
+        val inProgress = getInProgressUpdate()
+        if (inProgress != null) {
+            return joinInProgressUpdate(inProgress)
         }
 
         // Step 2: Attempt to acquire lock for new update
-        if (!updateMutex.tryLock()) {
-            // Lock held by another thread. Coalesce if possible.
-            yield() // Give owner a chance to register the deferred
-            val retryUpdate = currentUpdate.get()
-            if (retryUpdate != null && !retryUpdate.isCompleted) {
-                return joinInProgressUpdate(retryUpdate)
-            }
+        val locked = acquireUpdateLock()
+        val secondInProgress = if (!locked) getInProgressUpdate() else null
 
-            // If still null or completed, the previous update just finished or is finishing.
-            // We wait for the lock to start a fresh update.
-            updateMutex.lock()
-
-            // After acquiring lock, check again if another thread started an update
-            // while we were waiting for the lock.
-            val postLockUpdate = currentUpdate.get()
-            if (postLockUpdate != null && !postLockUpdate.isCompleted) {
-                updateMutex.unlock()
-                return joinInProgressUpdate(postLockUpdate)
-            }
+        return if (secondInProgress != null) {
+            joinInProgressUpdate(secondInProgress)
+        } else if (!locked) {
+            // Should not happen if logic is correct, but safe fallback
+            WidgetUpdateResult.Failure(wasCoalesced = true, isRetryable = true)
+        } else {
+            performNewUpdate()
         }
+    }
 
+    private suspend fun performNewUpdate(): WidgetUpdateResult {
         // We hold the lock. Create and register deferred.
         val deferred = CompletableDeferred<WidgetUpdateResult>()
         currentUpdate.set(deferred)
 
-        try {
-            val result: WidgetUpdateResult =
-                try {
-                    var lastOutcome: UpdateOutcome? = null
-                    val success =
-                        retryManager.updateWithRetry { attempt ->
-                            performSingleUpdate(attempt).also { lastOutcome = it }
-                        }
-
-                    if (success) {
-                        WidgetUpdateResult.Success(wasCoalesced = false)
-                    } else if (lastOutcome is UpdateOutcome.LimitExceeded) {
-                        handleLimitExceeded()
-                    } else {
-                        val isRetryable = lastOutcome == UpdateOutcome.Retry
-                        WidgetUpdateResult.Failure(
-                            wasCoalesced = false,
-                            isRetryable = isRetryable,
-                            reason = if (isRetryable) WidgetUpdateResult.FailureReason.TRANSIENT else WidgetUpdateResult.FailureReason.TERMINAL,
-                        )
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (t: Throwable) {
-                    AppLogger.e("WidgetUpdater: updateAll failed", t)
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    )
-                }
-
+        return try {
+            val result = executeUpdateProcess()
             deferred.complete(result)
-            return result
-        } catch (t: Throwable) {
-            // Defensive: ensure deferred is completed if we crash/cancel
-            if (t !is CancellationException) {
-                deferred.complete(
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    ),
+            result
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") t: Throwable,
+        ) {
+            // Defensive: ensure deferred is completed if we crash
+            AppLogger.e("WidgetUpdater: unexpected fatal error in updateAll", t)
+            val failure =
+                WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
                 )
-            }
-            throw t
+            deferred.complete(failure)
+            failure
         } finally {
             // Step 3: Cleanup. Unlock FIRST, then clear reference using CAS.
-            // This ensures that any concurrent caller that fails tryLock()
-            // will see the deferred as non-null and join it properly.
-            // CAS ensures we don't overwrite a NEW update's deferred.
             updateMutex.unlock()
             currentUpdate.compareAndSet(deferred, null)
         }
     }
 
-    private suspend fun joinInProgressUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
+    private fun getInProgressUpdate(): CompletableDeferred<WidgetUpdateResult>? {
+        val activeUpdate = currentUpdate.get()
+        return if (activeUpdate != null && !activeUpdate.isCompleted) activeUpdate else null
+        }
+
+    private suspend fun acquireUpdateLock(): Boolean {
+        var locked = updateMutex.tryLock()
+
+        if (!locked) {
+            // Lock held by another thread. Coalesce if possible.
+            yield() // Give owner a chance to register the deferred
+            if (getInProgressUpdate() == null) {
+                // If still null or completed, the previous update just finished or is finishing.
+                // We wait for the lock to start a fresh update.
+                updateMutex.lock()
+
+                // After acquiring lock, check again if another thread started an update
+                // while we were waiting for the lock.
+                if (getInProgressUpdate() != null) {
+                    updateMutex.unlock()
+                } else {
+                    locked = true
+                }
+            }
+        }
+        return locked
+        }
+
+    private suspend fun executeUpdateProcess(): WidgetUpdateResult =
+        try {
+            var lastOutcome: UpdateOutcome? = null
+            val success =
+                retryManager.updateWithRetry { attempt ->
+                    performSingleUpdate(attempt).also { lastOutcome = it }
+                }
+
+            if (success) {
+                WidgetUpdateResult.Success(wasCoalesced = false)
+            } else {
+                handleUnsuccessfulUpdate(lastOutcome)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") t: Throwable,
+        ) {
+            AppLogger.e("WidgetUpdater: updateAll failed", t)
+            WidgetUpdateResult.Failure(
+                wasCoalesced = false,
+                isRetryable = false,
+                reason = WidgetUpdateResult.FailureReason.TERMINAL,
+            )
+        }
+
+    private suspend fun handleUnsuccessfulUpdate(lastOutcome: UpdateOutcome?): WidgetUpdateResult {
+        if (lastOutcome is UpdateOutcome.LimitExceeded) {
+            return handleLimitExceeded()
+        }
+
+        val isRetryable = lastOutcome == UpdateOutcome.Retry
+        return WidgetUpdateResult.Failure(
+            wasCoalesced = false,
+            isRetryable = isRetryable,
+            reason =
+                if (isRetryable) {
+                    WidgetUpdateResult.FailureReason.TRANSIENT
+                } else {
+                    WidgetUpdateResult.FailureReason.TERMINAL
+                },
+        )
+    }
+
+    private suspend fun joinInProgressUpdate(
+        deferred: CompletableDeferred<WidgetUpdateResult>,
+    ): WidgetUpdateResult {
         AppLogger.d("WidgetUpdater: update already in progress, waiting")
         return try {
             withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
@@ -253,7 +290,6 @@ class WidgetUpdaterImpl
             RenderMode.FULL
             }
         }
-
 
     private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {

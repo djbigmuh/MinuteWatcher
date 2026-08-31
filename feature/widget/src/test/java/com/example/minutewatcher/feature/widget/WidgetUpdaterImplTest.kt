@@ -30,6 +30,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetUpdaterImplTest {
+    private class TestCrashException(
+        message: String,
+    ) : RuntimeException(message)
+
     private lateinit var context: Context
     private val testScope = TestScope(UnconfinedTestDispatcher())
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -348,23 +352,32 @@ class WidgetUpdaterImplTest {
                 mockSettings.value = transform(mockSettings.value)
             }
 
-            val rendererMock = object : WidgetRenderer {
-                override suspend fun renderAll(context: Context, forceFull: Boolean) {
-                    callCount++
-                    if (callCount == 1) {
-                        assertTrue("1st attempt should be FULL", forceFull)
-                        throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-                    }
-                    if (callCount == 2) {
-                        assertFalse("2nd attempt (fallback) should be SIMPLIFIED", forceFull)
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            assertTrue("1st attempt should be FULL", forceFull)
+                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                        }
+                        if (callCount == 2) {
+                            assertFalse("2nd attempt (fallback) should be SIMPLIFIED", forceFull)
+                        }
                     }
                 }
-            }
 
-            val updater = WidgetUpdaterImpl(
-                context, appSettingsRepository, rendererMock,
-                retryManager, limitManager, errorClassifier
-            )
+            val updater =
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    rendererMock,
+                    retryManager,
+                    limitManager,
+                    errorClassifier,
+                )
 
             val result = updater.updateAll()
 
@@ -397,7 +410,7 @@ class WidgetUpdaterImplTest {
                 if (callCount == 1) {
                     throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
                 } else {
-                    throw RuntimeException("Simplified also failed")
+                    throw TestCrashException("Simplified also failed")
                 }
             }
 

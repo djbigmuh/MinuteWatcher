@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -121,14 +120,17 @@ class SimVisibilityTest {
             backgroundScope.launch {
                 repository.observeActiveSims().collect { simsList.add(it) }
             }
+            testScheduler.runCurrent()
 
             // Initial value from StateFlow (initialValue = emptyList())
-            runCurrent()
-            assertTrue(simsList.isNotEmpty())
+            // We need to wait for SimIdentityObserver to initialize seedFlow
+            testScheduler.advanceUntilIdle()
+            assertTrue("Should contain initial emptyList", simsList.isNotEmpty())
 
             // Trigger first re-evaluation
             permissionChanges.emit(0)
-            runCurrent()
+            testScheduler.advanceTimeBy(1000) // Pass debounce
+            testScheduler.runCurrent()
 
             // Now grant permission AND PROVIDE A SIM to change the result
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -139,7 +141,8 @@ class SimVisibilityTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockInfo))
 
             permissionChanges.emit(1)
-            runCurrent()
+            testScheduler.advanceTimeBy(1000) // Pass debounce
+            testScheduler.runCurrent()
 
             // Should have emitted again with the new SIM
             assertTrue("Last emission should contain the SIM", simsList.last().isNotEmpty())

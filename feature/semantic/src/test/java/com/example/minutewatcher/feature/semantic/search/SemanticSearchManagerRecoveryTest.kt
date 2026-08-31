@@ -142,4 +142,30 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             // Even with many calls, we should have at least one session created
             assertTrue(fakeWrapper.createdSessions >= 1)
         }
+
+    @Test
+    fun `recover followed by empty snapshot correctly triggers stale document removal`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Index snapshot with one SIM
+            manager.indexSnapshot(createSnapshotWithOneSim())
+            val session = fakeWrapper.lastSession!!
+            val initialRemoves = session.removeRequests.size
+
+            // 2. Call recover (simulates error recovery which resets lastSnapshotHash)
+            manager.recover()
+
+            // 3. Pass empty snapshot (e.g. SIMs removed)
+            val emptySnapshot = createSnapshot(emptyList())
+            val result = manager.indexSnapshot(emptySnapshot)
+
+            // 4. Verify that removeRequests was called to clean up sim_0 documents
+            assertTrue("indexSnapshot should return true for empty snapshot after recover", result)
+            assertEquals(
+                "Should have one more remove request for stale data",
+                initialRemoves + 1,
+                session.removeRequests.size,
+            )
+        }
 }

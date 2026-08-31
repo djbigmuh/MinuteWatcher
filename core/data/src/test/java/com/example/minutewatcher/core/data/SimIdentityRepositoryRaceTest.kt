@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -324,9 +325,10 @@ class SimIdentityRepositoryRaceTest {
             val identityRepo = createRepositoryForSeedFlowTest("test_slow_seed.preferences_pb", storedSeed)
 
             val activeSimsList = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
-            val job = launch {
-                identityRepo.observeActiveSims().collect { activeSimsList.add(it) }
-            }
+            val job =
+                launch {
+                    identityRepo.observeActiveSims().drop(1).collect { activeSimsList.add(it) }
+                }
 
             // 1. Initial wait: T=13s. seedFlow emits Fallback.
             // SimIdentityObserver should wait extra SHORT_TIMEOUT_MS before emitting emptyList.

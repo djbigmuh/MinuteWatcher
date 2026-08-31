@@ -52,7 +52,6 @@ class UsageStateRepositoryImpl
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
-
         private val simUsagesFlow: Flow<List<SimUsage>> =
             deps.simIdentityRepository
                 .observeActiveSims()
@@ -232,14 +231,18 @@ class UsageStateRepositoryImpl
                 AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
             }
 
-            val newSnapshot = withTimeoutOrNull(timeout) {
-                snapshotFlow.first { it.timestamp > startTimestamp }
-            }
+            val newSnapshot =
+                withTimeoutOrNull(timeout) {
+                    snapshotFlow.first { it.timestamp > startTimestamp }
+                }
 
             return if (newSnapshot != null) {
                 RefreshResult.Success(newSnapshot)
             } else {
-                AppLogger.w("UsageStateRepository: refresh timed out after ${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot")
+                AppLogger.w(
+                    "UsageStateRepository: refresh timed out after " +
+                        "${Constants.Data.SNAPSHOT_TIMEOUT_MS}ms, returning current snapshot",
+                )
                 RefreshResult.Timeout(snapshotFlow.value)
             }
         }

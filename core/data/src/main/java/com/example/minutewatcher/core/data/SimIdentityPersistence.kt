@@ -5,17 +5,16 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
-import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -56,7 +55,7 @@ class SimIdentityPersistence
                     (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
                 ) {
                     saveMutex.withLock {
-                        val currentPrefs = fetchCurrentPrefs() ?: return@withLock
+                        val currentPrefs = fetchCurrentPrefs()
                         val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, currentPrefs) }
                         if (toUpdate.isEmpty()) return@withLock
 
@@ -77,18 +76,14 @@ class SimIdentityPersistence
             } catch (e: TimeoutCancellationException) {
                 AppLogger.e("SimIdentityPersistence: Save operation timed out (mutex or IO)")
                 throw IOException("Save operation timed out", e)
-            } catch (e: CancellationException) {
-                throw e
             }
         }
 
         private fun filterValidIdentities(identities: List<SimIdentity>): List<SimIdentity> =
             identities
                 .asSequence()
-                .filter {
-                    (it.source != IdentitySource.SLOT_FALLBACK) &&
-                        (!SimConstants.isInvalid(it.stableId))
-                }.distinctBy { it.stableId }
+                .filter { !SimConstants.isInvalid(it.stableId) }
+                .distinctBy { it.stableId }
                 .toList()
 
         private fun applyOptimizationAndFilterUpdates(
@@ -121,15 +116,16 @@ class SimIdentityPersistence
             }
         }
 
-        private suspend fun fetchCurrentPrefs(timeoutMs: Long = Constants.Flow.LONG_TIMEOUT_MS): Preferences? =
-            dataStore.data.firstWithTimeout(timeoutMs)
+    private suspend fun fetchCurrentPrefs(): Preferences = dataStore.data.first()
 
         private fun isIdentityUpdateRequired(
             identity: SimIdentity,
             prefs: Preferences,
         ): Boolean {
-            val currentSlot = prefs[DataStoreKeys.slotIndexKey(identity.stableId)]
-            val currentSub = prefs[DataStoreKeys.subscriptionIdKey(identity.stableId)]
+            val slotKey = DataStoreKeys.slotIndexKey(identity.stableId)
+            val subKey = DataStoreKeys.subscriptionIdKey(identity.stableId)
+            val currentSlot = prefs[slotKey]
+            val currentSub = prefs[subKey]
             return (currentSlot != identity.slotIndex) || (currentSub != identity.subscriptionId)
         }
 
