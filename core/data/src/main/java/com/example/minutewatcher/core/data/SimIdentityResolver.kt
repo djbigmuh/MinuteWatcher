@@ -83,9 +83,13 @@ internal class SimIdentityResolver
                 }
 
             // Persistence write outside the lock to keep mutex hold time minimal (<1ms)
-            if (finalIdentity === identity) {
+            if (finalIdentity == identity) {
                 try {
-                    persistence.saveSimIdentitiesInfo(listOf(identity))
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        persistence.saveSimIdentitiesInfo(listOf(identity))
+                    } ?: run {
+                        AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
+                    }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {

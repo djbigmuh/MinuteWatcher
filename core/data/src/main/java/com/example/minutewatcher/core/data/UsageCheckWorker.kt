@@ -180,8 +180,8 @@ class UsageCheckWorker
                 }
 
             return appSettingsResult ?: run {
-                AppLogger.w("UsageCheckWorker: AppSettings read failed after retry, using defaults")
-                AppSettings()
+                AppLogger.w("UsageCheckWorker: settings load failed, notifications disabled")
+                AppSettings(notifyLowMinutes = false, notifyLowTraffic = false)
             }
         }
 

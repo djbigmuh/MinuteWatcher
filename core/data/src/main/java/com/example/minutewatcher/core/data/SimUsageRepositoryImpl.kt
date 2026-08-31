@@ -20,7 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 /**
  * Implementation of [SimUsageRepository], [SimUsageAdjustmentRepository],
@@ -130,9 +130,9 @@ class SimUsageRepositoryImpl
             }
             dataStore.edit { prefs ->
                 val current = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val newValue = (current + deltaMb.toDouble()).toFloat().coerceIn(0f, MAX_TRAFFIC_MB)
-                val rounded = (newValue * 100).roundToInt() / 100f
-                prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded
+                val newValue = current + deltaMb.toDouble()
+                val rounded = ((newValue * 100.0).roundToLong() / 100.0).toFloat()
+                prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded.coerceIn(0f, MAX_TRAFFIC_MB)
             }
         }
 
@@ -326,9 +326,9 @@ class SimUsageRepositoryImpl
             dataStore.edit { prefs ->
                 // 1. Increment traffic
                 val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val newValue = (currentUsage + deltaMb.toDouble()).toFloat().coerceIn(0f, MAX_TRAFFIC_MB)
-                val rounded = (newValue * 100).roundToInt() / 100f
-                prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded
+                val newValue = currentUsage + deltaMb.toDouble()
+                val rounded = ((newValue * 100.0).roundToLong() / 100.0).toFloat()
+                prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded.coerceIn(0f, MAX_TRAFFIC_MB)
 
                 // 2. Update baseline
                 prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes

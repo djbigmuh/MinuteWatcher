@@ -332,8 +332,14 @@ class UpdateCoordinator
 
     private suspend fun performForcedUpdate(): Boolean =
         widgetUpdateMutex.withLock {
+            if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                AppLogger.w(
+                    "UpdateCoordinator: forced widget update suppressed due to too many failures ($consecutiveUpdateFailures)",
+                )
+                return@withLock false
+            }
+
             try {
-                val snapshot = usageStateRepository.observeSnapshot().value
                 var result = widgetUpdater.updateAll()
 
                 if (!result.isSuccess) {
@@ -350,9 +356,7 @@ class UpdateCoordinator
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
                     observationRestartCount.set(0)
-                    if (snapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                        lastSnapshotHash = SnapshotUtils.calculateContentHash(snapshot)
-                    }
+                    lastSnapshotHash = null
                     true
                 } else {
                     val isRetryable = (result as? WidgetUpdateResult.Failure)?.isRetryable ?: true

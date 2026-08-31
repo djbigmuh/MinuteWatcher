@@ -88,79 +88,29 @@ internal class SimIdentityObserver
             seedFlow
                 .flatMapLatest { seed ->
                     if (seed is SeedResult.Fallback) {
-                        // Если сид не готов, даем короткую паузу на случай, если Real сид придет сразу после Fallback
-                        // (например, DataStore медленно ответил, но ответил).
-                        flow {
-                            val realSeed =
-                                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                    seedFlow.filter { it is SeedResult.Real }.first() as SeedResult.Real
-                                }
-                            if (realSeed != null) {
-                                discovery.observeSubscriptionChanges()
-                                    .map { fetcher.fetchActiveSimsWithRetry(realSeed) }.collect { emit(it) }
-                            } else {
-                                AppLogger.e("SimIdentityObserver: No Real seed after Fallback timeout. Emitting empty SIM list.")
-                                emit(emptyList())
-                            }
-                        }
+                        flow { emit(emptyList()) }
                     } else {
                         discovery
                             .observeSubscriptionChanges()
                             .map {
                                 fetcher.fetchActiveSimsWithRetry(seed)
                             }
-                    }.retryWhen { cause, attempt ->
-                        when (cause) {
-                            is CancellationException -> throw cause
-                            is SeedUnavailableException -> {
-                                if (attempt < MAX_SEED_RETRY_ATTEMPTS) {
-                                    val backoff = Constants.Flow.RETRY_DELAY_MS * (1 shl attempt.toInt())
-                                    AppLogger.w(
-                                        "SimIdentityObserver: Seed unavailable, retry ${attempt + 1}/$MAX_SEED_RETRY_ATTEMPTS, delay ${backoff}ms",
-                                    )
-                                    delay(backoff.milliseconds)
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-
-                                is IOException -> {
-                                    if (attempt < MAX_FETCH_RETRY_ATTEMPTS) {
-                                        val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
-                                        AppLogger.w(
-                                            "SimIdentityObserver: Error fetching sims, " +
-                                                "retrying in ${backoff}ms (attempt ${attempt + 1})",
-                                            cause,
-                                        )
-                                        delay(backoff.milliseconds)
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                }
-
-                                else -> false
-                            }
-                    }.catch { e ->
-                        if (e is SeedUnavailableException) {
-                            AppLogger.e(
-                                "SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, emitting empty list",
-                            )
-                            emit(emptyList())
-                        } else {
-                            throw e
-                        }
                     }
                 }.retryWhen { cause, attempt ->
                     (cause as? CancellationException)?.let { throw it }
                     if (cause is SecurityException) return@retryWhen false
 
-                    if (attempt < MAX_FLOW_RETRY_ATTEMPTS) {
+                    val maxAttempts = when (cause) {
+                        is SeedUnavailableException -> MAX_SEED_RETRY_ATTEMPTS
+                        is IOException -> MAX_FETCH_RETRY_ATTEMPTS
+                        else -> MAX_FLOW_RETRY_ATTEMPTS
+                    }
+
+                    if (attempt < maxAttempts) {
                         val backoff = INITIAL_BACKOFF_MS * (1 shl attempt.toInt())
                         AppLogger.w(
-                            "SimIdentityObserver: Retrying physicalActiveSims flow due to error (${attempt + 1}/$MAX_FLOW_RETRY_ATTEMPTS), " +
-                                "delay ${backoff}ms",
+                            "SimIdentityObserver: Retrying physicalActiveSims flow due to ${cause::class.simpleName} " +
+                                "(${attempt + 1}/$maxAttempts), delay ${backoff}ms",
                             cause,
                         )
                         delay(backoff.milliseconds)
@@ -170,13 +120,28 @@ internal class SimIdentityObserver
                     }
                 }.catch { e ->
                     (e as? CancellationException)?.let { throw it }
-                    if (e is SecurityException) {
-                        AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), emitting empty list")
-                    } else {
-                        AppLogger.e(
-                            "SimIdentityObserver: Terminal error in physicalActiveSims after retries, flow terminated",
-                            e,
-                        )
+                    when (e) {
+                        is SecurityException -> {
+                            AppLogger.w("SimIdentityObserver: SecurityException (permission revoked), emitting empty list")
+                        }
+
+                        is SeedUnavailableException -> {
+                            AppLogger.e("SimIdentityObserver: Seed unavailable after $MAX_SEED_RETRY_ATTEMPTS retries, emitting empty list")
+                        }
+
+                        is IOException -> {
+                            AppLogger.e(
+                                "SimIdentityObserver: Error fetching sims after $MAX_FETCH_RETRY_ATTEMPTS retries, emitting empty list",
+                                e
+                            )
+                        }
+
+                        else -> {
+                            AppLogger.e(
+                                "SimIdentityObserver: Terminal error in physicalActiveSims after retries, flow terminated",
+                                e
+                            )
+                        }
                     }
                     emit(emptyList())
                 }

@@ -157,13 +157,20 @@ open class CallTracker
             false
         }
 
+    /**
+     * Finalizes the call recording and updates usage.
+     *
+     * @param subId The subscription ID of the SIM card.
+     * @param notify Whether to trigger data change notifications.
+     * @RequiresMutex This method must be called under [callMutex].
+     */
     private suspend fun endCall(
         subId: Int,
         notify: Boolean = true,
     ) {
-        // Aссерт: метод должен вызываться из-под callMutex (performCallEnd → executeCallEndLogic → CallEndResolver)
-        check(callMutex.isLocked) {
-            "CallTracker.endCall must be called under callMutex (from performCallEnd)"
+        if (!callMutex.isLocked) {
+            AppLogger.e("CallTracker.endCall called without mutex")
+            return
         }
         endHandler.endCall(
             subId = subId,

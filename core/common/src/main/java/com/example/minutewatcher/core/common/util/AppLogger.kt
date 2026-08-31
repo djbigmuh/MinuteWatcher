@@ -128,12 +128,12 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (!isFileLoggingEnabled || (logDir == null)) return
-
         val entry = LogEntry(level, message)
         var fallbackRequired = false
 
         lock.withLock {
+            if (!isFileLoggingEnabled || (logDir == null)) return
+
             val totalSize = criticalQueue.size + normalQueue.size
             if (entry.isCritical) {
                 fallbackRequired = !enqueueCritical(entry, totalSize)
@@ -286,6 +286,7 @@ object AppLogger {
         }
 
     private fun processWorkerEntry(entry: LogEntry) {
+        if (logDir == null) return
         try {
             writeEntryToFile(entry)
             // Success
@@ -385,6 +386,7 @@ object AppLogger {
      */
     fun shutdown() {
         isFileLoggingEnabled = false
+        logDir = null
         lock.withLock {
             condition.signalAll()
         }

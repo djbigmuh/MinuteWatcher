@@ -198,8 +198,12 @@ class WidgetSettingsViewModel
                 reduce { copy(saveResult = SaveResult.Failed()) }
             } finally {
                 withContext(NonCancellable) {
-                    reduce { copy(isSaving = false) }
                     saveMutex.unlock()
+                    try {
+                        reduce { copy(isSaving = false) }
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
+                    }
                 }
             }
         }

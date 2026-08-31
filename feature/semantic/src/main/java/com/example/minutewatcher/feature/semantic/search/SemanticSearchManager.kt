@@ -107,7 +107,10 @@ open class SemanticSearchManager
                     lastSnapshotHash = null
                     lastSnapshotVersion = null
                 }
-                val flow = lastSnapshotFlow ?: return
+                val flow = lastSnapshotFlow ?: run {
+                    AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
+                    return
+                }
                 setupObservation(flow)
             }
         }
@@ -135,7 +138,10 @@ open class SemanticSearchManager
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            job?.cancel()
+            val oldJob = job
+            if (oldJob?.isActive == true && lastSnapshotFlow === snapshotFlow) return
+
+            oldJob?.cancel()
             try {
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job?.join()

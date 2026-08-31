@@ -263,14 +263,26 @@ class TrafficTracker
                             }
 
                             phase = "atomic update"
-                            withContext(NonCancellable) {
-                                deltaCalculator.updateTrafficBaselineAndUsage(
-                                    targetIdentity,
-                                    statsResult.bytes,
-                                    lastTotalBytes,
-                                    target,
-                                )
-                                simChangeHandler.updateLastDataSubId(target.dataSubId)
+                            val writeSuccess =
+                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                    deltaCalculator.updateTrafficBaselineAndUsage(
+                                        targetIdentity,
+                                        statsResult.bytes,
+                                        lastTotalBytes,
+                                        target,
+                                    )
+                                    simChangeHandler.updateLastDataSubId(target.dataSubId)
+                                    true
+                                } ?: false
+
+                            if (!writeSuccess) {
+                                AppLogger.e("TrafficTracker: Traffic update write timed out for $targetIdentity")
+                                _status.value =
+                                    TrackingStatus.Error(
+                                        TrackingStatus.ErrorType.UNKNOWN,
+                                        "Traffic update write timeout",
+                                    )
+                                return@withLock
                             }
                             _status.value = TrackingStatus.Active
                         }
