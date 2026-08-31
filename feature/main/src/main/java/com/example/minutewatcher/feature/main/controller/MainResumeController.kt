@@ -82,7 +82,7 @@ class MainResumeController
         }
 
         companion object {
-            private const val RESUME_REFRESH_THRESHOLD_MS = 20_000L
+            private const val RESUME_REFRESH_THRESHOLD_MS = 60_000L
             private const val RESUME_DEBOUNCE_MS = 5_000L
         }
     }

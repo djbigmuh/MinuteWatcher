@@ -87,6 +87,13 @@ class WidgetSettingsViewModel
             viewModelScope.launch {
                 loadMutex.withLock {
                     loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    if (loadJob?.isActive == true) {
+                        loadJob?.cancel()
+                        try {
+                            loadJob?.join()
+                        } catch (_: Exception) {
+                        }
+                    }
 
                     val newJob = launch {
                         try {

@@ -37,12 +37,12 @@ class AutoResetScheduler
         /**
          * Флаг однократного запуска проверки авто-сброса.
          *
-         * **Намеренно не сбрасывается при успехе:** проверка авто-сброса должна
-         * выполняться ровно один раз за время жизни ViewModel. Повторный вызов
-         * `checkOnStart()` после успешного завершения немедленно возвращает управление.
+         * **Намеренно не сбрасывается при успехе или логической ошибке:** проверка авто-сброса
+         * должна выполняться ровно один раз за время жизни ViewModel. Повторный вызов
+         * `checkOnStart()` после завершения немедленно возвращает управление.
          *
-         * Сбрасывается только при ошибке, чтобы позволить повторную попытку при следующем вызове.
-         * CancellationException (отмена корутины) не сбрасывает флаг.
+         * Сбрасывается только при [CancellationException], чтобы позволить повторную попытку,
+         * так как в этом случае проверка не была доведена до конца.
          */
         private val isCheckStarted = AtomicBoolean(false)
 
@@ -101,12 +101,12 @@ class AutoResetScheduler
                     }
                 }
             } catch (e: CancellationException) {
+                isCheckStarted.set(false)
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Auto-reset failed during initialization", e)
                 val currentFailCount = savedStateHandle.get<Int>(KEY_AUTO_RESET_FAIL_COUNT) ?: 0
                 savedStateHandle[KEY_AUTO_RESET_FAIL_COUNT] = currentFailCount + 1
-                isCheckStarted.set(false)
             }
         }
 

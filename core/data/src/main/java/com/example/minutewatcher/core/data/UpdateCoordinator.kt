@@ -99,6 +99,12 @@ class UpdateCoordinator
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
             initMutex.withLock {
+                // Reset failure counter on observation restart to prevent permanent suppression
+                widgetUpdateMutex.withLock {
+                    consecutiveUpdateFailures = 0
+                    lastSnapshotHash = null
+                }
+
                 val oldJob = observationJob.get()
                 if (oldJob != null) {
                     oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)

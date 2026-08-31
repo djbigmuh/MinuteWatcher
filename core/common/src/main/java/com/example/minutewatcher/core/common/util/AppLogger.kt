@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.ArrayDeque
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -396,24 +397,41 @@ object AppLogger {
                 Thread.currentThread().interrupt()
             }
         }
-        fileLock.withLock {
-            flushRemainingLogsUnlocked()
-            closeWriterUnlocked()
+
+        if (thread?.isAlive == true) {
+            // Worker is stuck (e.g. holding fileLock). Avoid deadlock by not attempting flush.
+            // Just try to close the writer if possible.
+            if (fileLock.tryLock(500, TimeUnit.MILLISECONDS)) {
+                try {
+                    closeWriterUnlocked()
+                } finally {
+                    fileLock.unlock()
+                }
+            }
+        } else {
+            fileLock.withLock {
+                flushRemainingLogsUnlocked()
+                closeWriterUnlocked()
+            }
         }
         workerThread = null
     }
 
     private fun flushRemainingLogsUnlocked() {
-        lock.withLock {
-            while (criticalQueue.isNotEmpty() || normalQueue.isNotEmpty()) {
-                val entry = criticalQueue.pollFirst() ?: normalQueue.pollFirst()
-                if (entry != null) {
-                    try {
-                        writeEntryToFileUnlocked(entry)
-                    } catch (_: Exception) {
-                        // Best effort during shutdown
+        if (lock.tryLock()) {
+            try {
+                while (criticalQueue.isNotEmpty() || normalQueue.isNotEmpty()) {
+                    val entry = criticalQueue.pollFirst() ?: normalQueue.pollFirst()
+                    if (entry != null) {
+                        try {
+                            writeEntryToFileUnlocked(entry)
+                        } catch (_: Exception) {
+                            // Best effort during shutdown
+                        }
                     }
                 }
+            } finally {
+                lock.unlock()
             }
         }
     }

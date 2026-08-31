@@ -69,8 +69,19 @@ internal class SimIdentityObserver
                 seedRepository.seedFlow
                     .filter { it.isNotEmpty() }
                     .map { SeedResult.Real(it) as SeedResult }
-            ).distinctUntilChanged()
-                .shareIn(scope, SharingStarted.Lazily, replay = 1)
+            ).retryWhen { cause, attempt ->
+                (cause as? CancellationException)?.let { throw it }
+                if (attempt < 3) {
+                    AppLogger.w("SimIdentityObserver: seedFlow failed, retry ${attempt + 1}", cause)
+                    delay((1000L * (attempt + 1)).milliseconds)
+                    true
+                } else false
+            }.distinctUntilChanged()
+                .shareIn(
+                    scope,
+                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    replay = 1
+                )
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =

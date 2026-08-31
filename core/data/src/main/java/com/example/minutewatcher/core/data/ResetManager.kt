@@ -89,7 +89,15 @@ class ResetManager
             cleanupStaleCheckTimestamps(activeSims)
 
             if (resetIdentities.isNotEmpty()) {
-                resetIdentities.forEach { identity -> trafficTracker.resetBaseline(identity) }
+                resetIdentities.forEach { identity ->
+                    try {
+                        trafficTracker.resetBaseline(identity)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("ResetManager: failed to reset traffic baseline for $identity", e)
+                    }
+                }
                 if (shouldNotify) dataChangeNotifier.notifyDataChanged()
             }
 

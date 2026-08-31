@@ -111,8 +111,7 @@ class SimIdentitySeedRepositoryImpl
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e(
-                        "DataStore unreachable for seed, falling back to ephemeral session seed. " +
-                            "Warning: Identity stable IDs may change on next restart, leading to data loss.",
+                        "CRITICAL: DataStore unavailable, using ephemeral seed. All SIM identities will change. Previous statistics will be orphaned.",
                         e,
                     )
                     _isEphemeralSeedActive.value = true
