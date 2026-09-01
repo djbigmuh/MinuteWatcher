@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.data.DataRefreshNotifierImpl
 import com.example.minutewatcher.core.data.NetworkStatsProvider
 import com.example.minutewatcher.core.data.RealNetworkStatsProvider
 import com.example.minutewatcher.core.data.ResetManager
+import com.example.minutewatcher.core.data.SimIdentityObserver
 import com.example.minutewatcher.core.data.SimLimitsRepositoryImpl
 import com.example.minutewatcher.core.data.SimUsageRepositoryImpl
 import com.example.minutewatcher.core.data.TrackingStatusRepositoryImpl
@@ -34,7 +35,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 // @Suppress("unused") is required because Hilt discovers bindings via reflection.
 @Suppress("unused")
-abstract class UsageDataModule {
+internal abstract class UsageDataModule {
     @Binds
     @Singleton
     abstract fun bindSimUsageRepository(impl: SimUsageRepositoryImpl): SimUsageRepository
@@ -90,4 +91,8 @@ abstract class UsageDataModule {
     @Binds
     @IntoSet
     abstract fun bindUpdateCoordinatorStatus(impl: UpdateCoordinator): TrackingStatusProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindSimIdentityObserverStatus(impl: SimIdentityObserver): TrackingStatusProvider
 }

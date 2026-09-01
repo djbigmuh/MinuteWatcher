@@ -163,7 +163,7 @@ class TrafficTracker
         target: TargetInfo,
         targetIdentity: String,
     ) {
-        // 1. Чтение начальных данных вне лока (для определения startTime)
+        // 1. Чтение начальных данных вне лока (тяжёлый запрос для прогрева кэша)
         val initialUsage =
             simUsageRepository
                 .getSimUsage(targetIdentity)
@@ -173,11 +173,11 @@ class TrafficTracker
                     return
                 }
 
-        // 2. Тяжёлый системный вызов вне лока
-        //    initialRetryCount фиксируется до системного вызова и используется только для детекции устаревания результата внутри мьютекса.
+        // 2. Спекулятивный расчет статистики вне лока.
+        // Используем lastResetDate, предполагая отсутствие активных ретраев (наиболее частый случай).
         val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-        val startTime = if (initialRetryCount != null) 0L else initialUsage.lastResetDate
-        val statsResult = baselineManager.getCurrentMobileBytes(startTime)
+        val speculativeStartTime = if (initialRetryCount != null) 0L else initialUsage.lastResetDate
+        var statsResult = baselineManager.getCurrentMobileBytes(speculativeStartTime)
 
         // 3. Вся остальная логика — внутри мьютекса
         trafficMutex.withLock {
@@ -200,17 +200,22 @@ class TrafficTracker
 
             val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
 
-            // Verify consistency: if reset date or retry state changed, the statsResult is stale
-            if ((currentUsage.lastResetDate != initialUsage.lastResetDate) ||
-                (currentRetryCount != initialRetryCount)
-            ) {
-                AppLogger.d("TrafficTracker: state changed during stats query for $targetIdentity, skipping")
-                return@withLock
+            // Определяем актуальный startTime на основе текущего состояния под локом
+            val actualStartTime = if (currentRetryCount != null) 0L else currentUsage.lastResetDate
+
+            // Если состояние изменилось (reset date или retry status), пересчитываем статы под локом.
+            // Это быстро (синхронный системный вызов NetworkStatsManager).
+            if (actualStartTime != speculativeStartTime) {
+                AppLogger.d(
+                    "TrafficTracker: speculative stats stale for $targetIdentity " +
+                        "(expected $speculativeStartTime, actual $actualStartTime), recalculating under lock",
+                )
+                statsResult = baselineManager.getCurrentMobileBytes(actualStartTime)
             }
 
             // Check retry limit
-            if (initialRetryCount != null &&
-                initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
+            if ((currentRetryCount != null) &&
+                (currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
             ) {
                 baselineManager.baselineNeedsRetry.remove(targetIdentity)
                 errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
@@ -218,8 +223,8 @@ class TrafficTracker
             }
 
             // Handle results
-            if (initialRetryCount != null) {
-                handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
+            if (currentRetryCount != null) {
+                handleRetryAction(target, targetIdentity, currentRetryCount, statsResult)
             } else {
                 if (statsResult !is StatsResult.Success) {
                     errorHandler.handleStatsFailure(statsResult, _status)

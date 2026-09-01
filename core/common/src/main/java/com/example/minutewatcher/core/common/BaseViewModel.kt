@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 
 /**
  * Базовый класс для ViewModel с состоянием.
@@ -30,6 +31,13 @@ abstract class BaseViewModel<S>(
      */
     protected fun reduce(reducer: S.() -> S) {
         _state.update { it.reducer() }
+    }
+
+    /**
+     * Атомарно обновляет состояние и возвращает результат.
+     */
+    protected fun updateAndGet(reducer: S.() -> S): S {
+        return _state.updateAndGet { it.reducer() }
     }
 
     override fun onCleared() {

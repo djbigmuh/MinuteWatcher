@@ -79,63 +79,68 @@ class SimIdentitySeedRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String {
+            var ephemeralToMigrate: String? = null
             val firstAttempt =
                 seedMutex.withLock {
                     val seed = tryGetPersistentSeed(generator)
-                    if (seed != null && _isEphemeralSeedActive.value) {
-                        val ephemeral = cachedEphemeralSeed
-                        if (ephemeral != null) {
-                            try {
-                                performRecoveryMigration(ephemeral, seed)
-                                _isEphemeralSeedActive.value = false
-                                cachedEphemeralSeed = null
-                                AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                // Миграция не удалась — оставляем флаг, повторим при следующем вызове
-                                AppLogger.w("SimIdentitySeedRepositoryImpl: recovery migration failed, will retry", e)
-                            }
-                        }
+                    if (seed != null && (_isEphemeralSeedActive.value || cachedEphemeralSeed != null)) {
+                        ephemeralToMigrate = cachedEphemeralSeed
+                        _isEphemeralSeedActive.value = false
+                        cachedEphemeralSeed = null
                     }
                     seed
                 }
 
-            if (firstAttempt != null) return firstAttempt
+            if (firstAttempt != null) {
+                ephemeralToMigrate?.let { executeMigrationSafely(it, firstAttempt) }
+                return firstAttempt
+            }
 
             AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed, retrying in 500ms...")
             kotlinx.coroutines.delay(RETRY_DELAY_MS.milliseconds)
 
-            return seedMutex.withLock {
-                val secondAttempt = tryGetPersistentSeed(generator)
-                if (secondAttempt != null) {
-                    if (_isEphemeralSeedActive.value) {
-                        val ephemeral = cachedEphemeralSeed
-                        if (ephemeral != null) {
-                            try {
-                                performRecoveryMigration(ephemeral, secondAttempt)
-                                _isEphemeralSeedActive.value = false
-                                cachedEphemeralSeed = null
-                                AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                // Миграция не удалась — оставляем флаг, повторим при следующем вызове
-                                AppLogger.w("SimIdentitySeedRepositoryImpl: recovery migration failed, will retry", e)
-                            }
+            var ephemeralToMigrateRetry: String? = null
+            val secondAttempt =
+                seedMutex.withLock {
+                    val seed = tryGetPersistentSeed(generator)
+                    if (seed != null) {
+                        if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
+                            ephemeralToMigrateRetry = cachedEphemeralSeed
+                            _isEphemeralSeedActive.value = false
+                            cachedEphemeralSeed = null
                         }
+                        seed
+                    } else {
+                        AppLogger.e(
+                            "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
+                                "All SIM identities will change. Previous statistics will be orphaned.",
+                        )
+                        _isEphemeralSeedActive.value = true
+                        cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                     }
-                    secondAttempt
-                } else {
-                    AppLogger.e(
-                        "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
-                            "All SIM identities will change. Previous statistics will be orphaned.",
-                    )
-                    _isEphemeralSeedActive.value = true
-                    cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                 }
-            }
+
+            ephemeralToMigrateRetry?.let { executeMigrationSafely(it, secondAttempt) }
+            return secondAttempt
         }
+
+    private suspend fun executeMigrationSafely(
+        ephemeralSeed: String,
+        persistentSeed: String,
+    ) {
+        try {
+            performRecoveryMigration(ephemeralSeed, persistentSeed)
+            AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Миграция не удалась — оставляем хэш, повторим при следующем вызове
+            seedMutex.withLock {
+                cachedEphemeralSeed = ephemeralSeed
+            }
+            AppLogger.w("SimIdentitySeedRepositoryImpl: recovery migration failed, will retry", e)
+        }
+    }
 
     private suspend fun performRecoveryMigration(
         ephemeralSeed: String,

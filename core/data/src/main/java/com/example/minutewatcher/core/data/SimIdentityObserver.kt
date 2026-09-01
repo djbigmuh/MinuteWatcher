@@ -5,16 +5,21 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -29,7 +34,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
@@ -49,7 +53,23 @@ internal class SimIdentityObserver
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
         private val permissionStateNotifier: PermissionStateNotifier,
-    ) {
+    ) : TrackingStatusProvider {
+    override val key: String = "sim_discovery"
+
+    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    private val generalAttempt = AtomicLong(0)
+    private val securityAttempt = AtomicLong(0)
+    private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    override suspend fun recover() {
+        generalAttempt.set(0)
+        securityAttempt.set(0)
+        _status.value = TrackingStatus.Idle
+        manualTrigger.emit(Unit)
+    }
+
         val seedFlow: Flow<SeedResult> =
             flow {
                 val attempt = AtomicLong(0)
@@ -108,50 +128,73 @@ internal class SimIdentityObserver
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
-        flow {
-            val attempt = AtomicLong(0)
-            attempt.set(0)
-            emitAll(
-                seedFlow
-                    .flatMapLatest { seed ->
-                        if (seed is SeedResult.Fallback) {
-                            flow {
-                                delay(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-                                emit(emptyList())
-                            }
-                        } else {
-                            discovery
-                                .observeSubscriptionChanges()
-                                .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
-                                .transformLatest {
-                                    val result = fetcher.fetchActiveSimsWithRetry(seed)
-                                    attempt.set(0) // Success! Reset counter
-                                    emit(result)
-                                }
-                        }
-                    }.distinctUntilChanged()
-                    .retryWhen { cause, _ ->
-                        if (cause is CancellationException) return@retryWhen false
-                        if (cause is SecurityException) {
-                            AppLogger.w("SimIdentityObserver: SecurityException, waiting for re-grant")
-                            emit(emptyList())
-                            permissionStateNotifier.changes.first()
-                            attempt.set(0)
-                            return@retryWhen true
-                        }
+        seedFlow.flatMapLatest { seed ->
+            if (seed is SeedResult.Fallback) {
+                flow {
+                    delay(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+                    emit(emptyList())
+                }
+            } else {
+                merge(
+                    discovery.observeSubscriptionChanges(),
+                    manualTrigger,
+                ).onEach {
+                    generalAttempt.set(0)
+                    securityAttempt.set(0)
+                }.debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
+                    .flatMapLatest {
+                        flow {
+                            val result = fetcher.fetchActiveSimsWithRetry(seed)
+                            generalAttempt.set(0)
+                            securityAttempt.set(0)
+                            _status.value = TrackingStatus.Active
+                            emit(result)
+                        }.retryWhen { cause, _ ->
+                            if (cause is CancellationException) return@retryWhen false
 
-                        val currentAttempt = attempt.incrementAndGet()
-                        val backoff = INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
-                        AppLogger.e(
-                            "SimIdentityObserver: physicalActiveSims discovery failure (attempt $currentAttempt), " +
-                                "restarting in ${backoff}ms",
-                            cause,
-                        )
-                        emit(emptyList())
-                        delay(backoff.milliseconds)
-                        true // Never give up, follow discovery schedule or backoff
-                    },
-            )
+                            if (cause is SecurityException) {
+                                val current = securityAttempt.incrementAndGet()
+                                if (current > MAX_SECURITY_ATTEMPTS) {
+                                    AppLogger.e("SimIdentityObserver: SecurityException threshold reached ($current)")
+                                    emit(emptyList())
+                                    return@retryWhen false
+                                }
+                                AppLogger.w("SimIdentityObserver: SecurityException (attempt $current), waiting for re-grant")
+                                emit(emptyList())
+                                permissionStateNotifier.changes.first()
+                                securityAttempt.set(0)
+                                generalAttempt.set(0)
+                                return@retryWhen true
+                            }
+
+                            val currentAttempt = generalAttempt.incrementAndGet()
+                            if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
+                                AppLogger.e(
+                                    "SimIdentityObserver: physicalActiveSims discovery stopped after $currentAttempt consecutive failures",
+                                    cause,
+                                )
+                                _status.value =
+                                    TrackingStatus.Error(
+                                        TrackingStatus.ErrorType.UNKNOWN,
+                                        "SIM discovery stopped after $currentAttempt consecutive failures",
+                                    )
+                                emit(emptyList())
+                                return@retryWhen false
+                            }
+
+                            val backoff =
+                                INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
+                            AppLogger.e(
+                                "SimIdentityObserver: physicalActiveSims discovery failure (attempt $currentAttempt), " +
+                                    "restarting in ${backoff}ms",
+                                cause,
+                            )
+                            emit(emptyList())
+                            delay(backoff.milliseconds)
+                            true
+                        }
+                    }
+            }
         }.distinctUntilChanged()
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -186,6 +229,8 @@ internal class SimIdentityObserver
             private const val INITIAL_BACKOFF_MS = 1000L
             private const val MAX_SEED_BACKOFF_MS = 10000L
             private const val MAX_SEED_RETRIES = 10
+            private const val MAX_GENERAL_ATTEMPTS = 20
+            private const val MAX_SECURITY_ATTEMPTS = 50
 
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)

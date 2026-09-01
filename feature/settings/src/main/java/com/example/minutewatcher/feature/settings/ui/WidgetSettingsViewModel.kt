@@ -170,9 +170,8 @@ class WidgetSettingsViewModel
             }
 
             try {
-                // Захватываем состояние ДО обновления isSaving, чтобы получить актуальные настройки
-                val currentState = state.value
-                reduce { copy(saveResult = null, isSaving = true) }
+                // Атомарно обновляем состояние и захватываем актуальное значение
+                val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
                 val result = performSaveInternal(currentState)
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {

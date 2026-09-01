@@ -225,7 +225,7 @@ object AppLogger {
     }
 
     private fun ensureWorkerStarted() {
-        if (!isFileLoggingEnabled) return
+        if (!isFileLoggingEnabled || isFileLoggingDegraded) return
         val current = workerThread
         if ((current != null) && current.isAlive) return
 
@@ -288,6 +288,7 @@ object AppLogger {
             lock.withLock {
                 isWorkerStarted = false
             }
+            degradeFileLogging()
             Log.e(TAG, "AppLogger worker thread fatal error", e)
             throw e
         }

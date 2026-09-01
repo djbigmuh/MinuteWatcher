@@ -63,7 +63,7 @@ class UpdateCoordinator
     private val observationRestartCount =
         java.util.concurrent.atomic
             .AtomicInteger(0)
-    private val widgetUpdateMutex = Mutex()
+    private val stateMutex = Mutex()
 
     private val isObservationStarted = AtomicBoolean(false)
     private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
@@ -171,7 +171,7 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         suspend fun restartObservation() {
-            widgetUpdateMutex.withLock {
+            stateMutex.withLock {
                 lastSnapshotHash = null
                 consecutiveUpdateFailures = 0
                 _status.value = TrackingStatus.Idle
@@ -195,11 +195,11 @@ class UpdateCoordinator
         // намеренно — виджет должен корректно отобразить состояние
         // "No SIM" или "No Data".
         val result = performWidgetUpdate()
-        handleUpdateResult(result)
+        handleUpdateResult(result, newHash)
     }
 
     private suspend fun checkShouldUpdate(newHash: Int): Boolean =
-            widgetUpdateMutex.withLock {
+        stateMutex.withLock {
                 if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
                     AppLogger.d(
                         "UpdateCoordinator: widget update suppressed due to too many failures " +
@@ -212,7 +212,6 @@ class UpdateCoordinator
                     AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                     return@withLock false
                 }
-                lastSnapshotHash = newHash
                 true
             }
 
@@ -241,13 +240,14 @@ class UpdateCoordinator
             WidgetUpdateResult.Failure(isRetryable = isRetryable, reason = reason)
         }
 
-    private suspend fun handleUpdateResult(result: WidgetUpdateResult) {
-        widgetUpdateMutex.withLock {
+    private suspend fun handleUpdateResult(result: WidgetUpdateResult, newHash: Int) {
+        stateMutex.withLock {
             if (result.isSuccess) {
                 _status.value = TrackingStatus.Active
                 observationRestartCount.set(0)
                 consecutiveUpdateFailures = 0
-            } else if (result is WidgetUpdateResult.Failure && !result.wasCoalesced) {
+                lastSnapshotHash = newHash
+            } else if ((result is WidgetUpdateResult.Failure) && !result.wasCoalesced) {
                 processFailureResult(result)
             }
         }
@@ -256,7 +256,6 @@ class UpdateCoordinator
     private fun processFailureResult(result: WidgetUpdateResult.Failure) {
         when (result.reason) {
             WidgetUpdateResult.FailureReason.TRANSIENT -> {
-                lastSnapshotHash = null
                 handleUpdateFailure()
             }
 
@@ -349,22 +348,21 @@ class UpdateCoordinator
             }
         }
 
-    private suspend fun performForcedUpdate(): Boolean =
-        widgetUpdateMutex.withLock {
+    private suspend fun performForcedUpdate(): Boolean {
+        stateMutex.withLock {
             if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
                 AppLogger.w(
                     "UpdateCoordinator: forced widget update suppressed due to too many failures " +
                         "($consecutiveUpdateFailures)",
                 )
-                return@withLock false
+                return false
             }
+        }
 
-            try {
-                val result = widgetUpdater.updateAll()
-                if (!result.isSuccess) {
-                    AppLogger.w("Force widget update failed, isRetryable=${(result as? WidgetUpdateResult.Failure)?.isRetryable}")
-                }
+        return try {
+            val result = widgetUpdater.updateAll()
 
+            stateMutex.withLock {
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
                     observationRestartCount.set(0)
@@ -382,16 +380,14 @@ class UpdateCoordinator
                     )
                     false
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("Force widget update failed, hash not updated", e)
-                if (isRetryableException(e)) {
-                    lastSnapshotHash = null
-                }
-                false
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.w("Force widget update failed, hash not updated", e)
+            false
         }
+    }
 
     private companion object {
         private const val MAX_RESTART_DELAY_EXPONENT = 4

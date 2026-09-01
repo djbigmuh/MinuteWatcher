@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -723,5 +724,112 @@ class UpdateCoordinatorTest {
 
             // Should have called updateAll at least once (for the latest observation setup)
             verify(widgetUpdater, times(1)).updateAll()
+        }
+
+    @Test
+    fun `reactive update retries on next snapshot if first one fails with same content`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. First update attempt fails
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(isRetryable = true, reason = WidgetUpdateResult.FailureReason.TRANSIENT),
+            )
+
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Emit another snapshot with DIFFERENT timestamp but SAME content (hash)
+            val s2 = s1.copy(timestamp = 2000L)
+            snapshotFlow.tryEmit(s2)
+
+            // Now make the next attempt succeed
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should call updateAll AGAIN (total 2) because first one failed and hash wasn't updated
+            verify(widgetUpdater, times(2)).updateAll()
+        }
+    }
+
+    @Test
+    fun `forced update does not block reactive updates during long running update`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // Mock long-running update
+            val updateStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val updateCanFinish = kotlinx.coroutines.CompletableDeferred<Unit>()
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                updateStarted.complete(Unit)
+                runBlocking { updateCanFinish.await() }
+                WidgetUpdateResult.Success()
+            }
+
+            // Start forced update in a separate coroutine
+            val forcedUpdateJob =
+                backgroundScope.launch {
+                    coordinator.notifyDataChanged(updateWidget = true, force = true)
+                }
+
+            testScheduler.runCurrent()
+            updateStarted.await() // Wait until forced update hits updateAll()
+
+            // Now trigger a reactive update by emitting a new snapshot
+            val s1 = createSnapshot(timestamp = 1000L, content = "Reactive")
+            snapshotFlow.tryEmit(s1)
+
+            // Advance time for debounce
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Reactive update should be triggered and waiting for its own call to updateAll
+            // (or coalescing with the current one if it was already finished, but here it's still running)
+
+            updateCanFinish.complete(Unit)
+            forcedUpdateJob.join()
+            testScheduler.advanceUntilIdle()
+
+            // Total calls should be 2 (one forced, one reactive)
+            verify(widgetUpdater, times(2)).updateAll()
         }
 }

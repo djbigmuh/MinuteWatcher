@@ -42,15 +42,17 @@ class IdentityMigrationService
         val migrated: Int = 0,
         val conflicts: Int = 0,
         val failures: Int = 0,
+        val partialFailure: Boolean = false,
     ) {
         operator fun plus(other: MigrationOutcome): MigrationOutcome =
             MigrationOutcome(
                 migrated = this.migrated + other.migrated,
                 conflicts = this.conflicts + other.conflicts,
                 failures = this.failures + other.failures,
+                partialFailure = this.partialFailure || other.partialFailure,
             )
 
-        fun hasChanges(): Boolean = migrated > 0 || conflicts > 0
+        fun hasChanges(): Boolean = (migrated > 0) || (conflicts > 0)
     }
 
         private val migrationMutex = Mutex()
@@ -376,7 +378,7 @@ class IdentityMigrationService
 
                         MigrationResult.CONFLICT -> {
                             conflictCount++
-                            prefs.remove(oldKey)
+                            // Не удаляем старый ключ при конфликте для возможности повтора/ручного восстановления
                         }
 
                         MigrationResult.FAILURE -> {
@@ -394,6 +396,7 @@ class IdentityMigrationService
                 migrated = migratedCount,
                 conflicts = conflictCount,
                 failures = failureCount,
+                partialFailure = (failureCount > 0) || (conflictCount > 0),
             )
         }
 

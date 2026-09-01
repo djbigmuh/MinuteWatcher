@@ -940,7 +940,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `performTrafficUpdate skips update if state changes during stats query`() =
+    fun `performTrafficUpdate re-calculates stats if state changes during query instead of skipping`() =
         runTest {
             val targetIdentity = "sim_0"
 
@@ -949,20 +949,36 @@ class TrafficTrackerTest {
             val usageFlow = MutableStateFlow(initialUsage)
             whenever(simUsageRepository.getSimUsage(targetIdentity)).thenReturn(usageFlow)
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(targetIdentity)))
+            whenever(simUsageResetRepository.getLastTotalBytes(targetIdentity)).thenReturn(flowOf(1000L))
 
-            // 2. Mock network stats provider with state change during execution
+            // 2. Mock network stats provider:
+            // First call (speculative) uses 1000L.
+            // During this call, we change the state.
+            // Second call (under lock) should use 2000L.
+            var callCount = 0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
-                // Change usage's lastResetDate during the "heavy query"
-                usageFlow.value = initialUsage.copy(lastResetDate = 2000L)
-                StatsResult.Success(5000L)
+                callCount++
+                if (callCount == 1) {
+                    // Speculative call
+                    usageFlow.value = initialUsage.copy(lastResetDate = 2000L)
+                    StatsResult.Success(5000L)
+                } else {
+                    // Recalculation under lock
+                    StatsResult.Success(7000L)
+                }
             }
 
             // 3. Trigger update
             tracker.updateTrafficUsage()
 
-            // 4. Verify that usage update was NOT performed
-            verify(simUsageResetRepository, never()).incrementTrafficAndSetBaseline(any(), any(), any())
-            verify(simUsageResetRepository, never()).setLastTotalBytes(eq(targetIdentity), any())
+            // 4. Verify that usage update WAS performed using the SECOND stats result
+            // delta = 7000 - 1000 = 6000
+            val expectedDeltaMb = (6000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
+            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(
+                eq(targetIdentity),
+                eq(expectedDeltaMb),
+                eq(7000L)
+            )
         }
 }
 

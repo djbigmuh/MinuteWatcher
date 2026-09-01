@@ -152,8 +152,8 @@ class SimIdentityPersistence
             if (!migratingIdentities.add(identity.stableId)) return
             try {
                 val outcome = migrationService.migrateLegacyData(identity)
-                if (outcome.failures > 0) {
-                    throw IOException("Migration failed for some keys of ${identity.stableId}")
+                if (outcome.partialFailure) {
+                    throw IOException("Migration failed for some keys of ${identity.stableId} (partialFailure=true)")
                 }
                 migratedIdentities.add(identity.stableId)
             } finally {

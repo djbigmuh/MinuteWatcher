@@ -192,20 +192,24 @@ class InitialSetupWorker
     private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
         try {
             var totalFailures = 0
+            var hasPartialFailure = false
             activeSims.forEach { info ->
                 val outcome = deps.migrationService.migrateLegacyData(info.identity)
                 totalFailures += outcome.failures
+                if (outcome.partialFailure) {
+                    hasPartialFailure = true
+                }
             }
 
-            if (totalFailures > 0) {
-                AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures total failures")
+            if ((totalFailures > 0) || hasPartialFailure) {
+                AppLogger.e("InitialSetupWorker: Migration finished with failures or conflicts (failures=$totalFailures, partial=$hasPartialFailure)")
                 if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
                     AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
                     return Result.retry()
                 } else {
                     AppLogger.e(
                         "InitialSetupWorker: Max migration attempts reached. " +
-                            "Marking as completed despite failures.",
+                            "Marking as completed despite failures/conflicts.",
                     )
                 }
             }
