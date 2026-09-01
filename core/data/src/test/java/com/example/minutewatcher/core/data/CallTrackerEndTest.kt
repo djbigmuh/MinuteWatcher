@@ -653,25 +653,10 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
 
     @Test(expected = IllegalStateException::class)
     fun `endCall throws IllegalStateException when called without mutex`() =
-        runTest(testDispatcher) {
+        runTest {
             setupCommonMocks()
             val callTracker = createTracker()
-
-            // Using reflection to call the private endCall method
-            // Note: suspend method has an extra Continuation parameter in JVM signature
-            val method =
-                callTracker.javaClass.getDeclaredMethod(
-                    "endCall",
-                    Int::class.java,
-                    Boolean::class.java,
-                    kotlin.coroutines.Continuation::class.java,
-                )
-            method.isAccessible = true
-            try {
-                // Pass null for continuation as it's not actually used for the check(...) call
-                method.invoke(callTracker, 1, true, null)
-            } catch (e: java.lang.reflect.InvocationTargetException) {
-                throw e.targetException
-            }
+            // Directly call the internal method
+            callTracker.endCall(1, true)
         }
 }

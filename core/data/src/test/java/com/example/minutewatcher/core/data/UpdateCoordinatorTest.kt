@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -56,9 +55,9 @@ class UpdateCoordinatorTest {
 
     @Before
     fun setup() {
-        initTestLogger()
-        snapshotFlow.tryEmit(createEmptySnapshot())
-        runBlocking {
+        runTest {
+            initTestLogger()
+            snapshotFlow.tryEmit(createEmptySnapshot())
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
         }
     }
@@ -786,24 +785,29 @@ class UpdateCoordinatorTest {
                 )
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
+            // Mock long-running update using a fake object to avoid runBlocking in mocks
+            val updateStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val updateCanFinish = kotlinx.coroutines.CompletableDeferred<Unit>()
+            var callCount = 0
+            val longRunningUpdater =
+                object : WidgetUpdater {
+                    override suspend fun updateAll(): WidgetUpdateResult {
+                        callCount++
+                        updateStarted.complete(Unit)
+                        updateCanFinish.await()
+                        return WidgetUpdateResult.Success()
+                    }
+                }
+
             val coordinator =
                 UpdateCoordinator(
                     dataRefreshNotifier,
-                    widgetUpdater,
+                    longRunningUpdater,
                     usageStateRepository,
                     backgroundScope,
                 )
             coordinator.status
             testScheduler.advanceUntilIdle()
-
-            // Mock long-running update
-            val updateStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
-            val updateCanFinish = kotlinx.coroutines.CompletableDeferred<Unit>()
-            whenever(widgetUpdater.updateAll()).thenAnswer {
-                updateStarted.complete(Unit)
-                runBlocking { updateCanFinish.await() }
-                WidgetUpdateResult.Success()
-            }
 
             // Start forced update in a separate coroutine
             val forcedUpdateJob =
@@ -830,6 +834,6 @@ class UpdateCoordinatorTest {
             testScheduler.advanceUntilIdle()
 
             // Total calls should be 2 (one forced, one reactive)
-            verify(widgetUpdater, times(2)).updateAll()
+            assertEquals(2, callCount)
         }
 }

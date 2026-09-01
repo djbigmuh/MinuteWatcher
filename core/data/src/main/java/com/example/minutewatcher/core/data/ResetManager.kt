@@ -55,6 +55,7 @@ class ResetManager
          * @return `true` if all SIMs were successfully processed, `false` otherwise.
          * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
          */
+        @Suppress("CyclomaticComplexMethod")
         override suspend fun performAutoReset(shouldNotify: Boolean): Boolean {
             val now = timeProvider.now()
             val nowElapsed = timeProvider.elapsedRealtime()
@@ -74,26 +75,30 @@ class ResetManager
             var ioException: IOException? = null
             var successCount = 0
 
-            val allProcessed = withTimeoutOrNull(RESET_TOTAL_TIMEOUT_MS.milliseconds) {
-                for (simInfo in activeSims) {
-                    try {
-                        if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
-                            successCount++
+            val allProcessed =
+                withTimeoutOrNull(RESET_TOTAL_TIMEOUT_MS.milliseconds) {
+                    for (simInfo in activeSims) {
+                        try {
+                            if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
+                                successCount++
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: IOException) {
+                            AppLogger.e(
+                                "ResetManager: reset failed for SIM ${simInfo.identity.stableId}, continuing",
+                                e,
+                            )
+                            ioException = e
+                        } catch (e: Exception) {
+                            AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: IOException) {
-                        AppLogger.e("ResetManager: reset failed for SIM ${simInfo.identity.stableId}, continuing", e)
-                        ioException = e
-                    } catch (e: Exception) {
-                        AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
                     }
+                    true
+                } ?: run {
+                    AppLogger.e("ResetManager: total reset timeout after ${RESET_TOTAL_TIMEOUT_MS}ms")
+                    false
                 }
-                true
-            } ?: run {
-                AppLogger.e("ResetManager: total reset timeout after ${RESET_TOTAL_TIMEOUT_MS}ms")
-                false
-            }
 
             cleanupStaleCheckTimestamps(activeSims)
 

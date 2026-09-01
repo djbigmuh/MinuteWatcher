@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import android.content.Context
 import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -11,10 +10,12 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
+import com.example.minutewatcher.core.model.util.SemanticMapper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -165,7 +166,7 @@ class UsageStateRepositoryImpl
                 )
 
             val entities =
-                mutableMapOf(
+                mutableMapOf<PackageType, SemanticEntity>(
                     PackageType.MINUTES to
                         SemanticMapper.mapMinutes(
                             slot,

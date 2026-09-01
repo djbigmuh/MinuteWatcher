@@ -68,7 +68,11 @@ open class SemanticSearchManager
     /** Result of an indexing attempt. */
     sealed interface IndexResult {
         data object Success : IndexResult
-        data object ActualFailure : IndexResult
+
+        data class ActualFailure(
+            val message: String? = null,
+        ) : IndexResult
+
         data object MutexTimeout : IndexResult
     }
 
@@ -90,19 +94,37 @@ open class SemanticSearchManager
             dataStore: DataStore<Preferences>,
             timeProvider: TimeProvider,
         ) : this(
+            context = context,
+            scope = scope,
+            appSearchWrapper = appSearchWrapper,
+            ioDispatcher = ioDispatcher,
+            dataStore = dataStore,
+            timeProvider = timeProvider,
+            errorHandler = AppSearchErrorHandler(timeProvider),
+        )
+
+    private constructor(
+        context: Context,
+        scope: CoroutineScope,
+        appSearchWrapper: AppSearchWrapper,
+        ioDispatcher: CoroutineDispatcher,
+        dataStore: DataStore<Preferences>,
+        timeProvider: TimeProvider,
+        errorHandler: AppSearchErrorHandler,
+    ) : this(
             sessionManager =
                 AppSearchSessionManager(
                     context = context,
                     appSearchWrapper = appSearchWrapper,
-                    errorHandler = AppSearchErrorHandler(timeProvider),
+                    errorHandler = errorHandler,
                 ),
             indexer =
                 SnapshotIndexer(
                     appSearchWrapper = appSearchWrapper,
-                    errorHandler = AppSearchErrorHandler(timeProvider),
+                    errorHandler = errorHandler,
                     dataStore = dataStore,
                 ),
-            errorHandler = AppSearchErrorHandler(timeProvider),
+        errorHandler = errorHandler,
             scope = scope,
             ioDispatcher = ioDispatcher,
         )
@@ -129,7 +151,6 @@ open class SemanticSearchManager
                 indexMutex.withLock {
                     lastSnapshotHash = null
                     lastSnapshotVersion = null
-                    errorHandler.resetFailures()
                     try {
                         indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
                             _status.value = newStatus
@@ -178,7 +199,7 @@ open class SemanticSearchManager
                                     throw e
                                 } catch (e: Exception) {
                                     AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                    IndexResult.ActualFailure
+                                    IndexResult.ActualFailure(e.message)
                                 }
 
                             when (result) {
@@ -186,14 +207,16 @@ open class SemanticSearchManager
                                     errorHandler.resetFailures()
                                 }
 
-                                IndexResult.ActualFailure -> {
+                                is IndexResult.ActualFailure -> {
                                     _status.update { currentState ->
-                                        errorHandler.handleIndexFailure(currentState)
+                                        errorHandler.handleIndexFailure(currentState, result.message)
                                     }
                                 }
 
                                 IndexResult.MutexTimeout -> {
-                                    AppLogger.d("SemanticSearchManager: skipping snapshot due to mutex timeout (concurrency)")
+                                    AppLogger.d(
+                                        "SemanticSearchManager: skipping snapshot due to mutex timeout (concurrency)",
+                                    )
                                 }
                             }
                         }
@@ -218,21 +241,24 @@ open class SemanticSearchManager
         }
 
         return try {
-            val success =
+            val result =
                 withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                     performIndexSnapshotLocked(snapshot)
-                } ?: run {
-                    AppLogger.e("SemanticSearchManager: indexing operation timed out")
-                    false
+                } ?: IndexResult.ActualFailure("Indexing timed out")
+
+            if (result is IndexResult.ActualFailure) {
+                _status.update { currentState ->
+                    errorHandler.handleIndexFailure(currentState, result.message)
                 }
-            if (success) IndexResult.Success else IndexResult.ActualFailure
+            }
+            result
         } finally {
             indexMutex.unlock()
         }
     }
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
-    private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): Boolean {
+    private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
         val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
         val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
 
@@ -240,12 +266,12 @@ open class SemanticSearchManager
             (currentHash == lastSnapshotHash) &&
             (snapshot.version == lastSnapshotVersion)
         ) {
-            return true
+            return IndexResult.Success
         }
 
         if (!sessionManager.ensureSession({ _status.value = it })) {
             resetLastSnapshotState()
-            return false
+            return IndexResult.ActualFailure("Failed to ensure AppSearch session")
         }
 
         return try {
@@ -258,21 +284,19 @@ open class SemanticSearchManager
             } else {
                 AppLogger.e("AppSearch indexing failed", e)
                     resetLastSnapshotState()
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                    false
+                IndexResult.ActualFailure(e.message)
             }
         } catch (e: Exception) {
             AppLogger.e("AppSearch non-AppSearch error during indexing", e)
             resetLastSnapshotState()
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            false
+            IndexResult.ActualFailure(e.message)
         }
     }
 
     private suspend fun tryHandleSchemaMismatch(
         snapshot: GlobalSnapshot,
         currentHash: Int?,
-    ): Boolean {
+    ): IndexResult {
         AppLogger.w("AppSearch schema mismatch, retrying with force override")
         sessionManager.closeSession()
         return if (sessionManager.ensureSession({ _status.value = it }, forceOverride = true)) {
@@ -283,35 +307,33 @@ open class SemanticSearchManager
             } catch (e: AppSearchException) {
                 AppLogger.e("AppSearch indexing failed after schema reset (code=${e.resultCode})", e)
                 resetLastSnapshotState()
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-                false
+                IndexResult.ActualFailure(e.message)
             } catch (e: Exception) {
                 AppLogger.e("Unexpected error after schema reset", e)
                 resetLastSnapshotState()
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                false
+                IndexResult.ActualFailure(e.message)
             }
         } else {
-            false
+            IndexResult.ActualFailure("Failed to ensure AppSearch session after schema mismatch")
         }
     }
 
     private suspend fun executeIndexingInternal(
             snapshot: GlobalSnapshot,
             currentHash: Int?,
-        ): Boolean =
+    ): IndexResult =
             withContext(ioDispatcher) {
                 // Ensure the session is valid and active immediately before usage.
                 // sessionManager.ensureSession is synchronized internally.
                 if (!sessionManager.ensureSession({ _status.value = it })) {
                     AppLogger.e("AppSearch session could not be ensured in executeIndexingInternal")
-                    return@withContext false
+                    return@withContext IndexResult.ActualFailure("AppSearch session could not be ensured")
                 }
 
                 val currentSession =
                     sessionManager.session ?: run {
                         AppLogger.e("AppSearch session is null in executeIndexingInternal, skipping")
-                        return@withContext false
+                        return@withContext IndexResult.ActualFailure("AppSearch session is null")
                     }
 
                 try {
@@ -319,7 +341,7 @@ open class SemanticSearchManager
                     lastSnapshotHash = currentHash
                     lastSnapshotVersion = snapshot.version
                     _status.value = TrackingStatus.Active
-                    true
+                    IndexResult.Success
                 } catch (e: CancellationException) {
                     resetLastSnapshotState()
                     throw e
@@ -328,8 +350,7 @@ open class SemanticSearchManager
                 } catch (e: Exception) {
                     AppLogger.e("AppSearch indexing error", e)
                     resetLastSnapshotState()
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                    false
+                    IndexResult.ActualFailure(e.message)
                 }
             }
 

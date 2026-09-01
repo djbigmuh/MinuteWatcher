@@ -41,27 +41,37 @@ class WidgetUpdaterImpl
         currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
 
         updateMutex.lock()
-        var lockHeld = true
-        try {
-            // Re-check after acquiring the lock to handle race conditions where another
-            // coroutine started the update while we were waiting for the mutex.
-            currentUpdate.get()?.takeIf { !it.isCompleted }?.let {
-                updateMutex.unlock()
-                lockHeld = false
-                return joinInProgressUpdate(it)
+        val result =
+            try {
+                // Re-check after acquiring the lock to handle race conditions where another
+                // coroutine started the update while we were waiting for the mutex.
+                val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
+                if (activeUpdate != null) {
+                    updateMutex.unlock()
+                    joinInProgressUpdate(activeUpdate)
+                } else {
+                    startNewUpdate()
+                }
+            } finally {
+                if (updateMutex.isLocked) {
+                    updateMutex.unlock()
+                }
             }
+        return result
+    }
 
+    private suspend fun startNewUpdate(): WidgetUpdateResult {
             val deferred = CompletableDeferred<WidgetUpdateResult>()
             currentUpdate.set(deferred)
-            try {
+        return try {
                 val result = executeUpdateProcess()
                 deferred.complete(result)
-                return result
-            } catch (e: Exception) {
-                if (e is CancellationException) {
-                    deferred.completeExceptionally(e)
-                    throw e
-                }
+            result
+        } catch (e: CancellationException) {
+            deferred.completeExceptionally(e)
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("WidgetUpdater: update failed", e)
                 val failure =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
@@ -69,15 +79,10 @@ class WidgetUpdaterImpl
                         reason = WidgetUpdateResult.FailureReason.TERMINAL,
                     )
                 deferred.complete(failure)
-                return failure
+            failure
             } finally {
                 currentUpdate.compareAndSet(deferred, null)
             }
-        } finally {
-            if (lockHeld) {
-                updateMutex.unlock()
-            }
-        }
     }
 
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =
@@ -135,7 +140,8 @@ class WidgetUpdaterImpl
                     is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
                 }
             } ?: WidgetUpdateResult.Failure(
-                wasCoalesced = true, isRetryable = true,
+                wasCoalesced = true,
+                isRetryable = true,
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
             )
         } catch (e: CancellationException) {
@@ -143,7 +149,8 @@ class WidgetUpdaterImpl
         } catch (e: Exception) {
             AppLogger.e("WidgetUpdater: joinInProgressUpdate failed", e)
             WidgetUpdateResult.Failure(
-                wasCoalesced = true, isRetryable = true,
+                wasCoalesced = true,
+                isRetryable = true,
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
             )
         }

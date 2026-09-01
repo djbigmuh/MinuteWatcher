@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.data.semantic
+package com.example.minutewatcher.core.model.util
 
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.semantic
 
 import android.content.Context
+import androidx.core.content.pm.ShortcutInfoCompat
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.DataSourceType
@@ -53,6 +54,14 @@ class ShortcutManagerTest {
         androidShortcutManager = context.getSystemService(AndroidShortcutManager::class.java)
 
         whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
+
+        whenever(shortcutApplier.apply(any(), any())).thenAnswer { invocation ->
+            val ctx = invocation.getArgument<Context>(0)
+            val shortcuts = invocation.getArgument<List<ShortcutInfoCompat>>(1)
+            androidx.core.content.pm.ShortcutManagerCompat
+                .setDynamicShortcuts(ctx, shortcuts)
+            Unit
+        }
 
         shortcutManager =
             ShortcutManager(
@@ -203,8 +212,8 @@ class ShortcutManagerTest {
             whenever(
                 shortcutApplier.apply(
                     any(),
-                    any()
-                )
+                    any(),
+                ),
             ).thenThrow(UnsupportedOperationException("Shortcuts not supported"))
 
             val result = shortcutManager.updateShortcutsSync(createSnapshot(emptyList()))

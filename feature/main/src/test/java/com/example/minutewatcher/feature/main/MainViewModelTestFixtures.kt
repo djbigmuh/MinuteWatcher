@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -52,7 +53,7 @@ abstract class MainViewModelTestFixtures {
     protected val usageUseCase: UsageUseCase = mock()
     protected val settingsUseCase: SettingsUseCase = mock()
     protected val dataChangeNotifier: DataChangeNotifier = mock()
-    protected val updateCoordinator: com.example.minutewatcher.core.data.UpdateCoordinator = mock()
+    protected val updateCoordinator: WidgetUpdateCoordinator = mock()
     protected val dataRefreshNotifier: com.example.minutewatcher.core.domain.DataRefreshNotifier = mock()
     protected val permissionRepository: PermissionRepository = mock()
     protected val seedRepository: SimIdentitySeedRepository = mock()

@@ -5,8 +5,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.DefaultDispatcher
+import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.data.AppSettingsRepositoryImpl
 import com.example.minutewatcher.core.data.BenchmarkUseCaseImpl
 import com.example.minutewatcher.core.data.PermissionRepositoryImpl

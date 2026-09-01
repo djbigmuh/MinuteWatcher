@@ -3,8 +3,8 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.Constants
@@ -173,8 +173,8 @@ class SimIdentitySeedRepositoryImpl
         } catch (_: TimeoutCancellationException) {
             AppLogger.w("SimIdentitySeedRepositoryImpl: Timeout accessing seed in DataStore")
             null
-        } catch (e: java.io.IOException) {
-            AppLogger.w("SimIdentitySeedRepositoryImpl: IOException accessing seed in DataStore", e)
+        } catch (e: Exception) {
+            AppLogger.w("SimIdentitySeedRepositoryImpl: Error accessing seed in DataStore", e)
             null
         }
 

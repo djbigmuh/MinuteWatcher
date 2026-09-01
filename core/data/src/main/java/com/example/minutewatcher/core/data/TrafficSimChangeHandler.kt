@@ -41,9 +41,10 @@ class TrafficSimChangeHandler
         suspend fun ensureInMemoryLastDataSubId() {
             if (!lastDataSubIdLoaded.get()) {
                 try {
-                    val loaded = withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        callSessionRepository.getLastDataSubId().first()
-                    }
+                    val loaded =
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            callSessionRepository.getLastDataSubId().first()
+                        }
                     if (loaded != null) {
                         inMemoryLastDataSubId.set(loaded)
                         lastDataSubIdLoaded.set(true)

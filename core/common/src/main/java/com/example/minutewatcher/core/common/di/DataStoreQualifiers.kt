@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.data.di
+package com.example.minutewatcher.core.common.di
 
 import javax.inject.Qualifier
 

@@ -3,9 +3,9 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
-import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants

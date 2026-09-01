@@ -156,6 +156,7 @@ class MainBannerController
     }
 
     private fun initialize() {
+        _status.value = TrackingStatus.Active
         ensureObservationStarted()
     }
 

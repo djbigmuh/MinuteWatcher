@@ -29,16 +29,12 @@ abstract class BaseViewModel<S>(
     /**
      * Обновляет состояние.
      */
-    protected fun reduce(reducer: S.() -> S) {
-        _state.update { it.reducer() }
-    }
+    protected fun reduce(reducer: S.() -> S) = _state.update { it.reducer() }
 
     /**
      * Атомарно обновляет состояние и возвращает результат.
      */
-    protected fun updateAndGet(reducer: S.() -> S): S {
-        return _state.updateAndGet { it.reducer() }
-    }
+    protected fun updateAndGet(reducer: S.() -> S): S = _state.updateAndGet { it.reducer() }
 
     override fun onCleared() {
         // Хук для очистки ресурсов в подклассах.

@@ -3,7 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import com.example.minutewatcher.core.data.di.AppDataStore
+import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.model.MigrationSkipReason

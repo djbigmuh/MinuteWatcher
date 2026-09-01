@@ -52,9 +52,10 @@ fun MainScreenContent(
             isRefreshing = true
             viewModel.refreshSimCardsNow { isRefreshing = false }
         },
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TrackingBanners(

@@ -4,9 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings

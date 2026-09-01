@@ -24,6 +24,7 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -75,6 +76,10 @@ internal abstract class UsageDataModule {
     @Binds
     @Singleton
     abstract fun bindDataChangeNotifier(impl: UpdateCoordinator): DataChangeNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindWidgetUpdateCoordinator(impl: UpdateCoordinator): WidgetUpdateCoordinator
 
     @Binds
     @Singleton

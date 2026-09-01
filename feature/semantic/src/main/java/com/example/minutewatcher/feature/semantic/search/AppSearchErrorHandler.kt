@@ -77,7 +77,11 @@ class AppSearchErrorHandler
         }
 
         @Suppress("ReturnCount")
-        fun handleIndexFailure(currentStatus: TrackingStatus): TrackingStatus {
+        fun handleIndexFailure(
+            currentStatus: TrackingStatus,
+            errorOverride: String? = null,
+        ): TrackingStatus {
+            val baseMessage = errorOverride ?: "Indexing failed"
             val failureMessage = "Indexing failed after $MAX_CONSECUTIVE_INDEX_FAILURES consecutive errors"
 
             // Idempotency check: if status is already NOT_SUPPORTED, do nothing.
@@ -104,7 +108,11 @@ class AppSearchErrorHandler
             } else {
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Indexing failed (attempt $failures/$MAX_CONSECUTIVE_INDEX_FAILURES)",
+                    if (errorOverride != null) {
+                        baseMessage
+                    } else {
+                        "Indexing failed (attempt $failures/$MAX_CONSECUTIVE_INDEX_FAILURES)"
+                    },
                 )
             }
         }

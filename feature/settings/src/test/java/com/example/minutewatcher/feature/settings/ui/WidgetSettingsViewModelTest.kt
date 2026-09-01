@@ -547,7 +547,11 @@ class WidgetSettingsViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // 1. Initial state
-            assertEquals(2, vm.state.value.settings?.fontSize) // default
+            assertEquals(
+                2,
+                vm.state.value.settings
+                    ?.fontSize,
+            ) // default
 
             // 2. Start save. Locks saveMutex.
             val saveJob = launch { vm.saveAndNotify() }
@@ -559,7 +563,11 @@ class WidgetSettingsViewModelTest {
             runCurrent()
 
             // 4. Verify state IS updated
-            assertEquals(50, vm.state.value.settings?.fontSize)
+            assertEquals(
+                50,
+                vm.state.value.settings
+                    ?.fontSize,
+            )
 
             // 5. Cleanup
             saveGate.complete(Unit)

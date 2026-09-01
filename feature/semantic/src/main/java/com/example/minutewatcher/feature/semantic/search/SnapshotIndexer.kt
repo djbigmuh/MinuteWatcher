@@ -4,12 +4,13 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.semantic.SemanticMapper
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.util.SemanticMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -26,7 +27,7 @@ open class SnapshotIndexer
     constructor(
         private val appSearchWrapper: AppSearchWrapper,
         private val errorHandler: AppSearchErrorHandler,
-        @com.example.minutewatcher.core.data.di.AppDataStore
+        @AppDataStore
         private val dataStore: DataStore<Preferences>,
     ) {
         suspend fun performIndexUpdate(

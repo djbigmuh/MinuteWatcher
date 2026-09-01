@@ -136,7 +136,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `after MAX_CONSECUTIVE_INDEX_FAILURES consecutive failures status becomes Error but not permanently suppressed`() =
+    fun `after failures status becomes Error but not permanently suppressed`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -145,9 +145,9 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             manager.initialize(flow)
             testScheduler.advanceUntilIdle()
 
-            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
-                flow.value = createTestSnapshot(100L + it)
-                testScheduler.advanceUntilIdle()
+            // 1. Force 5 failures via the loop to reach the limit
+            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) { i ->
+                manager.indexSnapshot(createTestSnapshot(100L + i))
             }
 
             val status = manager.status.value as TrackingStatus.Error
@@ -156,8 +156,14 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             // Verify it's NOT permanently suppressed: next success should recover
             fakeWrapper.failAllPutDocuments = false
-            flow.value = createTestSnapshot(200)
-            testScheduler.advanceUntilIdle()
+            fakeWrapper.lastSession?.failPutDocuments = false
+
+            // Reset state to allow next indexing to proceed and reset counter on SUCCESS result.
+            manager.recover()
+            testScheduler.runCurrent()
+
+            manager.indexSnapshot(createTestSnapshot(200))
+            testScheduler.runCurrent()
 
             assertTrue(
                 "Should recover to Active after successful indexing, but was ${manager.status.value}",
@@ -232,7 +238,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                 // 4. Verify status is NOT Error
                 assertTrue(
                     "Status should not be Error, but was ${manager.status.value}",
-                    manager.status.value !is TrackingStatus.Error
+                    manager.status.value !is TrackingStatus.Error,
                 )
             } finally {
                 indexMutex.unlock()

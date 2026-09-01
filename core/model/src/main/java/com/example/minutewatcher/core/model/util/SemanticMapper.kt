@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.data.semantic
+package com.example.minutewatcher.core.model.util
 
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.TrafficModel
-import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 
 object SemanticMapper {
     @JvmStatic

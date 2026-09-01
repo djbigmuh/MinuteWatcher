@@ -202,7 +202,10 @@ class InitialSetupWorker
             }
 
             if ((totalFailures > 0) || hasPartialFailure) {
-                AppLogger.e("InitialSetupWorker: Migration finished with failures or conflicts (failures=$totalFailures, partial=$hasPartialFailure)")
+                AppLogger.e(
+                    "InitialSetupWorker: Migration finished with failures or conflicts " +
+                        "(failures=$totalFailures, partial=$hasPartialFailure)",
+                )
                 if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
                     AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
                     return Result.retry()

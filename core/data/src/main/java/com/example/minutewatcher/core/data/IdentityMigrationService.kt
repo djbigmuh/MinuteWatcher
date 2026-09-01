@@ -10,10 +10,10 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.minutewatcher.core.common.di.AppDataStore
+import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
-import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.CancellationException
@@ -32,6 +32,7 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
+@Suppress("TooManyFunctions")
 class IdentityMigrationService
     @Inject
     constructor(
@@ -215,7 +216,8 @@ class IdentityMigrationService
                         "IdentityMigrationService: Migrating ephemeral data for slot ${info.simSlotIndex} " +
                             "(${ephemeralIdentity.stableId} -> ${persistentIdentity.stableId})",
                     )
-                    totalOutcome += migrateBetweenIdentities(ephemeralIdentity.stableId, persistentIdentity.stableId)
+                    totalOutcome +=
+                        migrateBetweenIdentities(ephemeralIdentity.stableId, persistentIdentity.stableId)
                 }
             }
             totalOutcome

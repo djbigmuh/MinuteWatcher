@@ -30,6 +30,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -88,7 +89,9 @@ class UsageStateRepositoryImplTest {
                     scope = backgroundScope,
                 )
 
-            val uiModels = repository.observeSimCardUiModels().first()
+            val uiModelsFlow = repository.observeSimCardUiModels()
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            val uiModels = uiModelsFlow.first()
 
             assertEquals("Should only contain valid slot index model", 1, uiModels.size)
             assertEquals(0, uiModels[0].slot)

@@ -164,13 +164,12 @@ open class CallTracker
      * @param notify Whether to trigger data change notifications.
      * @RequiresMutex This method must be called under [callMutex].
      */
-    private suspend fun endCall(
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal suspend fun endCall(
         subId: Int,
         notify: Boolean = true,
     ) {
-        if (!callMutex.isLocked) {
-            AppLogger.w("CallTracker.endCall called without holding callMutex — potential contract violation")
-        }
+        check(callMutex.isLocked) { "CallTracker.endCall must be called while holding callMutex" }
         endHandler.endCall(
             subId = subId,
             notify = notify,

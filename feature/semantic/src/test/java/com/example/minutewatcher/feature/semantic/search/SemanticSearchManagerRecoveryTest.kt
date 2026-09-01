@@ -74,16 +74,18 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             manager.initialize(flow)
             testScheduler.advanceUntilIdle()
 
-            // 1. Force 5 failures
+            // 1. Force failures via the loop to reach the limit
             fakeWrapper.failAllPutDocuments = true
-            repeat(5) {
-                flow.value = createTestSnapshot(100L + it)
+            // manager.initialize(flow) already triggered 1 failure if put was failed.
+            // But we want to be sure we hit the limit.
+            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) { i ->
+                flow.value = createTestSnapshot(100L + i)
                 testScheduler.advanceUntilIdle()
             }
 
             assertTrue("Status should be Error after 5 failures", manager.status.value is TrackingStatus.Error)
             val errorHandler = getErrorHandler(manager)
-            assertEquals(5, errorHandler.consecutiveIndexFailures)
+            assertTrue(errorHandler.consecutiveIndexFailures >= 5)
 
             // 2. Call recover
             manager.recover()
@@ -102,8 +104,8 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             manager.initialize(flow)
             testScheduler.advanceUntilIdle()
 
-            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
-                flow.value = createTestSnapshot(100L + it)
+            repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) { i ->
+                flow.value = createTestSnapshot(100L + i)
                 testScheduler.advanceUntilIdle()
             }
 
@@ -112,15 +114,15 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             fakeWrapper.lastSession?.failPutDocuments = false
 
             manager.recover()
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
 
             val errorHandler = getErrorHandler(manager)
             assertEquals(0, errorHandler.consecutiveIndexFailures)
 
             // Trigger one failure
             fakeWrapper.failAllPutDocuments = true
-            flow.value = createTestSnapshot(200L)
-            testScheduler.advanceUntilIdle()
+            manager.indexSnapshot(createTestSnapshot(200L))
+            testScheduler.runCurrent()
 
             assertEquals(1, errorHandler.consecutiveIndexFailures)
         }

@@ -117,13 +117,14 @@ class SimIdentityRepositoryRegistrationTest {
             whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
 
             // 1. Setup discovery to throw SecurityException on first call, then succeed
-            var calls = 0
+            var activeSubCalls = 0
             val discovery = mock<SimIdentityDiscovery>()
-            whenever(discovery.observeSubscriptionChanges()).thenAnswer {
-                if (calls++ == 0) {
+            whenever(discovery.observeSubscriptionChanges()).thenReturn(flowOf(Unit))
+            whenever(discovery.getActiveSubscriptions()).thenAnswer {
+                if (activeSubCalls++ == 0) {
                     throw SecurityException("Mock permission revocation")
                 } else {
-                    flowOf(Unit)
+                    emptyList<android.telephony.SubscriptionInfo>()
                 }
             }
 
@@ -165,7 +166,7 @@ class SimIdentityRepositoryRegistrationTest {
             testScheduler.advanceUntilIdle()
 
             // 4. Verify recovery
-            assertTrue("Should have retried and stayed active", calls >= 2)
+            assertTrue("Should have retried and stayed active", activeSubCalls >= 2)
 
             job.cancel()
         }

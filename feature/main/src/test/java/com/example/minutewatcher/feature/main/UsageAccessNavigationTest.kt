@@ -15,6 +15,7 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
+import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainBannerController
@@ -64,7 +65,7 @@ class UsageAccessNavigationTest {
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
     private val dataRefreshNotifier: com.example.minutewatcher.core.domain.DataRefreshNotifier = mock()
-    private val updateCoordinator: com.example.minutewatcher.core.data.UpdateCoordinator = mock()
+    private val updateCoordinator: WidgetUpdateCoordinator = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)

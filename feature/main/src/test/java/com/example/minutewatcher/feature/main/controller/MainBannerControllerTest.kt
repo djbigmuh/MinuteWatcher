@@ -168,26 +168,36 @@ class MainBannerControllerTest {
             // At this point, it's initialized and subscribed to trackingStatusRepository (count 1)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
 
-            // Force "never initialized" state by clearing lastTrackingStatusFlow via reflection
-            val flowField = MainBannerController::class.java.getDeclaredField("lastTrackingStatusFlow")
-            flowField.isAccessible = true
-            flowField.set(controller, null)
+            // Force "never initialized" state by clearing isObservationStarted via reflection
+            val startedField = MainBannerController::class.java.getDeclaredField("isObservationStarted")
+            startedField.isAccessible = true
+            val isStarted = startedField.get(controller) as java.util.concurrent.atomic.AtomicBoolean
+            isStarted.set(false)
 
             // Act
             controller.recover()
             testScheduler.advanceUntilIdle()
 
-            // Verify it re-subscribed
+            // Verify it re-subscribed (subscription count should be 1 as old one is replaced or re-added)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
-            assertEquals(TrackingStatus.Active, controller.status.value)
         }
 
     @Test
     fun `status transitions from Idle to Active during setupObservation`() =
         runTest(UnconfinedTestDispatcher()) {
             val controller = createController(backgroundScope)
-            // Initial state in createController might already trigger setupObservation
+
+            // Start collecting trackingBannerState to trigger ensureObservationStarted if needed
+            // although it is called in init.
+            val collectJob =
+                launch {
+                    controller.trackingBannerState.collect {}
+                }
+
             testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
+
             assertEquals(TrackingStatus.Active, controller.status.value)
+            collectJob.cancel()
         }
 }

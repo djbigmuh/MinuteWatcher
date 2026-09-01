@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,43 +49,45 @@ class TrafficTrackerTest {
 
     @Before
     fun setup() {
-        initTestLogger()
-        setupPermissionMocks()
-        setupIdentityMocks()
-        setupUsageMocks()
+        runTest {
+            initTestLogger()
+            setupPermissionMocks()
+            setupIdentityMocks()
+            setupUsageMocks()
 
-        val baselineManager =
-            TrafficBaselineManager(
-                simIdentityRepository,
-                simUsageRepository,
-                simUsageResetRepository,
-                permissionManager,
-                timeProvider,
-                networkStatsProvider,
-            )
-        val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
-        val simChangeHandler =
-            TrafficSimChangeHandler(
-                callSessionRepository,
-                simIdentityRepository,
-                simUsageResetRepository,
-                baselineManager,
-            )
-        val targetResolver = TrafficTargetResolver(permissionManager)
+            val baselineManager =
+                TrafficBaselineManager(
+                    simIdentityRepository,
+                    simUsageRepository,
+                    simUsageResetRepository,
+                    permissionManager,
+                    timeProvider,
+                    networkStatsProvider,
+                )
+            val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
+            val simChangeHandler =
+                TrafficSimChangeHandler(
+                    callSessionRepository,
+                    simIdentityRepository,
+                    simUsageResetRepository,
+                    baselineManager,
+                )
+            val targetResolver = TrafficTargetResolver(permissionManager)
 
-        tracker =
-            TrafficTracker(
-                simIdentityRepository = simIdentityRepository,
-                simUsageRepository = simUsageRepository,
-                simUsageResetRepository = simUsageResetRepository,
-                permissionManager = permissionManager,
-                baselineManager = baselineManager,
-                deltaCalculator = deltaCalculator,
-                simChangeHandler = simChangeHandler,
-                targetResolver = targetResolver,
-                errorHandler = TrafficErrorHandler(),
-                permissionChecker = TrafficPermissionChecker(permissionManager),
-            )
+            tracker =
+                TrafficTracker(
+                    simIdentityRepository = simIdentityRepository,
+                    simUsageRepository = simUsageRepository,
+                    simUsageResetRepository = simUsageResetRepository,
+                    permissionManager = permissionManager,
+                    baselineManager = baselineManager,
+                    deltaCalculator = deltaCalculator,
+                    simChangeHandler = simChangeHandler,
+                    targetResolver = targetResolver,
+                    errorHandler = TrafficErrorHandler(),
+                    permissionChecker = TrafficPermissionChecker(permissionManager),
+                )
+        }
     }
 
     private fun setupPermissionMocks() {
@@ -107,12 +108,10 @@ class TrafficTrackerTest {
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo, mockSubInfo2))
     }
 
-    private fun setupIdentityMocks() {
+    private suspend fun setupIdentityMocks() {
         whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
-        runBlocking {
-            doReturn("sim_0").whenever(simIdentityRepository).getIdentity(0)
-            doReturn("sim_1").whenever(simIdentityRepository).getIdentity(1)
-        }
+        whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
+        whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
         val activeSims =
             listOf(
                 ActiveSimInfo(
@@ -964,20 +963,22 @@ class TrafficTrackerTest {
                     StatsResult.Success(5000L)
                 } else {
                     // Recalculation under lock
-                    StatsResult.Success(7000L)
+                    // Use larger value to exceed MIN_DELTA_MB (0.01 MB = 10485 bytes)
+                    StatsResult.Success(20000L)
                 }
             }
 
             // 3. Trigger update
             tracker.updateTrafficUsage()
+            testScheduler.advanceUntilIdle()
 
             // 4. Verify that usage update WAS performed using the SECOND stats result
-            // delta = 7000 - 1000 = 6000
-            val expectedDeltaMb = (6000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
+            // delta = 20000 - 1000 = 19000
+            val expectedDeltaMb = (19000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
             verify(simUsageResetRepository).incrementTrafficAndSetBaseline(
                 eq(targetIdentity),
                 eq(expectedDeltaMb),
-                eq(7000L)
+                eq(20000L),
             )
         }
 }

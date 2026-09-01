@@ -159,6 +159,7 @@ class TrafficTracker
             }
         }
 
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     private suspend fun performTrafficUpdate(
         target: TargetInfo,
         targetIdentity: String,
@@ -223,15 +224,16 @@ class TrafficTracker
             }
 
             // Handle results
+            val finalStats = statsResult
             if (currentRetryCount != null) {
-                handleRetryAction(target, targetIdentity, currentRetryCount, statsResult)
+                handleRetryAction(target, targetIdentity, currentRetryCount, finalStats)
             } else {
-                if (statsResult !is StatsResult.Success) {
-                    errorHandler.handleStatsFailure(statsResult, _status)
+                if (finalStats !is StatsResult.Success) {
+                    errorHandler.handleStatsFailure(finalStats, _status)
                     return@withLock
                 }
 
-                val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+                val lastTotalBytes = fetchLastTotalBytes(targetIdentity, finalStats)
                 if (lastTotalBytes == null) {
                     errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
                     return@withLock
@@ -241,7 +243,7 @@ class TrafficTracker
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                         deltaCalculator.updateTrafficBaselineAndUsage(
                             targetIdentity,
-                            statsResult.bytes,
+                            finalStats.bytes,
                             lastTotalBytes,
                             target,
                         )

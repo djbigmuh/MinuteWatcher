@@ -4,9 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
-import com.example.minutewatcher.core.data.di.SimDataStore
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
@@ -61,6 +61,11 @@ class SimIdentityPersistence
                         val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
                         val failedIds = performMigrations(toMigrate)
 
+                        // Оптимизация: проверяем необходимость обновления ДО вызова edit.
+                        // Это предотвращает лишние записи в DataStore и инкремент счетчиков в тестах.
+                        val anyUpdateRequired = validIdentities.any { isIdentityUpdateRequired(it, preEditPrefs) }
+                        if (!anyUpdateRequired && toMigrate.isEmpty()) return@withLock
+
                         dataStore.edit { prefs ->
                             // Фильтрация обновлений на основе АКТУАЛЬНЫХ данных внутри edit
                             val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, prefs) }
@@ -95,7 +100,6 @@ class SimIdentityPersistence
                 }
                 isIdentityUpdateRequired(identity, prefs)
             }
-
 
         private fun updatePreferences(
             identities: List<SimIdentity>,

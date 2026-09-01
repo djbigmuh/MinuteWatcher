@@ -3,10 +3,9 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FlowObservationScope
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
-import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
@@ -51,8 +50,7 @@ class UpdateCoordinator
         private val widgetUpdater: WidgetUpdater,
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : DataChangeNotifier,
-        TrackingStatusProvider {
+    ) : WidgetUpdateCoordinator {
         override val key: String = "widget_observation"
 
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
@@ -240,7 +238,10 @@ class UpdateCoordinator
             WidgetUpdateResult.Failure(isRetryable = isRetryable, reason = reason)
         }
 
-    private suspend fun handleUpdateResult(result: WidgetUpdateResult, newHash: Int) {
+    private suspend fun handleUpdateResult(
+        result: WidgetUpdateResult,
+        newHash: Int,
+    ) {
         stateMutex.withLock {
             if (result.isSuccess) {
                 _status.value = TrackingStatus.Active
@@ -266,7 +267,7 @@ class UpdateCoordinator
                 )
                 _status.value =
                     TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        TrackingStatus.ErrorType.NOT_SUPPORTED,
                         "Widget size limit exceeded",
                     )
                 handleUpdateFailure()
