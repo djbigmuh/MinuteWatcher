@@ -92,6 +92,7 @@ open class WidgetLimitManager
                     is UpdateResult.Success -> {
                         setWidgetLimitExceeded(value = false)
                     }
+
                     is UpdateResult.GenericFailure,
                     is UpdateResult.LimitExceeded,
                     -> {
