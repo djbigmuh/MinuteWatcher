@@ -1,7 +1,6 @@
 package com.example.minutewatcher.feature.semantic
 
 import android.content.Context
-import androidx.core.content.pm.ShortcutInfoCompat
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.DataSourceType
@@ -25,6 +24,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -41,6 +41,7 @@ class ShortcutManagerTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
     private val timeProvider = FixedTimeProvider(100000L)
+    private val shortcutApplier: ShortcutApplier = mock()
     private lateinit var shortcutManager: ShortcutManager
     private lateinit var androidShortcutManager: AndroidShortcutManager
 
@@ -59,6 +60,7 @@ class ShortcutManagerTest {
                 testScope,
                 navigationProvider,
                 testDispatcher,
+                shortcutApplier,
             )
     }
 
@@ -198,16 +200,17 @@ class ShortcutManagerTest {
     @Test
     fun `unsupported operation sets NOT_SUPPORTED status`() =
         runTest(testDispatcher) {
-            val manager =
-                object : ShortcutManager(context, testScope, navigationProvider, testDispatcher) {
-                    override fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) =
-                        throw UnsupportedOperationException("Shortcuts not supported")
-                }
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any()
+                )
+            ).thenThrow(UnsupportedOperationException("Shortcuts not supported"))
 
-            val result = manager.updateShortcutsSync(createSnapshot(emptyList()))
+            val result = shortcutManager.updateShortcutsSync(createSnapshot(emptyList()))
 
             assertFalse(result)
-            val status = manager.status.value
+            val status = shortcutManager.status.value
             assertTrue(status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
         }

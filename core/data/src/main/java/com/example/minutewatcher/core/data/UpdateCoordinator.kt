@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
+import com.example.minutewatcher.core.common.util.FlowObservationScope
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -19,15 +19,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -66,10 +64,9 @@ class UpdateCoordinator
         java.util.concurrent.atomic
             .AtomicInteger(0)
     private val widgetUpdateMutex = Mutex()
-    private val initMutex = Mutex()
 
     private val isObservationStarted = AtomicBoolean(false)
-    private val observationJob = AtomicReference<Job?>(null)
+    private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
     private val monitoringJob = AtomicReference<Job?>(null)
 
     init {
@@ -103,106 +100,65 @@ class UpdateCoordinator
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
             val currentJob = currentCoroutineContext()[Job]
+            monitoringJob.get()?.takeIf { it !== currentJob }?.cancel()
 
-            // Фаза 1: отмена старого (без мьютекса)
-            // Это может занимать до 10 секунд (таймаут обновления виджета),
-            // поэтому выполняется вне мьютекса, чтобы не блокировать recover().
-            cleanupOldObservation(currentJob)
+            val handler =
+                CoroutineExceptionHandler { _, cause ->
+                    AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+                }
 
-            // Фаза 2: создание нового (под мьютексом)
-            initMutex.withLock {
-                // Проверка, не создал ли кто-то другой пока мы ждали отмены старого джоба
-                val existingJob = observationJob.get()
-                if (existingJob?.isActive == true) return@withLock
+            val flow =
+                usageStateRepository
+                    .observeSnapshot()
+                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
 
-                val handler =
-                    CoroutineExceptionHandler { _, cause ->
-                        AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
+            val newJob =
+                observationScope.observe(flow, handler) { snapshot ->
+                    try {
+                        processSnapshot(snapshot)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
                     }
-
-                val newJob =
-                    usageStateRepository
-                        .observeSnapshot()
-                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
-                        .onEach { snapshot ->
-                            try {
-                                processSnapshot(snapshot)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
-                            }
-                        }.launchIn(scope + handler)
-
-                if (!observationJob.compareAndSet(existingJob, newJob)) {
-                    newJob.cancel()
-                    return@withLock
                 }
 
-                launchMonitoringJob(newJob)
-            }
+            launchMonitoringJob(newJob)
         }
-
-    private suspend fun cleanupOldObservation(currentJob: Job?) {
-        val oldJob = observationJob.get()
-        if (oldJob != null) {
-            oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-            if (oldJob.isActive) {
-                AppLogger.w(
-                    "UpdateCoordinator: previous observation job did not terminate in time, forcing cancel",
-                )
-                oldJob.cancel()
-                try {
-                    oldJob.join()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    // Джоб завершён принудительно
-                }
-            }
-            observationJob.compareAndSet(oldJob, null)
-        }
-
-        // Cancel previous monitoring coroutine if it's not the current one
-        val oldMonitoringJob = monitoringJob.get()
-        if (oldMonitoringJob != null && oldMonitoringJob !== currentJob) {
-            oldMonitoringJob.cancel()
-        }
-    }
 
     private fun launchMonitoringJob(newJob: Job) {
         // Мониторинг завершения: если наблюдение упало — перезапускаем с экспоненциальной задержкой.
         val newMonitoringJob =
             scope.launch {
-                    newJob.join()
-                    if (observationJob.get() !== newJob) return@launch
-                    if (!isObservationStarted.get()) return@launch
+                newJob.join()
+                if (observationScope.getJob() !== newJob) return@launch
+                if (!isObservationStarted.get()) return@launch
 
-                    val restartCount = observationRestartCount.incrementAndGet()
-                    if (restartCount >= MAX_OBSERVATION_RESTARTS) {
-                        AppLogger.e("UpdateCoordinator: observation restart limit reached ($restartCount)")
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.DATABASE_ERROR,
-                                "Widget observation failed permanently after $restartCount restarts",
-                            )
-                        return@launch
-                    }
-
-                    val delayMs = calculateRestartDelay(restartCount)
-                    AppLogger.w(
-                        "UpdateCoordinator: observation terminated unexpectedly, " +
-                            "scheduling restart #$restartCount in ${delayMs}ms",
-                    )
-                    kotlinx.coroutines.delay(delayMs.milliseconds)
-
-                    if (isObservationStarted.get() && (observationJob.get() === newJob)) {
-                        restartObservation()
-                    }
+                val restartCount = observationRestartCount.incrementAndGet()
+                if (restartCount >= MAX_OBSERVATION_RESTARTS) {
+                    AppLogger.e("UpdateCoordinator: observation restart limit reached ($restartCount)")
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Widget observation failed permanently after $restartCount restarts",
+                        )
+                    return@launch
                 }
+
+                val delayMs = calculateRestartDelay(restartCount)
+                AppLogger.w(
+                    "UpdateCoordinator: observation terminated unexpectedly, " +
+                        "scheduling restart #$restartCount in ${delayMs}ms",
+                )
+                kotlinx.coroutines.delay(delayMs.milliseconds)
+
+                if (isObservationStarted.get() && (observationScope.getJob() === newJob)) {
+                    restartObservation()
+                }
+            }
         monitoringJob.set(newMonitoringJob)
-        }
+    }
 
     private fun calculateRestartDelay(restartCount: Int): Long {
         val exponent = (restartCount - 1).coerceAtMost(MAX_RESTART_DELAY_EXPONENT)
@@ -225,6 +181,7 @@ class UpdateCoordinator
 
     @Suppress("ReturnCount")
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+        currentCoroutineContext().ensureActive()
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         if (snapshot.suppressWidgetUpdate) {

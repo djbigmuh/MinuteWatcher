@@ -18,7 +18,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
@@ -81,35 +80,29 @@ class WidgetSettingsViewModel
          */
         private fun loadSettings() {
             viewModelScope.launch {
-                saveMutex.withLock {
-                    loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
-                    loadJob =
-                        launch {
-                            try {
-                                val loaded =
-                                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                        loader.load()
-                                    }
-                                ensureActive()
-                                saveMutex.withLock {
-                                    if (loaded != null) {
-                                        reduce { copy(settings = loaded, isLoadError = false) }
-                                    } else {
-                                        AppLogger.e("Failed to load widget settings: timeout")
-                                        reduce { copy(isLoadError = true) }
-                                    }
+                loadJob =
+                    launch {
+                        try {
+                            val loaded =
+                                withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                                    loader.load()
                                 }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to load widget settings", e)
-                                saveMutex.withLock {
-                                    reduce { copy(isLoadError = true) }
-                                }
+                            ensureActive()
+                            if (loaded != null) {
+                                reduce { copy(settings = loaded, isLoadError = false) }
+                            } else {
+                                AppLogger.e("Failed to load widget settings: timeout")
+                                reduce { copy(isLoadError = true) }
                             }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to load widget settings", e)
+                            reduce { copy(isLoadError = true) }
                         }
-                }
+                    }
             }
         }
 
@@ -117,16 +110,12 @@ class WidgetSettingsViewModel
          * Обновляет текущее состояние настроек виджета.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            viewModelScope.launch {
-                saveMutex.withLock {
-                    reduce {
-                        val currentSettings = settings ?: return@reduce this
-                        copy(
-                            isLoadError = false,
-                            settings = transform(currentSettings).copy(widgetLimitExceeded = false),
-                        )
-                    }
-                }
+            reduce {
+                val currentSettings = settings ?: return@reduce this
+                copy(
+                    isLoadError = false,
+                    settings = transform(currentSettings).copy(widgetLimitExceeded = false),
+                )
             }
         }
 
@@ -137,24 +126,20 @@ class WidgetSettingsViewModel
             slot: Int,
             transform: (SimSettingsState) -> SimSettingsState,
         ) {
-            viewModelScope.launch {
-                saveMutex.withLock {
-                    reduce {
-                        val currentSettings = settings ?: return@reduce this
-                        val updatedSimStates = currentSettings.simStates.toMutableMap()
-                        val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                        updatedSimStates[slot] = transform(currentSimState)
+            reduce {
+                val currentSettings = settings ?: return@reduce this
+                val updatedSimStates = currentSettings.simStates.toMutableMap()
+                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                updatedSimStates[slot] = transform(currentSimState)
 
-                        copy(
-                            isLoadError = false,
-                            settings =
-                                currentSettings.copy(
-                                    simStates = updatedSimStates,
-                                    widgetLimitExceeded = false,
-                                ),
-                        )
-                    }
-                }
+                copy(
+                    isLoadError = false,
+                    settings =
+                        currentSettings.copy(
+                            simStates = updatedSimStates,
+                            widgetLimitExceeded = false,
+                        ),
+                )
             }
         }
 
@@ -169,6 +154,7 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
+            val currentStateSnapshot = state.value
             val acquired =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     saveMutex.lock()
@@ -183,7 +169,6 @@ class WidgetSettingsViewModel
 
             try {
                 reduce { copy(saveResult = null, isSaving = true) }
-                val currentStateSnapshot = state.value
                 val result = performSaveInternal(currentStateSnapshot)
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {

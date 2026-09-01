@@ -34,7 +34,8 @@ class SemanticInitializerWorker
             val initialSnapshot = snapshotFlow.first()
 
             // Perform initial indexing and shortcut update synchronously to catch immediate failures
-            val searchSuccess = searchManager.indexSnapshot(initialSnapshot)
+            val searchResult = searchManager.indexSnapshot(initialSnapshot)
+            val searchSuccess = searchResult is SemanticSearchManager.IndexResult.Success
             val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
 
             // Start background observers for continuous updates

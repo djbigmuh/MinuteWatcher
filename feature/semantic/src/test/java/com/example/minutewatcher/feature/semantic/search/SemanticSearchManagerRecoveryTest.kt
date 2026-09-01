@@ -68,21 +68,27 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     fun `recover resets failure counters`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val snapshot = createSnapshotWithOneSim()
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+
+            // Use initialize to ensure counter increments through the collect loop
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
 
             // 1. Force 5 failures
-            fakeWrapper.failNextWithGenericError = true
+            fakeWrapper.failAllPutDocuments = true
             repeat(5) {
-                manager.indexSnapshot(snapshot)
+                flow.value = createTestSnapshot(100L + it)
+                testScheduler.advanceUntilIdle()
             }
 
             assertTrue("Status should be Error after 5 failures", manager.status.value is TrackingStatus.Error)
+            val errorHandler = getErrorHandler(manager)
+            assertEquals(5, errorHandler.consecutiveIndexFailures)
 
             // 2. Call recover
             manager.recover()
 
             // 3. Verify counters via reflection
-            val errorHandler = getErrorHandler(manager)
             assertEquals(0, errorHandler.consecutiveIndexFailures)
         }
 
@@ -157,11 +163,13 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             manager.recover()
 
             // 3. Pass empty snapshot (e.g. SIMs removed)
-            val emptySnapshot = createSnapshot(emptyList())
-            val result = manager.indexSnapshot(emptySnapshot)
+            val result = manager.indexSnapshot(createSnapshot(emptyList()))
 
             // 4. Verify that removeRequests was called to clean up sim_0 documents
-            assertTrue("indexSnapshot should return true for empty snapshot after recover", result)
+            assertTrue(
+                "indexSnapshot should return Success for empty snapshot after recover",
+                result is SemanticSearchManager.IndexResult.Success,
+            )
             assertEquals(
                 "Should have one more remove request for stale data",
                 initialRemoves + 1,

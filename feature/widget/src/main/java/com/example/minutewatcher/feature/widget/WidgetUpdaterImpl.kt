@@ -39,82 +39,38 @@ class WidgetUpdaterImpl
     private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
     override suspend fun updateAll(): WidgetUpdateResult {
-        // Step 1: Check for in-progress update.
-        val inProgress = getInProgressUpdate()
-        if (inProgress != null) {
-            return joinInProgressUpdate(inProgress)
-        }
+        repeat(2) {
+            currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
 
-        // Step 2: Attempt to acquire lock for new update
-        val locked = acquireUpdateLock()
-        val secondInProgress = if (!locked) getInProgressUpdate() else null
-
-        return if (secondInProgress != null) {
-            joinInProgressUpdate(secondInProgress)
-        } else if (!locked) {
-            // Should not happen if logic is correct, but safe fallback
-            WidgetUpdateResult.Failure(wasCoalesced = true, isRetryable = true)
-        } else {
-            performNewUpdate()
-        }
-    }
-
-    private suspend fun performNewUpdate(): WidgetUpdateResult {
-        // We hold the lock. Create and register deferred.
-        val deferred = CompletableDeferred<WidgetUpdateResult>()
-        currentUpdate.set(deferred)
-
-        return try {
-            val result = executeUpdateProcess()
-            deferred.complete(result)
-            result
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // Defensive: ensure deferred is completed if we crash
-            AppLogger.e("WidgetUpdater: unexpected error in updateAll", e)
-            val failure =
-                WidgetUpdateResult.Failure(
-                    wasCoalesced = false,
-                    isRetryable = false,
-                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                )
-            deferred.complete(failure)
-            failure
-        } finally {
-            // Step 3: Cleanup. Clear reference using CAS FIRST, then unlock.
-            currentUpdate.compareAndSet(deferred, null)
-            updateMutex.unlock()
-        }
-    }
-
-    private fun getInProgressUpdate(): CompletableDeferred<WidgetUpdateResult>? {
-        val activeUpdate = currentUpdate.get()
-        return if (activeUpdate != null && !activeUpdate.isCompleted) activeUpdate else null
-        }
-
-    private suspend fun acquireUpdateLock(): Boolean {
-        var locked = updateMutex.tryLock()
-
-        if (!locked) {
-            // Lock held by another thread. Coalesce if possible.
-            yield() // Give owner a chance to register the deferred
-            if (getInProgressUpdate() == null) {
-                // If still null or completed, the previous update just finished or is finishing.
-                // We wait for the lock to start a fresh update.
-                updateMutex.lock()
-
-                // After acquiring lock, check again if another thread started an update
-                // while we were waiting for the lock.
-                if (getInProgressUpdate() != null) {
+            if (updateMutex.tryLock()) {
+                val deferred = CompletableDeferred<WidgetUpdateResult>()
+                currentUpdate.set(deferred)
+                try {
+                    val result = executeUpdateProcess()
+                    deferred.complete(result)
+                    return result
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    val failure =
+                        WidgetUpdateResult.Failure(
+                            wasCoalesced = false,
+                            isRetryable = false,
+                            reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                        )
+                    deferred.complete(failure)
+                    return failure
+                } finally {
+                    currentUpdate.compareAndSet(deferred, null)
                     updateMutex.unlock()
-                } else {
-                    locked = true
                 }
             }
+            yield()
+            currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
+            updateMutex.lock()
+            updateMutex.unlock()
         }
-        return locked
-        }
+        return updateAll()
+    }
 
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =
         try {

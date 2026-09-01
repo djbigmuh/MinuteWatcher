@@ -65,6 +65,13 @@ open class SemanticSearchManager
     @Volatile
         private var lastSnapshotVersion: SchemaVersion? = null
 
+    /** Result of an indexing attempt. */
+    sealed interface IndexResult {
+        data object Success : IndexResult
+        data object ActualFailure : IndexResult
+        data object MutexTimeout : IndexResult
+    }
+
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
@@ -164,29 +171,29 @@ open class SemanticSearchManager
                         .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                         .collect { snapshot ->
                             ensureActive()
-                            if (errorHandler.consecutiveIndexFailures >=
-                                AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES
-                            ) {
-                                _status.update { currentState ->
-                                    errorHandler.handleIndexFailure(currentState)
+                            val result =
+                                try {
+                                    indexSnapshot(snapshot)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
+                                    IndexResult.ActualFailure
                                 }
-                                return@collect
-                            }
-                            try {
-                                val success = indexSnapshot(snapshot)
-                                if (success) {
+
+                            when (result) {
+                                IndexResult.Success -> {
                                     errorHandler.resetFailures()
-                                } else {
+                                }
+
+                                IndexResult.ActualFailure -> {
                                     _status.update { currentState ->
                                         errorHandler.handleIndexFailure(currentState)
                                     }
                                 }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                _status.update { currentState ->
-                                    errorHandler.handleIndexFailure(currentState)
+
+                                IndexResult.MutexTimeout -> {
+                                    AppLogger.d("SemanticSearchManager: skipping snapshot due to mutex timeout (concurrency)")
                                 }
                             }
                         }
@@ -198,7 +205,7 @@ open class SemanticSearchManager
         }
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
-    suspend fun indexSnapshot(snapshot: GlobalSnapshot): Boolean {
+    suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
         val mutexAcquired =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 indexMutex.lock()
@@ -207,16 +214,18 @@ open class SemanticSearchManager
 
         if (!mutexAcquired) {
             AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrency)")
-            return false
+            return IndexResult.MutexTimeout
         }
 
         return try {
-            withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
-                performIndexSnapshotLocked(snapshot)
-            } ?: run {
-                AppLogger.e("SemanticSearchManager: indexing operation timed out")
-                false
-            }
+            val success =
+                withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
+                    performIndexSnapshotLocked(snapshot)
+                } ?: run {
+                    AppLogger.e("SemanticSearchManager: indexing operation timed out")
+                    false
+                }
+            if (success) IndexResult.Success else IndexResult.ActualFailure
         } finally {
             indexMutex.unlock()
         }

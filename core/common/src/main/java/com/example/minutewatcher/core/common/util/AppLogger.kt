@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
-import com.example.minutewatcher.core.common.util.AppLogger.MAX_FILE_SIZE
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -32,10 +31,12 @@ object AppLogger {
 
     @Volatile
     private var isFileLoggingEnabled = BuildConfig.DEBUG
+
+    @Volatile
+    private var isFileLoggingDegraded = false
     private const val LOG_BUFFER_SIZE = 8192
     private const val WORKER_RETRY_DELAY_MS = 1000L
     private const val MAX_RETRY_DELAY_MS = 5000L
-    private const val MAX_WRITE_FAILURES = 10
     private const val SYNC_FALLBACK_LOCK_TIMEOUT_MS = 500L
     private const val SHUTDOWN_JOIN_TIMEOUT_MS = 1000L
     private const val SHUTDOWN_FLUSH_LOCK_TIMEOUT_MS = 500L
@@ -119,14 +120,6 @@ object AppLogger {
         logToFile("E", fullMessage)
     }
 
-    /**
-     * Logs the message to a file in the application's internal directory.
-     *
-     * Rotation logic:
-     * When the current log file exceeds [MAX_FILE_SIZE], it is renamed to "logs.old.txt",
-     * replacing any existing "logs.old.txt". This limits the total log storage to
-     * approximately 2 * [MAX_FILE_SIZE].
-     */
     private fun logToFile(
         level: String,
         message: String,
@@ -163,14 +156,12 @@ object AppLogger {
             return true
         }
 
-        // Try to make room by displacing a non-critical log.
         if (normalQueue.pollFirst() != null) {
             criticalQueue.addLast(entry)
             condition.signalAll()
             return true
         }
 
-        // All capacity is taken by critical logs.
         return false
     }
 
@@ -190,7 +181,6 @@ object AppLogger {
         entry: LogEntry,
         level: String,
     ) {
-        // Synchronous fallback for critical logs when queue is full.
         Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
         val acquired =
             try {
@@ -211,7 +201,6 @@ object AppLogger {
                 fileLock.unlock()
             }
         } else {
-            // Last resort: attempt to re-queue the entry if any space became available
             val reQueued =
                 lock.withLock {
                     if (criticalQueue.size < LOG_QUEUE_CAPACITY) {
@@ -278,11 +267,9 @@ object AppLogger {
             }
             val count = workerRestartCount.incrementAndGet()
             Log.e(TAG, "AppLogger worker thread crashed (restart count: $count)", e)
-            if (count > MAX_WORKER_CRASHES) {
-                isFileLoggingEnabled = false
-                Log.e(TAG, "AppLogger: too many worker crashes, file logging disabled")
+            if (count >= MAX_WORKER_CRASHES) {
+                degradeFileLogging()
             } else if (isFileLoggingEnabled) {
-                // Автоматический перезапуск через задержку
                 Thread {
                     try {
                         Thread.sleep(WORKER_RETRY_DELAY_MS)
@@ -298,7 +285,6 @@ object AppLogger {
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Error,
         ) {
-            // Do not suppress Error (OOM, StackOverflow, etc.)
             lock.withLock {
                 isWorkerStarted = false
             }
@@ -320,40 +306,63 @@ object AppLogger {
         try {
             writeEntryToFile(entry)
             // Success
-            consecutiveWriteFailures.set(0)
-            currentWriteRetryDelay.set(WORKER_RETRY_DELAY_MS)
-            if (workerRestartCount.get() > 0) {
+            if (isFileLoggingDegraded) {
+                Log.i(TAG, "AppLogger: file logging restored")
+                resetFileLogging()
+            } else {
+                consecutiveWriteFailures.set(0)
+                currentWriteRetryDelay.set(WORKER_RETRY_DELAY_MS)
                 workerRestartCount.set(0)
             }
         } catch (e: Exception) {
-            // Запись не удалась. Возвращаем в начало соответствующей очереди.
-            lock.withLock {
-                if (entry.isCritical) criticalQueue.addFirst(entry) else normalQueue.addFirst(entry)
-                condition.signalAll()
-            }
-
             val failures = consecutiveWriteFailures.incrementAndGet()
-            if (failures >= MAX_WRITE_FAILURES) {
-                isFileLoggingEnabled = false
-                Log.e(TAG, "AppLogger: file logging disabled due to too many failures ($failures)")
+            if (failures >= MAX_WORKER_CRASHES) {
+                if (!isFileLoggingDegraded) {
+                    degradeFileLogging()
+                }
+                Log.w(TAG, "[FileLog-Fallback] ${entry.level}/$TAG: ${entry.message}")
             } else {
+                lock.withLock {
+                    if (entry.isCritical) criticalQueue.addFirst(entry) else normalQueue.addFirst(entry)
+                    condition.signalAll()
+                }
+
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "AppLogger: failed to write log entry, re-queued. Failure count: $failures", e)
                 }
 
                 val delay = currentWriteRetryDelay.get()
-                // Добавляем задержку перед повтором, чтобы не забить CPU при фатальной ошибке диска
                 try {
                     Thread.sleep(delay)
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
                 }
 
-                // Update delay with exponential backoff
                 val nextDelay = (delay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
                 currentWriteRetryDelay.set(nextDelay)
             }
         }
+    }
+
+    private fun degradeFileLogging() {
+        isFileLoggingDegraded = true
+        Log.e(TAG, "AppLogger: too many failures, switching to Logcat-only mode for file logs")
+
+        lock.withLock {
+            while (criticalQueue.isNotEmpty()) {
+                val entry = criticalQueue.pollFirst() ?: break
+                Log.e(TAG, "[CRITICAL-DRAIN] ${entry.level}/$TAG: ${entry.message}")
+            }
+        }
+    }
+
+    @VisibleForTesting
+    fun resetFileLogging() {
+        isFileLoggingDegraded = false
+        isFileLoggingEnabled = true
+        consecutiveWriteFailures.set(0)
+        workerRestartCount.set(0)
+        currentWriteRetryDelay.set(WORKER_RETRY_DELAY_MS)
     }
 
     private fun writeEntryToFile(entry: LogEntry) {
@@ -397,8 +406,6 @@ object AppLogger {
         if (oldFile.exists()) oldFile.delete()
         val renamed = logFile.renameTo(oldFile)
         if (!renamed) {
-            // Переименование не удалось — удаляем текущий файл, чтобы предотвратить
-            // неограниченный рост. Потеря текущего лога допустима.
             logFile.delete()
         }
     }
@@ -411,9 +418,6 @@ object AppLogger {
         logWriter = null
     }
 
-    /**
-     * Gracefully shuts down the logger, flushing any remaining entries in the queue.
-     */
     fun shutdown() {
         isFileLoggingEnabled = false
         logDir = null
@@ -431,8 +435,6 @@ object AppLogger {
         }
 
         if (thread?.isAlive == true) {
-            // Worker is stuck (e.g. holding fileLock). Avoid deadlock by not attempting flush.
-            // Just try to close the writer if possible.
             if (fileLock.tryLock(SHUTDOWN_FLUSH_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 try {
                     closeWriterUnlocked()
@@ -466,7 +468,6 @@ object AppLogger {
             try {
                 writeEntryToFileUnlocked(entry)
             } catch (_: Exception) {
-                // Best effort during shutdown
             }
         }
     }
@@ -481,6 +482,7 @@ object AppLogger {
             criticalQueue.clear()
             normalQueue.clear()
         }
+        resetFileLogging()
     }
 
     @VisibleForTesting

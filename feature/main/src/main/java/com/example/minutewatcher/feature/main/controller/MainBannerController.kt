@@ -2,8 +2,7 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
-import com.example.minutewatcher.core.common.util.catchingCancellation
+import com.example.minutewatcher.core.common.util.FlowObservationScope
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -15,7 +14,8 @@ import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +25,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -78,11 +76,8 @@ class MainBannerController
 
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
-        private var job: Job? = null
-        private var lastTrackingStatusFlow: StateFlow<Map<String, TrackingStatus>>? = null
-
-        private val initMutex = Mutex()
         private val isObservationStarted = AtomicBoolean(false)
+    private val observationScope = FlowObservationScope<Map<String, TrackingStatus>>(scope, "MainBannerController")
 
         val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
             trackingStatusRepository
@@ -174,49 +169,18 @@ class MainBannerController
         }
 
         private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
-            initMutex.withLock {
-                lastTrackingStatusFlow = statusFlow
-                val oldJob = job
-                if (oldJob != null) {
-                    oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                    if (oldJob.isActive) {
-                        AppLogger.w(
-                            "MainBannerController: previous observation job did not terminate in time, forcing cancel",
-                        )
-                        oldJob.cancel()
-                        try {
-                            oldJob.join()
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                            // Джоб завершён принудительно
-                        }
+            observationScope.observe(statusFlow) { status ->
+                currentCoroutineContext().ensureActive()
+                val appsearch = status["appsearch"]
+                val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                if (currentErrorType != lastAppSearchErrorType) {
+                    lastAppSearchErrorType = currentErrorType
+                    appSearchRetryCount.value = 0
+                    appSearchBannerDismissed.value = false
+                    if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                        AppLogger.w("AppSearch not supported on this device")
                     }
-                    job = null
                 }
-                job =
-                    scope.launch {
-                        _status.value = TrackingStatus.Active
-                        catchingCancellation(
-                            block = {
-                                statusFlow.collect { status ->
-                                    val appsearch = status["appsearch"]
-                                    val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                                    if (currentErrorType != lastAppSearchErrorType) {
-                                        lastAppSearchErrorType = currentErrorType
-                                        appSearchRetryCount.value = 0
-                                        appSearchBannerDismissed.value = false
-                                        if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                                            AppLogger.w("AppSearch not supported on this device")
-                                        }
-                                    }
-                                }
-                            },
-                        ) { e ->
-                            AppLogger.e("MainBannerController: tracking status observation failed", e)
-                            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                        }
-                    }
             }
         }
 
@@ -226,13 +190,12 @@ class MainBannerController
      * **Thread Safety:** Safe to call from any coroutine context.
      */
     override suspend fun recover() {
-        val flow = initMutex.withLock { lastTrackingStatusFlow }
-        if (flow == null) {
+        if (observationScope.getJob() == null) {
             AppLogger.w("MainBannerController: re-subscribing to tracking status during recover")
             setupObservation(trackingStatus)
-            return
+        } else {
+            observationScope.recover()
         }
-        setupObservation(flow)
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false
     }

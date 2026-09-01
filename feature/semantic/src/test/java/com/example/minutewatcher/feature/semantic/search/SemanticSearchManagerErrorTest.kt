@@ -113,8 +113,11 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             val result = manager.indexSnapshot(snapshotWithSim1)
 
-            // Assert: indexSnapshot returns false
-            assertTrue("indexSnapshot should return false when update fails", !result)
+            // Assert: indexSnapshot returns ActualFailure
+            assertTrue(
+                "indexSnapshot should return ActualFailure when update fails",
+                result is SemanticSearchManager.IndexResult.ActualFailure,
+            )
 
             // Assert: status is Error and contains ONLY put message
             // Note: throwIfErrors throws putEx directly if it is an AppSearchException and removeEx is null
@@ -133,7 +136,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `after MAX_CONSECUTIVE_INDEX_FAILURES consecutive failures status becomes suppressed Error`() =
+    fun `after MAX_CONSECUTIVE_INDEX_FAILURES consecutive failures status becomes Error but not permanently suppressed`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -149,11 +152,21 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             val status = manager.status.value as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
-            assertEquals("Indexing suppressed after 5 failures", status.message)
+            assertEquals("Indexing failed after 5 consecutive errors", status.message)
+
+            // Verify it's NOT permanently suppressed: next success should recover
+            fakeWrapper.failAllPutDocuments = false
+            flow.value = createTestSnapshot(200)
+            testScheduler.advanceUntilIdle()
+
+            assertTrue(
+                "Should recover to Active after successful indexing, but was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Active,
+            )
         }
 
     @Test
-    fun `handleIndexFailure is idempotent when already suppressed`() =
+    fun `handleIndexFailure is not idempotent and continues to increment failures`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val errorHandler = getErrorHandler(manager)
@@ -163,14 +176,13 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                 status.value = errorHandler.handleIndexFailure(status.value)
             }
 
-            val suppressedStatus = status.value
-            assertTrue(suppressedStatus is TrackingStatus.Error)
+            assertTrue(status.value is TrackingStatus.Error)
             val initialFailures = errorHandler.consecutiveIndexFailures
+            assertEquals(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES, initialFailures)
 
             status.value = errorHandler.handleIndexFailure(status.value)
 
-            assertEquals("Status should not change", suppressedStatus, status.value)
-            assertEquals("Counter should not increment further", initialFailures, errorHandler.consecutiveIndexFailures)
+            assertEquals(initialFailures + 1, errorHandler.consecutiveIndexFailures)
         }
 
     @Test
@@ -190,5 +202,40 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             jobs.joinAll()
 
             assertEquals(count, errorHandler.consecutiveIndexFailures)
+        }
+
+    @Test
+    fun `mutex timeout does not increment failure count and does not set error status`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val errorHandler = getErrorHandler(manager)
+
+            // 1. Manually lock the indexMutex to cause timeout
+            val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
+            indexMutexField.isAccessible = true
+            val indexMutex = indexMutexField.get(manager) as kotlinx.coroutines.sync.Mutex
+
+            indexMutex.lock()
+            try {
+                // 2. Attempt indexing - should timeout based on SHORT_TIMEOUT_MS
+                val result = manager.indexSnapshot(createSnapshotWithOneSim())
+
+                assertEquals(
+                    "Should return MutexTimeout",
+                    SemanticSearchManager.IndexResult.MutexTimeout,
+                    result,
+                )
+
+                // 3. Verify failure counter is still 0
+                assertEquals(0, errorHandler.consecutiveIndexFailures)
+
+                // 4. Verify status is NOT Error
+                assertTrue(
+                    "Status should not be Error, but was ${manager.status.value}",
+                    manager.status.value !is TrackingStatus.Error
+                )
+            } finally {
+                indexMutex.unlock()
+            }
         }
 }

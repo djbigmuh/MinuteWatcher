@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.semantic
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
@@ -52,13 +51,14 @@ import javax.inject.Singleton
  */
 @Suppress("TooManyFunctions")
 @Singleton
-open class ShortcutManager
+class ShortcutManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
         @ApplicationScope private val scope: CoroutineScope,
         private val navigationProvider: NavigationProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        private val shortcutApplier: ShortcutApplier,
     ) : TrackingStatusProvider {
         override val key: String = "shortcuts"
 
@@ -196,17 +196,21 @@ open class ShortcutManager
          * Классифицирует ошибку работы с ярлыками.
          */
         private fun classifyShortcutError(e: Exception): TrackingStatus.ErrorType =
-            when {
-                e is UnsupportedOperationException -> {
+            when (e) {
+                is UnsupportedOperationException -> {
                     TrackingStatus.ErrorType.NOT_SUPPORTED
                 }
 
-                e is SecurityException -> {
+                is SecurityException -> {
                     TrackingStatus.ErrorType.PERMISSION_MISSING
                 }
 
-                (e is IllegalStateException) && (e.message?.contains("context", ignoreCase = true) == true) -> {
-                    TrackingStatus.ErrorType.NOT_SUPPORTED
+                is IllegalStateException -> {
+                    if (e.message?.contains("context", ignoreCase = true) == true) {
+                        TrackingStatus.ErrorType.NOT_SUPPORTED
+                    } else {
+                        TrackingStatus.ErrorType.UNKNOWN
+                    }
                 }
 
                 else -> {
@@ -234,7 +238,7 @@ open class ShortcutManager
 
         private fun createMinutesShortcut(sim: SimSnapshot): ShortcutInfoCompat? {
             val entity = sim.entities[PackageType.MINUTES]
-            if (entity == null || (entity.limit <= 0)) return null
+            if ((entity == null) || (entity.limit <= 0)) return null
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
@@ -285,22 +289,8 @@ open class ShortcutManager
                     putExtra(IntentExtras.SIM_SLOT, slot)
                 }
 
-        protected open fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
-            try {
-                if (shortcuts.isNotEmpty()) {
-                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
-                } else {
-                    ShortcutManagerCompat.removeAllDynamicShortcuts(context)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (
-                @Suppress("TooGenericExceptionCaught")
-                e: Exception,
-            ) {
-                AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
-                throw e // Rethrow to be caught by executeSimOperation/updateShortcutsSync
-            }
+    private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
+        shortcutApplier.apply(context, shortcuts)
         }
 
         companion object {

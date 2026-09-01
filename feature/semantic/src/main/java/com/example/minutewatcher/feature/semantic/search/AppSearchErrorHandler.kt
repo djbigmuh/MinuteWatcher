@@ -78,16 +78,13 @@ class AppSearchErrorHandler
 
         @Suppress("ReturnCount")
         fun handleIndexFailure(currentStatus: TrackingStatus): TrackingStatus {
-            val suppressedMessage = "Indexing suppressed after $MAX_CONSECUTIVE_INDEX_FAILURES failures"
+            val failureMessage = "Indexing failed after $MAX_CONSECUTIVE_INDEX_FAILURES consecutive errors"
 
-            // Idempotency check: if status is already suppressed Error or NOT_SUPPORTED, do nothing.
-            if (currentStatus is TrackingStatus.Error) {
-                if (currentStatus.type == TrackingStatus.ErrorType.NOT_SUPPORTED) return currentStatus
-                if (currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
-                    currentStatus.message == suppressedMessage
-                ) {
-                    return currentStatus
-                }
+            // Idempotency check: if status is already NOT_SUPPORTED, do nothing.
+            if (currentStatus is TrackingStatus.Error &&
+                currentStatus.type == TrackingStatus.ErrorType.NOT_SUPPORTED
+            ) {
+                return currentStatus
             }
 
             val newState =
@@ -98,11 +95,11 @@ class AppSearchErrorHandler
             return if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
                     "SemanticSearchManager: $failures consecutive indexing failures. " +
-                        "Further attempts suppressed until next app restart.",
+                        "Status set to Error, but future snapshots will still be attempted.",
                 )
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.DATABASE_ERROR,
-                    suppressedMessage,
+                    failureMessage,
                 )
             } else {
                 TrackingStatus.Error(

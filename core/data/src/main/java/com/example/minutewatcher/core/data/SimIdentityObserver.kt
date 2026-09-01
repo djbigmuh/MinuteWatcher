@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -51,7 +52,8 @@ internal class SimIdentityObserver
     ) {
         val seedFlow: Flow<SeedResult> =
             flow {
-                var attempt = 0L
+                val attempt = AtomicLong(0)
+                attempt.set(0)
                 emitAll(
                     merge(
                         flow {
@@ -76,14 +78,14 @@ internal class SimIdentityObserver
                         seedRepository.seedFlow
                             .filter { it.isNotEmpty() }
                             .map { SeedResult.Real(it) as SeedResult },
-                    ).onEach { attempt = 0 }
+                    ).onEach { attempt.set(0) }
                         .retryWhen { cause, _ ->
                             if (cause is CancellationException) return@retryWhen false
-                            attempt++
-                            val backoff = (INITIAL_BACKOFF_MS * attempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
+                            val currentAttempt = attempt.incrementAndGet()
+                            val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
                             AppLogger.e(
-                                "SimIdentityObserver: seedFlow failure (attempt $attempt), retrying in ${backoff}ms",
-                                cause
+                                "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), retrying in ${backoff}ms",
+                                cause,
                             )
                             delay(backoff.milliseconds)
                             true
@@ -99,7 +101,8 @@ internal class SimIdentityObserver
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
         flow {
-            var attempt = 0L
+            val attempt = AtomicLong(0)
+            attempt.set(0)
             emitAll(
                 seedFlow
                     .flatMapLatest { seed ->
@@ -114,7 +117,7 @@ internal class SimIdentityObserver
                                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                                 .transformLatest {
                                     val result = fetcher.fetchActiveSimsWithRetry(seed)
-                                    attempt = 0 // Success! Reset counter
+                                    attempt.set(0) // Success! Reset counter
                                     emit(result)
                                 }
                         }
@@ -125,14 +128,14 @@ internal class SimIdentityObserver
                             AppLogger.w("SimIdentityObserver: SecurityException, waiting for re-grant")
                             emit(emptyList())
                             permissionStateNotifier.changes.first()
-                            attempt = 0
+                            attempt.set(0)
                             return@retryWhen true
                         }
 
-                        attempt++
-                        val backoff = INITIAL_BACKOFF_MS * (1 shl minOf(attempt.toInt(), MAX_BACKOFF_EXPONENT))
+                        val currentAttempt = attempt.incrementAndGet()
+                        val backoff = INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
                         AppLogger.e(
-                            "SimIdentityObserver: physicalActiveSims discovery failure (attempt $attempt), " +
+                            "SimIdentityObserver: physicalActiveSims discovery failure (attempt $currentAttempt), " +
                                 "restarting in ${backoff}ms",
                             cause,
                         )

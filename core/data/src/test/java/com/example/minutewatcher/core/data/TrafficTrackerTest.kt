@@ -938,6 +938,32 @@ class TrafficTrackerTest {
                 baselineManager.baselineNeedsRetry.containsKey("other_sim"),
             )
         }
+
+    @Test
+    fun `performTrafficUpdate skips update if state changes during stats query`() =
+        runTest {
+            val targetIdentity = "sim_0"
+
+            // 1. Initial usage
+            val initialUsage = createSimUsage(targetIdentity).copy(lastResetDate = 1000L)
+            val usageFlow = MutableStateFlow(initialUsage)
+            whenever(simUsageRepository.getSimUsage(targetIdentity)).thenReturn(usageFlow)
+            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(targetIdentity)))
+
+            // 2. Mock network stats provider with state change during execution
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
+                // Change usage's lastResetDate during the "heavy query"
+                usageFlow.value = initialUsage.copy(lastResetDate = 2000L)
+                StatsResult.Success(5000L)
+            }
+
+            // 3. Trigger update
+            tracker.updateTrafficUsage()
+
+            // 4. Verify that usage update was NOT performed
+            verify(simUsageResetRepository, never()).incrementTrafficAndSetBaseline(any(), any(), any())
+            verify(simUsageResetRepository, never()).setLastTotalBytes(eq(targetIdentity), any())
+        }
 }
 
 private fun createSimUsage(id: String) =

@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -37,7 +37,7 @@ class MainInitializationController
         private val _initializationState = MutableStateFlow<InitializationState>(InitializationState.NotStarted)
         val initializationState: StateFlow<InitializationState> = _initializationState.asStateFlow()
 
-        private val isInitializationStarted = AtomicBoolean(false)
+    private val stateRef = AtomicReference<InitializationState>(InitializationState.NotStarted)
 
         fun initializeApp(
             scope: CoroutineScope,
@@ -47,7 +47,6 @@ class MainInitializationController
             if (!claimInitialization()) return
 
             autoResetScheduler.setup()
-            _initializationState.value = InitializationState.InProgress
 
             scope.launch(ioDispatcher) {
                 val isSuccess = runInitializationLoop(lastRefreshAt, onUpdateLastRefreshAt)
@@ -56,17 +55,15 @@ class MainInitializationController
         }
 
     private fun claimInitialization(): Boolean {
-        val currentState = _initializationState.value
-        val alreadyStarted = isInitializationStarted.get()
-
-        val canStart = !alreadyStarted || currentState is InitializationState.Failed
-
-        return if (canStart && isInitializationStarted.compareAndSet(false, true)) {
-            true
-        } else {
-            // Re-check after failed CAS in case state changed to Failed by another thread
-            _initializationState.value is InitializationState.Failed &&
-                isInitializationStarted.compareAndSet(false, true)
+        while (true) {
+            val current = stateRef.get()
+            if (current !is InitializationState.NotStarted && current !is InitializationState.Failed) {
+                return false
+            }
+            if (stateRef.compareAndSet(current, InitializationState.InProgress)) {
+                _initializationState.value = InitializationState.InProgress
+                return true
+            }
         }
     }
 
@@ -89,7 +86,7 @@ class MainInitializationController
                     isTerminal = true
                 }
             } catch (e: CancellationException) {
-                isInitializationStarted.set(false)
+                stateRef.set(InitializationState.Failed)
                 _initializationState.value = InitializationState.Failed
                 throw e
             } catch (e: SecurityException) {
@@ -158,12 +155,9 @@ class MainInitializationController
         }
 
         private fun finalizeInitialization(isSuccess: Boolean) {
-            if (isSuccess) {
-                _initializationState.value = InitializationState.Completed
-            } else {
-                isInitializationStarted.set(false) // Allow retry on failure
-                _initializationState.value = InitializationState.Failed
-            }
+            val newState = if (isSuccess) InitializationState.Completed else InitializationState.Failed
+            stateRef.set(newState)
+            _initializationState.value = newState
         }
 
         companion object {

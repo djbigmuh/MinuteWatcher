@@ -51,7 +51,10 @@ class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
 
             // Assertions based on new requirements:
             // Fails indexing if remove fails
-            assertTrue("indexSnapshot should return false if remove fails", !result)
+            assertTrue(
+                "indexSnapshot should return ActualFailure if remove fails",
+                result is SemanticSearchManager.IndexResult.ActualFailure,
+            )
             assertTrue("Status should be Error", manager.status.value is TrackingStatus.Error)
 
             // Verify that put WAS called (since put happens before remove now)
@@ -69,7 +72,10 @@ class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
             val result = manager.indexSnapshot(createSnapshotWithOneSim())
 
             // Assertions:
-            assertTrue("indexSnapshot should return false if put fails", !result)
+            assertTrue(
+                "indexSnapshot should return ActualFailure if put fails",
+                result is SemanticSearchManager.IndexResult.ActualFailure,
+            )
             assertTrue("Status should be Error", manager.status.value is TrackingStatus.Error)
         }
 }

@@ -76,10 +76,12 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
             val initialRemoves = session.removeRequests.size
 
             // 2. Pass empty snapshot
-            val emptySnapshot = createSnapshot(emptyList())
-            val result = manager.indexSnapshot(emptySnapshot)
+            val result = manager.indexSnapshot(createSnapshot(emptyList()))
 
-            assertTrue("indexSnapshot should return true for empty snapshot", result)
+            assertTrue(
+                "indexSnapshot should return Success for empty snapshot",
+                result is SemanticSearchManager.IndexResult.Success,
+            )
             assertEquals(
                 "Should have one more remove request",
                 initialRemoves + 1,
