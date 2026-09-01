@@ -103,8 +103,17 @@ class UpdateCoordinator
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
             val currentJob = currentCoroutineContext()[Job]
+
+            // Фаза 1: отмена старого (без мьютекса)
+            // Это может занимать до 10 секунд (таймаут обновления виджета),
+            // поэтому выполняется вне мьютекса, чтобы не блокировать recover().
+            cleanupOldObservation(currentJob)
+
+            // Фаза 2: создание нового (под мьютексом)
             initMutex.withLock {
-                cleanupOldObservation(currentJob)
+                // Проверка, не создал ли кто-то другой пока мы ждали отмены старого джоба
+                val existingJob = observationJob.get()
+                if (existingJob?.isActive == true) return@withLock
 
                 val handler =
                     CoroutineExceptionHandler { _, cause ->
@@ -126,9 +135,9 @@ class UpdateCoordinator
                             }
                         }.launchIn(scope + handler)
 
-                if (!observationJob.compareAndSet(null, newJob)) {
+                if (!observationJob.compareAndSet(existingJob, newJob)) {
                     newJob.cancel()
-                    return
+                    return@withLock
                 }
 
                 launchMonitoringJob(newJob)

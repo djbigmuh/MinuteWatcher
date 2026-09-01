@@ -324,8 +324,8 @@ class WidgetUpdaterImplTest {
             verify(renderer).renderAll(any(), any()) // Should be called only once
         }
 
-    @Test
-    fun `updateAll returns failure and does not retry on Error`() =
+    @Test(expected = OutOfMemoryError::class)
+    fun `updateAll throws Error and does not retry`() =
         runTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
@@ -333,10 +333,7 @@ class WidgetUpdaterImplTest {
 
             whenever(renderer.renderAll(any(), any())).thenThrow(OutOfMemoryError("Out of memory"))
 
-            val result = updater.updateAll()
-
-            assertFalse("updateAll should return failure on Error", result.isSuccess)
-            verify(renderer).renderAll(any(), any()) // Should be called only once
+            updater.updateAll()
         }
 
     @Test

@@ -15,11 +15,11 @@ fun TrackingBanners(
     Column(modifier = Modifier.fillMaxWidth()) {
         ObservationErrorBanner(
             state = state,
-            onRetry = callbacks.onRetryBanners,
+            onRetry = callbacks.onRetryWidgetObservation,
         )
         StorageDegradedBanner(
             state = state,
-            onRetry = callbacks.onRetryBanners,
+            onRetry = callbacks.onRetryWidgetObservation,
         )
         PermissionBanners(state, callbacks)
         ErrorBanners(state, callbacks)

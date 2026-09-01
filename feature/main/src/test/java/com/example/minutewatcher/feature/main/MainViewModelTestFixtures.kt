@@ -52,6 +52,7 @@ abstract class MainViewModelTestFixtures {
     protected val usageUseCase: UsageUseCase = mock()
     protected val settingsUseCase: SettingsUseCase = mock()
     protected val dataChangeNotifier: DataChangeNotifier = mock()
+    protected val updateCoordinator: com.example.minutewatcher.core.data.UpdateCoordinator = mock()
     protected val dataRefreshNotifier: com.example.minutewatcher.core.domain.DataRefreshNotifier = mock()
     protected val permissionRepository: PermissionRepository = mock()
     protected val seedRepository: SimIdentitySeedRepository = mock()
@@ -200,6 +201,7 @@ abstract class MainViewModelTestFixtures {
             simData = simDataController,
             resume = resumeController,
             dataRefreshNotifier = dataRefreshNotifier,
+            widgetObservationRecovery = dagger.Lazy { updateCoordinator },
         )
     }
 }

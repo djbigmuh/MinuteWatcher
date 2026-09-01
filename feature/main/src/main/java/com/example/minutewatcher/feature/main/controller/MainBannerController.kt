@@ -90,7 +90,7 @@ class MainBannerController
                 .observeTrackingStatus()
                 .stateIn(
                     scope = scope,
-                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    started = SharingStarted.Eagerly,
                     initialValue = emptyMap(),
                 )
 

@@ -70,11 +70,9 @@ class WidgetUpdaterImpl
             result
         } catch (e: CancellationException) {
             throw e
-        } catch (
-            @Suppress("TooGenericExceptionCaught") t: Throwable,
-        ) {
+        } catch (e: Exception) {
             // Defensive: ensure deferred is completed if we crash
-            AppLogger.e("WidgetUpdater: unexpected fatal error in updateAll", t)
+            AppLogger.e("WidgetUpdater: unexpected error in updateAll", e)
             val failure =
                 WidgetUpdateResult.Failure(
                     wasCoalesced = false,
@@ -84,9 +82,9 @@ class WidgetUpdaterImpl
             deferred.complete(failure)
             failure
         } finally {
-            // Step 3: Cleanup. Unlock FIRST, then clear reference using CAS.
-            updateMutex.unlock()
+            // Step 3: Cleanup. Clear reference using CAS FIRST, then unlock.
             currentUpdate.compareAndSet(deferred, null)
+            updateMutex.unlock()
         }
     }
 
@@ -133,10 +131,8 @@ class WidgetUpdaterImpl
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (
-            @Suppress("TooGenericExceptionCaught") t: Throwable,
-        ) {
-            AppLogger.e("WidgetUpdater: updateAll failed", t)
+        } catch (e: Exception) {
+            AppLogger.e("WidgetUpdater: update process failed", e)
             WidgetUpdateResult.Failure(
                 wasCoalesced = false,
                 isRetryable = false,
@@ -314,7 +310,6 @@ class WidgetUpdaterImpl
                 }
             }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun safeUpdateInternal(
             context: Context,
             isFullAttempt: Boolean,

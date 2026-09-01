@@ -143,6 +143,12 @@ class MainViewModel
             }
         }
 
+    fun retryWidgetObservation() {
+        viewModelScope.launch {
+            controllers.widgetObservationRecovery.get().recover()
+            }
+        }
+
         // Delegate Settings Actions
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
 

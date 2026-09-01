@@ -4,20 +4,21 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -76,44 +77,36 @@ class SimIdentitySeedRepositoryImpl
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String =
             seedMutex.withLock {
-                val isEphemeral = _isEphemeralSeedActive.value
-                // Если активен эфемерный сид, пробуем вернуться к персистентному
-                if (isEphemeral) {
-                    try {
-                        val recovered =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                dataStore.getOrCreateSeedInternal(generator)
-                            }
-                        if (recovered != null) {
-                            _isEphemeralSeedActive.value = false
-                            AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
-                            return@withLock recovered
-                        } else {
-                            AppLogger.w("DataStore recovery timed out, continuing with ephemeral seed")
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.w("DataStore still unavailable, continuing with ephemeral seed", e)
+                // 1. Recovery attempt if currently ephemeral
+                if (_isEphemeralSeedActive.value) {
+                    val recovered = tryGetPersistentSeed(generator)
+                    if (recovered != null) {
+                        _isEphemeralSeedActive.value = false
+                        cachedEphemeralSeed = null
+                        AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+                        return@withLock recovered
                     }
                 }
 
-                try {
-                    val currentSeed =
-                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                            dataStore.getOrCreateSeedInternal(generator)
-                        } ?: throw java.io.IOException("Timeout accessing seed in DataStore")
+                // 2. Normal path (or first attempt after recovery failed)
+                var currentSeed = tryGetPersistentSeed(generator)
 
+                // 3. Retry once if failed with IO or Timeout
+                if (currentSeed == null) {
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed, retrying in 500ms...")
+                    kotlinx.coroutines.delay(RETRY_DELAY_MS.milliseconds)
+                    currentSeed = tryGetPersistentSeed(generator)
+                }
+
+                if (currentSeed != null) {
                     _isEphemeralSeedActive.value = false
                     cachedEphemeralSeed = null
                     currentSeed
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
+                } else {
+                    // 4. Fallback to ephemeral if persistent failed twice
                     AppLogger.e(
-                        "CRITICAL: DataStore unavailable, using ephemeral seed. " +
+                        "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
                             "All SIM identities will change. Previous statistics will be orphaned.",
-                        e,
                     )
                     _isEphemeralSeedActive.value = true
                     // cachedEphemeralSeed is only accessed under seedMutex
@@ -121,11 +114,21 @@ class SimIdentitySeedRepositoryImpl
                 }
             }
 
+    private suspend fun tryGetPersistentSeed(generator: () -> String): String? =
+        try {
+            withTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                dataStore.getOrCreateSeedInternal(generator)
+            }
+        } catch (_: TimeoutCancellationException) {
+            AppLogger.w("SimIdentitySeedRepositoryImpl: Timeout accessing seed in DataStore")
+            null
+        } catch (e: java.io.IOException) {
+            AppLogger.w("SimIdentitySeedRepositoryImpl: IOException accessing seed in DataStore", e)
+            null
+        }
+
     private suspend fun DataStore<Preferences>.getOrCreateSeedInternal(generator: () -> String): String {
-        val existing =
-            this.data
-                .map { it[DataStoreKeys.SIM_IDENTITY_SEED] }
-                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+        val existing = this.data.map { it[DataStoreKeys.SIM_IDENTITY_SEED] }.first()
 
         if (!existing.isNullOrEmpty()) return existing
 
@@ -134,5 +137,9 @@ class SimIdentitySeedRepositoryImpl
             preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
         }
         return newSeed
+    }
+
+    private companion object {
+        private const val RETRY_DELAY_MS = 500L
     }
     }

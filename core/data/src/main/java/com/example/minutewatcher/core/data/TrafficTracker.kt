@@ -56,6 +56,11 @@ class TrafficTracker
 
         private val trafficMutex = Mutex()
 
+    private data class TrafficUpdateState(
+        val startTime: Long,
+        val retryCount: Int?,
+    )
+
         override suspend fun recover() {
             updateTrafficUsage()
         }
@@ -159,61 +164,56 @@ class TrafficTracker
             }
         }
 
-    @Suppress("ReturnCount", "LongMethod", "ComplexMethod")
     private suspend fun performTrafficUpdate(
         target: TargetInfo,
         targetIdentity: String,
     ) {
-        var phase = "initialization"
-        // Phase 1: Read state under mutex
-            val state =
-                trafficMutex.withLock {
-                    phase = "usage fetch"
-                    val usage =
-                        simUsageRepository
-                            .getSimUsage(targetIdentity)
-                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                            ?: run {
-                                errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                                return@withLock null
-                            }
+        val state = readTrafficState(targetIdentity) ?: return
+        val statsResult = baselineManager.getCurrentMobileBytes(state.startTime)
+        verifyAndApplyTrafficDelta(targetIdentity, target, statsResult, state)
+    }
 
-                    phase = "identity check"
-                    val activeIdentities =
-                        simIdentityRepository
-                            .getActiveIdentities()
-                            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                            ?: return@withLock null
-
-                    if (targetIdentity !in activeIdentities) {
-                        AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
-                        return@withLock null
-                    }
-
-                    phase = "retry check"
-                    val retryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-                    if ((retryCount != null) &&
-                        (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
-                    ) {
-                        baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                        errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                        return@withLock null
-                    }
-
-                    val st = if (retryCount != null) 0L else usage.lastResetDate
-                    st to retryCount
-                } ?: return
-
-            val startTime = state.first
-            val initialRetryCount = state.second
-
-        // Phase 2: System query OUTSIDE mutex
-        phase = "stats query"
-        val statsResult = baselineManager.getCurrentMobileBytes(startTime)
-
-        // Phase 3: Verify and write under mutex
+    private suspend fun readTrafficState(targetIdentity: String): TrafficUpdateState? =
         trafficMutex.withLock {
-            phase = "state verification"
+            val usage =
+                simUsageRepository
+                    .getSimUsage(targetIdentity)
+                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                    ?: run {
+                        errorHandler.handleUsageReadTimeout(targetIdentity, _status)
+                        return@withLock null
+                    }
+
+            val activeIdentities =
+                simIdentityRepository
+                    .getActiveIdentities()
+                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                    ?: return@withLock null
+
+            if (targetIdentity !in activeIdentities) {
+                AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
+                return@withLock null
+            }
+
+            val retryCount = baselineManager.baselineNeedsRetry[targetIdentity]
+            if ((retryCount != null) &&
+                (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
+            ) {
+                baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                return@withLock null
+            }
+
+            val st = if (retryCount != null) 0L else usage.lastResetDate
+            TrafficUpdateState(st, retryCount)
+        }
+
+    private suspend fun verifyAndApplyTrafficDelta(
+        targetIdentity: String,
+        target: TargetInfo,
+        statsResult: StatsResult,
+        state: TrafficUpdateState,
+    ) = trafficMutex.withLock {
             val currentActive =
                 simIdentityRepository
                     .getActiveIdentities()
@@ -225,7 +225,7 @@ class TrafficTracker
             }
 
             val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-            if (currentRetryCount != initialRetryCount) {
+        if (currentRetryCount != state.retryCount) {
                 AppLogger.d(
                     "TrafficTracker: retry state changed during query for $targetIdentity, skipping",
                 )
@@ -233,23 +233,20 @@ class TrafficTracker
             }
 
             // Handle results
-            if (initialRetryCount != null) {
-                phase = "retry action"
-                handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
+        if (state.retryCount != null) {
+            handleRetryAction(target, targetIdentity, state.retryCount, statsResult)
             } else {
                 if (statsResult !is StatsResult.Success) {
                     errorHandler.handleStatsFailure(statsResult, _status)
                     return@withLock
                 }
 
-                phase = "baseline fetch"
                 val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
                 if (lastTotalBytes == null) {
                     errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
                     return@withLock
                 }
 
-                phase = "atomic update"
                 val writeSuccess =
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                         deltaCalculator.updateTrafficBaselineAndUsage(
@@ -274,7 +271,6 @@ class TrafficTracker
                 _status.value = TrackingStatus.Active
             }
         }
-    }
 
         private suspend fun handleRetryAction(
             target: TargetInfo,
