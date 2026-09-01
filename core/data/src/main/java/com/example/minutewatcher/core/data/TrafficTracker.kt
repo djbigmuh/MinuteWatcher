@@ -163,7 +163,7 @@ class TrafficTracker
         target: TargetInfo,
         targetIdentity: String,
     ) {
-        // 1. Fetch parameters outside the lock to determine startTime
+        // 1. Чтение начальных данных вне лока (для определения startTime)
         val initialUsage =
             simUsageRepository
                 .getSimUsage(targetIdentity)
@@ -173,13 +173,13 @@ class TrafficTracker
                     return
                 }
 
+        // 2. Тяжёлый системный вызов вне лока
+        //    initialRetryCount фиксируется до системного вызова и используется только для детекции устаревания результата внутри мьютекса.
         val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
         val startTime = if (initialRetryCount != null) 0L else initialUsage.lastResetDate
-
-        // 2. Perform system call outside the lock (heavy operation)
         val statsResult = baselineManager.getCurrentMobileBytes(startTime)
 
-        // 3. Unify verification and application in a single lock to ensure consistency
+        // 3. Вся остальная логика — внутри мьютекса
         trafficMutex.withLock {
             val currentActive =
                 simIdentityRepository
@@ -209,8 +209,8 @@ class TrafficTracker
             }
 
             // Check retry limit
-            if (currentRetryCount != null &&
-                currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
+            if (initialRetryCount != null &&
+                initialRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES
             ) {
                 baselineManager.baselineNeedsRetry.remove(targetIdentity)
                 errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
@@ -218,8 +218,8 @@ class TrafficTracker
             }
 
             // Handle results
-            if (currentRetryCount != null) {
-                handleRetryAction(target, targetIdentity, currentRetryCount, statsResult)
+            if (initialRetryCount != null) {
+                handleRetryAction(target, targetIdentity, initialRetryCount, statsResult)
             } else {
                 if (statsResult !is StatsResult.Success) {
                     errorHandler.handleStatsFailure(statsResult, _status)

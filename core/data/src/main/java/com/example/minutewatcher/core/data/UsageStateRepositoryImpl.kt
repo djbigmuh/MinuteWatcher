@@ -81,6 +81,14 @@ class UsageStateRepositoryImpl
                     emit(emptyList())
                 }
 
+    private val simUsagesSharedFlow: StateFlow<List<SimUsage>> =
+        combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList(),
+            )
+
         /**
          * Returns a flow of all active SIM usages.
          *
@@ -90,8 +98,7 @@ class UsageStateRepositoryImpl
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
-        override fun observeSimUsages(): Flow<List<SimUsage>> =
-            combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
+        override fun observeSimUsages(): Flow<List<SimUsage>> = simUsagesSharedFlow
 
         /**
          * Returns a flow of UI models for all active SIM cards.

@@ -58,7 +58,10 @@ class WidgetUpdaterImpl
                 deferred.complete(result)
                 return result
             } catch (e: Exception) {
-                if (e is CancellationException) throw e
+                if (e is CancellationException) {
+                    deferred.completeExceptionally(e)
+                    throw e
+                }
                 val failure =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
@@ -132,8 +135,7 @@ class WidgetUpdaterImpl
                     is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
                 }
             } ?: WidgetUpdateResult.Failure(
-                wasCoalesced = true,
-                isRetryable = true,
+                wasCoalesced = true, isRetryable = true,
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
             )
         } catch (e: CancellationException) {
@@ -141,8 +143,7 @@ class WidgetUpdaterImpl
         } catch (e: Exception) {
             AppLogger.e("WidgetUpdater: joinInProgressUpdate failed", e)
             WidgetUpdateResult.Failure(
-                wasCoalesced = true,
-                isRetryable = true,
+                wasCoalesced = true, isRetryable = true,
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
             )
         }

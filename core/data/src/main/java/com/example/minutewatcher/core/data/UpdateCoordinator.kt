@@ -360,17 +360,9 @@ class UpdateCoordinator
             }
 
             try {
-                var result = widgetUpdater.updateAll()
-
+                val result = widgetUpdater.updateAll()
                 if (!result.isSuccess) {
-                    val failure = result as? WidgetUpdateResult.Failure
-                    val isRetryable = failure?.isRetryable ?: false
-                    if (isRetryable) {
-                        AppLogger.w("Force widget update failed with retryable error, retrying once")
-                        result = widgetUpdater.updateAll()
-                    } else {
-                        AppLogger.w("Force widget update failed with terminal error, not retrying")
-                    }
+                    AppLogger.w("Force widget update failed, isRetryable=${(result as? WidgetUpdateResult.Failure)?.isRetryable}")
                 }
 
                 if (result.isSuccess) {

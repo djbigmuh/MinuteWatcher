@@ -85,11 +85,18 @@ class SimIdentitySeedRepositoryImpl
                     if (seed != null && _isEphemeralSeedActive.value) {
                         val ephemeral = cachedEphemeralSeed
                         if (ephemeral != null) {
-                            performRecoveryMigration(ephemeral, seed)
+                            try {
+                                performRecoveryMigration(ephemeral, seed)
+                                _isEphemeralSeedActive.value = false
+                                cachedEphemeralSeed = null
+                                AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                // Миграция не удалась — оставляем флаг, повторим при следующем вызове
+                                AppLogger.w("SimIdentitySeedRepositoryImpl: recovery migration failed, will retry", e)
+                            }
                         }
-                        _isEphemeralSeedActive.value = false
-                        cachedEphemeralSeed = null
-                        AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
                     }
                     seed
                 }
@@ -105,11 +112,18 @@ class SimIdentitySeedRepositoryImpl
                     if (_isEphemeralSeedActive.value) {
                         val ephemeral = cachedEphemeralSeed
                         if (ephemeral != null) {
-                            performRecoveryMigration(ephemeral, secondAttempt)
+                            try {
+                                performRecoveryMigration(ephemeral, secondAttempt)
+                                _isEphemeralSeedActive.value = false
+                                cachedEphemeralSeed = null
+                                AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                // Миграция не удалась — оставляем флаг, повторим при следующем вызове
+                                AppLogger.w("SimIdentitySeedRepositoryImpl: recovery migration failed, will retry", e)
+                            }
                         }
-                        _isEphemeralSeedActive.value = false
-                        cachedEphemeralSeed = null
-                        AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
                     }
                     secondAttempt
                 } else {
@@ -141,8 +155,8 @@ class SimIdentitySeedRepositoryImpl
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Логируем ошибку, но не блокируем переключение сида, как требует инструкция.
             AppLogger.e("SimIdentitySeedRepositoryImpl: Failed to migrate data from ephemeral seed", e)
+            throw e // Пробрасываем, чтобы не сбрасывать флаг
         }
     }
 

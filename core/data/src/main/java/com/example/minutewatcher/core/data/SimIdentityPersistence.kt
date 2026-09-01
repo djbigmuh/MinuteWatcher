@@ -55,16 +55,15 @@ class SimIdentityPersistence
                     (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
                 ) {
                     saveMutex.withLock {
-                        val currentPrefs = fetchCurrentPrefs()
-                        val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, currentPrefs) }
-                        if (toUpdate.isEmpty()) return@withLock
-
-                        // Perform migrations OUTSIDE dataStore.edit to avoid potential deadlock
-                        // and long DataStore locking.
-                        val toMigrate = filterIdentitiesRequiringMigration(toUpdate, currentPrefs)
+                        // Миграция выполняется до edit — она изменяет другие ключи
+                        // и не конфликтует с последующим edit.
+                        val preEditPrefs = fetchCurrentPrefs()
+                        val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
                         val failedIds = performMigrations(toMigrate)
 
                         dataStore.edit { prefs ->
+                            // Фильтрация обновлений на основе АКТУАЛЬНЫХ данных внутри edit
+                            val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, prefs) }
                             val updatedToUpdate = applyOptimizationAndFilterUpdates(toUpdate, prefs)
                             if (updatedToUpdate.isEmpty()) return@edit
 
@@ -97,10 +96,6 @@ class SimIdentityPersistence
                 isIdentityUpdateRequired(identity, prefs)
             }
 
-        private fun filterIdentitiesRequiringMigration(
-            identities: List<SimIdentity>,
-            prefs: Preferences,
-        ): List<SimIdentity> = identities.filter { isMigrationRequired(it, prefs) }
 
         private fun updatePreferences(
             identities: List<SimIdentity>,
