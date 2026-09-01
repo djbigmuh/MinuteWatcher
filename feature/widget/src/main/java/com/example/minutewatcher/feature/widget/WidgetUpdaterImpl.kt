@@ -39,7 +39,7 @@ class WidgetUpdaterImpl
     private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
     override suspend fun updateAll(): WidgetUpdateResult {
-        repeat(2) {
+        repeat(5) {
             currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
 
             if (updateMutex.tryLock()) {
@@ -69,7 +69,11 @@ class WidgetUpdaterImpl
             updateMutex.lock()
             updateMutex.unlock()
         }
-        return updateAll()
+        return WidgetUpdateResult.Failure(
+            wasCoalesced = false,
+            isRetryable = true,
+            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+        )
     }
 
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =

@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -37,8 +36,6 @@ class MainInitializationController
         private val _initializationState = MutableStateFlow<InitializationState>(InitializationState.NotStarted)
         val initializationState: StateFlow<InitializationState> = _initializationState.asStateFlow()
 
-    private val stateRef = AtomicReference<InitializationState>(InitializationState.NotStarted)
-
         fun initializeApp(
             scope: CoroutineScope,
             lastRefreshAt: Long,
@@ -56,12 +53,11 @@ class MainInitializationController
 
     private fun claimInitialization(): Boolean {
         while (true) {
-            val current = stateRef.get()
+            val current = _initializationState.value
             if (current !is InitializationState.NotStarted && current !is InitializationState.Failed) {
                 return false
             }
-            if (stateRef.compareAndSet(current, InitializationState.InProgress)) {
-                _initializationState.value = InitializationState.InProgress
+            if (_initializationState.compareAndSet(current, InitializationState.InProgress)) {
                 return true
             }
         }
@@ -86,7 +82,6 @@ class MainInitializationController
                     isTerminal = true
                 }
             } catch (e: CancellationException) {
-                stateRef.set(InitializationState.Failed)
                 _initializationState.value = InitializationState.Failed
                 throw e
             } catch (e: SecurityException) {
@@ -156,7 +151,6 @@ class MainInitializationController
 
         private fun finalizeInitialization(isSuccess: Boolean) {
             val newState = if (isSuccess) InitializationState.Completed else InitializationState.Failed
-            stateRef.set(newState)
             _initializationState.value = newState
         }
 

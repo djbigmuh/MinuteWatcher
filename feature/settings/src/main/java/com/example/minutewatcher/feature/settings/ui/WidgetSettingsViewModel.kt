@@ -61,6 +61,7 @@ class WidgetSettingsViewModel
         private val saveMutex = Mutex()
 
         private var loadJob: Job? = null
+    private var loadOuterJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
@@ -79,31 +80,33 @@ class WidgetSettingsViewModel
          * Загружает настройки виджета, используя паттерн сериализации через мьютекс.
          */
         private fun loadSettings() {
-            viewModelScope.launch {
-                loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+            loadOuterJob?.cancel()
+            loadOuterJob =
+                viewModelScope.launch {
+                    loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
 
-                loadJob =
-                    launch {
-                        try {
-                            val loaded =
-                                withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                    loader.load()
+                    loadJob =
+                        launch {
+                            try {
+                                val loaded =
+                                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                                        loader.load()
+                                    }
+                                ensureActive()
+                                if (loaded != null) {
+                                    reduce { copy(settings = loaded, isLoadError = false) }
+                                } else {
+                                    AppLogger.e("Failed to load widget settings: timeout")
+                                    reduce { copy(isLoadError = true) }
                                 }
-                            ensureActive()
-                            if (loaded != null) {
-                                reduce { copy(settings = loaded, isLoadError = false) }
-                            } else {
-                                AppLogger.e("Failed to load widget settings: timeout")
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to load widget settings", e)
                                 reduce { copy(isLoadError = true) }
                             }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to load widget settings", e)
-                            reduce { copy(isLoadError = true) }
                         }
-                    }
-            }
+                }
         }
 
         /**
@@ -154,7 +157,6 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            val currentStateSnapshot = state.value
             val acquired =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     saveMutex.lock()
@@ -168,6 +170,7 @@ class WidgetSettingsViewModel
             }
 
             try {
+                val currentStateSnapshot = state.value
                 reduce { copy(saveResult = null, isSaving = true) }
                 val result = performSaveInternal(currentStateSnapshot)
                 reduce { copy(saveResult = result) }

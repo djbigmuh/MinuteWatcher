@@ -75,44 +75,42 @@ class SimIdentitySeedRepositoryImpl
          * @return The resulting seed string.
          * Safe to call from any coroutine context.
          */
-        override suspend fun getOrCreateSeed(generator: () -> String): String =
-            seedMutex.withLock {
-                // 1. Recovery attempt if currently ephemeral
-                if (_isEphemeralSeedActive.value) {
-                    val recovered = tryGetPersistentSeed(generator)
-                    if (recovered != null) {
+        override suspend fun getOrCreateSeed(generator: () -> String): String {
+            val firstAttempt =
+                seedMutex.withLock {
+                    val seed = tryGetPersistentSeed(generator)
+                    if (seed != null && _isEphemeralSeedActive.value) {
                         _isEphemeralSeedActive.value = false
                         cachedEphemeralSeed = null
                         AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
-                        return@withLock recovered
                     }
+                    seed
                 }
 
-                // 2. Normal path (or first attempt after recovery failed)
-                var currentSeed = tryGetPersistentSeed(generator)
+            if (firstAttempt != null) return firstAttempt
 
-                // 3. Retry once if failed with IO or Timeout
-                if (currentSeed == null) {
-                    AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed, retrying in 500ms...")
-                    kotlinx.coroutines.delay(RETRY_DELAY_MS.milliseconds)
-                    currentSeed = tryGetPersistentSeed(generator)
-                }
+            AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed, retrying in 500ms...")
+            kotlinx.coroutines.delay(RETRY_DELAY_MS.milliseconds)
 
-                if (currentSeed != null) {
-                    _isEphemeralSeedActive.value = false
-                    cachedEphemeralSeed = null
-                    currentSeed
+            return seedMutex.withLock {
+                val secondAttempt = tryGetPersistentSeed(generator)
+                if (secondAttempt != null) {
+                    if (_isEphemeralSeedActive.value) {
+                        _isEphemeralSeedActive.value = false
+                        cachedEphemeralSeed = null
+                        AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
+                    }
+                    secondAttempt
                 } else {
-                    // 4. Fallback to ephemeral if persistent failed twice
                     AppLogger.e(
                         "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
                             "All SIM identities will change. Previous statistics will be orphaned.",
                     )
                     _isEphemeralSeedActive.value = true
-                    // cachedEphemeralSeed is only accessed under seedMutex
                     cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
                 }
             }
+        }
 
     private suspend fun tryGetPersistentSeed(generator: () -> String): String? =
         try {

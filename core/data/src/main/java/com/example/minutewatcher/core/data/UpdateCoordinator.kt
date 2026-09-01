@@ -268,9 +268,9 @@ class UpdateCoordinator
                 )
                 _status.value =
                     TrackingStatus.Error(
-                            TrackingStatus.ErrorType.NOT_SUPPORTED,
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
                         "Widget size limit exceeded",
-                        )
+                    )
                 handleUpdateFailure()
             }
 

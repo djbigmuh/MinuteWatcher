@@ -24,7 +24,8 @@ object TrackingBannerMapper {
 
         val widgetError = statusMap["widget_observation"] as? TrackingStatus.Error
         val isDatabaseError = widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
-        val observationFailed = isDatabaseError || isStorageDegraded
+        val isSizeLimitError = widgetError?.message?.contains("size limit") == true
+        val observationFailed = (isDatabaseError && !isSizeLimitError) || isStorageDegraded
 
         val phonePermanentlyDenied = settings.wasPhonePermissionRequestedBefore && !phoneGranted
         val phonePermissionState =

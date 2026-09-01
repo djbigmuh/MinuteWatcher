@@ -45,7 +45,13 @@ open class WidgetSettingsSaver
             state: WidgetSettingsState,
             skipSimSettings: Boolean = false,
         ): SaveResult {
-            if (!saveMutex.tryLock()) {
+            val acquired =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    saveMutex.lock()
+                    true
+                } ?: false
+
+            if (!acquired) {
                 AppLogger.w("WidgetSettingsSaver: save already in progress, skipping")
                 return SaveResult.AlreadyInProgress
             }
