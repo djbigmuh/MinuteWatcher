@@ -13,7 +13,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,41 +38,43 @@ class WidgetUpdaterImpl
     private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
     override suspend fun updateAll(): WidgetUpdateResult {
-        repeat(5) {
-            currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
+        currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
 
-            if (updateMutex.tryLock()) {
-                val deferred = CompletableDeferred<WidgetUpdateResult>()
-                currentUpdate.set(deferred)
-                try {
-                    val result = executeUpdateProcess()
-                    deferred.complete(result)
-                    return result
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    val failure =
-                        WidgetUpdateResult.Failure(
-                            wasCoalesced = false,
-                            isRetryable = false,
-                            reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                        )
-                    deferred.complete(failure)
-                    return failure
-                } finally {
-                    currentUpdate.compareAndSet(deferred, null)
-                    updateMutex.unlock()
-                }
+        updateMutex.lock()
+        var lockHeld = true
+        try {
+            // Re-check after acquiring the lock to handle race conditions where another
+            // coroutine started the update while we were waiting for the mutex.
+            currentUpdate.get()?.takeIf { !it.isCompleted }?.let {
+                updateMutex.unlock()
+                lockHeld = false
+                return joinInProgressUpdate(it)
             }
-            yield()
-            currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
-            updateMutex.lock()
-            updateMutex.unlock()
+
+            val deferred = CompletableDeferred<WidgetUpdateResult>()
+            currentUpdate.set(deferred)
+            try {
+                val result = executeUpdateProcess()
+                deferred.complete(result)
+                return result
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                val failure =
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = false,
+                        isRetryable = false,
+                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                    )
+                deferred.complete(failure)
+                return failure
+            } finally {
+                currentUpdate.compareAndSet(deferred, null)
+            }
+        } finally {
+            if (lockHeld) {
+                updateMutex.unlock()
+            }
         }
-        return WidgetUpdateResult.Failure(
-            wasCoalesced = false,
-            isRetryable = true,
-            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-        )
     }
 
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =

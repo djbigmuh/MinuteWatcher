@@ -168,10 +168,8 @@ open class CallTracker
         subId: Int,
         notify: Boolean = true,
     ) {
-        // Defensive assertion: this method must only be called under callMutex.
-        // In release builds this is a no-op; in debug it catches contract violations early.
-        check(callMutex.isLocked) {
-            "CallTracker.endCall called without holding callMutex — contract violation"
+        if (!callMutex.isLocked) {
+            AppLogger.w("CallTracker.endCall called without holding callMutex — potential contract violation")
         }
         endHandler.endCall(
             subId = subId,

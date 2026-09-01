@@ -185,7 +185,6 @@ class UpdateCoordinator
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         if (snapshot.suppressWidgetUpdate) {
-            widgetUpdateMutex.withLock { lastSnapshotHash = newHash }
             return
         }
 

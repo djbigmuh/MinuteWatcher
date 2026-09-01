@@ -601,6 +601,48 @@ class UpdateCoordinatorTest {
         }
     }
 
+    @Test
+    fun `snapshot with suppressWidgetUpdate does not block subsequent reactive update with same content`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. Emit snapshot s1 with suppressWidgetUpdate = true
+            val s1 = createSnapshot(timestamp = 1000L, content = "A").copy(suppressWidgetUpdate = true)
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should NOT call updateAll
+            verify(widgetUpdater, times(0)).updateAll()
+
+            // 2. Emit the same snapshot content but with suppressWidgetUpdate = false
+            val s2 = s1.copy(suppressWidgetUpdate = false)
+            snapshotFlow.tryEmit(s2)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should call updateAll
+            verify(widgetUpdater, times(1)).updateAll()
+        }
+    }
+
     private fun createEmptySnapshot() =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),

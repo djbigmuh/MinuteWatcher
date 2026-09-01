@@ -134,6 +134,7 @@ object SimCardMapper {
         hasNegativeValues: Boolean,
         version: Long,
     ) {
+        var shouldLog = false
         negativeLogged.compute(slot) { _, currentEntry ->
             // Если в кэше уже есть более новая версия (race condition), ничего не меняем.
             if (currentEntry != null && currentEntry.version > version) return@compute currentEntry
@@ -141,15 +142,19 @@ object SimCardMapper {
             if (currentEntry?.identity == usage.identity) return@compute currentEntry
 
             if (hasNegativeValues && (currentEntry != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
-                AppLogger.e(
-                    "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
-                        "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
-                        "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
-                )
+                shouldLog = true
                 LogEntry(usage.identity, version)
             } else {
                 null
             }
+        }
+
+        if (shouldLog) {
+            AppLogger.e(
+                "SimCardMapper: Detected negative usage/limit values for slot $slot (id=${usage.identity}): " +
+                    "minUsed=${usage.minutesUsed}, minLimit=${usage.minutesLimit}, " +
+                    "trafUsed=${usage.trafficUsedMb}, trafLimit=${usage.trafficLimitMb}",
+            )
         }
     }
 

@@ -39,12 +39,22 @@ class TrafficSimChangeHandler
         suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 
         suspend fun ensureInMemoryLastDataSubId() {
-            if (lastDataSubIdLoaded.compareAndSet(false, true)) {
-                inMemoryLastDataSubId.set(
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+            if (!lastDataSubIdLoaded.get()) {
+                try {
+                    val loaded = withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                         callSessionRepository.getLastDataSubId().first()
-                    } ?: -1,
-                )
+                    }
+                    if (loaded != null) {
+                        inMemoryLastDataSubId.set(loaded)
+                        lastDataSubIdLoaded.set(true)
+                    } else {
+                        AppLogger.w("TrafficSimChangeHandler: Timeout loading lastDataSubId")
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficSimChangeHandler: Failed to load lastDataSubId", e)
+                }
             }
         }
 

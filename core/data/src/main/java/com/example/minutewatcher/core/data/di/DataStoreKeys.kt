@@ -173,4 +173,7 @@ internal object DataStoreKeys {
 
     // Identity Seed (SimIdentitySeedRepositoryImpl)
     @JvmStatic val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
+
+    @JvmStatic
+    val EPHEMERAL_IDENTITY_SEED = stringPreferencesKey("ephemeral_identity_seed")
 }

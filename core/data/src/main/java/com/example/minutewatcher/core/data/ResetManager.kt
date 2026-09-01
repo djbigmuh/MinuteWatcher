@@ -74,19 +74,25 @@ class ResetManager
             var ioException: IOException? = null
             var successCount = 0
 
-            for (simInfo in activeSims) {
-                try {
-                    if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
-                        successCount++
+            val allProcessed = withTimeoutOrNull(RESET_TOTAL_TIMEOUT_MS.milliseconds) {
+                for (simInfo in activeSims) {
+                    try {
+                        if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
+                            successCount++
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: IOException) {
+                        AppLogger.e("ResetManager: reset failed for SIM ${simInfo.identity.stableId}, continuing", e)
+                        ioException = e
+                    } catch (e: Exception) {
+                        AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: IOException) {
-                    AppLogger.e("ResetManager: reset failed for SIM ${simInfo.identity.stableId}, continuing", e)
-                    ioException = e
-                } catch (e: Exception) {
-                    AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
                 }
+                true
+            } ?: run {
+                AppLogger.e("ResetManager: total reset timeout after ${RESET_TOTAL_TIMEOUT_MS}ms")
+                false
             }
 
             cleanupStaleCheckTimestamps(activeSims)
@@ -104,7 +110,7 @@ class ResetManager
                 if (shouldNotify) dataChangeNotifier.notifyDataChanged()
             }
 
-            return handleAutoResetResult(ioException, successCount, activeSims.size)
+            return allProcessed && handleAutoResetResult(ioException, successCount, activeSims.size)
         }
 
         private suspend fun processSingleSimReset(
@@ -201,5 +207,6 @@ class ResetManager
 
         companion object {
             private val CHECK_INTERVAL_MS = 1.hours.inWholeMilliseconds
+            private const val RESET_TOTAL_TIMEOUT_MS = 30_000L
         }
     }

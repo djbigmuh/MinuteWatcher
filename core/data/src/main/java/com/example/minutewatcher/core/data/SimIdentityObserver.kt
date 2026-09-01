@@ -53,7 +53,7 @@ internal class SimIdentityObserver
         val seedFlow: Flow<SeedResult> =
             flow {
                 val attempt = AtomicLong(0)
-                attempt.set(0)
+                var exhausted = false
                 emitAll(
                     merge(
                         flow {
@@ -82,6 +82,11 @@ internal class SimIdentityObserver
                         .retryWhen { cause, _ ->
                             if (cause is CancellationException) return@retryWhen false
                             val currentAttempt = attempt.incrementAndGet()
+                            if (currentAttempt > MAX_SEED_RETRIES) {
+                                AppLogger.e("SimIdentityObserver: seedFlow max retries exceeded, falling back", cause)
+                                exhausted = true
+                                return@retryWhen false
+                            }
                             val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
                             AppLogger.e(
                                 "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), retrying in ${backoff}ms",
@@ -91,6 +96,9 @@ internal class SimIdentityObserver
                             true
                         },
                 )
+                if (exhausted) {
+                    emit(SeedResult.Fallback)
+                }
             }.distinctUntilChanged()
                 .shareIn(
                     scope,
@@ -177,6 +185,7 @@ internal class SimIdentityObserver
             private const val MAX_BACKOFF_EXPONENT = 4
             private const val INITIAL_BACKOFF_MS = 1000L
             private const val MAX_SEED_BACKOFF_MS = 10000L
+            private const val MAX_SEED_RETRIES = 10
 
             private const val SEED_TOTAL_TIMEOUT_MS =
                 (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)

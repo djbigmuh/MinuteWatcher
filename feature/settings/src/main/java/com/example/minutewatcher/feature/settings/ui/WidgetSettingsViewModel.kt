@@ -170,9 +170,13 @@ class WidgetSettingsViewModel
             }
 
             try {
-                val currentStateSnapshot = state.value
-                reduce { copy(saveResult = null, isSaving = true) }
-                val result = performSaveInternal(currentStateSnapshot)
+                var currentStateSnapshot: WidgetSettingsUiState? = null
+                reduce {
+                    val updated = copy(saveResult = null, isSaving = true)
+                    currentStateSnapshot = updated
+                    updated
+                }
+                val result = performSaveInternal(currentStateSnapshot!!)
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {
                 throw e

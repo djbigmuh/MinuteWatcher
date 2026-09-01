@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import android.telephony.SubscriptionInfo
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -13,6 +14,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.AppDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.di.SimDataStore
+import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -184,6 +186,62 @@ class IdentityMigrationService
                     throw e
                 }
             }
+
+    /**
+     * Migrates data from identities generated with an ephemeral seed to those generated with a persistent seed.
+     *
+     * @param ephemeralSeed The ephemeral seed used during DataStore unavailability.
+     * @param persistentSeed The persistent seed recovered from DataStore.
+     * @param activeSubscriptions The list of currently active SIM subscriptions.
+     * @return The combined outcome of all migration attempts.
+     */
+    suspend fun migrateFromEphemeralSeed(
+        ephemeralSeed: String,
+        persistentSeed: String,
+        activeSubscriptions: List<SubscriptionInfo>,
+    ): MigrationOutcome =
+        migrationMutex.withLock {
+            var totalOutcome = MigrationOutcome()
+            for (info in activeSubscriptions) {
+                val ephemeralIdentity =
+                    SimIdentityUtils.createIdentityFromInfo(info, ephemeralSeed)
+                val persistentIdentity =
+                    SimIdentityUtils.createIdentityFromInfo(info, persistentSeed)
+
+                if (ephemeralIdentity.stableId != persistentIdentity.stableId) {
+                    AppLogger.d(
+                        "IdentityMigrationService: Migrating ephemeral data for slot ${info.simSlotIndex} " +
+                            "(${ephemeralIdentity.stableId} -> ${persistentIdentity.stableId})",
+                    )
+                    totalOutcome += migrateBetweenIdentities(ephemeralIdentity.stableId, persistentIdentity.stableId)
+                }
+            }
+            totalOutcome
+        }
+
+    private suspend fun migrateBetweenIdentities(
+        oldStableId: String,
+        newStableId: String,
+    ): MigrationOutcome {
+        val oldSuffix = "_$oldStableId"
+        val newSuffix = "_$newStableId"
+        var outcome = MigrationOutcome()
+        outcome +=
+            migrateDataStore(
+                appDataStore,
+                oldSuffix,
+                newSuffix,
+                "app_settings",
+            )
+        outcome +=
+            migrateDataStore(
+                simDataStore,
+                oldSuffix,
+                newSuffix,
+                "sim_settings",
+            )
+        return outcome
+    }
 
         private suspend fun performMigration(
             activeIdentity: com.example.minutewatcher.core.model.SimIdentity,

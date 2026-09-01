@@ -25,6 +25,8 @@ class SimIdentitySeedRepositoryImplTest {
 
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimIdentitySeedRepositoryImpl
+    private val migrationService: IdentityMigrationService = org.mockito.kotlin.mock()
+    private val discovery: SimIdentityDiscovery = org.mockito.kotlin.mock()
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
@@ -35,7 +37,12 @@ class SimIdentitySeedRepositoryImplTest {
                 scope = testScope,
                 produceFile = { tmpFolder.newFile("test_seed.preferences_pb") },
             )
-        repository = SimIdentitySeedRepositoryImpl(dataStore)
+        repository =
+            SimIdentitySeedRepositoryImpl(
+                dataStore = dataStore,
+                migrationService = { migrationService },
+                discovery = { discovery },
+            )
     }
 
     @Test

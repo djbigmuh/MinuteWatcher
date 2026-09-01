@@ -20,6 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -35,6 +36,8 @@ class SimIdentitySeedRepositoryImpl
     @Inject
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
+        private val migrationService: Provider<IdentityMigrationService>,
+        private val discovery: Provider<SimIdentityDiscovery>,
     ) : SimIdentitySeedRepository {
         // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
         // Это соответствует принципу Dependency Inversion.
@@ -80,6 +83,10 @@ class SimIdentitySeedRepositoryImpl
                 seedMutex.withLock {
                     val seed = tryGetPersistentSeed(generator)
                     if (seed != null && _isEphemeralSeedActive.value) {
+                        val ephemeral = cachedEphemeralSeed
+                        if (ephemeral != null) {
+                            performRecoveryMigration(ephemeral, seed)
+                        }
                         _isEphemeralSeedActive.value = false
                         cachedEphemeralSeed = null
                         AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
@@ -96,6 +103,10 @@ class SimIdentitySeedRepositoryImpl
                 val secondAttempt = tryGetPersistentSeed(generator)
                 if (secondAttempt != null) {
                     if (_isEphemeralSeedActive.value) {
+                        val ephemeral = cachedEphemeralSeed
+                        if (ephemeral != null) {
+                            performRecoveryMigration(ephemeral, secondAttempt)
+                        }
                         _isEphemeralSeedActive.value = false
                         cachedEphemeralSeed = null
                         AppLogger.d("Seed recovered from DataStore after ephemeral fallback")
@@ -111,6 +122,29 @@ class SimIdentitySeedRepositoryImpl
                 }
             }
         }
+
+    private suspend fun performRecoveryMigration(
+        ephemeralSeed: String,
+        persistentSeed: String,
+    ) {
+        try {
+            // Store ephemeral seed as requested ("temporary storage" for migration source record)
+            dataStore.edit { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] = ephemeralSeed }
+
+            val activeSubscriptions = discovery.get().getActiveSubscriptions()
+            migrationService.get().migrateFromEphemeralSeed(
+                ephemeralSeed = ephemeralSeed,
+                persistentSeed = persistentSeed,
+                activeSubscriptions = activeSubscriptions,
+            )
+            AppLogger.d("SimIdentitySeedRepositoryImpl: Ephemeral data migration completed successfully")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Логируем ошибку, но не блокируем переключение сида, как требует инструкция.
+            AppLogger.e("SimIdentitySeedRepositoryImpl: Failed to migrate data from ephemeral seed", e)
+        }
+    }
 
     private suspend fun tryGetPersistentSeed(generator: () -> String): String? =
         try {
