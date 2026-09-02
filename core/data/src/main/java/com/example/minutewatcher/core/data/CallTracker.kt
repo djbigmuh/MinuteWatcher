@@ -61,9 +61,9 @@ open class CallTracker
                 } catch (e: Exception) {
                     AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
                 }
+                }
             }
         }
-    }
 
     private val callMutex = Mutex()
     private val callEndResolver =
@@ -123,7 +123,7 @@ open class CallTracker
                 ) {
                     return
                 }
-            }
+                }
 
             if (!checkPermissions()) return
 
@@ -141,7 +141,7 @@ open class CallTracker
             AppLogger.e("Error refreshing status", e)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
         }
-    }
+        }
 
     private fun checkPermissions(): Boolean =
         try {
@@ -154,8 +154,8 @@ open class CallTracker
         } catch (e: SecurityException) {
             AppLogger.e("Permission revoked in checkPermissions", e)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            false
-        }
+                false
+            }
 
     /**
      * Finalizes the call recording and updates usage.
@@ -168,7 +168,7 @@ open class CallTracker
     internal suspend fun endCall(
         subId: Int,
         notify: Boolean = true,
-    ) {
+        ) {
         check(callMutex.isLocked) { "CallTracker.endCall must be called while holding callMutex" }
         endHandler.endCall(
             subId = subId,
@@ -181,7 +181,7 @@ open class CallTracker
         ) {
             settingsHandler.isCallTrackingEnabled()
         }
-    }
+        }
 
     private suspend fun clearSessionsAndRefresh(tag: String) {
         var operationCompleted = false
@@ -203,10 +203,10 @@ open class CallTracker
                     } catch (e: Exception) {
                         AppLogger.e("CallTracker: Failed to refresh status in finally during $tag", e)
                     }
+                    }
                 }
             }
         }
-    }
 
     fun onBoot() {
         scope.launch {
@@ -221,12 +221,12 @@ open class CallTracker
     }
 
     override suspend fun recover() {
-        try {
-            clearSessionsAndRefresh("recovery")
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("CallTracker: recovery failed", e)
+            try {
+                clearSessionsAndRefresh("recovery")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("CallTracker: recovery failed", e)
+            }
         }
     }
-}

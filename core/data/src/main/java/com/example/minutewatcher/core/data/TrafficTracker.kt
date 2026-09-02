@@ -166,13 +166,13 @@ class TrafficTracker
     ) {
         // 1. Чтение начальных данных вне лока (тяжёлый запрос для прогрева кэша)
         val initialUsage =
-            simUsageRepository
-                .getSimUsage(targetIdentity)
-                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                ?: run {
-                    errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                    return
-                }
+                simUsageRepository
+                    .getSimUsage(targetIdentity)
+                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                    ?: run {
+                        errorHandler.handleUsageReadTimeout(targetIdentity, _status)
+                        return
+                    }
 
         // 2. Спекулятивный расчет статистики вне лока.
         // Используем lastResetDate, предполагая отсутствие активных ретраев (наиболее частый случай).
@@ -212,7 +212,7 @@ class TrafficTracker
                         "(expected $speculativeStartTime, actual $actualStartTime), recalculating under lock",
                 )
                 statsResult = baselineManager.getCurrentMobileBytes(actualStartTime)
-            }
+                }
 
             // Check retry limit
             if ((currentRetryCount != null) &&
@@ -220,8 +220,8 @@ class TrafficTracker
             ) {
                 baselineManager.baselineNeedsRetry.remove(targetIdentity)
                 errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                return@withLock
-            }
+                    return@withLock
+                }
 
             // Handle results
             val finalStats = statsResult
@@ -261,9 +261,9 @@ class TrafficTracker
                     return@withLock
                 }
                 _status.value = TrackingStatus.Active
+                }
             }
         }
-    }
 
         private suspend fun handleRetryAction(
             target: TargetInfo,

@@ -154,7 +154,12 @@ private class SimLimitState(
     mutableStateOf(
         TextFieldValue(
             text = initialMinutesText,
-            selection = if (initialMinutesText == "0") TextRange(0, initialMinutesText.length) else TextRange.Zero,
+            selection =
+                if (initialMinutesText == "0") {
+                    TextRange(0, initialMinutesText.length)
+                } else {
+                    TextRange.Zero
+                },
         ),
     )
     var trafficText by
