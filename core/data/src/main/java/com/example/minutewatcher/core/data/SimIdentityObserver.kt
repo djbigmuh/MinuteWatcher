@@ -16,6 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -189,9 +190,7 @@ internal class SimIdentityObserver
                 }
             }.distinctUntilChanged()
 
-    private suspend fun kotlinx.coroutines.flow.FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
-        result: SimDiscoveryResult,
-    ) {
+    private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(result: SimDiscoveryResult) {
         when (result) {
             is SimDiscoveryResult.Available -> {
                 generalAttempt.set(0)
@@ -203,16 +202,18 @@ internal class SimIdentityObserver
             is SimDiscoveryResult.PermissionMissing -> {
                 val current = securityAttempt.incrementAndGet()
                 if (current > MAX_SECURITY_ATTEMPTS) {
-                    _status.value = TrackingStatus.Error(
-                        TrackingStatus.ErrorType.PERMISSION_MISSING,
-                        "SecurityException limit reached",
-                    )
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                            "SecurityException limit reached",
+                        )
                     emit(emptyList())
                 } else {
-                    _status.value = TrackingStatus.Error(
-                        TrackingStatus.ErrorType.PERMISSION_MISSING,
-                        "Permission missing (attempt $current)",
-                    )
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                            "Permission missing (attempt $current)",
+                        )
                     emit(emptyList())
                     permissionStateNotifier.changes.first()
                     generalAttempt.set(0)
@@ -221,10 +222,11 @@ internal class SimIdentityObserver
             }
 
             is SimDiscoveryResult.Unsupported -> {
-                _status.value = TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "SIM discovery unsupported",
-                )
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "SIM discovery unsupported",
+                    )
                 emit(emptyList())
             }
 

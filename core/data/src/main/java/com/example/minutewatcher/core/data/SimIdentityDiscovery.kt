@@ -118,22 +118,24 @@ class SimIdentityDiscovery
             val defaultDataSubId = getDefaultDataSubscriptionId()
             val defaultVoiceSubId = getDefaultVoiceSubscriptionId()
 
-            val discoveredSims = subscriptions.map { info ->
-                val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
-                ActiveSimInfo(
-                    identity = identity,
-                    slotIndex = info.simSlotIndex,
-                    subscriptionId = info.subscriptionId,
-                    iccId = info.iccId,
-                    displayName = info.displayName?.toString(),
-                    carrierName = info.carrierName?.toString(),
-                    mccMnc = SimIdentityUtils.getMccMnc(info),
-                    isDefaultData = info.subscriptionId == defaultDataSubId,
-                    isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
-                )
-            }
+            val discoveredSims =
+                subscriptions.map { info ->
+                    val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
+                    ActiveSimInfo(
+                        identity = identity,
+                        slotIndex = info.simSlotIndex,
+                        subscriptionId = info.subscriptionId,
+                        iccId = info.iccId,
+                        displayName = info.displayName?.toString(),
+                        carrierName = info.carrierName?.toString(),
+                        mccMnc = SimIdentityUtils.getMccMnc(info),
+                        isDefaultData = info.subscriptionId == defaultDataSubId,
+                        isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
+                    )
+                }
             SimDiscoveryResult.Available(discoveredSims)
         } catch (e: SecurityException) {
+            AppLogger.w("Sim discovery failed: security restriction", e)
             SimDiscoveryResult.PermissionMissing
         } catch (e: Exception) {
             AppLogger.e("Sim discovery failed", e)

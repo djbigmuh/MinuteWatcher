@@ -111,8 +111,8 @@ class SimIdentityObserverTest {
             // Now make fetcher succeed
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                 com.example.minutewatcher.core.model.SimDiscoveryResult.Available(
-                    emptyList()
-                )
+                    emptyList(),
+                ),
             )
 
             observer.recover()

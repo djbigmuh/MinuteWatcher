@@ -17,7 +17,6 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class SimDiscoveryRegressionTest {
-
     private val context: Context = mock()
     private val subscriptionManager: SubscriptionManager = mock()
     private val permissionManager: PermissionManager = mock()
@@ -28,12 +27,13 @@ class SimDiscoveryRegressionTest {
 
     @Before
     fun setup() {
-        val deps = SimDiscoveryDependencies(
-            context = context,
-            subscriptionManager = subscriptionManager,
-            permissionManager = permissionManager,
-            permissionStateNotifier = permissionStateNotifier
-        )
+        val deps =
+            SimDiscoveryDependencies(
+                context = context,
+                subscriptionManager = subscriptionManager,
+                permissionManager = permissionManager,
+                permissionStateNotifier = permissionStateNotifier,
+            )
         discovery = SimIdentityDiscovery(deps)
     }
 
@@ -71,12 +71,24 @@ class SimDiscoveryRegressionTest {
         val result2 = discovery.discoverSims(seed) as SimDiscoveryResult.Available
 
         assertEquals(
-            result1.sims.find { it.subscriptionId == 1 }?.identity?.stableId,
-            result2.sims.find { it.subscriptionId == 1 }?.identity?.stableId
+            result1.sims
+                .find { it.subscriptionId == 1 }
+                ?.identity
+                ?.stableId,
+            result2.sims
+                .find { it.subscriptionId == 1 }
+                ?.identity
+                ?.stableId,
         )
         assertEquals(
-            result1.sims.find { it.subscriptionId == 2 }?.identity?.stableId,
-            result2.sims.find { it.subscriptionId == 2 }?.identity?.stableId
+            result1.sims
+                .find { it.subscriptionId == 2 }
+                ?.identity
+                ?.stableId,
+            result2.sims
+                .find { it.subscriptionId == 2 }
+                ?.identity
+                ?.stableId,
         )
     }
 
@@ -90,8 +102,16 @@ class SimDiscoveryRegressionTest {
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(sub1, sub2))
         val result = discovery.discoverSims(seed) as SimDiscoveryResult.Available
 
-        val id1 = result.sims.find { it.subscriptionId == 1 }?.identity?.stableId
-        val id2 = result.sims.find { it.subscriptionId == 2 }?.identity?.stableId
+        val id1 =
+            result.sims
+                .find { it.subscriptionId == 1 }
+                ?.identity
+                ?.stableId
+        val id2 =
+            result.sims
+                .find { it.subscriptionId == 2 }
+                ?.identity
+                ?.stableId
 
         assertTrue(id1 != id2)
     }
@@ -103,12 +123,18 @@ class SimDiscoveryRegressionTest {
         val sub1 = createMockSub(1, 0, "icc1")
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(sub1))
         val result1 = discovery.discoverSims(seed) as SimDiscoveryResult.Available
-        val id1 = result1.sims.first().identity.stableId
+        val id1 =
+            result1.sims
+                .first()
+                .identity.stableId
 
         val sub2 = createMockSub(2, 0, "icc2") // New SIM in same slot 0
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(sub2))
         val result2 = discovery.discoverSims(seed) as SimDiscoveryResult.Available
-        val id2 = result2.sims.first().identity.stableId
+        val id2 =
+            result2.sims
+                .first()
+                .identity.stableId
 
         assertTrue(id1 != id2)
     }
@@ -142,8 +168,13 @@ class SimDiscoveryRegressionTest {
         val result2 = discovery.discoverSims(seed) as SimDiscoveryResult.Available
         assertEquals(1, result2.sims.size)
         assertEquals(
-            result1.sims.find { it.subscriptionId == 1 }?.identity?.stableId,
-            result2.sims.first().identity.stableId
+            result1.sims
+                .find { it.subscriptionId == 1 }
+                ?.identity
+                ?.stableId,
+            result2.sims
+                .first()
+                .identity.stableId,
         )
     }
 
@@ -163,7 +194,7 @@ class SimDiscoveryRegressionTest {
         slotIndex: Int,
         iccId: String?,
         displayName: String = "SIM $subId",
-        carrierName: String = "Carrier $subId"
+        carrierName: String = "Carrier $subId",
     ): SubscriptionInfo {
         val sub: SubscriptionInfo = mock()
         whenever(sub.subscriptionId).thenReturn(subId)

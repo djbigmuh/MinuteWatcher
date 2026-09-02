@@ -468,18 +468,23 @@ class IdentityMigrationService
             storeName: String,
         ): MigrationResult {
             val existingValue = this[newKey]
-            if (existingValue == null) {
-                this[newKey] = value
-                return MigrationResult.SUCCESS
-            }
-            if (existingValue == value) {
-                return MigrationResult.SUCCESS // Already migrated
-            }
-            this[conflictKey] = value
-            AppLogger.w(
-                "Migration conflict in $storeName: ${newKey.name} already exists. " +
-                    "Legacy value backed up to ${conflictKey.name}",
-            )
-            return MigrationResult.CONFLICT
+            val result =
+                when {
+                    existingValue == null -> {
+                        this[newKey] = value
+                        MigrationResult.SUCCESS
+                    }
+
+                    existingValue == value -> MigrationResult.SUCCESS
+                    else -> {
+                        this[conflictKey] = value
+                        AppLogger.w(
+                            "Migration conflict in $storeName: ${newKey.name} already exists. " +
+                                "Legacy value backed up to ${conflictKey.name}",
+                        )
+                        MigrationResult.CONFLICT
+                    }
+                }
+            return result
         }
     }

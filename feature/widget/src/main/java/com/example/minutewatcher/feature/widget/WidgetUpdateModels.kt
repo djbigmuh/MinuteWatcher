@@ -8,7 +8,7 @@ sealed class UpdateResult {
         val wasFull: Boolean,
     ) : UpdateResult()
 
-    object LimitExceeded : UpdateResult()
+    data object LimitExceeded : UpdateResult()
 
     data class GenericFailure(
         val isRetryable: Boolean,
@@ -23,9 +23,9 @@ sealed class UpdateOutcome {
         val shouldStop: Boolean = true,
     ) : UpdateOutcome()
 
-    object Retry : UpdateOutcome()
+    data object Retry : UpdateOutcome()
 
-    object Stop : UpdateOutcome()
+    data object Stop : UpdateOutcome()
 
-    object LimitExceeded : UpdateOutcome()
+    data object LimitExceeded : UpdateOutcome()
 }

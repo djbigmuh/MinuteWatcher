@@ -30,8 +30,8 @@ object SimIdentityUtils {
         slotIndex: Int,
         iccId: String?,
         seed: String,
-    ): SimIdentity {
-        return if (!iccId.isNullOrBlank()) {
+    ): SimIdentity =
+        if (!iccId.isNullOrBlank()) {
             SimIdentity(
                 stableId = "icc_" + hashString(iccId, seed),
                 subscriptionId = subscriptionId,
@@ -48,7 +48,6 @@ object SimIdentityUtils {
                 isStable = false,
             )
         }
-    }
 
     private fun hashString(
         input: String,

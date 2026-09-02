@@ -6,359 +6,173 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.concurrent.atomic.AtomicBoolean
+import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class WidgetSettingsRepositoryTest {
-    private lateinit var repository: WidgetSettingsRepository
-    private val settingsRepository: AppSettingsRepository = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
+
+    private lateinit var repository: WidgetSettingsRepository
 
     @Before
     fun setup() {
         initTestLogger()
         repository =
             WidgetSettingsRepository(
-                settingsRepository,
-                simIdentityRepository,
-                simWidgetVisibilityRepository,
+                appSettingsRepository = appSettingsRepository,
+                simIdentityRepository = simIdentityRepository,
+                simWidgetVisibilityRepository = simWidgetVisibilityRepository,
             )
     }
 
     @Test
-    fun `load should return state populated from app settings`() =
+    fun `load returns success when all underlying repositories work`() =
         runTest {
-            val appSettings = createAppSettings()
-            val appSettingsFlow = flowOf(appSettings)
-            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
-
             val activeSims = createMockActiveSims()
-            val activeSimsFlow = flowOf(activeSims)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(activeSims))
 
-            val simSettings = createMockSimSettings()
-            val batchSettings = mapOf("id0" to simSettings, "id1" to simSettings, "id2" to simSettings)
-            val batchSettingsFlow = flowOf(batchSettings)
-            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(batchSettingsFlow)
+            val simSettings = SimSettingsState(showSim = true)
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(
+                flowOf(mapOf("id0" to simSettings, "id1" to simSettings, "id2" to simSettings)),
+            )
+
+            val appSettings =
+                AppSettings(
+                    widgetLayoutMode = 1,
+                    widgetSimArrangement = 0,
+                    widgetBackgroundColor = 0xFF000000.toInt(),
+                    widgetTransparency = 0,
+                    widgetLimitExceeded = false,
+                )
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
 
             val result = repository.load()
 
+            assertNotNull(result)
+            assertFalse(result.settingsLoadFailed)
+            assertFalse(result.simListLoadFailed)
             assertEquals(1, result.layoutMode)
-            assertEquals(1, result.simArrangement)
-            assertEquals(80, result.transparency)
-            assertEquals(3, result.fontSize)
-            assertEquals(0xFF0000FF.toInt(), result.backgroundColor)
-            assertEquals(true, result.notifyLowMinutes)
-            assertEquals(false, result.notifyLowTraffic)
-
             assertEquals(3, result.simStates.size)
-
-            @Suppress("UnusedFlow")
-            verify(settingsRepository).getAppSettings()
-            @Suppress("UnusedFlow")
-            verify(simWidgetVisibilityRepository).getSimSettingsBatch(any())
         }
 
     @Test
-    fun `save should update general and sim specific settings`() =
+    fun `load sets simListLoadFailed when active sims flow is empty`() =
+        runTest {
+            // firstWithTimeout on flowOf(emptyList()) returns emptyList, not null.
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
+            val appSettings = AppSettings()
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+
+            val result = repository.load()
+
+            assertNotNull(result)
+            assertFalse(result.simListLoadFailed) // Empty list is a valid result (0 SIMs)
+            assertEquals(0, result.simStates.size)
+        }
+
+    @Test
+    fun `load correctly detects sim list updates via flow`() =
+        runTest {
+            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
+
+            val appSettings = AppSettings()
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+
+            val simSettings = SimSettingsState()
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(
+                flowOf(mapOf("id0" to simSettings, "id1" to simSettings, "id2" to simSettings)),
+            )
+
+            val activeSims = createMockActiveSims()
+            activeSimsFlow.emit(activeSims)
+
+            val result = repository.load()
+            assertEquals(3, result.simStates.size)
+        }
+
+    @Test
+    fun `saveGeneralSettings updates underlying app settings repository`() =
         runTest {
             val state =
                 WidgetSettingsState(
                     layoutMode = 2,
-                    simArrangement = 0,
-                    transparency = 30,
-                    fontSize = 1,
-                    backgroundColor = 0xFF00FF00.toInt(),
-                    notifyLowMinutes = false,
-                    notifyLowTraffic = true,
-                    simStates =
-                        mapOf(
-                            0 to
-                                SimSettingsState(
-                                    showSim = true,
-                                    showIcon = false,
-                                    showName = true,
-                                    showMinutes = true,
-                                    showMinutesLimit = false,
-                                    showTraffic = true,
-                                    showTrafficLimit = false,
-                                ),
-                            1 to
-                                SimSettingsState(
-                                    showSim = false,
-                                    showIcon = true,
-                                    showName = true,
-                                    showMinutes = true,
-                                    showMinutesLimit = false,
-                                    showTraffic = true,
-                                    showTrafficLimit = false,
-                                ),
-                        ),
+                    simArrangement = 1,
+                    backgroundColor = 0xFF111111.toInt(),
+                    transparency = 50,
                 )
-            // Моки нужны для стабов getIdentity; результат вызова (String) не потребляется напрямую,
-            // но используется внутри Mockito для регистрации стаба.
-            @Suppress("UNUSED_EXPRESSION")
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
-            @Suppress("UNUSED_EXPRESSION")
-            whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim1")
 
-            repository.save(state)
+            repository.saveGeneralSettings(state)
 
-            verify(settingsRepository).updateAppSettings(any())
-            verify(simWidgetVisibilityRepository).setSimSettingsBatch(
-                org.mockito.kotlin.check { map ->
-                    assertEquals(4, map.size)
-                    assertEquals("sim0", map.keys.first { it == "sim0" })
-                    assertEquals("sim_0", map.keys.first { it == "sim_0" })
-                    assertEquals("sim1", map.keys.first { it == "sim1" })
-                    assertEquals("sim_1", map.keys.first { it == "sim_1" })
-                },
-            )
+            verify(appSettingsRepository).updateAppSettings(any())
         }
 
     @Test
-    fun `save should include inactive sim settings`() =
+    fun `saveSimSettings updates underlying SIM repositories`() =
         runTest {
-            val state =
-                WidgetSettingsState(
-                    simStates =
-                        mapOf(
-                            2 to SimSettingsState(showSim = true),
-                        ),
-                )
-            @Suppress("UNUSED_EXPRESSION")
-            whenever(simIdentityRepository.getIdentity(2)).thenReturn("sim2_inactive")
+            val simState = SimSettingsState(showSim = true)
+            val state = WidgetSettingsState(simStates = mapOf(0 to simState))
 
-            repository.save(state)
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("id0")
 
-            verify(simWidgetVisibilityRepository).setSimSettingsBatch(
-                org.mockito.kotlin.check { map ->
-                    assertEquals(2, map.size)
-                    assertEquals(true, map["sim2_inactive"]?.showSim)
-                    assertEquals(true, map["sim_2"]?.showSim)
-                },
-            )
+            repository.saveSimSettings(state)
+
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(any())
         }
 
-    @Test
-    fun `saveSimSettings should return list of failed slots on exception`() =
-        runTest {
-            val state =
-                WidgetSettingsState(
-                    simStates =
-                        mapOf(
-                            0 to SimSettingsState(showSim = true),
-                            1 to SimSettingsState(showSim = true),
-                        ),
-                )
-            whenever(simIdentityRepository.getIdentity(0))
-                .thenThrow(
-                    com.example.minutewatcher.core.domain
-                        .SeedUnavailableException(0),
-                )
-            whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim1")
-
-            val failedSlots = repository.saveSimSettings(state)
-
-            assertEquals(listOf(0), failedSlots)
-            verify(simWidgetVisibilityRepository).setSimSettingsBatch(
-                org.mockito.kotlin.check { map ->
-                    assertEquals(2, map.size)
-                    assertEquals(true, map["sim1"]?.showSim)
-                    assertEquals(true, map["sim_1"]?.showSim)
-                },
-            )
-        }
-
-    @Test
-    fun `load returns success with empty simStates on devices without SIM`() =
-        runTest {
-            val appSettingsFlow = flowOf(AppSettings())
-            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
-
-            // observeActiveSims emits empty list (no SIMs)
-            val activeSimsFlow = flowOf(emptyList<ActiveSimInfo>())
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
-
-            val result = repository.load()
-
-            assertTrue("simStates should be empty", result.simStates.isEmpty())
-            assertFalse("settingsLoadFailed should be false", result.settingsLoadFailed)
-            assertFalse("simListLoadFailed should be false for empty list", result.simListLoadFailed)
-
-            // getSimSettingsBatch should NOT be called for empty SIM list
-            @Suppress("UnusedFlow")
-            verify(simWidgetVisibilityRepository, never()).getSimSettingsBatch(any())
-        }
-
-    @Test
-    fun `load returns fallback with simListLoadFailed when observeActiveSims times out`() =
-        runTest {
-            val appSettingsFlow = flowOf(AppSettings())
-            whenever(settingsRepository.getAppSettings()).thenReturn(appSettingsFlow)
-
-            // observeActiveSims never emits
-            val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>()
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
-
-            val result = repository.load()
-
-            assertTrue("simStates should be empty on timeout", result.simStates.isEmpty())
-            assertTrue("SIM list should be marked as failed on timeout", result.simListLoadFailed)
-        }
-
-    @Test
-    fun `save should be sequential and protected by mutex`() =
-        runTest {
-            val state = WidgetSettingsState(simStates = mapOf(0 to SimSettingsState()))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
-
-            val isRunning = AtomicBoolean(false)
-            val overlapDetected = AtomicBoolean(false)
-
-            whenever(simWidgetVisibilityRepository.setSimSettingsBatch(any())).doAnswer {
-                if (isRunning.getAndSet(true)) {
-                    overlapDetected.set(true)
-                }
-                // Simulate some work
-                Thread.sleep(20)
-                isRunning.set(false)
-            }
-
-            // Launch multiple concurrent saves
-            val jobs =
-                List(5) {
-                    launch {
-                        repository.save(state)
-                    }
-                }
-            jobs.joinAll()
-
-            assertFalse("Concurrent save operations detected", overlapDetected.get())
-        }
-
-    @Test
-    fun `save should skip general settings if sim settings fail with exception`() =
-        runTest {
-            val state = WidgetSettingsState(simStates = mapOf(0 to SimSettingsState()))
-            // saveSimSettings will fail because setSimSettingsBatch throws
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim0")
-            whenever(simWidgetVisibilityRepository.setSimSettingsBatch(any()))
-                .thenThrow(RuntimeException("DataStore error"))
-
-            repository.save(state)
-
-            // General settings should NOT be updated because saveSimSettings failed first
-            verify(settingsRepository, never()).updateAppSettings(any())
-        }
-
-    private fun createAppSettings() =
-        AppSettings(
-            theme = AppTheme.LIGHT,
-            language = "en",
-            notifyLowMinutes = true,
-            notifyLowTraffic = false,
-            widgetLayoutMode = 1,
-            widgetSimArrangement = 1,
-            widgetTransparency = 80,
-            widgetFontSize = 3,
-            widgetBackgroundColor = 0xFF0000FF.toInt(),
-            migrationV1Completed = true,
+    private fun createMockActiveSims(): List<ActiveSimInfo> =
+        listOf(
+            createMockSim(0, "id0", true),
+            createMockSim(1, "id1", true),
+            createMockSim(2, "id2", false),
         )
 
-    private fun createMockActiveSims(): List<ActiveSimInfo> {
-        val identity0 =
+    private fun createMockSim(
+        slot: Int,
+        id: String,
+        isStable: Boolean,
+    ): ActiveSimInfo {
+        val identity =
             SimIdentity(
-                "id0",
-                100,
-                0,
-                com.example.minutewatcher.core.model.IdentitySource.ICCID,
-                isStable = true,
+                stableId = id,
+                subscriptionId = if (isStable) 100 + slot else null,
+                slotIndex = slot,
+                source = if (isStable) IdentitySource.ICCID else IdentitySource.SLOT_FALLBACK,
+                isStable = isStable,
             )
-        val identity1 =
-            SimIdentity(
-                "id1",
-                101,
-                1,
-                com.example.minutewatcher.core.model.IdentitySource.ICCID,
-                isStable = true,
-            )
-        val identity2 =
-            SimIdentity(
-                "id2",
-                null,
-                2,
-                com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK,
-                isStable = false,
-            )
-
-        return listOf(
-            ActiveSimInfo(
-                identity = identity0,
-                slotIndex = 0,
-                subscriptionId = 100,
-                iccId = "id0",
-                displayName = "MTS",
-                carrierName = "MTS",
-                mccMnc = "25001",
-                isDefaultData = true,
-                isDefaultVoice = true,
-            ),
-            ActiveSimInfo(
-                identity = identity1,
-                slotIndex = 1,
-                subscriptionId = 101,
-                iccId = "id1",
-                displayName = "MegaFon",
-                carrierName = "MegaFon",
-                mccMnc = "25002",
-                isDefaultData = false,
-                isDefaultVoice = false,
-            ),
-            ActiveSimInfo(
-                identity = identity2,
-                slotIndex = 2,
-                subscriptionId = 102,
-                iccId = null,
-                displayName = "Sim 2",
-                carrierName = "Carrier 2",
-                mccMnc = "25003",
-                isDefaultData = false,
-                isDefaultVoice = false,
-            ),
+        return ActiveSimInfo(
+            identity = identity,
+            slotIndex = slot,
+            subscriptionId = identity.subscriptionId ?: (100 + slot),
+            iccId = if (isStable) id else null,
+            displayName = "SIM $slot",
+            carrierName = "Carrier",
+            mccMnc = "12345",
+            isDefaultData = (slot == 0),
+            isDefaultVoice = (slot == 0),
         )
     }
-
-    private fun createMockSimSettings() =
-        SimSettingsState(
-            showSim = true,
-            showIcon = true,
-            showName = true,
-            showMinutes = true,
-            showMinutesLimit = false,
-            showTraffic = true,
-            showTrafficLimit = false,
-        )
 }

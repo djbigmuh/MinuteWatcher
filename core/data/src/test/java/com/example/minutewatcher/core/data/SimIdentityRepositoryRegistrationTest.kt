@@ -124,7 +124,8 @@ class SimIdentityRepositoryRegistrationTest {
                 if (activeSubCalls++ == 0) {
                     throw SecurityException("Mock permission revocation")
                 } else {
-                    com.example.minutewatcher.core.model.SimDiscoveryResult.Available(emptyList())
+                    com.example.minutewatcher.core.model.SimDiscoveryResult
+                        .Available(emptyList())
                 }
             }
 

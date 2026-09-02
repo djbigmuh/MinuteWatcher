@@ -77,10 +77,11 @@ internal class SimIdentityResolver
     ): SimIdentity =
         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
             val result = discovery.discoverSims(seedValue)
-            val sims = when (result) {
-                is SimDiscoveryResult.Available -> result.sims
-                else -> emptyList()
-            }
+            val sims =
+                when (result) {
+                    is SimDiscoveryResult.Available -> result.sims
+                    else -> emptyList()
+                }
             sims.find { it.slotIndex == slot }?.identity ?: throw SimNotFoundException(slot)
         } ?: throw IOException("Timeout resolving identity for slot $slot")
 
