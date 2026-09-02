@@ -5,7 +5,6 @@ import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -19,77 +18,83 @@ import org.robolectric.RobolectricTestRunner
 class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `putDocuments failure transitions to Error state and clears Indexing`() =
-        runTest {
-            val manager = createManager(this)
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
             fakeWrapper.failAllPutDocuments = true
-            val snapshot = createSnapshotWithOneSim()
+            val snapshot = createTestSnapshot(100)
             val flow = MutableStateFlow(snapshot)
 
             manager.initialize(flow)
 
             // Wait for Error status
-            val errorStatus = manager.status.filterIsInstance<TrackingStatus.Error>().first()
+            val errorStatus = manager.status.first { it is TrackingStatus.Error } as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, errorStatus.type)
         }
 
     @Test
     fun `removeDocuments failure transitions to Error state`() =
-        runTest {
-            val manager = createManager(this)
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
             fakeWrapper.failAllRemoveByDocumentId = true
-            val snapshot = createSnapshotWithOneSim()
+            val snapshot = createTestSnapshot(100)
             val flow = MutableStateFlow(snapshot)
 
             manager.initialize(flow)
 
             // Wait for Error status
-            val errorStatus = manager.status.filterIsInstance<TrackingStatus.Error>().first()
+            val errorStatus = manager.status.first { it is TrackingStatus.Error } as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, errorStatus.type)
         }
 
     @Test
     fun `schema update failure transitions to Error state`() =
-        runTest {
-            val manager = createManager(this)
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
             fakeWrapper.failNextWithFatalError = true
-            val snapshot = createSnapshotWithOneSim()
+            val snapshot = createTestSnapshot(100)
             val flow = MutableStateFlow(snapshot)
 
             manager.initialize(flow)
 
             // Wait for Error status
-            val errorStatus = manager.status.filterIsInstance<TrackingStatus.Error>().first()
+            val errorStatus = manager.status.first { it is TrackingStatus.Error } as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, errorStatus.type)
         }
 
     @Test
     fun `successful index after error restores Ready status`() =
-        runTest {
-            val manager = createManager(this)
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
             fakeWrapper.failAllPutDocuments = true
-            val snapshot = createSnapshotWithOneSim()
-            val flow = MutableStateFlow(snapshot)
+            val flow = MutableStateFlow(createTestSnapshot(100))
 
             manager.initialize(flow)
 
-            // Wait for Error status
-            manager.status.filterIsInstance<TrackingStatus.Error>().first()
+            // Wait for initial Error
+            testScheduler.advanceUntilIdle()
+            assertTrue("Should be Error, but was ${manager.status.value}", manager.status.value is TrackingStatus.Error)
 
             // Fix the failure
             fakeWrapper.failAllPutDocuments = false
-            // Update snapshot to trigger new indexing
+            fakeWrapper.lastSession?.failPutDocuments = false
+
+            // Update currentTime and snapshot to trigger new indexing
             currentTime += 1000
             flow.value = createTestSnapshot(50)
 
             // Wait for Ready status
-            val readyStatus = manager.status.filterIsInstance<TrackingStatus.Ready>().first()
+            testScheduler.advanceUntilIdle()
+
+            val status = manager.status.value
+            assertTrue("Status should be Ready, but was $status", status is TrackingStatus.Ready)
+            val readyStatus = status as TrackingStatus.Ready
             assertEquals(currentTime, readyStatus.lastUpdateTimestamp)
         }
 
     @Test
     fun `query during indexing or error returns controlled failure result`() =
-        runTest {
-            val manager = createManager(this)
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
             fakeWrapper.failSessionCreationWith = AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
 
             val result = manager.query("test")
@@ -100,10 +105,9 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
 
     @Test
     fun `concurrent index requests do not break state machine`() =
-        runTest {
-            val manager = createManager(this)
-            val snapshot = createSnapshotWithOneSim()
-            val flow = MutableStateFlow(snapshot)
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val flow = MutableStateFlow(createTestSnapshot(100))
 
             manager.initialize(flow)
 
@@ -114,7 +118,10 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
             }
 
             // Wait for Ready status for the last one
-            val readyStatus = manager.status.filterIsInstance<TrackingStatus.Ready>().first()
+            val readyStatus =
+                manager.status.first {
+                    it is TrackingStatus.Ready && it.lastUpdateTimestamp == currentTime
+                } as TrackingStatus.Ready
             assertEquals(currentTime, readyStatus.lastUpdateTimestamp)
         }
 }

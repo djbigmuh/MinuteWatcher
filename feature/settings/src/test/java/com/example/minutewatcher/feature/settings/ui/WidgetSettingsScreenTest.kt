@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
@@ -26,8 +28,7 @@ import org.robolectric.annotation.Config
 class WidgetSettingsScreenTest {
     @get:Rule
     val composeTestRule =
-        androidx.compose.ui.test.junit4.v2
-            .createComposeRule()
+        createComposeRule()
 
     private lateinit var viewModel: WidgetSettingsViewModel
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -58,10 +59,9 @@ class WidgetSettingsScreenTest {
     }
 
     private fun createEmptySnapshot() =
-        com.example.minutewatcher.core.model.GlobalSnapshot(
+        GlobalSnapshot(
             version =
-                com.example.minutewatcher.core.model
-                    .SchemaVersion(1, 0, 0),
+                SchemaVersion(1, 0, 0),
             timestamp = 0L,
             simSnapshots = emptyList(),
             capabilities = emptyList(),
@@ -75,7 +75,6 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {},
             )
         }
 
@@ -94,7 +93,6 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {},
             )
         }
 
@@ -110,30 +108,9 @@ class WidgetSettingsScreenTest {
             WidgetSettingsScreen(
                 viewModel = viewModel,
                 onBack = {},
-                onSave = {},
             )
         }
 
         composeTestRule.onNodeWithText(context.getString(R.string.layout_mode_title)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).assertIsDisplayed()
-    }
-
-    @Test
-    fun saveButton_triggersCallback() {
-        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
-
-        var saved = false
-        composeTestRule.setContent {
-            WidgetSettingsScreen(
-                viewModel = viewModel,
-                onBack = {},
-                onSave = {
-                    saved = true
-                },
-            )
-        }
-
-        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).performClick()
-        org.junit.Assert.assertTrue(saved)
     }
 }

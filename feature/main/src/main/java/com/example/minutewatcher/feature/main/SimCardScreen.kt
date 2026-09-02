@@ -58,21 +58,7 @@ fun SimCardScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    var totalDrag = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = { totalDrag = 0f },
-                        onDragEnd = {
-                            if (totalDrag < -200f) {
-                                actions.onOpenSettings()
-                            }
-                        },
-                        onDragCancel = { totalDrag = 0f },
-                        onHorizontalDrag = { _, dragAmount ->
-                            totalDrag += dragAmount
-                        },
-                    )
-                },
+                .settingsDragInput { actions.onOpenSettings() },
         topBar = {
             SimCardTopBar(
                 currentTheme = appTheme,
@@ -102,3 +88,20 @@ fun SimCardScreen(
         )
     }
 }
+
+private fun Modifier.settingsDragInput(onOpenSettings: () -> Unit): Modifier =
+    this.pointerInput(Unit) {
+        var totalDrag = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { totalDrag = 0f },
+            onDragEnd = {
+                if (totalDrag < -200f) {
+                    onOpenSettings()
+                }
+            },
+            onDragCancel = { totalDrag = 0f },
+            onHorizontalDrag = { _, dragAmount ->
+                totalDrag += dragAmount
+            },
+        )
+    }

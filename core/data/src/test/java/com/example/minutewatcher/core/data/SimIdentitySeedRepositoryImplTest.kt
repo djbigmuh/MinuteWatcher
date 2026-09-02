@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.SimDiscoveryResult
@@ -10,11 +11,13 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -26,6 +29,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -48,13 +52,13 @@ class SimIdentitySeedRepositoryImplTest {
         dataStore =
             PreferenceDataStoreFactory.create(
                 scope = testScope,
-                produceFile = { tmpFolder.newFile("test_seed.preferences_pb") },
-            )
+            ) { tmpFolder.newFile("test_seed.preferences_pb") }
         repository =
             SimIdentitySeedRepositoryImpl(
                 dataStore = dataStore,
                 migrationService = { migrationService },
-            ) { discovery }
+                discovery = { discovery },
+            )
     }
 
     @Test
@@ -75,34 +79,43 @@ class SimIdentitySeedRepositoryImplTest {
     @Test
     fun `migration does not block concurrent seed access`() =
         runTest {
-            val mockDataStore: DataStore<Preferences> = mock()
-            val repo = SimIdentitySeedRepositoryImpl(mockDataStore, { migrationService }) { discovery }
+            var shouldFail = true
+            val failingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> =
+                        flow {
+                            if (shouldFail) {
+                                throw IOException("Test failure")
+                            }
+                            dataStore.data.collect { emit(it) }
+                        }
 
-            // 1. Make DataStore fail to trigger ephemeral mode
-            whenever(mockDataStore.data).thenReturn(
-                kotlinx.coroutines.flow.flow { throw java.io.IOException("Test failure") },
-            )
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        if (shouldFail) {
+                            throw IOException("Test failure")
+                        }
+                        return dataStore.updateData(transform)
+                    }
+                }
 
+            val repo = SimIdentitySeedRepositoryImpl(failingDataStore, { migrationService }, { discovery })
+
+            // 1. Enter ephemeral mode
             val ephemeralSeed = repo.getOrCreateSeed { "ephemeral-seed" }
             assertEquals("ephemeral-seed", ephemeralSeed)
-            assertEquals(true, repo.isEphemeralSeedActive.value)
+            assertTrue(repo.isEphemeralSeedActive.value)
 
             // 2. Now make DataStore work and migration be slow
-            val prefs: Preferences = mock()
-            whenever(mockDataStore.data).thenReturn(flowOf(prefs))
-            whenever(prefs[DataStoreKeys.SIM_IDENTITY_SEED]).thenReturn("persistent-seed")
+            shouldFail = false
+            dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = "persistent-seed" }
             whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
             val migrationStarted = CompletableDeferred<Unit>()
 
             whenever(migrationService.migrateFromEphemeralSeed(any(), any())).thenAnswer {
                 migrationStarted.complete(Unit)
-                // Instead of runBlocking, we can use a small delay to simulate work,
-                // but for deterministic wait we need runBlocking if thenAnswer is not suspendable.
-                // However, the user said they fixed it by removing runBlocking.
-                // Maybe they used a mock that returns a flow or something? No, this returns an object.
-
-                // If we want to wait without runBlocking, we'd need a suspendable mock.
+                // Use a non-blocking way to wait if possible, but here we are in a mock.
+                // To simulate slowness, we can just return a result.
                 IdentityMigrationService.MigrationOutcome()
             }
 
@@ -126,19 +139,33 @@ class SimIdentitySeedRepositoryImplTest {
     @Test
     fun `migration failure allows retry on next call`() =
         runTest {
-            val mockDataStore: DataStore<Preferences> = mock()
-            val repo = SimIdentitySeedRepositoryImpl(mockDataStore, { migrationService }) { discovery }
+            var shouldFail = true
+            val failingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> =
+                        flow {
+                            if (shouldFail) {
+                                throw IOException("Test failure")
+                            }
+                            dataStore.data.collect { emit(it) }
+                        }
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        if (shouldFail) {
+                            throw IOException("Test failure")
+                        }
+                        return dataStore.updateData(transform)
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(failingDataStore, { migrationService }, { discovery })
 
             // 1. Enter ephemeral mode
-            whenever(mockDataStore.data).thenReturn(
-                kotlinx.coroutines.flow.flow { throw java.io.IOException("Test failure") },
-            )
             repo.getOrCreateSeed { "ephemeral-seed" }
 
             // 2. Make migration fail
-            val prefs: Preferences = mock()
-            whenever(mockDataStore.data).thenReturn(flowOf(prefs))
-            whenever(prefs[DataStoreKeys.SIM_IDENTITY_SEED]).thenReturn("persistent-seed")
+            shouldFail = false
+            dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = "persistent-seed" }
             whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
             whenever(migrationService.migrateFromEphemeralSeed(any(), any()))

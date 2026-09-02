@@ -260,7 +260,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
             flow.value = createTestSnapshot(102)
             testScheduler.advanceUntilIdle()
 
-            // 6. Verify recovery to Active
-            assertTrue(manager.status.value is TrackingStatus.Active)
+            // 6. Verify recovery to Ready
+            assertTrue(manager.status.value is TrackingStatus.Ready)
         }
 }

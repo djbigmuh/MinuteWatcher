@@ -48,6 +48,7 @@ fun BroadcastReceiver.goAsyncWithScope(
                 ).mainImmediateDispatcher()
         } catch (e: Exception) {
             // Fallback for tests not using Hilt or missing CommonEntryPoint
+            AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using Main.immediate", e)
             Dispatchers.Main.immediate
         }
 

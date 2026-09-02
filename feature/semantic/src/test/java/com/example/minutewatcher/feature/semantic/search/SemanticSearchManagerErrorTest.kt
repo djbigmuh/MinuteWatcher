@@ -42,8 +42,8 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             manager.indexSnapshot(updatedSnapshot)
 
             assertTrue(
-                "Status should be Active after recovery, but was ${manager.status.value}",
-                manager.status.value is TrackingStatus.Active,
+                "Status should be Ready after recovery, but was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Ready,
             )
             val currentSession = fakeWrapper.lastSession!!
             assertTrue(currentSession.putRequests.isNotEmpty())
@@ -147,9 +147,10 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             // 1. Force 5 failures via the loop to reach the limit
             repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) { i ->
-                manager.indexSnapshot(createTestSnapshot(100L + i))
+                manager.indexSnapshot(createTestSnapshot(300L + i))
             }
 
+            assertTrue("Status should be Error after 5 failures", manager.status.value is TrackingStatus.Error)
             val status = manager.status.value as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
             assertEquals("Indexing failed after 5 consecutive errors", status.message)
@@ -160,14 +161,14 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             // Reset state to allow next indexing to proceed and reset counter on SUCCESS result.
             manager.recover()
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             manager.indexSnapshot(createTestSnapshot(200))
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             assertTrue(
-                "Should recover to Active after successful indexing, but was ${manager.status.value}",
-                manager.status.value is TrackingStatus.Active,
+                "Should recover to Ready after successful indexing, but was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Ready,
             )
         }
 
@@ -176,7 +177,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val errorHandler = getErrorHandler(manager)
-            val status = MutableStateFlow<TrackingStatus>(TrackingStatus.Active)
+            val status = MutableStateFlow<TrackingStatus>(TrackingStatus.Ready(0L))
 
             repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) {
                 status.value = errorHandler.handleIndexFailure(status.value)
@@ -201,7 +202,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val jobs =
                 List(count) {
                     launch {
-                        val flow = MutableStateFlow<TrackingStatus>(TrackingStatus.Active)
+                        val flow = MutableStateFlow<TrackingStatus>(TrackingStatus.Ready(0L))
                         flow.value = errorHandler.handleIndexFailure(flow.value)
                     }
                 }

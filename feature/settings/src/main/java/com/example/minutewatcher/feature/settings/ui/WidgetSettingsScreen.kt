@@ -99,7 +99,6 @@ fun WidgetSettingsScreen(
                 WidgetSettingsContent(
                     settings = settings,
                     screenUiState = screenUiState,
-                    isSaving = uiState.isSaving,
                     saveResult = uiState.saveResult,
                     viewModel = viewModel,
                     onBack = onBack,
@@ -161,7 +160,6 @@ private fun ErrorState(
 private fun WidgetSettingsContent(
     settings: WidgetSettingsState,
     screenUiState: WidgetUiState?,
-    isSaving: Boolean,
     saveResult: SaveResult?,
     viewModel: WidgetSettingsViewModel,
     onBack: () -> Unit,
@@ -207,7 +205,6 @@ private fun WidgetSettingsContent(
         bottomBar = {
             BottomPreviewBar(
                 uiState = screenUiState,
-                isSaving = isSaving,
             )
         },
     ) { paddingValues ->

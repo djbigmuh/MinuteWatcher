@@ -216,21 +216,18 @@ open class SemanticSearchManager
                             when (result) {
                                 IndexResult.Success -> {
                                     errorHandler.resetFailures()
-                                    _status.value = TrackingStatus.Ready(timeProvider.now())
+                                    // Status already set to Ready inside indexSnapshot
                                 }
 
                                 is IndexResult.ActualFailure -> {
-                                    _status.update { currentState ->
-                                        errorHandler.handleIndexFailure(currentState, result.message)
-                                    }
+                                    // Status already set to Error inside indexSnapshot
                                 }
 
                                 IndexResult.MutexTimeout -> {
                                     AppLogger.d(
                                         "SemanticSearchManager: skipping snapshot due to mutex timeout (concurrency)",
                                     )
-                                    // If we were Indexing, go back to Ready or Active?
-                                    // Actually, if it's a timeout, we probably shouldn't stay in Indexing.
+                                    // If we were Indexing, go back to Idle or maintain current status
                                     if (_status.value is TrackingStatus.Indexing) {
                                         _status.value = TrackingStatus.Idle
                                     }
@@ -263,9 +260,20 @@ open class SemanticSearchManager
                     performIndexSnapshotLocked(snapshot)
                 } ?: IndexResult.ActualFailure("Indexing timed out")
 
-            if (result is IndexResult.ActualFailure) {
-                _status.update { currentState ->
-                    errorHandler.handleIndexFailure(currentState, result.message)
+            when (result) {
+                is IndexResult.ActualFailure -> {
+                    _status.update { currentState ->
+                        errorHandler.handleIndexFailure(currentState, result.message)
+                    }
+                }
+
+                IndexResult.Success -> {
+                    errorHandler.resetFailures()
+                    _status.value = TrackingStatus.Ready(timeProvider.now())
+                }
+
+                IndexResult.MutexTimeout -> {
+                    // Handled by return
                 }
             }
             result

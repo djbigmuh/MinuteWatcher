@@ -63,7 +63,8 @@ class WidgetSettingsViewModel
         // saveMutex — мьютекс для предотвращения конкурентных сохранений.
         private val saveMutex = Mutex()
 
-    private val autoSaveFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val autoSaveFlow = MutableSharedFlow<Long>(extraBufferCapacity = 64)
+    private var autoSaveCounter = 0L
 
         private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
@@ -137,7 +138,7 @@ class WidgetSettingsViewModel
                     settings = transform(currentSettings).copy(widgetLimitExceeded = false),
                 )
             }
-            autoSaveFlow.tryEmit(Unit)
+            autoSaveFlow.tryEmit(++autoSaveCounter)
         }
 
         /**
@@ -162,7 +163,7 @@ class WidgetSettingsViewModel
                         ),
                 )
             }
-            autoSaveFlow.tryEmit(Unit)
+            autoSaveFlow.tryEmit(++autoSaveCounter)
         }
 
         /**

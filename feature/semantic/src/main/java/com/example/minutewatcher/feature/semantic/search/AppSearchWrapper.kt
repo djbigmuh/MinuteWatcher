@@ -91,9 +91,11 @@ internal class AppSearchWrapperImpl
         SearchSpec
             .Builder()
             .addFilterNamespaces(NAMESPACE)
-            .setSnippetCount(10)
+            .setSnippetCount(SNIPPET_COUNT)
                 .build()
     }
+
+private const val SNIPPET_COUNT = 10
 
 internal class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,

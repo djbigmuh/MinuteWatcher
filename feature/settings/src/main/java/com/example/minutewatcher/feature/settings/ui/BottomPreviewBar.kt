@@ -19,10 +19,7 @@ import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.settings.ui.components.WidgetPreview
 
 @Composable
-fun BottomPreviewBar(
-    uiState: WidgetUiState?,
-    isSaving: Boolean,
-) {
+fun BottomPreviewBar(uiState: WidgetUiState?) {
     Column(
         modifier =
             Modifier

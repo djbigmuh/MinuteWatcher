@@ -87,7 +87,8 @@ open class WidgetLimitManager
             updateBlock: suspend (Context, Boolean) -> UpdateResult,
         ): UpdateResult {
             try {
-                val probeResult = updateBlock(context, true)
+                val isFullAttempt = true
+                val probeResult = updateBlock(context, isFullAttempt)
                 when (probeResult) {
                     is UpdateResult.Success -> {
                         setWidgetLimitExceeded(value = false)

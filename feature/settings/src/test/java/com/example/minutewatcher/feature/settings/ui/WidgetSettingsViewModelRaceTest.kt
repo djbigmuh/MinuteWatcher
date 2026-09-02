@@ -19,10 +19,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -62,56 +59,50 @@ class WidgetSettingsViewModelRaceTest {
         runTest {
             val saveStarted = CompletableDeferred<Unit>()
             val canCompleteSave = CompletableDeferred<Unit>()
+            val capturedStates = mutableListOf<WidgetSettingsState>()
 
-            whenever(saver.save(any(), any())).thenAnswer {
-                saveStarted.complete(Unit)
-                // Use a proper suspendable mock if possible, or wait deterministically.
-                // Since this is a Mockito answer for a suspend function, we can't easily
-                // return a value that suspends without runBlocking or making the answer itself suspend.
-                // In modern mockito-kotlin, answers for suspend functions ARE executed in coroutine.
-                // But the Return type of the lambda must match the Return type of the function.
+            val controlledSaver =
+                object : WidgetSettingsSaver(loader, mock()) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): SaveResult {
+                        capturedStates.add(state)
+                        saveStarted.complete(Unit)
+                        canCompleteSave.await()
+                        return SaveResult.Success
+                    }
+                }
 
-                // If we use runBlocking here, we might block the test thread if using Single threaded dispatcher.
-                // However, StandardTestDispatcher IS single threaded (usually).
-
-                // To avoid runBlocking, we can use a custom Answer or just accept it if it's the only way
-                // for this specific race test.
-
-                kotlinx.coroutines.runBlocking { canCompleteSave.await() }
-                SaveResult.Success
-            }
+            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository)
+            advanceUntilIdle()
 
             // 1. Start save operation
             val saveJob =
                 launch {
-                    viewModel.saveAndNotify()
+                    vm.saveAndNotify()
                 }
             runCurrent()
             saveStarted.await()
 
             // 2. Try to update settings while save is in progress
-            // This update should be queued because updateSettings now uses saveMutex
-            viewModel.updateSettings { it.copy(fontSize = 2) }
+            // This update is NOT blocked by saveMutex in memory,
+            // but the RESULTING auto-save will be blocked.
+            vm.updateSettings { it.copy(fontSize = 2) }
             runCurrent()
 
-            // 3. Allow save to complete
+            // 3. Allow first save to complete
             canCompleteSave.complete(Unit)
             saveJob.join()
 
             // 4. Verify that the FIRST save call captured the state BEFORE the update was applied
-            // (Since the update was blocked by the lock)
-            argumentCaptor<WidgetSettingsState>().apply {
-                verify(saver).save(capture(), any())
-                assertEquals(4, firstValue.fontSize)
-            }
+            assertEquals("First save should see old state", 4, capturedStates.first().fontSize)
 
             // 5. Trigger second save to verify the update was NOT lost and is now in memory
-            viewModel.saveAndNotify()
+            vm.saveAndNotify()
             runCurrent()
 
-            argumentCaptor<WidgetSettingsState>().apply {
-                verify(saver, org.mockito.kotlin.times(2)).save(capture(), any())
-                assertEquals(2, lastValue.fontSize)
-            }
+            assertEquals("Second save should see updated state", 2, capturedStates.last().fontSize)
+            assertEquals("Total saves should be 2", 2, capturedStates.size)
         }
 }

@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
-    fun `successful initialization sets status to Active`() =
+    fun `successful initialization sets status to Ready`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -30,7 +30,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
 
             assertTrue(
                 "Status was ${manager.status.value}",
-                manager.status.value is TrackingStatus.Active,
+                manager.status.value is TrackingStatus.Ready,
             )
             assertEquals(1, fakeWrapper.createdSessions)
             assertNotNull(fakeWrapper.lastSession)
@@ -47,7 +47,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
             manager.initialize(flow)
             testScheduler.advanceUntilIdle()
 
-            assertTrue(manager.status.value is TrackingStatus.Active)
+            assertTrue(manager.status.value is TrackingStatus.Ready)
             assertEquals(2, fakeWrapper.createdSessions)
             assertTrue(fakeWrapper.lastSession!!.lastSchemaRequest!!.isForceOverride)
         }

@@ -52,10 +52,10 @@ class WidgetLimitManagerTest {
     @Test
     fun `isLimitExceeded returns value set by setWidgetLimitExceeded synchronously`() =
         runTest(testDispatcher) {
-            manager.setWidgetLimitExceeded(true)
+            manager.setWidgetLimitExceeded(value = true)
             assertEquals(true, manager.isLimitExceeded())
 
-            manager.setWidgetLimitExceeded(false)
+            manager.setWidgetLimitExceeded(value = false)
             assertEquals(false, manager.isLimitExceeded())
         }
 
@@ -82,7 +82,7 @@ class WidgetLimitManagerTest {
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
 
-            manager.setWidgetLimitExceeded(true)
+            manager.setWidgetLimitExceeded(value = true)
 
             verify(appSettingsRepository).updateAppSettings(any())
         }
@@ -92,7 +92,7 @@ class WidgetLimitManagerTest {
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = true)
 
-            manager.setWidgetLimitExceeded(true)
+            manager.setWidgetLimitExceeded(value = true)
 
             verify(appSettingsRepository, never()).updateAppSettings(any())
         }

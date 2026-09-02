@@ -16,6 +16,8 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants.SimConstants
+import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -176,9 +178,7 @@ class IdentityMigrationService
          * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
-        suspend fun migrateLegacyData(
-            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
-        ): MigrationOutcome =
+        suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =
             migrationMutex.withLock {
                 try {
                     performMigration(activeIdentity)
@@ -225,18 +225,25 @@ class IdentityMigrationService
             totalOutcome
         }
 
-        private suspend fun performMigration(
-            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
-        ): MigrationOutcome {
-            if (activeIdentity.slotIndex == null) return MigrationOutcome()
+    private suspend fun performMigration(activeIdentity: SimIdentity): MigrationOutcome {
             val identity = activeIdentity.stableId
+        val slotIndex = activeIdentity.slotIndex
 
-            val legacySuffixes = findLegacySuffixes(activeIdentity)
+        val legacySuffixes = if (slotIndex != null) findLegacySuffixes(activeIdentity) else emptyList()
             val newSuffix = "_$identity"
             val mappings = legacySuffixes.filter { it != newSuffix }.map { it to newSuffix }
 
-            if (mappings.isEmpty()) return MigrationOutcome()
+        return if (mappings.isEmpty()) {
+            MigrationOutcome()
+        } else {
+            executeMigrationBatch(activeIdentity, mappings)
+        }
+    }
 
+    private suspend fun executeMigrationBatch(
+        activeIdentity: SimIdentity,
+        mappings: List<Pair<String, String>>,
+    ): MigrationOutcome {
             var totalOutcome = MigrationOutcome()
 
             // 1. Batch migrate App Settings
@@ -244,7 +251,7 @@ class IdentityMigrationService
 
             // 2. Batch migrate SIM Settings AND Cleanup mapping markers
             val subIdForCleanup =
-                if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
+                if (activeIdentity.source == IdentitySource.SUBSCRIPTION_ID) {
                     activeIdentity.subscriptionId
                 } else {
                     null
@@ -258,6 +265,15 @@ class IdentityMigrationService
                     subIdForCleanup = subIdForCleanup,
                 )
 
+        logMigrationSummary(activeIdentity.stableId, totalOutcome)
+
+        return totalOutcome
+    }
+
+    private fun logMigrationSummary(
+        identity: String,
+        totalOutcome: MigrationOutcome,
+    ) {
             if (totalOutcome.hasChanges()) {
                 AppLogger.d(
                     "Migration completed for identity $identity: " +
@@ -268,8 +284,6 @@ class IdentityMigrationService
             if (totalOutcome.failures > 0) {
                 AppLogger.e("Migration for identity $identity finished with ${totalOutcome.failures} failures")
             }
-
-            return totalOutcome
         }
 
         private suspend fun findLegacySuffixes(
@@ -287,7 +301,7 @@ class IdentityMigrationService
             // 2. ICCID transition:
             // If the current SIM is identified by ICCID, it might have legacy data stored under its
             // Subscription ID (e.g. from a version that used SubID before ICCID became available).
-            if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.ICCID) {
+            if (activeIdentity.source == IdentitySource.ICCID) {
                 activeIdentity.subscriptionId?.let { subId ->
                     suffixes.add("_sub_$subId")
                 }
@@ -298,7 +312,7 @@ class IdentityMigrationService
             // it might have legacy data under a previously generated ICCID identity
             // (e.g. if the user upgraded from a newer Android version to an older one,
             // or if ICCID became unavailable due to OS policy changes).
-            if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
+            if (activeIdentity.source == IdentitySource.SUBSCRIPTION_ID) {
                 val subId = activeIdentity.subscriptionId
                 if (subId != null) {
                     val simPrefs = simDataStore.data.first()
@@ -372,8 +386,9 @@ class IdentityMigrationService
                     keysToRemove.forEach { prefs.remove(it) }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
             AppLogger.e("IdentityMigrationService: Batch migration failed for $storeName", e)
             return MigrationOutcome(failures = mappings.size, partialFailure = true)
             }

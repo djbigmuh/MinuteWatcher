@@ -135,8 +135,11 @@ class SimIdentitySeedRepositoryImpl
 
     private suspend fun tryGetStoredEphemeralSeed(): String? =
         try {
-            dataStore.data.map { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] }.firstWithTimeout(100)
+            dataStore.data
+                .map { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] }
+                .firstWithTimeout(EPHEMERAL_READ_TIMEOUT_MS)
         } catch (e: Exception) {
+            AppLogger.w("SimIdentitySeedRepositoryImpl: Failed to read stored ephemeral seed", e)
             null
         }
 
@@ -224,5 +227,6 @@ class SimIdentitySeedRepositoryImpl
 
     private companion object {
         private const val RETRY_DELAY_MS = 500L
+        private const val EPHEMERAL_READ_TIMEOUT_MS = 100L
     }
     }

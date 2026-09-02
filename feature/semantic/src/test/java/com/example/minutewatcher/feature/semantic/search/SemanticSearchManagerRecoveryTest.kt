@@ -38,7 +38,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             // Should have retried and created a new session
             assertEquals(2, fakeWrapper.createdSessions)
             assertTrue(session1.isClosed)
-            assertTrue(manager.status.value is TrackingStatus.Active)
+            assertTrue(manager.status.value is TrackingStatus.Ready)
         }
 
     @Test
@@ -61,7 +61,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             // 4. Verify session was recreated (total 2 created)
             assertEquals(2, fakeWrapper.createdSessions)
             assertTrue("Old session should be closed", session1.isClosed)
-            assertTrue("New session should be active", manager.status.value is TrackingStatus.Active)
+            assertTrue("New session should be Ready", manager.status.value is TrackingStatus.Ready)
         }
 
     @Test
@@ -76,10 +76,9 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
 
             // 1. Force failures via the loop to reach the limit
             fakeWrapper.failAllPutDocuments = true
-            // manager.initialize(flow) already triggered 1 failure if put was failed.
-            // But we want to be sure we hit the limit.
             repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) { i ->
-                flow.value = createTestSnapshot(100L + i)
+                // Ensure each snapshot is different from the previous one AND the initial one
+                flow.value = createTestSnapshot(200L + i)
                 testScheduler.advanceUntilIdle()
             }
 
@@ -114,7 +113,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             fakeWrapper.lastSession?.failPutDocuments = false
 
             manager.recover()
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             val errorHandler = getErrorHandler(manager)
             assertEquals(0, errorHandler.consecutiveIndexFailures)
@@ -122,7 +121,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             // Trigger one failure
             fakeWrapper.failAllPutDocuments = true
             manager.indexSnapshot(createTestSnapshot(200L))
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
 
             assertEquals(1, errorHandler.consecutiveIndexFailures)
         }
@@ -146,7 +145,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
                 }
             jobs.joinAll()
 
-            assertTrue(manager.status.value is TrackingStatus.Active)
+            assertTrue(manager.status.value is TrackingStatus.Ready)
             // Even with many calls, we should have at least one session created
             assertTrue(fakeWrapper.createdSessions >= 1)
         }

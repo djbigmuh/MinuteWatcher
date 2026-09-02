@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -202,14 +203,9 @@ class DataStoreResilienceTest {
                     isDefaultVoice = true,
                 )
 
-            // The service calculates ephemeral identity internally using SimIdentityUtils
-            // We need to match what it expects.
-            // SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed) -> "icc_" + hash("icc_123", ephemeralSeed)
-
-            val legacySuffix =
-                "_icc_6906a51d8d1797e88414526d11d140e6c2a41d7237894901f464879612c62c2f"
-            // hash of "icc_123ephemeral_seed"
-            val legacyKey = intPreferencesKey("test_key$legacySuffix")
+            // Use the utility to get the actual ephemeral identity string for the test
+            val ephemeralId = SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed).stableId
+            val legacyKey = intPreferencesKey("test_key_$ephemeralId")
 
             appDataStore.edit { it[legacyKey] = 555 }
             advanceUntilIdle()
@@ -217,12 +213,12 @@ class DataStoreResilienceTest {
             // First run
             val outcome1 = service.migrateFromEphemeralSeed(ephemeralSeed, listOf(simInfo))
             advanceUntilIdle()
-            assertTrue(outcome1.hasChanges())
+            assertTrue("First migration should have changes", outcome1.hasChanges())
 
             // Second run
             val outcome2 = service.migrateFromEphemeralSeed(ephemeralSeed, listOf(simInfo))
             advanceUntilIdle()
-            assertFalse(outcome2.hasChanges())
+            assertFalse("Second migration should be a no-op", outcome2.hasChanges())
 
             val prefs = appDataStore.data.first()
             // Should be migrated to the identity in simInfo

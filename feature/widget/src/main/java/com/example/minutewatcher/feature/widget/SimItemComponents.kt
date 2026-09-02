@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.widget
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
@@ -86,12 +87,11 @@ internal fun SimItemLayout(
         spacerRenderer = { component ->
             SimItemSpacer(component)
         },
-        rowContainer = { content ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                content()
-            }
-        },
-    )
+    ) { content ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            content()
+        }
+    }
 }
 
 /**
@@ -149,8 +149,7 @@ private fun resolveTextColor(
         GlanceTheme.colors.onSurfaceVariant
     } else {
         val composeColor =
-            androidx.compose.ui.graphics
-                .Color(component.color)
+            Color(component.color)
         androidx.glance.color.ColorProvider(day = composeColor, night = composeColor)
     }
 
