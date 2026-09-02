@@ -54,8 +54,7 @@ class SimIdentitySeedRepositoryImplTest {
             SimIdentitySeedRepositoryImpl(
                 dataStore = dataStore,
                 migrationService = { migrationService },
-                discovery = { discovery },
-            )
+            ) { discovery }
     }
 
     @Test
@@ -77,7 +76,7 @@ class SimIdentitySeedRepositoryImplTest {
     fun `migration does not block concurrent seed access`() =
         runTest {
             val mockDataStore: DataStore<Preferences> = mock()
-            val repo = SimIdentitySeedRepositoryImpl(mockDataStore, { migrationService }, { discovery })
+            val repo = SimIdentitySeedRepositoryImpl(mockDataStore, { migrationService }) { discovery }
 
             // 1. Make DataStore fail to trigger ephemeral mode
             whenever(mockDataStore.data).thenReturn(
@@ -128,7 +127,7 @@ class SimIdentitySeedRepositoryImplTest {
     fun `migration failure allows retry on next call`() =
         runTest {
             val mockDataStore: DataStore<Preferences> = mock()
-            val repo = SimIdentitySeedRepositoryImpl(mockDataStore, { migrationService }, { discovery })
+            val repo = SimIdentitySeedRepositoryImpl(mockDataStore, { migrationService }) { discovery }
 
             // 1. Enter ephemeral mode
             whenever(mockDataStore.data).thenReturn(

@@ -198,7 +198,7 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
-            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, true)
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
@@ -227,7 +227,7 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork resets baseline only for default data SIM`() =
         runTest {
-            val identity1 = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, true)
+            val identity1 = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim1 =
                 ActiveSimInfo(
                     identity1,
@@ -241,7 +241,7 @@ class InitialSetupWorkerTest {
                     isDefaultVoice = true,
                 )
 
-            val identity2 = SimIdentity("icc_2", 2, 1, IdentitySource.ICCID, true)
+            val identity2 = SimIdentity("icc_2", 2, 1, IdentitySource.ICCID, isStable = true)
             val activeSim2 =
                 ActiveSimInfo(
                     identity2,
@@ -270,7 +270,7 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
-            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, true)
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
@@ -307,7 +307,7 @@ class InitialSetupWorkerTest {
 
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
-            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, true)
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))

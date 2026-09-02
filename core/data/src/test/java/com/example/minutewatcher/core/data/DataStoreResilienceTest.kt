@@ -49,13 +49,11 @@ class DataStoreResilienceTest {
         appDataStore =
             PreferenceDataStoreFactory.create(
                 scope = testScope,
-                produceFile = { tmpFolder.newFile("test_app_settings.preferences_pb") },
-            )
+            ) { tmpFolder.newFile("test_app_settings.preferences_pb") }
         simDataStore =
             PreferenceDataStoreFactory.create(
                 scope = testScope,
-                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
-            )
+            ) { tmpFolder.newFile("test_sim_settings.preferences_pb") }
     }
 
     @Test
@@ -67,7 +65,9 @@ class DataStoreResilienceTest {
                 List(updateCount) {
                     launch {
                         repository.updateAppSettings { current ->
-                            current.copy(inaccurateCallAttributionsCount = current.inaccurateCallAttributionsCount + 1)
+                            current.copy(
+                                inaccurateCallAttributionsCount = current.inaccurateCallAttributionsCount + 1,
+                            )
                         }
                     }
                 }
@@ -207,7 +207,8 @@ class DataStoreResilienceTest {
             // SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed) -> "icc_" + hash("icc_123", ephemeralSeed)
 
             val legacySuffix =
-                "_icc_6906a51d8d1797e88414526d11d140e6c2a41d7237894901f464879612c62c2f" // hash of "icc_123ephemeral_seed"
+                "_icc_6906a51d8d1797e88414526d11d140e6c2a41d7237894901f464879612c62c2f"
+            // hash of "icc_123ephemeral_seed"
             val legacyKey = intPreferencesKey("test_key$legacySuffix")
 
             appDataStore.edit { it[legacyKey] = 555 }

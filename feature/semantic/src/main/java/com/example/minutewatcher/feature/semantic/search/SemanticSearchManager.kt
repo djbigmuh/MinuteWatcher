@@ -384,8 +384,8 @@ open class SemanticSearchManager
                 return@withContext Result.failure(
                     AppSearchException(
                         AppSearchResult.RESULT_INTERNAL_ERROR,
-                        "Session not ready"
-                    )
+                        "Session not ready",
+                    ),
                 )
             }
 
@@ -396,7 +396,8 @@ open class SemanticSearchManager
 
             try {
                 val spec =
-                    androidx.appsearch.app.SearchSpec.Builder()
+                    androidx.appsearch.app.SearchSpec
+                        .Builder()
                         .setSnippetCount(limit)
                         .addFilterNamespaces(AppSearchConstants.NAMESPACE)
                         .build()

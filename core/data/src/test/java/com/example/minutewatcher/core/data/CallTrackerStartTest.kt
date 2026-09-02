@@ -156,7 +156,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             val status = callTracker.status.first()
-            assertTrue((status is TrackingStatus.Error) && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING)
+            assertTrue((status is TrackingStatus.Error) && (status.type == TrackingStatus.ErrorType.PERMISSION_MISSING))
         }
 
     @Test

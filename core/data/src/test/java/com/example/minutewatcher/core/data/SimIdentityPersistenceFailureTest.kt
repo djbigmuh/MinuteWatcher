@@ -55,7 +55,7 @@ class SimIdentityPersistenceFailureTest {
                     },
                 )
             val persistence = SimIdentityPersistence(dataStore, migrationService)
-            val identity = SimIdentity("stable_id", 101, 1, IdentitySource.SUBSCRIPTION_ID, false)
+            val identity = SimIdentity("stable_id", 101, 1, IdentitySource.SUBSCRIPTION_ID, isStable = false)
 
             // 1. Setup migration to fail
             whenever(migrationService.migrateLegacyData(identity)).thenAnswer {

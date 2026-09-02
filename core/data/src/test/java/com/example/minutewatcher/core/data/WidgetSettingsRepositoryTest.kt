@@ -145,9 +145,9 @@ class WidgetSettingsRepositoryTest {
 
     private fun createMockActiveSims(): List<ActiveSimInfo> =
         listOf(
-            createMockSim(0, "id0", true),
-            createMockSim(1, "id1", true),
-            createMockSim(2, "id2", false),
+            createMockSim(0, "id0", isStable = true),
+            createMockSim(1, "id1", isStable = true),
+            createMockSim(2, "id2", isStable = false),
         )
 
     private fun createMockSim(

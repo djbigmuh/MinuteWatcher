@@ -102,10 +102,11 @@ private fun HorizontalSimPreviewLayout(
     uiState: WidgetUiState,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(Constants.Widget.PADDING_DEFAULT.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(Constants.Widget.PADDING_DEFAULT.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         sims.forEachIndexed { index, sim ->
@@ -125,10 +126,11 @@ private fun VerticalSimPreviewLayout(
     uiState: WidgetUiState,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(Constants.Widget.PADDING_DEFAULT.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(Constants.Widget.PADDING_DEFAULT.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         sims.forEachIndexed { index, sim ->

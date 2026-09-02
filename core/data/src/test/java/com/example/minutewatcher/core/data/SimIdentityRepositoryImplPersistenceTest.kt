@@ -73,7 +73,7 @@ class SimIdentityRepositoryImplPersistenceTest {
                     tmpFolder.newFile("test_ds_2.preferences_pb")
                 }
             val countingDataStore = CountingDataStore(realDataStore)
-            val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID, false)
+            val identity = SimIdentity("stable_id", 1, 101, IdentitySource.SUBSCRIPTION_ID, isStable = false)
 
             // 1. Initial save to populate DataStore
             val persistence = SimIdentityPersistence(countingDataStore, migrationService)

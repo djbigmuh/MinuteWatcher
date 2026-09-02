@@ -7,7 +7,9 @@ sealed interface TrackingStatus {
 
     data object Indexing : TrackingStatus
 
-    data class Ready(val lastUpdateTimestamp: Long) : TrackingStatus
+    data class Ready(
+        val lastUpdateTimestamp: Long,
+    ) : TrackingStatus
 
     data class Error(
         val type: ErrorType,

@@ -102,7 +102,7 @@ class UsageStateRepositoryImplTest {
         subId: Int,
         slot: Int,
     ) = com.example.minutewatcher.core.model.ActiveSimInfo(
-        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID, true),
+        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID, isStable = true),
         slotIndex = slot,
         subscriptionId = subId,
         iccId = id,

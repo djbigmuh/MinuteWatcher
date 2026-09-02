@@ -80,7 +80,7 @@ class TrafficTargetResolverTest {
         subId: Int,
         isDefaultData: Boolean,
     ) = ActiveSimInfo(
-        identity = SimIdentity("sim_$slot", subId, slot, IdentitySource.ICCID, true),
+        identity = SimIdentity("sim_$slot", subId, slot, IdentitySource.ICCID, isStable = true),
         slotIndex = slot,
         subscriptionId = subId,
         iccId = "sim_$slot",

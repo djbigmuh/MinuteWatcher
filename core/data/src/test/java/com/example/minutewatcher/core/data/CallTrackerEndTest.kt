@@ -657,6 +657,6 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             setupCommonMocks()
             val callTracker = createTracker()
             // Directly call the internal method
-            callTracker.endCall(1, true)
+            callTracker.endCall(1, notify = true)
         }
 }

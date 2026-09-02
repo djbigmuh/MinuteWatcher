@@ -50,13 +50,11 @@ class IdentityMigrationServiceTest {
         appDataStore =
             PreferenceDataStoreFactory.create(
                 scope = testScope,
-                produceFile = { tmpFolder.newFile("test_app_settings.preferences_pb") },
-            )
+            ) { tmpFolder.newFile("test_app_settings.preferences_pb") }
         simDataStore =
             PreferenceDataStoreFactory.create(
                 scope = testScope,
-                produceFile = { tmpFolder.newFile("test_sim_settings.preferences_pb") },
-            )
+            ) { tmpFolder.newFile("test_sim_settings.preferences_pb") }
     }
 
     @Test
@@ -418,13 +416,7 @@ class IdentityMigrationServiceTest {
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
-            // Setup a key with an unsupported type for migration (though DataStore only supports a few,
-            // we can try to trigger the 'else' block in migrateTypedKey by mocking if possible,
-            // or just rely on the fact that we added the failureCount logic).
             // Actually, migrateTypedKey returns FAILURE if value is null or unknown type.
-
-            val legacyKey = intPreferencesKey("test_key_sim_0")
-            // We can't easily put an "unknown type" into Preferences, but we can test the outcome aggregation.
 
             val outcome =
                 service.migrateLegacyData(

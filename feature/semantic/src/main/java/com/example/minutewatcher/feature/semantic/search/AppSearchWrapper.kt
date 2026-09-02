@@ -88,7 +88,8 @@ internal class AppSearchWrapperImpl
                 .build()
 
     override fun createSearchSpec(query: String): SearchSpec =
-        SearchSpec.Builder()
+        SearchSpec
+            .Builder()
             .addFilterNamespaces(NAMESPACE)
             .setSnippetCount(10)
                 .build()
