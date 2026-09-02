@@ -20,10 +20,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -60,11 +60,8 @@ class WidgetSettingsViewModel
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
-        // saveMutex — мьютекс для предотвращения конкурентных сохранений.
-        private val saveMutex = Mutex()
-
     private val autoSaveFlow = MutableSharedFlow<Long>(extraBufferCapacity = 64)
-    private var autoSaveCounter = 0L
+    private val autoSaveCounter = AtomicLong(0L)
 
         private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
@@ -138,7 +135,7 @@ class WidgetSettingsViewModel
                     settings = transform(currentSettings).copy(widgetLimitExceeded = false),
                 )
             }
-            autoSaveFlow.tryEmit(++autoSaveCounter)
+            autoSaveFlow.tryEmit(autoSaveCounter.incrementAndGet())
         }
 
         /**
@@ -163,7 +160,7 @@ class WidgetSettingsViewModel
                         ),
                 )
             }
-            autoSaveFlow.tryEmit(++autoSaveCounter)
+            autoSaveFlow.tryEmit(autoSaveCounter.incrementAndGet())
         }
 
         /**
@@ -177,14 +174,9 @@ class WidgetSettingsViewModel
          * Сохраняет текущие настройки и уведомляет систему об изменениях.
          */
         suspend fun saveAndNotify() {
-            val acquired =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    saveMutex.lock()
-                    true
-                } ?: false
-
-            if (!acquired) {
-                AppLogger.w("saveAndNotify: already in progress, timeout waiting for mutex")
+            // Проверяем, не идет ли уже сохранение
+            if (state.value.isSaving) {
+                AppLogger.d("saveAndNotify: already in progress (state.isSaving=true)")
                 reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
                 return
             }
@@ -201,7 +193,6 @@ class WidgetSettingsViewModel
                 reduce { copy(saveResult = SaveResult.Failed()) }
             } finally {
                 withContext(NonCancellable) {
-                    saveMutex.unlock()
                     try {
                         reduce { copy(isSaving = false) }
                     } catch (e: Exception) {

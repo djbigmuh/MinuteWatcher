@@ -113,33 +113,6 @@ open class SemanticSearchManager
             timeProvider = timeProvider,
         )
 
-    private constructor(
-        context: Context,
-        scope: CoroutineScope,
-        appSearchWrapper: AppSearchWrapper,
-        ioDispatcher: CoroutineDispatcher,
-        dataStore: DataStore<Preferences>,
-        timeProvider: TimeProvider,
-        errorHandler: AppSearchErrorHandler,
-    ) : this(
-            sessionManager =
-                AppSearchSessionManager(
-                    context = context,
-                    appSearchWrapper = appSearchWrapper,
-                    errorHandler = errorHandler,
-                ),
-            indexer =
-                SnapshotIndexer(
-                    appSearchWrapper = appSearchWrapper,
-                    errorHandler = errorHandler,
-                    dataStore = dataStore,
-                ),
-        errorHandler = errorHandler,
-            scope = scope,
-            ioDispatcher = ioDispatcher,
-        timeProvider = timeProvider,
-        )
-
         override suspend fun recover() {
             initMutex.withLock {
                 errorHandler.resetFailures()

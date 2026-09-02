@@ -38,7 +38,6 @@ appsearch = "1.1.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
 detekt = "1.23.8"
-jacoco = "0.8.15"
 screenshot = "0.0.1-alpha16"
 
 [libraries]

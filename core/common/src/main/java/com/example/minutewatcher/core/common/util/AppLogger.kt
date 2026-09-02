@@ -124,11 +124,12 @@ object AppLogger {
         level: String,
         message: String,
     ) {
+        val dir = logDir ?: return
         val entry = LogEntry(level, message)
         var fallbackRequired = false
 
         lock.withLock {
-            if (!isFileLoggingEnabled || (logDir == null)) return
+            if (!isFileLoggingEnabled) return
 
             val totalSize = criticalQueue.size + normalQueue.size
             if (entry.isCritical) {
@@ -139,7 +140,7 @@ object AppLogger {
         }
 
         if (fallbackRequired) {
-            handleSynchronousFallback(entry, level)
+            handleSynchronousFallback(entry, level, dir)
         } else {
             ensureWorkerStarted()
         }
@@ -180,6 +181,7 @@ object AppLogger {
     private fun handleSynchronousFallback(
         entry: LogEntry,
         level: String,
+        dir: File,
     ) {
         Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
         val acquired =
@@ -192,7 +194,7 @@ object AppLogger {
 
         if (acquired) {
             try {
-                writeEntryToFileUnlocked(entry)
+                writeEntryToFileUnlocked(entry, dir)
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     Log.w(TAG, "Critical log synchronous write failed", e)
@@ -303,9 +305,9 @@ object AppLogger {
         }
 
     private fun processWorkerEntry(entry: LogEntry) {
-        if (logDir == null) return
+        val dir = logDir ?: return
         try {
-            writeEntryToFile(entry)
+            writeEntryToFile(entry, dir)
             // Success
             if (isFileLoggingDegraded) {
                 Log.i(TAG, "AppLogger: file logging restored")
@@ -366,14 +368,19 @@ object AppLogger {
         currentWriteRetryDelay.set(WORKER_RETRY_DELAY_MS)
     }
 
-    private fun writeEntryToFile(entry: LogEntry) {
+    private fun writeEntryToFile(
+        entry: LogEntry,
+        dir: File,
+    ) {
         fileLock.withLock {
-            writeEntryToFileUnlocked(entry)
+            writeEntryToFileUnlocked(entry, dir)
         }
     }
 
-    private fun writeEntryToFileUnlocked(entry: LogEntry) {
-        val dir = logDir ?: return
+    private fun writeEntryToFileUnlocked(
+        entry: LogEntry,
+        dir: File,
+    ) {
         try {
             val logFile = File(dir, LOG_FILE_NAME)
             if (logFile.exists() && (logFile.length() > MAX_FILE_SIZE)) {
@@ -420,6 +427,7 @@ object AppLogger {
     }
 
     fun shutdown() {
+        val dir = logDir
         isFileLoggingEnabled = false
         logDir = null
         lock.withLock {
@@ -445,29 +453,29 @@ object AppLogger {
             }
         } else {
             fileLock.withLock {
-                flushRemainingLogsUnlocked()
+                dir?.let { flushRemainingLogsUnlocked(it) }
                 closeWriterUnlocked()
             }
         }
         workerThread = null
     }
 
-    private fun flushRemainingLogsUnlocked() {
+    private fun flushRemainingLogsUnlocked(dir: File) {
         if (!lock.tryLock()) return
         try {
             while (criticalQueue.isNotEmpty() || normalQueue.isNotEmpty()) {
-                flushNextEntry()
+                flushNextEntry(dir)
             }
         } finally {
             lock.unlock()
         }
     }
 
-    private fun flushNextEntry() {
+    private fun flushNextEntry(dir: File) {
         val entry = criticalQueue.pollFirst() ?: normalQueue.pollFirst()
         if (entry != null) {
             try {
-                writeEntryToFileUnlocked(entry)
+                writeEntryToFileUnlocked(entry, dir)
             } catch (_: Exception) {
             }
         }

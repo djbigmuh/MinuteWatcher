@@ -123,7 +123,7 @@ open class CallTracker
                 ) {
                     return
                 }
-                }
+            }
 
             if (!checkPermissions()) return
 
@@ -141,7 +141,7 @@ open class CallTracker
             AppLogger.e("Error refreshing status", e)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
         }
-        }
+    }
 
     private fun checkPermissions(): Boolean =
         try {

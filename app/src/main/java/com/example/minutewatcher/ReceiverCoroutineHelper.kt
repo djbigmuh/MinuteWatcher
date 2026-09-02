@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 /**
  * Executes a coroutine block within a [BroadcastReceiver.goAsync] context.
  *
- * [goAsync] extends the receiver's lifetime until `PendingResult.finish()` is called.
+ * [BroadcastReceiver.goAsync] extends the receiver's lifetime until `PendingResult.finish()` is called.
  * This is required for asynchronous operations (like WorkManager enqueuing) because
  * without it, the system may kill the receiver process prematurely.
  *
@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
  * @param pendingResult The [BroadcastReceiver.PendingResult] obtained from [BroadcastReceiver.goAsync].
  * @param block The suspend block to execute. Receives application context.
  */
-fun BroadcastReceiver.goAsyncWithScope(
+fun goAsyncWithScope(
     context: Context,
     pendingResult: BroadcastReceiver.PendingResult,
     dispatcher: CoroutineDispatcher? = null,

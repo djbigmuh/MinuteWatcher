@@ -287,7 +287,7 @@ class IdentityMigrationService
         }
 
         private suspend fun findLegacySuffixes(
-            activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
+            activeIdentity: SimIdentity,
         ): List<String> {
             val suffixes = mutableListOf<String>()
 

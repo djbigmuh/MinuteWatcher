@@ -64,7 +64,7 @@ class WidgetSettingsViewModelTest {
         }
     }
 
-    private suspend fun TestScope.initViewModel() {
+    private fun TestScope.initViewModel() {
         viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
         advanceUntilIdle()
     }
@@ -81,9 +81,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `retryLoad re-attempts loading`() =
         runTest {
-            runBlocking {
-                whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
-            }
+            whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
 
             // Initial load in init
             val initialViewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
@@ -127,9 +125,7 @@ class WidgetSettingsViewModelTest {
                     ): WidgetSaveResult = WidgetSaveResult.Success
                 }
             val realSaver = WidgetSettingsSaver(blockingLoader, mock())
-            runBlocking {
-                whenever(loader.load()).thenReturn(WidgetSettingsState())
-            }
+            whenever(loader.load()).thenReturn(WidgetSettingsState())
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             advanceUntilIdle()
 
@@ -357,9 +353,7 @@ class WidgetSettingsViewModelTest {
                     ): WidgetSaveResult = WidgetSaveResult.Success
                 }
             val realSaver = WidgetSettingsSaver(hangingLoader, mock())
-            runBlocking {
-                whenever(loader.load()).thenReturn(WidgetSettingsState())
-            }
+            whenever(loader.load()).thenReturn(WidgetSettingsState())
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
             advanceUntilIdle()
 
@@ -409,9 +403,7 @@ class WidgetSettingsViewModelTest {
     fun `updateSettings resets loadError`() =
         runTest {
             // Имитировать ошибку загрузки
-            runBlocking {
-                whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            }
+            whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
@@ -428,9 +420,7 @@ class WidgetSettingsViewModelTest {
     fun `updateSimSettings resets loadError`() =
         runTest {
             // Имитировать ошибку загрузки
-            runBlocking {
-                whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            }
+            whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
@@ -446,9 +436,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `saveAndNotify returns Failed when loading failed previously`() =
         runTest {
-            runBlocking {
-                whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            }
+            whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
@@ -643,9 +631,7 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            runBlocking {
-                whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 1))
-            }
+            whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 1))
             val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository)
             advanceUntilIdle()
 
