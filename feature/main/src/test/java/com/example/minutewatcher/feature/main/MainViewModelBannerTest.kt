@@ -5,7 +5,8 @@ import com.example.minutewatcher.core.model.PermissionUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -19,16 +20,17 @@ import org.robolectric.RobolectricTestRunner
 class MainViewModelBannerTest : MainViewModelTestFixtures() {
     @Test
     fun `trackingBannerState shows phone permission banner when granted is false`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
+            runCurrent()
 
             phonePermissionFlow.value = false
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.phonePermissionState != PermissionUiState.GRANTED)
@@ -36,17 +38,18 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState hides phone permission banner when granted is true`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
+            runCurrent()
 
             phonePermissionFlow.value = true
             usageStatsPermissionFlow.value = true
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.phonePermissionState == PermissionUiState.GRANTED)
@@ -54,7 +57,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState reflects permanently denied status`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -68,10 +71,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             // Since phonePermissionFlow.value = false and wasPhonePermissionRequestedBefore = true,
@@ -81,7 +85,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState shows notification banner when alerts enabled but not granted`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -96,10 +100,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState != PermissionUiState.GRANTED)
@@ -107,7 +112,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState hides notification banner when granted even if alerts enabled`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -122,10 +127,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
@@ -133,7 +139,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState correctly identifies NOT_REQUESTED vs DENIED states`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             // Case 1: Not requested
             val settingsFlow =
                 MutableStateFlow(
@@ -148,10 +154,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             var bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
@@ -162,7 +169,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
                     wasPhonePermissionRequestedBefore = true,
                     onboardingCompleted = true,
                 )
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
@@ -170,7 +177,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState hides notification banner when alerts disabled`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -185,10 +192,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
@@ -196,15 +204,16 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState shows usage access banner when permission missing`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             usageStatsPermissionFlow.value = false
 
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
+            runCurrent()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue("Banner should be visible when permission missing", bannerState.showUsageAccessBanner)
@@ -212,7 +221,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState shows traffic error banner when other tracking error occurs`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
@@ -229,9 +238,10 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
+            runCurrent()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.showTrafficErrorBanner)
@@ -240,7 +250,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `trackingBannerState shows shortcuts error banner when shortcuts error occurs`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
@@ -257,9 +267,10 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
 
             // Collect to trigger WhileSubscribed
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
+            runCurrent()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.showShortcutsErrorBanner)
@@ -267,7 +278,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `notificationPermissionState is GRANTED when notificationsGranted is true`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -280,10 +291,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
             val viewModel = createViewModel(backgroundScope)
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
@@ -291,7 +303,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `notificationPermissionState is GRANTED when alerts are disabled and not granted`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -305,10 +317,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
             val viewModel = createViewModel(backgroundScope)
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
@@ -316,7 +329,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `notificationPermissionState is PERMANENTLY_DENIED when alerts enabled and requested but not granted`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -330,10 +343,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
             val viewModel = createViewModel(backgroundScope)
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.PERMANENTLY_DENIED)
@@ -341,7 +355,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
     @Test
     fun `notificationPermissionState is NOT_REQUESTED when alerts enabled but not yet requested`() =
-        testScope.runTest {
+        runTest(testDispatcher) {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
@@ -355,10 +369,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
 
             val viewModel = createViewModel(backgroundScope)
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            backgroundScope.launch {
                 viewModel.trackingBannerState.collect {}
             }
-            testScheduler.advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.notificationPermissionState == PermissionUiState.NOT_REQUESTED)

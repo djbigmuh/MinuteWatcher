@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -43,7 +45,6 @@ import com.example.minutewatcher.core.resources.R
 @Composable
 fun WidgetSettingsScreen(
     viewModel: WidgetSettingsViewModel,
-    onSave: suspend () -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
@@ -65,29 +66,47 @@ fun WidgetSettingsScreen(
             )
         }
 
-    if (uiState.isLoadError) {
-        ErrorState(
-            onRetry = { viewModel.retryLoad() },
-            onBack = onBack,
-        )
-        return
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    var totalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { totalDrag = 0f },
+                        onDragEnd = {
+                            if (totalDrag > 200f) {
+                                onBack()
+                            }
+                        },
+                        onDragCancel = { totalDrag = 0f },
+                        onHorizontalDrag = { _, dragAmount ->
+                            totalDrag += dragAmount
+                        },
+                    )
+                },
+    ) {
+        if (uiState.isLoadError) {
+            ErrorState(
+                onRetry = { viewModel.retryLoad() },
+                onBack = onBack,
+            )
+        } else {
+            val settings = uiState.settings
+            if (settings == null) {
+                LoadingState()
+            } else {
+                WidgetSettingsContent(
+                    settings = settings,
+                    screenUiState = screenUiState,
+                    isSaving = uiState.isSaving,
+                    saveResult = uiState.saveResult,
+                    viewModel = viewModel,
+                    onBack = onBack,
+                )
+            }
+        }
     }
-
-    val settings = uiState.settings
-    if (settings == null) {
-        LoadingState()
-        return
-    }
-
-    WidgetSettingsContent(
-        settings = settings,
-        screenUiState = screenUiState,
-        isSaving = uiState.isSaving,
-        saveResult = uiState.saveResult,
-        viewModel = viewModel,
-        onSave = onSave,
-        onBack = onBack,
-    )
 }
 
 @Composable
@@ -145,30 +164,27 @@ private fun WidgetSettingsContent(
     isSaving: Boolean,
     saveResult: SaveResult?,
     viewModel: WidgetSettingsViewModel,
-    onSave: suspend () -> Unit,
     onBack: () -> Unit,
 ) {
     var showColorPicker by remember { mutableStateOf(value = false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val successMessage = stringResource(id = R.string.settings_saved_toast)
     val partialSuccessMessage = stringResource(id = R.string.settings_save_partial_success)
     val failedMessage = stringResource(id = R.string.settings_save_failed)
-    val alreadyInProgressMessage = stringResource(id = R.string.settings_save_already_in_progress)
 
     LaunchedEffect(saveResult) {
         if (saveResult != null) {
             try {
                 val message =
                     when (saveResult) {
-                        SaveResult.Success -> successMessage
+                        SaveResult.Success -> null // Suppress success snackbar for auto-save
                         is SaveResult.PartialSuccess -> partialSuccessMessage
                         is SaveResult.PartialFailure -> saveResult.message
                         is SaveResult.Failed -> saveResult.message ?: failedMessage
-                        SaveResult.AlreadyInProgress -> alreadyInProgressMessage
+                        SaveResult.AlreadyInProgress -> null
                     }
 
-                snackbarHostState.showSnackbar(message)
+                message?.let { snackbarHostState.showSnackbar(it) }
             } finally {
                 viewModel.consumeSaveResult()
             }
@@ -192,7 +208,6 @@ private fun WidgetSettingsContent(
             BottomPreviewBar(
                 uiState = screenUiState,
                 isSaving = isSaving,
-                onSave = onSave,
             )
         },
     ) { paddingValues ->

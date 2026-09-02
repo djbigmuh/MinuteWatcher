@@ -1,13 +1,14 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,9 +32,11 @@ import java.io.IOException
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityPersistenceFailureTest {
     @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
     private val migrationService: IdentityMigrationService = mock()
 
     @Before
@@ -43,7 +46,7 @@ class SimIdentityPersistenceFailureTest {
 
     @Test
     fun `migration failure allows retry and prevents DataStore update`() =
-        runTest(testDispatcher) {
+        runTest {
             val dataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
@@ -61,7 +64,7 @@ class SimIdentityPersistenceFailureTest {
 
             // 2. Call saveSimIdentitiesInfo - it should catch the exception internally but log it
             persistence.saveSimIdentitiesInfo(listOf(identity))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // 3. Verify migration was called
             verify(migrationService, times(1)).migrateLegacyData(identity)
@@ -80,7 +83,7 @@ class SimIdentityPersistenceFailureTest {
 
             // 6. Call saveSimIdentitiesInfo again
             persistence.saveSimIdentitiesInfo(listOf(identity))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // 7. Verify migration was called AGAIN (retry)
             verify(migrationService, times(1)).migrateLegacyData(identity)

@@ -12,10 +12,13 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -60,6 +63,8 @@ class WidgetSettingsViewModel
         // saveMutex — мьютекс для предотвращения конкурентных сохранений.
         private val saveMutex = Mutex()
 
+    private val autoSaveFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
         private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
 
@@ -67,6 +72,18 @@ class WidgetSettingsViewModel
 
         init {
             loadSettings()
+            setupAutoSave()
+        }
+
+    private fun setupAutoSave() {
+        viewModelScope.launch {
+            @OptIn(FlowPreview::class)
+            autoSaveFlow
+                .debounce(400.milliseconds)
+                .collect {
+                    saveAndNotify()
+                }
+        }
         }
 
         /**
@@ -120,6 +137,7 @@ class WidgetSettingsViewModel
                     settings = transform(currentSettings).copy(widgetLimitExceeded = false),
                 )
             }
+            autoSaveFlow.tryEmit(Unit)
         }
 
         /**
@@ -144,6 +162,7 @@ class WidgetSettingsViewModel
                         ),
                 )
             }
+            autoSaveFlow.tryEmit(Unit)
         }
 
         /**

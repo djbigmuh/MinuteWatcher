@@ -28,7 +28,6 @@ class WidgetSettingsActivity : AppCompatActivity() {
                 ) {
                     WidgetSettingsScreen(
                         viewModel = viewModel,
-                        onSave = { viewModel.saveAndNotify() },
                         onBack = { finish() },
                     )
                 }

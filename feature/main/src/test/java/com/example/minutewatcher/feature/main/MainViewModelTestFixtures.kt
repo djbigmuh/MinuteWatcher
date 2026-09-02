@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
@@ -30,20 +31,35 @@ import com.example.minutewatcher.feature.main.controller.MainSimRefreshControlle
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.TestScope
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class MainViewModelTestFixtures {
+    /**
+     * MainViewModel and its controllers (BannerController, etc) involve complex StateFlow
+     * combinations with WhileSubscribed sharing strategy and deep nesting of reactive flows.
+     * In a Robolectric environment, managing deterministic advancement of StandardTestDispatcher
+     * through these layers while ensuring WhileSubscribed triggers correctly at each level
+     * proves exceptionally fragile. UnconfinedTestDispatcher is used here to ensure immediate
+     * propagation of state changes through the complex reactive chain.
+     */
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(kotlinx.coroutines.test.UnconfinedTestDispatcher())
+
+    protected val testDispatcher: TestDispatcher get() = mainDispatcherRule.testDispatcher
+    protected val testScope by lazy { TestScope(testDispatcher) }
+    protected val testScheduler get() = testDispatcher.scheduler
+
     protected val simIdentityRepository: SimIdentityRepository = mock()
     protected val simLimitsRepository: SimLimitsRepository = mock()
     protected val appSettingsRepository: AppSettingsRepository = mock()
@@ -61,9 +77,6 @@ abstract class MainViewModelTestFixtures {
     protected val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
     protected val savedStateHandle = SavedStateHandle()
 
-    protected val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
-    protected val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
-
     protected val phonePermissionFlow = MutableStateFlow(false)
     protected val usageStatsPermissionFlow = MutableStateFlow(false)
     protected val notificationPermissionFlow = MutableStateFlow(false)
@@ -72,8 +85,6 @@ abstract class MainViewModelTestFixtures {
 
     @Before
     open fun setup() {
-        Dispatchers.setMain(testDispatcher)
-
         phonePermissionFlow.value = false
         usageStatsPermissionFlow.value = false
         notificationPermissionFlow.value = false
@@ -126,7 +137,7 @@ abstract class MainViewModelTestFixtures {
 
     @After
     open fun tearDown() {
-        Dispatchers.resetMain()
+        // MainDispatcherRule handles resetMain()
     }
 
     protected fun createViewModel(scope: CoroutineScope): MainViewModel {

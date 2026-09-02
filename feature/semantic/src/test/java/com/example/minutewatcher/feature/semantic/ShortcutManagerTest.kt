@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.semantic
 
 import android.content.Context
 import androidx.core.content.pm.ShortcutInfoCompat
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.DataSourceType
@@ -17,12 +18,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -37,10 +40,12 @@ import android.content.pm.ShortcutManager as AndroidShortcutManager
 @Config(sdk = [35], qualifiers = "en")
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShortcutManagerTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private lateinit var context: Context
     private val navigationProvider: NavigationProvider = mock()
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private val testScope = TestScope(mainDispatcherRule.testDispatcher)
     private val timeProvider = FixedTimeProvider(100000L)
     private val shortcutApplier: ShortcutApplier = mock()
     private lateinit var shortcutManager: ShortcutManager
@@ -68,14 +73,14 @@ class ShortcutManagerTest {
                 context,
                 testScope,
                 navigationProvider,
-                testDispatcher,
+                mainDispatcherRule.testDispatcher,
                 shortcutApplier,
             )
     }
 
     @Test
     fun `shortcuts are eventually updated even with frequent changes`() =
-        runTest(testDispatcher) {
+        runTest {
             val flow =
                 MutableStateFlow(
                     createSnapshot(
@@ -99,7 +104,7 @@ class ShortcutManagerTest {
             // Emit changes every 10 seconds.
             repeat(10) { i ->
                 timeProvider.advance(10_000)
-                testDispatcher.scheduler.advanceTimeBy(10_000.milliseconds)
+                advanceTimeBy(10_000.milliseconds)
                 flow.value =
                     createSnapshot(
                         listOf(
@@ -117,7 +122,8 @@ class ShortcutManagerTest {
                     )
             }
 
-            testDispatcher.scheduler.advanceTimeBy(31_000.milliseconds)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
 
             val shortcuts = androidShortcutManager.dynamicShortcuts
             assertTrue("Op_" in shortcuts[0].longLabel.toString())
@@ -125,7 +131,7 @@ class ShortcutManagerTest {
 
     @Test
     fun `initialize updates shortcuts immediately with correct labels`() =
-        runTest(testDispatcher) {
+        runTest {
             val remainingMinutes = 90L
             val operator = "MTS"
             val entity = createEntity(0, operator, PackageType.MINUTES, 100, 100 - remainingMinutes)
@@ -147,7 +153,8 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
-            testDispatcher.scheduler.advanceTimeBy(31_000.milliseconds)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
 
             val shortcuts = androidShortcutManager.dynamicShortcuts
             assertEquals(1, shortcuts.size)
@@ -160,7 +167,7 @@ class ShortcutManagerTest {
 
     @Test
     fun `no shortcut is created when limit is 0`() =
-        runTest(testDispatcher) {
+        runTest {
             val entity = createEntity(0, "MTS", PackageType.MINUTES, 0, 0)
             val snapshot =
                 createSnapshot(
@@ -180,14 +187,15 @@ class ShortcutManagerTest {
             val flow = MutableStateFlow(snapshot)
 
             shortcutManager.initialize(flow)
-            testDispatcher.scheduler.advanceTimeBy(31_000.milliseconds)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
 
             assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
         }
 
     @Test
     fun `concurrent initialize and recover does not crash and maintains consistency`() =
-        runTest(testDispatcher) {
+        runTest {
             val flow = MutableStateFlow(createSnapshot(emptyList()))
 
             // Start multiple concurrent operations
@@ -202,13 +210,14 @@ class ShortcutManagerTest {
                     }
                 }
             jobs.joinAll()
+            advanceUntilIdle()
 
             assertTrue(shortcutManager.status.value is TrackingStatus.Active)
         }
 
     @Test
     fun `unsupported operation sets NOT_SUPPORTED status`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(
                 shortcutApplier.apply(
                     any(),
@@ -217,6 +226,7 @@ class ShortcutManagerTest {
             ).thenThrow(UnsupportedOperationException("Shortcuts not supported"))
 
             val result = shortcutManager.updateShortcutsSync(createSnapshot(emptyList()))
+            advanceUntilIdle()
 
             assertFalse(result)
             val status = shortcutManager.status.value

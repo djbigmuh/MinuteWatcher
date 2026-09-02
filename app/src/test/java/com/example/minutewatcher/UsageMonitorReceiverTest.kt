@@ -12,17 +12,15 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.CallEventWorker
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyString
@@ -45,14 +43,15 @@ import org.robolectric.shadows.ShadowLooper
 @Config(application = TestMinuteWatcherApp::class, sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageMonitorReceiverTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private lateinit var context: Context
     private lateinit var workManager: WorkManager
-    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        Dispatchers.setMain(testDispatcher)
 
         val lifecycle = ProcessLifecycleOwner.get().lifecycle as androidx.lifecycle.LifecycleRegistry
         lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_CREATE)
@@ -76,7 +75,7 @@ class UsageMonitorReceiverTest {
 
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
+        // MainDispatcherRule handles resetMain()
     }
 
     @Test

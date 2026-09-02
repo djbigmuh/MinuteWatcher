@@ -49,4 +49,6 @@ dependencies {
     testImplementation(libs.kotlinxCoroutinesTesting)
 
     testFixturesApi(libs.mockingKotlin)
+    testFixturesApi(libs.kotlinxCoroutinesTesting)
+    testFixturesApi(libs.junit)
 }

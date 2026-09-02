@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSaveResult
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -9,24 +10,23 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -45,6 +45,9 @@ import kotlin.time.Duration.Companion.milliseconds
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsViewModelTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -54,7 +57,6 @@ class WidgetSettingsViewModelTest {
     @Before
     fun setup() =
         runTest {
-            Dispatchers.setMain(UnconfinedTestDispatcher())
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
             val snapshotFlow = MutableStateFlow(snapshot)
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
@@ -63,17 +65,18 @@ class WidgetSettingsViewModelTest {
             whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
 
             viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            advanceUntilIdle()
         }
 
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
+        // MainDispatcherRule handles resetMain()
     }
 
     @Test
     fun `init loads settings`() =
         runTest {
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertNotNull(viewModel.state.value.settings)
             assertFalse(viewModel.state.value.isLoadError)
             verify(loader).load()
@@ -86,11 +89,11 @@ class WidgetSettingsViewModelTest {
 
             // Initial load in init
             val initialViewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertTrue(initialViewModel.state.value.isLoadError)
 
             initialViewModel.retryLoad()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertFalse(initialViewModel.state.value.isLoadError)
             assertNotNull(initialViewModel.state.value.settings)
         }
@@ -99,10 +102,10 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify calls save and notifies`() =
         runTest {
             whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             viewModel.saveAndNotify()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             assertEquals(SaveResult.Success, viewModel.state.value.saveResult)
             verify(saver).save(any(), any())
@@ -129,25 +132,25 @@ class WidgetSettingsViewModelTest {
                 }
             val realSaver = WidgetSettingsSaver(blockingLoader, mock())
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             launch { vm.saveAndNotify() }
-            testScheduler.runCurrent()
+            runCurrent()
             assertTrue(vm.state.value.isSaving)
 
             // Второй вызов ждёт освобождения мьютекса с таймаутом
             val secondSave = launch { vm.saveAndNotify() }
-            testScheduler.runCurrent()
+            runCurrent()
 
             // Продвигаем время на SHORT_TIMEOUT_MS, чтобы сработал таймаут ожидания мьютекса
-            testScheduler.advanceTimeBy(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-            testScheduler.runCurrent()
+            advanceTimeBy(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+            runCurrent()
 
             // Теперь AlreadyInProgress IS set in the state
             assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
 
             gate.complete(Unit)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // After first save completes, it should be Success
             assertEquals(SaveResult.Success, vm.state.value.saveResult)
@@ -159,23 +162,70 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify sets Failed on exception`() =
         runTest {
             whenever(saver.save(any(), any())).thenAnswer { SaveResult.Failed() }
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             viewModel.saveAndNotify()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             assertEquals(SaveResult.Failed(), viewModel.state.value.saveResult)
         }
 
     @Test
-    fun `updateSettings updates state locally`() =
+    fun `updateSettings triggers auto-save after debounce`() =
         runTest {
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             viewModel.updateSettings { it.copy(fontSize = 10) }
-            testScheduler.advanceUntilIdle()
-            val state = viewModel.state.value.settings
-            assertNotNull(state)
-            assertEquals(10, state!!.fontSize)
+
+            // Should NOT have saved yet (debounce is 400ms)
+            runCurrent()
+            verify(saver, never()).save(any(), any())
+
+            // Advance time past debounce (400ms)
+            advanceTimeBy(401.milliseconds)
+            runCurrent()
+
+            verify(saver).save(any(), any())
+        }
+
+    @Test
+    fun `updateSimSettings triggers auto-save after debounce`() =
+        runTest {
+            advanceUntilIdle()
+            viewModel.updateSimSettings(0) { it.copy(showTraffic = true) }
+
+            // Should NOT have saved yet
+            runCurrent()
+            verify(saver, never()).save(any(), any())
+
+            // Advance time past debounce
+            advanceTimeBy(401.milliseconds)
+            runCurrent()
+
+            verify(saver).save(any(), any())
+        }
+
+    @Test
+    fun `multiple updates within debounce window trigger only one save`() =
+        runTest {
+            advanceUntilIdle()
+            viewModel.updateSettings { it.copy(fontSize = 10) }
+            advanceTimeBy(200.milliseconds)
+            viewModel.updateSettings { it.copy(fontSize = 15) }
+            advanceTimeBy(200.milliseconds)
+            viewModel.updateSettings { it.copy(fontSize = 20) }
+
+            // Still shouldn't have saved because of 400ms debounce from LAST update
+            runCurrent()
+            verify(saver, never()).save(any(), any())
+
+            advanceTimeBy(401.milliseconds)
+            runCurrent()
+
+            // Should have saved exactly once with the final value
+            argumentCaptor<WidgetSettingsState>().apply {
+                verify(saver, times(1)).save(capture(), any())
+                assertEquals(20, firstValue.fontSize)
+            }
         }
 
     @Test
@@ -219,7 +269,7 @@ class WidgetSettingsViewModelTest {
 
             // 3. Complete first load (it should be cancelled)
             firstLoadDeferred.complete(WidgetSettingsState(fontSize = 10))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // 4. Assert state contains result from second load
             val state = vm.state.value.settings
@@ -231,7 +281,7 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `concurrent updateSettings does not lose updates`() =
         runTest {
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             val totalUpdates = 10
             val deferreds =
                 List(totalUpdates) { i ->
@@ -241,7 +291,7 @@ class WidgetSettingsViewModelTest {
                     }
                 }
             deferreds.awaitAll()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             val state = viewModel.state.value.settings
             assertNotNull(state)
@@ -256,7 +306,7 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify rethrows CancellationException`() =
         runTest {
             whenever(saver.save(any(), any())).thenThrow(CancellationException("Test cancellation"))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             viewModel.saveAndNotify()
         }
@@ -281,7 +331,7 @@ class WidgetSettingsViewModelTest {
                 }
             val realSaver = WidgetSettingsSaver(hangingLoader, mock())
             val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             val saveJob =
                 launch {
@@ -289,8 +339,8 @@ class WidgetSettingsViewModelTest {
                 }
 
             // Advance time past BOTH the VM timeout and the hanging loader delay
-            testScheduler.advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS * 2 + 1000).milliseconds)
-            testScheduler.advanceUntilIdle()
+            advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS * 2 + 1000).milliseconds)
+            advanceUntilIdle()
 
             assertEquals(
                 SaveResult.Failed("Saving timed out. Storage might be slow or unavailable."),
@@ -303,12 +353,9 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify sets PartialFailure when simListLoadFailed is true`() =
         runTest {
             whenever(saver.save(any(), any())).thenReturn(SaveResult.PartialSuccess(skippedSimSettings = true))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             viewModel.updateSettings { it.copy(simListLoadFailed = true) }
-            testScheduler.advanceUntilIdle()
-
-            viewModel.saveAndNotify()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             assertTrue(viewModel.state.value.saveResult is SaveResult.PartialSuccess)
             verify(saver).save(any(), skipSimSettings = eq(value = true))
@@ -320,12 +367,12 @@ class WidgetSettingsViewModelTest {
             // Имитировать ошибку загрузки
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
             // Обновить настройки
             vm.updateSettings { it.copy(fontSize = 10) }
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Ошибка НЕ должна быть сброшена, так как settings == null
             assertTrue(vm.state.value.isLoadError)
@@ -337,12 +384,12 @@ class WidgetSettingsViewModelTest {
             // Имитировать ошибку загрузки
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
             // Обновить настройки SIM
             vm.updateSimSettings(0) { it.copy(showTraffic = true) }
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Ошибка НЕ должна быть сброшена, так как settings == null
             assertTrue(vm.state.value.isLoadError)
@@ -353,11 +400,11 @@ class WidgetSettingsViewModelTest {
         runTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
             vm.saveAndNotify()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             assertEquals(SaveResult.Failed("Settings were not loaded"), vm.state.value.saveResult)
             verify(saver, never()).save(any(), any())
@@ -387,17 +434,18 @@ class WidgetSettingsViewModelTest {
             // Do NOT advance time, so it's still loading inside init -> loadSettings
 
             vm.saveAndNotify()
-            testScheduler.runCurrent()
+            runCurrent()
 
             assertEquals(SaveResult.Failed("Settings are still loading"), vm.state.value.saveResult)
             verify(saver, never()).save(any(), any())
             deferred.complete(WidgetSettingsState())
+            advanceUntilIdle()
         }
 
     @Test
     fun `validate clamps out-of-range values`() =
         runTest {
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Test MAX values
             viewModel.updateSettings {
@@ -409,10 +457,7 @@ class WidgetSettingsViewModelTest {
                     widgetLimitExceeded = true,
                 )
             }
-            testScheduler.advanceUntilIdle()
-
-            viewModel.saveAndNotify()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             argumentCaptor<WidgetSettingsState>().apply {
                 verify(saver).save(capture(), any())
@@ -433,10 +478,7 @@ class WidgetSettingsViewModelTest {
                     fontSize = Constants.Widget.MIN_FONT_SIZE - 1,
                 )
             }
-            testScheduler.advanceUntilIdle()
-
-            viewModel.saveAndNotify()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             argumentCaptor<WidgetSettingsState>().apply {
                 verify(saver, times(2)).save(capture(), any())
@@ -495,7 +537,7 @@ class WidgetSettingsViewModelTest {
 
             // 1. Complete initial load
             loadDeferred1.complete(WidgetSettingsState(fontSize = 10))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertEquals(
                 10,
                 vm.state.value.settings
@@ -524,7 +566,7 @@ class WidgetSettingsViewModelTest {
 
             // 6. Complete save
             saveGate.complete(Unit)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             saveJob.join()
         }
 
@@ -544,7 +586,7 @@ class WidgetSettingsViewModelTest {
                 }
 
             val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // 1. Initial state
             assertEquals(
@@ -571,7 +613,7 @@ class WidgetSettingsViewModelTest {
 
             // 5. Cleanup
             saveGate.complete(Unit)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             saveJob.join()
         }
 }

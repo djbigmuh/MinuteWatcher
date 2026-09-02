@@ -56,6 +56,7 @@ open class SemanticSearchManager
         @ApplicationScope private val scope: CoroutineScope,
         @com.example.minutewatcher.core.common.di.IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
+        private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
@@ -94,13 +95,22 @@ open class SemanticSearchManager
             dataStore: DataStore<Preferences>,
             timeProvider: TimeProvider,
         ) : this(
-            context = context,
-            scope = scope,
-            appSearchWrapper = appSearchWrapper,
-            ioDispatcher = ioDispatcher,
-            dataStore = dataStore,
-            timeProvider = timeProvider,
+            sessionManager =
+                AppSearchSessionManager(
+                    context = context,
+                    appSearchWrapper = appSearchWrapper,
+                    errorHandler = AppSearchErrorHandler(timeProvider),
+                ),
+            indexer =
+                SnapshotIndexer(
+                    appSearchWrapper = appSearchWrapper,
+                    errorHandler = AppSearchErrorHandler(timeProvider),
+                    dataStore = dataStore,
+                ),
             errorHandler = AppSearchErrorHandler(timeProvider),
+            scope = scope,
+            ioDispatcher = ioDispatcher,
+            timeProvider = timeProvider,
         )
 
     private constructor(
@@ -127,6 +137,7 @@ open class SemanticSearchManager
         errorHandler = errorHandler,
             scope = scope,
             ioDispatcher = ioDispatcher,
+        timeProvider = timeProvider,
         )
 
         override suspend fun recover() {
@@ -168,7 +179,7 @@ open class SemanticSearchManager
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             val oldJob = job
-            if (oldJob?.isActive == true && lastSnapshotFlow === snapshotFlow) return
+            if (oldJob?.isActive == true && (lastSnapshotFlow === snapshotFlow)) return
 
             oldJob?.cancel()
             try {
@@ -187,11 +198,11 @@ open class SemanticSearchManager
             lastSnapshotFlow = snapshotFlow
             job =
                 scope.launch {
-                    _status.value = TrackingStatus.Active
                     snapshotFlow
                         .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                         .collect { snapshot ->
                             ensureActive()
+                            _status.value = TrackingStatus.Indexing
                             val result =
                                 try {
                                     indexSnapshot(snapshot)
@@ -205,6 +216,7 @@ open class SemanticSearchManager
                             when (result) {
                                 IndexResult.Success -> {
                                     errorHandler.resetFailures()
+                                    _status.value = TrackingStatus.Ready(timeProvider.now())
                                 }
 
                                 is IndexResult.ActualFailure -> {
@@ -217,6 +229,11 @@ open class SemanticSearchManager
                                     AppLogger.d(
                                         "SemanticSearchManager: skipping snapshot due to mutex timeout (concurrency)",
                                     )
+                                    // If we were Indexing, go back to Ready or Active?
+                                    // Actually, if it's a timeout, we probably shouldn't stay in Indexing.
+                                    if (_status.value is TrackingStatus.Indexing) {
+                                        _status.value = TrackingStatus.Idle
+                                    }
                                 }
                             }
                         }
@@ -340,7 +357,6 @@ open class SemanticSearchManager
                     indexer.performIndexUpdate(currentSession, snapshot)
                     lastSnapshotHash = currentHash
                     lastSnapshotVersion = snapshot.version
-                    _status.value = TrackingStatus.Active
                     IndexResult.Success
                 } catch (e: CancellationException) {
                     resetLastSnapshotState()
@@ -358,4 +374,38 @@ open class SemanticSearchManager
         lastSnapshotHash = null
         lastSnapshotVersion = null
     }
-    }
+
+    suspend fun query(
+        queryExpression: String,
+        limit: Int = 10,
+    ): Result<List<androidx.appsearch.app.SearchResult>> =
+        withContext(ioDispatcher) {
+            if (!sessionManager.ensureSession({ _status.value = it })) {
+                return@withContext Result.failure(
+                    AppSearchException(
+                        AppSearchResult.RESULT_INTERNAL_ERROR,
+                        "Session not ready"
+                    )
+                )
+            }
+
+            val currentSession =
+                sessionManager.session ?: return@withContext Result.failure(
+                    AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Session is null"),
+                )
+
+            try {
+                val spec =
+                    androidx.appsearch.app.SearchSpec.Builder()
+                        .setSnippetCount(limit)
+                        .addFilterNamespaces(AppSearchConstants.NAMESPACE)
+                        .build()
+                Result.success(currentSession.query(queryExpression, spec))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("AppSearch query failed", e)
+                Result.failure(e)
+            }
+        }
+}

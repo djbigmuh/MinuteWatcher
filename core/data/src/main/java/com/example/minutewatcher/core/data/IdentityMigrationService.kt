@@ -202,7 +202,7 @@ class IdentityMigrationService
         activeSims: List<ActiveSimInfo>,
     ): MigrationOutcome =
         migrationMutex.withLock {
-            var totalOutcome = MigrationOutcome()
+            val mappings = mutableListOf<Pair<String, String>>()
             for (simInfo in activeSims) {
                 val ephemeralIdentity =
                     SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed)
@@ -210,39 +210,20 @@ class IdentityMigrationService
 
                 if (ephemeralIdentity.stableId != persistentIdentity.stableId) {
                     AppLogger.d(
-                        "IdentityMigrationService: Migrating ephemeral data for slot ${simInfo.slotIndex} " +
+                        "IdentityMigrationService: Preparing ephemeral migration for slot ${simInfo.slotIndex} " +
                             "(${ephemeralIdentity.stableId} -> ${persistentIdentity.stableId})",
                     )
-                    totalOutcome +=
-                        migrateBetweenIdentities(ephemeralIdentity.stableId, persistentIdentity.stableId)
+                    mappings.add("_" + ephemeralIdentity.stableId to "_" + persistentIdentity.stableId)
                 }
             }
+
+            if (mappings.isEmpty()) return MigrationOutcome()
+
+            var totalOutcome = MigrationOutcome()
+            totalOutcome += migrateDataStoreBatch(appDataStore, mappings, "app_settings")
+            totalOutcome += migrateDataStoreBatch(simDataStore, mappings, "sim_settings")
             totalOutcome
         }
-
-    private suspend fun migrateBetweenIdentities(
-        oldStableId: String,
-        newStableId: String,
-    ): MigrationOutcome {
-        val oldSuffix = "_$oldStableId"
-        val newSuffix = "_$newStableId"
-        var outcome = MigrationOutcome()
-        outcome +=
-            migrateDataStore(
-                appDataStore,
-                oldSuffix,
-                newSuffix,
-                "app_settings",
-            )
-        outcome +=
-            migrateDataStore(
-                simDataStore,
-                oldSuffix,
-                newSuffix,
-                "sim_settings",
-            )
-        return outcome
-    }
 
         private suspend fun performMigration(
             activeIdentity: com.example.minutewatcher.core.model.SimIdentity,
@@ -252,25 +233,30 @@ class IdentityMigrationService
 
             val legacySuffixes = findLegacySuffixes(activeIdentity)
             val newSuffix = "_$identity"
+            val mappings = legacySuffixes.filter { it != newSuffix }.map { it to newSuffix }
+
+            if (mappings.isEmpty()) return MigrationOutcome()
 
             var totalOutcome = MigrationOutcome()
-            for (legacySuffix in legacySuffixes) {
-                if (legacySuffix == newSuffix) continue
-                totalOutcome +=
-                    migrateDataStore(
-                        appDataStore,
-                        legacySuffix,
-                        newSuffix,
-                        "app_settings",
-                    )
-                totalOutcome +=
-                    migrateDataStore(
-                        simDataStore,
-                        legacySuffix,
-                        newSuffix,
-                        "sim_settings",
-                    )
-            }
+
+            // 1. Batch migrate App Settings
+            totalOutcome += migrateDataStoreBatch(appDataStore, mappings, "app_settings")
+
+            // 2. Batch migrate SIM Settings AND Cleanup mapping markers
+            val subIdForCleanup =
+                if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
+                    activeIdentity.subscriptionId
+                } else {
+                    null
+                }
+
+            totalOutcome +=
+                migrateDataStoreBatch(
+                    simDataStore,
+                    mappings,
+                    "sim_settings",
+                    subIdForCleanup = subIdForCleanup,
+                )
 
             if (totalOutcome.hasChanges()) {
                 AppLogger.d(
@@ -281,24 +267,6 @@ class IdentityMigrationService
 
             if (totalOutcome.failures > 0) {
                 AppLogger.e("Migration for identity $identity finished with ${totalOutcome.failures} failures")
-            }
-
-            // Cleanup mapping keys that were used for this identity
-            if (activeIdentity.source == com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID) {
-                val subId = activeIdentity.subscriptionId
-                if (subId != null) {
-                    simDataStore.edit { prefs ->
-                        val keysToRemove =
-                            prefs
-                                .asMap()
-                                .keys
-                                .asSequence()
-                                .filter { it.name.startsWith("subscription_id_icc_") }
-                                .filter { prefs[it] == subId }
-                                .toList()
-                        keysToRemove.forEach { prefs.remove(it) }
-                    }
-                }
             }
 
             return totalOutcome
@@ -353,42 +321,61 @@ class IdentityMigrationService
             return suffixes.distinct()
         }
 
-        private suspend fun migrateDataStore(
+    private suspend fun migrateDataStoreBatch(
             dataStore: DataStore<Preferences>,
-            legacySuffix: String,
-            newSuffix: String,
+            mappings: List<Pair<String, String>>,
             storeName: String,
+            subIdForCleanup: Int? = null,
         ): MigrationOutcome {
             var migratedCount = 0
             var conflictCount = 0
             var failureCount = 0
+
+        try {
             dataStore.edit { prefs ->
-                val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
+                // 1. Migrate keys based on suffixes
+                for ((legacySuffix, newSuffix) in mappings) {
+                    val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
-                for (oldKey in keysToMigrate) {
-                    val baseName = oldKey.name.removeSuffix(legacySuffix)
-                    val newKeyName = baseName + newSuffix
+                    for (oldKey in keysToMigrate) {
+                        val baseName = oldKey.name.removeSuffix(legacySuffix)
+                        val newKeyName = baseName + newSuffix
 
-                    when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
-                        MigrationResult.SUCCESS -> {
-                            migratedCount++
-                            prefs.remove(oldKey)
-                        }
+                        when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
+                            MigrationResult.SUCCESS -> {
+                                migratedCount++
+                                prefs.remove(oldKey)
+                            }
 
-                        MigrationResult.CONFLICT -> {
-                            conflictCount++
-                            // Не удаляем старый ключ при конфликте для возможности повтора/ручного восстановления
-                        }
+                            MigrationResult.CONFLICT -> {
+                                conflictCount++
+                                // Keep old key for potential recovery
+                            }
 
-                        MigrationResult.FAILURE -> {
-                            failureCount++
-                            AppLogger.e(
-                                "IdentityMigrationService: failed to migrate key '${oldKey.name}' " +
-                                    "(type=${prefs[oldKey]?.let { it::class.simpleName } ?: "null"}) in $storeName",
-                            )
+                            MigrationResult.FAILURE -> {
+                                failureCount++
+                            }
                         }
                     }
                 }
+
+                // 2. Perform cleanup if requested (usually for simDataStore)
+                if (subIdForCleanup != null) {
+                    val keysToRemove =
+                        prefs
+                            .asMap()
+                            .keys
+                            .asSequence()
+                            .filter { it.name.startsWith("subscription_id_icc_") }
+                            .filter { prefs[it] == subIdForCleanup }
+                            .toList()
+                    keysToRemove.forEach { prefs.remove(it) }
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            AppLogger.e("IdentityMigrationService: Batch migration failed for $storeName", e)
+            return MigrationOutcome(failures = mappings.size, partialFailure = true)
             }
 
             return MigrationOutcome(

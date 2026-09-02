@@ -1,12 +1,14 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -16,12 +18,16 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PermissionStateNotifierImplTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     @Test
     fun `initial value is emitted immediately`() =
         runTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
-            val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
+            val job = launch { notifier.changes.toList(results) }
+            runCurrent()
             assertEquals(1, results.size)
             job.cancel()
         }
@@ -29,19 +35,20 @@ class PermissionStateNotifierImplTest {
     @Test
     fun `notifyChanged emits new value`() =
         runTest {
-            val testDispatcher = UnconfinedTestDispatcher()
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
 
             val job =
-                launch(testDispatcher) {
+                launch {
                     notifier.changes.toList(results)
                 }
+            runCurrent()
 
             // 1 emission initially
             assertEquals(1, results.size)
 
             notifier.notifyChanged()
+            runCurrent()
 
             // 2 emissions total
             assertEquals(2, results.size)
@@ -53,10 +60,12 @@ class PermissionStateNotifierImplTest {
         runTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
-            val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
+            val job = launch { notifier.changes.toList(results) }
+            runCurrent()
 
             // Simulate permission grant
             notifier.notifyChanged()
+            runCurrent()
 
             assertTrue(results.size >= 2)
             job.cancel()
@@ -67,10 +76,12 @@ class PermissionStateNotifierImplTest {
         runTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
-            val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
+            val job = launch { notifier.changes.toList(results) }
+            runCurrent()
 
             // Simulate permission revoke
             notifier.notifyChanged()
+            runCurrent()
 
             assertTrue(results.size >= 2)
             job.cancel()
@@ -82,14 +93,17 @@ class PermissionStateNotifierImplTest {
             val notifier = PermissionStateNotifierImpl()
             val results = mutableListOf<Unit>()
 
-            val job = launch(UnconfinedTestDispatcher()) { notifier.changes.toList(results) }
+            val job = launch { notifier.changes.toList(results) }
+            runCurrent()
 
             assertEquals(1, results.size)
 
             notifier.notifyChanged()
+            runCurrent()
             assertEquals(2, results.size)
 
             notifier.notifyChanged()
+            runCurrent()
             assertEquals(3, results.size)
 
             job.cancel()

@@ -1,9 +1,13 @@
 package com.example.minutewatcher.core.model
 
 sealed interface TrackingStatus {
-    object Active : TrackingStatus
+    data object Active : TrackingStatus
 
-    object Idle : TrackingStatus
+    data object Idle : TrackingStatus
+
+    data object Indexing : TrackingStatus
+
+    data class Ready(val lastUpdateTimestamp: Long) : TrackingStatus
 
     data class Error(
         val type: ErrorType,

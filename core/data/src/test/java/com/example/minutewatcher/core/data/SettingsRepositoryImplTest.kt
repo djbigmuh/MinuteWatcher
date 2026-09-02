@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,10 +28,12 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsRepositoryImplTest {
     @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private val testScope = TestScope(mainDispatcherRule.testDispatcher)
 
     private lateinit var dataStore: DataStore<Preferences>
 
@@ -59,6 +62,7 @@ class SettingsRepositoryImplTest {
             }
 
             repository.clearAllCallSessions()
+            advanceUntilIdle()
 
             val prefs = dataStore.data.first()
             assertNull(prefs[DataStoreKeys.callStartTimeKey(1)])
@@ -110,6 +114,7 @@ class SettingsRepositoryImplTest {
                     widgetTransparency = 75,
                 )
             }
+            advanceUntilIdle()
 
             val prefs = dataStore.data.first()
             assertEquals(AppTheme.LIGHT.value, prefs[DataStoreKeys.APP_THEME])
@@ -129,6 +134,7 @@ class SettingsRepositoryImplTest {
             repository.updateAppSettings { current ->
                 current.copy(widgetTransparency = 10)
             }
+            advanceUntilIdle()
 
             val prefs = dataStore.data.first()
             assertEquals(true, prefs[DataStoreKeys.ONBOARDING_COMPLETED])
@@ -142,6 +148,7 @@ class SettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
+            advanceUntilIdle()
 
             val settings = repository.getAppSettings().first()
             assertEquals(true, settings.onboardingCompleted)
@@ -163,6 +170,7 @@ class SettingsRepositoryImplTest {
 
             job1.join()
             job2.join()
+            advanceUntilIdle()
 
             val settings = repository.getAppSettings().first()
             assertEquals(10, settings.widgetTransparency)
@@ -182,6 +190,7 @@ class SettingsRepositoryImplTest {
             testScheduler.advanceUntilIdle()
 
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
+            advanceUntilIdle()
 
             job.join()
             assertEquals(2, settingsList.size)

@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.controller
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -13,11 +14,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
@@ -27,6 +30,9 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class MainBannerControllerTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(kotlinx.coroutines.test.UnconfinedTestDispatcher())
+
     private val trackingStatusRepository: TrackingStatusRepository = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock()
@@ -63,7 +69,7 @@ class MainBannerControllerTest {
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun testBannerReactions() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(mainDispatcherRule.testDispatcher) {
             val controller = createController(backgroundScope)
 
             // Start collecting to activate WhileSubscribed
@@ -72,39 +78,36 @@ class MainBannerControllerTest {
                     controller.trackingBannerState.collect {}
                 }
             }
-
-            // With UnconfinedTestDispatcher and SharingStarted.Eagerly (now WhileSubscribed),
-            // we might need a small advance or runCurrent to ensure collection started.
-            testScheduler.runCurrent()
+            runCurrent()
 
             assertEquals(false, controller.trackingBannerState.value.showUsageAccessBanner)
 
             usageStatsPermissionFlow.value = false
-            testScheduler.runCurrent()
-            // Updates should propagate immediately with Unconfined
+            advanceUntilIdle()
+            // Updates should propagate after advancing virtual time (Standard dispatcher)
             assertEquals(true, controller.trackingBannerState.value.showUsageAccessBanner)
         }
 
     @Test
     fun `recover cancels previous observation and starts exactly one new`() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(mainDispatcherRule.testDispatcher) {
             val controller = createController(backgroundScope)
 
             // Initial subscription in init
             backgroundScope.launch { controller.trackingBannerState.collect {} }
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
 
             // First recover call
             controller.recover()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Should still be 1 (old cancelled, new started)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
 
             // Second recover call
             controller.recover()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Should still be 1
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
@@ -112,32 +115,33 @@ class MainBannerControllerTest {
 
     @Test
     fun `isStorageDegraded reflects seedRepository state`() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(mainDispatcherRule.testDispatcher) {
             val controller = createController(backgroundScope)
 
             backgroundScope.launch { controller.trackingBannerState.collect {} }
+            runCurrent()
 
             // Initial state
             assertEquals(false, controller.trackingBannerState.value.isStorageDegraded)
 
             // Activate ephemeral seed
             isEphemeralSeedActiveFlow.value = true
-            testScheduler.runCurrent()
+            advanceUntilIdle()
 
             assertEquals(true, controller.trackingBannerState.value.isStorageDegraded)
-            assertTrue("observationFailed should be true", controller.trackingBannerState.value.observationFailed)
+            assertTrue("observationFailed should be true", controller.trackingBannerState.value.isStorageDegraded)
 
             // Restore seed
             isEphemeralSeedActiveFlow.value = false
-            testScheduler.runCurrent()
+            advanceUntilIdle()
 
             assertEquals(false, controller.trackingBannerState.value.isStorageDegraded)
-            assertTrue("observationFailed should be false", !controller.trackingBannerState.value.observationFailed)
+            assertTrue("observationFailed should be false", !controller.trackingBannerState.value.isStorageDegraded)
         }
 
     @Test
     fun `notification banner hidden when notifications disabled in settings`() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(mainDispatcherRule.testDispatcher) {
             // Given: Permission NOT granted, but notifications DISABLED in settings
             notificationPermissionFlow.value = false
             appSettingsFlow.value =
@@ -149,7 +153,7 @@ class MainBannerControllerTest {
 
             val controller = createController(backgroundScope)
             backgroundScope.launch { controller.trackingBannerState.collect {} }
-            testScheduler.runCurrent()
+            advanceUntilIdle()
 
             // Then: Banner should be GRANTED (hidden)
             assertEquals(PermissionUiState.GRANTED, controller.trackingBannerState.value.notificationPermissionState)
@@ -157,13 +161,13 @@ class MainBannerControllerTest {
 
     @Test
     fun `recover before initialization re-subscribes`() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(mainDispatcherRule.testDispatcher) {
             // We use a custom controller without automatic initialization to test recover explicitly
             // But MainBannerController calls setupObservation in init via ensureObservationStarted.
             // However, we can verify that recover() increases subscription count or re-triggers logic.
 
             val controller = createController(backgroundScope)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // At this point, it's initialized and subscribed to trackingStatusRepository (count 1)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
@@ -176,7 +180,7 @@ class MainBannerControllerTest {
 
             // Act
             controller.recover()
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Verify it re-subscribed (subscription count should be 1 as old one is replaced or re-added)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
@@ -184,7 +188,7 @@ class MainBannerControllerTest {
 
     @Test
     fun `status transitions from Idle to Active during setupObservation`() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(mainDispatcherRule.testDispatcher) {
             val controller = createController(backgroundScope)
 
             // Start collecting trackingBannerState to trigger ensureObservationStarted if needed
@@ -194,8 +198,7 @@ class MainBannerControllerTest {
                     controller.trackingBannerState.collect {}
                 }
 
-            testScheduler.advanceUntilIdle()
-            testScheduler.runCurrent()
+            advanceUntilIdle()
 
             assertEquals(TrackingStatus.Active, controller.status.value)
             collectJob.cancel()

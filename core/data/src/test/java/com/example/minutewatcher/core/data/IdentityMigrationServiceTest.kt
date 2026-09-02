@@ -5,13 +5,14 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,13 +35,15 @@ import java.io.IOException
 @OptIn(ExperimentalCoroutinesApi::class)
 class IdentityMigrationServiceTest {
     @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
     val tmpFolder = TemporaryFolder()
 
     private lateinit var appDataStore: DataStore<Preferences>
     private lateinit var simDataStore: DataStore<Preferences>
 
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private val testScope = TestScope(mainDispatcherRule.testDispatcher)
 
     @Before
     fun setup() {
@@ -58,13 +61,14 @@ class IdentityMigrationServiceTest {
 
     @Test
     fun testMigration() =
-        testScope.runTest {
+        runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
             val identityId = "new_identity"
             val newKey = intPreferencesKey("test_key_$identityId")
 
             appDataStore.edit { it[legacyKey] = 123 }
+            advanceUntilIdle()
 
             val outcome =
                 service.migrateLegacyData(
@@ -76,6 +80,7 @@ class IdentityMigrationServiceTest {
                         isStable = false,
                     ),
                 )
+            advanceUntilIdle()
 
             assertTrue(outcome.migrated > 0)
             assertEquals(0, outcome.failures)
@@ -365,7 +370,7 @@ class IdentityMigrationServiceTest {
 
     @Test
     fun testConcurrentMigrationDoesNotCorruptData() =
-        testScope.runTest {
+        runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
             val identityId = "new_identity"
@@ -373,6 +378,7 @@ class IdentityMigrationServiceTest {
 
             // Setup legacy data
             appDataStore.edit { it[legacyKey] = 123 }
+            advanceUntilIdle()
 
             val identity =
                 com.example.minutewatcher.core.model.SimIdentity(
@@ -393,6 +399,7 @@ class IdentityMigrationServiceTest {
                 }
 
             jobs.joinAll()
+            advanceUntilIdle()
 
             val prefs = appDataStore.data.first()
             // Data successfully migrated to the new key
@@ -403,7 +410,6 @@ class IdentityMigrationServiceTest {
             assertFalse(prefs.asMap().keys.any { it.name.startsWith("conflict_") })
 
             // Exactly one migration should have returned true (if they ran sequentially thanks to Mutex)
-            // Note: Since we use UnconfinedTestDispatcher, they might run very fast, but Mutex guarantees order.
             assertEquals(1, results.count { it.hasChanges() })
         }
 

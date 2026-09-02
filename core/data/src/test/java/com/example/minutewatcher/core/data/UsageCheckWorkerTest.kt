@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -51,6 +53,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val simUsageRepository: SimUsageRepository = mock()
     private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -64,7 +69,7 @@ class UsageCheckWorkerTest {
     private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
-    private val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     private lateinit var worker: UsageCheckWorker
 
@@ -76,7 +81,7 @@ class UsageCheckWorkerTest {
         whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(createEmptySnapshot()))
 
         // Setup default stubs for all suspend methods to prevent hangs on unstubbed calls
-        runTest(testDispatcher) {
+        runTest {
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(trafficTracker.updateTrafficUsage()).thenReturn(Unit)
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
@@ -128,7 +133,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork sends notification when minutes low`() =
-        runTest(testDispatcher) {
+        runTest {
             val identity = "sim_0"
             val snapshot =
                 GlobalSnapshot(
@@ -186,7 +191,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork retries on IOException`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { throw java.io.IOException("Disk full") }
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.retry(), result)
@@ -194,7 +199,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork fails on unexpected Exception`() =
-        runTest(testDispatcher) {
+        runTest {
             whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { throw RuntimeException("Fatal") }
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.failure(), result)
@@ -202,7 +207,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork sends notification when traffic low`() =
-        runTest(testDispatcher) {
+        runTest {
             val identity = "sim_0"
             val snapshot =
                 GlobalSnapshot(
@@ -260,7 +265,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork does not notify when usage is below progress threshold`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup time: Jan 15 (approx 48% through month if reset day is 1)
             timeProvider.setTime(createUtcMillis(2026, 1, 15))
             val identity = "sim_0"
@@ -321,7 +326,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork sends notification when usage is high near the end of month`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup time: Oct 16
             timeProvider.setTime(createUtcMillis(2027, 10, 16))
             val identity = "sim_0"
@@ -377,7 +382,7 @@ class UsageCheckWorkerTest {
     @Test
     @Suppress("LongMethod", "detekt.LongMethod")
     fun `traffic critical notification uses critical level`() =
-        runTest(testDispatcher) {
+        runTest {
             val identity = "sim_0"
             // Use 95% used, 5% remaining ( < 10% critical threshold)
             val limit = 1000L * 1024 * 1024
@@ -447,7 +452,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork continues even when READ_PHONE_STATE is missing`() =
-        runTest(testDispatcher) {
+        runTest {
             // 1. Revoke permission in shadow
             val application = ApplicationProvider.getApplicationContext<Application>()
             Shadows.shadowOf(application).denyPermissions(Manifest.permission.READ_PHONE_STATE)
@@ -472,7 +477,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork uses default settings when AppSettings read times out`() =
-        runTest(testDispatcher) {
+        runTest {
             val identity = "sim_0"
             val snapshot =
                 GlobalSnapshot(
@@ -533,7 +538,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork skips notifications on refresh timeout but updates widget`() =
-        runTest(testDispatcher) {
+        runTest {
             val identity = "sim_0"
             val staleTimestamp = 500000L
             val snapshot =
@@ -594,7 +599,7 @@ class UsageCheckWorkerTest {
 
     @Test
     fun `doWork retries when refresh times out and no data loaded`() =
-        runTest(testDispatcher) {
+        runTest {
             // Mock timeout with empty snapshot (timestamp = 0)
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult

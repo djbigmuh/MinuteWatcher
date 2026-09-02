@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
@@ -9,13 +10,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -30,37 +31,43 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetUpdaterImplTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private class TestCrashException(
         message: String,
     ) : RuntimeException(message)
 
     private lateinit var context: Context
-    private val testScope = TestScope(UnconfinedTestDispatcher())
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val renderer: WidgetRenderer = mock()
     private val retryManager = WidgetUpdateRetryManager()
-    private val limitManager = WidgetLimitManager(appSettingsRepository, testScope)
     private val errorClassifier = WidgetErrorClassifier()
-
-    private lateinit var updater: WidgetUpdaterImpl
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        updater =
-            WidgetUpdaterImpl(
-                context = context,
-                appSettingsRepository = appSettingsRepository,
-                renderer = renderer,
-                retryManager = retryManager,
-                limitManager = limitManager,
-                errorClassifier = errorClassifier,
-            )
+    }
+
+    private fun createUpdater(
+        scope: kotlinx.coroutines.CoroutineScope,
+        customRenderer: WidgetRenderer = renderer,
+    ): WidgetUpdaterImpl {
+        val limitManager = WidgetLimitManager(appSettingsRepository, scope)
+        return WidgetUpdaterImpl(
+            context = context,
+            appSettingsRepository = appSettingsRepository,
+            renderer = customRenderer,
+            retryManager = retryManager,
+            limitManager = limitManager,
+            errorClassifier = errorClassifier,
+        )
     }
 
     @Test
     fun `updateAll calls renderer with correct parameters`() =
         runTest {
+            val updater = createUpdater(backgroundScope)
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
@@ -75,6 +82,8 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns false for generic IllegalArgumentException`() {
+        val updater =
+            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
         val e =
             IllegalArgumentException(
                 "Something else went wrong",
@@ -88,6 +97,8 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns true for TransactionTooLargeException cause`() {
+        val updater =
+            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
         val cause = android.os.TransactionTooLargeException()
         val e =
             IllegalArgumentException(
@@ -103,6 +114,8 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns true for RuntimeException with TransactionTooLargeException cause`() {
+        val updater =
+            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
         val cause = android.os.TransactionTooLargeException()
         val e = RuntimeException("Failure sending RemoteViews", cause)
         assertTrue(updater.isRemoteViewsLimitException(e))
@@ -110,6 +123,8 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns false when stack trace contains only RemoteViews without exception`() {
+        val updater =
+            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
         val e =
             IllegalArgumentException(
                 "Fake exception",
@@ -132,6 +147,8 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns true for deeply nested TransactionTooLargeException cause`() {
+        val updater =
+            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
         val cause = android.os.TransactionTooLargeException()
         val wrapper = RuntimeException("Middle wrapper", cause)
         val e = IllegalArgumentException("Top level", wrapper)
@@ -140,6 +157,8 @@ class WidgetUpdaterImplTest {
 
     @Test
     fun `isRemoteViewsLimitException returns false for generic Binder failure`() {
+        val updater =
+            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
         val e = IllegalArgumentException("Something failed in binder")
         assertFalse(updater.isRemoteViewsLimitException(e))
     }
@@ -147,27 +166,19 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll returns false when performWidgetUpdate throws unexpected exception`() =
         runTest {
+            val failingRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        error("Unexpected crash")
+                    }
+                }
+            val failingUpdater = createUpdater(backgroundScope, failingRenderer)
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
-
-            val failingUpdater =
-                WidgetUpdaterImpl(
-                    context,
-                    appSettingsRepository,
-                    renderer =
-                        object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceFull: Boolean,
-                            ) {
-                                error("Unexpected crash")
-                            }
-                        },
-                    retryManager = retryManager,
-                    limitManager = limitManager,
-                    errorClassifier = errorClassifier,
-                )
 
             val result = failingUpdater.updateAll()
 
@@ -177,10 +188,6 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll coalesces concurrent calls`() =
         runTest {
-            val mockSettings = MutableStateFlow(AppSettings())
-            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
-
             val startBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
             val finishBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
 
@@ -194,16 +201,10 @@ class WidgetUpdaterImplTest {
                         finishBarrier.await()
                     }
                 }
-
-            val updaterWithFake =
-                WidgetUpdaterImpl(
-                    context = context,
-                    appSettingsRepository = appSettingsRepository,
-                    renderer = fakeRenderer,
-                    retryManager = retryManager,
-                    limitManager = limitManager,
-                    errorClassifier = errorClassifier,
-                )
+            val updaterWithFake = createUpdater(backgroundScope, fakeRenderer)
+            val mockSettings = MutableStateFlow(AppSettings())
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
             val result1Deferred = async { updaterWithFake.updateAll() }
 
@@ -234,6 +235,23 @@ class WidgetUpdaterImplTest {
     fun `updateAll calls performWidgetUpdate twice when LimitExceeded occurs`() =
         runTest {
             var callCount = 0
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            // Simulate LimitExceeded on first call
+                            throw IllegalArgumentException(
+                                "RemoteViews too large",
+                                android.os.TransactionTooLargeException(),
+                            )
+                        }
+                    }
+                }
+            val updater = createUpdater(backgroundScope, rendererMock)
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
@@ -242,31 +260,6 @@ class WidgetUpdaterImplTest {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
                 mockSettings.value = transform(mockSettings.value)
             }
-
-            val updater =
-                WidgetUpdaterImpl(
-                    context,
-                    appSettingsRepository,
-                    renderer =
-                        object : WidgetRenderer {
-                            override suspend fun renderAll(
-                                context: Context,
-                                forceFull: Boolean,
-                            ) {
-                                callCount++
-                                if (callCount == 1) {
-                                    // Simulate LimitExceeded on first call
-                                    throw IllegalArgumentException(
-                                        "RemoteViews too large",
-                                        android.os.TransactionTooLargeException(),
-                                    )
-                                }
-                            }
-                        },
-                    retryManager = retryManager,
-                    limitManager = limitManager,
-                    errorClassifier = errorClassifier,
-                )
 
             val result = updater.updateAll()
 
@@ -288,7 +281,6 @@ class WidgetUpdaterImplTest {
             @Suppress("UNCHECKED_CAST")
             whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
                 // Return success immediately to simulate successful probe result
-                // This avoids using runBlocking or complex coroutine sync in the mock
                 UpdateResult.Success(wasFull = true)
             }
 
@@ -303,6 +295,7 @@ class WidgetUpdaterImplTest {
                 )
 
             updaterWithMock.updateAll()
+            advanceUntilIdle()
 
             verify(mockLimitManager).isLimitExceeded()
             verify(mockLimitManager).shouldProbe()
@@ -312,6 +305,7 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll returns false and does not retry on SecurityException`() =
         runTest {
+            val updater = createUpdater(backgroundScope)
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
@@ -319,6 +313,7 @@ class WidgetUpdaterImplTest {
             whenever(renderer.renderAll(any(), any())).thenThrow(SecurityException("No permission"))
 
             val result = updater.updateAll()
+            advanceUntilIdle()
 
             assertFalse("updateAll should return failure on SecurityException", result.isSuccess)
             verify(renderer).renderAll(any(), any()) // Should be called only once
@@ -327,6 +322,7 @@ class WidgetUpdaterImplTest {
     @Test(expected = OutOfMemoryError::class)
     fun `updateAll throws Error and does not retry`() =
         runTest {
+            val updater = createUpdater(backgroundScope)
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
@@ -366,15 +362,7 @@ class WidgetUpdaterImplTest {
                     }
                 }
 
-            val updater =
-                WidgetUpdaterImpl(
-                    context,
-                    appSettingsRepository,
-                    rendererMock,
-                    retryManager,
-                    limitManager,
-                    errorClassifier,
-                )
+            val updater = createUpdater(backgroundScope, rendererMock)
 
             val result = updater.updateAll()
 
@@ -386,9 +374,11 @@ class WidgetUpdaterImplTest {
     @Test
     fun `resolveRenderMode defaults to FULL on settings timeout`() =
         runTest {
+            val updater = createUpdater(backgroundScope)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(emptyFlow())
 
             updater.updateAll()
+            advanceUntilIdle()
 
             // Verification of FULL mode (forceFull = true)
             verify(renderer).renderAll(context, forceFull = true)
@@ -402,14 +392,21 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
-            whenever(renderer.renderAll(any(), any())).thenAnswer {
-                callCount++
-                if (callCount == 1) {
-                    throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-                } else {
-                    throw TestCrashException("Simplified also failed")
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                        } else {
+                            throw TestCrashException("Simplified also failed")
+                        }
+                    }
                 }
-            }
+            val updater = createUpdater(backgroundScope, rendererMock)
 
             val result = updater.updateAll()
 
@@ -422,15 +419,18 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll returns LIMIT_EXCEEDED failure if simplified fallback also exceeds limit`() =
         runTest {
-            var callCount = 0
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
-            whenever(renderer.renderAll(any(), any())).thenAnswer {
-                callCount++
-                throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-            }
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ): Unit = throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                }
+            val updater = createUpdater(backgroundScope, rendererMock)
 
             val result = updater.updateAll()
 
@@ -443,7 +443,6 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll recovers after LimitExceeded via probe update`() =
         runTest {
-            var callCount = 0
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
@@ -454,12 +453,20 @@ class WidgetUpdaterImplTest {
             }
 
             // 1. First call: LimitExceeded
-            whenever(renderer.renderAll(any(), any())).thenAnswer {
-                callCount++
-                throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-            }
+            var callCount = 0
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                    }
+                }
+            val updaterFirst = createUpdater(backgroundScope, rendererMock)
 
-            updater.updateAll()
+            updaterFirst.updateAll()
             assertTrue("Limit flag should be set", mockSettings.value.widgetLimitExceeded)
             assertEquals(2, callCount) // Full attempt + simplified fallback
 
@@ -539,16 +546,24 @@ class WidgetUpdaterImplTest {
             }
 
             // Mock renderer to fail both full and simplified updates initially
-            whenever(renderer.renderAll(any(), any())).thenAnswer {
-                callCount++
-                if (callCount == 1) {
-                    // 1st call: Full update -> LimitExceeded
-                    throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
-                } else {
-                    // 2nd call and onwards: Simplified update -> also fails
-                    error("Simplified failed")
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            // 1st call: Full update -> LimitExceeded
+                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                        } else {
+                            // 2nd call and onwards: Simplified update -> also fails
+                            error("Simplified failed")
+                        }
+                    }
                 }
-            }
+
+            val updater = createUpdater(backgroundScope, rendererMock)
 
             // First update attempt
             val result1 = updater.updateAll()
@@ -564,10 +579,7 @@ class WidgetUpdaterImplTest {
             assertEquals("Should have called renderer again for simplified update", 3, callCount)
             // Verify that the 3 calls were: 1st full (limit exceeded), 2nd fallback simplified,
             // 3rd sequential simplified
-            verify(renderer, org.mockito.kotlin.atLeast(1)).renderAll(
-                context = eq(context),
-                forceFull = eq(value = false),
-            )
+            // No need to verify on the mock here since we already checked callCount on the fake object
             assertTrue("Limit flag should still be set", mockSettings.value.widgetLimitExceeded)
         }
 
@@ -603,15 +615,7 @@ class WidgetUpdaterImplTest {
                     }
                 }
 
-            val updaterWithFake =
-                WidgetUpdaterImpl(
-                    context,
-                    appSettingsRepository,
-                    fakeRenderer,
-                    retryManager,
-                    limitManager,
-                    errorClassifier,
-                )
+            val updaterWithFake = createUpdater(backgroundScope, fakeRenderer)
 
             val result1Deferred = async { updaterWithFake.updateAll() }
 
@@ -655,21 +659,13 @@ class WidgetUpdaterImplTest {
                     }
                 }
 
-            val updater =
-                WidgetUpdaterImpl(
-                    context,
-                    appSettingsRepository,
-                    fakeRenderer,
-                    retryManager,
-                    limitManager,
-                    errorClassifier,
-                )
+            val updater = createUpdater(backgroundScope, fakeRenderer)
 
             // Start first update
             val result1Deferred = async { updater.updateAll() }
 
             // Launch second update while first is about to finish
-            // This is tricky with UnconfinedTestDispatcher, but let's try to trigger it
+            // This is tricky with StandardTestDispatcher, but let's try to trigger it
             // by finishing first and immediately starting second.
             finishBarrier.complete(Unit)
             val result2 = updater.updateAll()

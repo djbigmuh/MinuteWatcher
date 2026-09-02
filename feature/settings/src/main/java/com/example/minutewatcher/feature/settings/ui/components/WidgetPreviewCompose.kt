@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -48,7 +48,8 @@ fun WidgetPreview(
     Box(
         modifier =
             modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .wrapContentHeight()
                 .clip(RoundedCornerShape(Constants.Widget.CORNER_RADIUS.dp))
                 .background(bgColor),
         contentAlignment = Alignment.Center,
@@ -101,7 +102,10 @@ private fun HorizontalSimPreviewLayout(
     uiState: WidgetUiState,
 ) {
     Row(
-        modifier = Modifier.fillMaxSize().padding(Constants.Widget.PADDING_DEFAULT.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .padding(Constants.Widget.PADDING_DEFAULT.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         sims.forEachIndexed { index, sim ->
@@ -121,13 +125,14 @@ private fun VerticalSimPreviewLayout(
     uiState: WidgetUiState,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(Constants.Widget.PADDING_DEFAULT.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .padding(Constants.Widget.PADDING_DEFAULT.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         sims.forEachIndexed { index, sim ->
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                SimItemPreview(sim, uiState)
-            }
+            SimItemPreview(sim, uiState)
             if (uiState.showSeparator && index < sims.size - 1) {
                 Separator(isHorizontal = false, uiState = uiState, firstSim = sims[0])
             }
@@ -149,9 +154,13 @@ private fun Separator(
         }
     val modifier =
         if (isHorizontal) {
-            Modifier.width(Constants.Widget.SEPARATOR_THICKNESS.dp).fillMaxHeight()
+            Modifier
+                .width(Constants.Widget.SEPARATOR_THICKNESS.dp)
+                .fillMaxHeight()
         } else {
-            Modifier.height(Constants.Widget.SEPARATOR_THICKNESS.dp).fillMaxWidth()
+            Modifier
+                .height(Constants.Widget.SEPARATOR_THICKNESS.dp)
+                .fillMaxWidth()
         }
     Spacer(modifier = modifier.background(separatorColor))
 }

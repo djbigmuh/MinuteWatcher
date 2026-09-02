@@ -141,18 +141,21 @@ private fun SimDetailsSettings(
     CheckboxSetting(
         label = stringResource(id = R.string.display_name),
         checked = sim.showName,
+        modifier = Modifier.padding(start = 24.dp),
         enabled = enabled,
         onCheckedChange = { v -> onUpdate { it.copy(showName = v) } },
     )
     CheckboxSetting(
         label = stringResource(id = R.string.display_icon),
         checked = sim.showIcon,
+        modifier = Modifier.padding(start = 24.dp),
         enabled = enabled,
         onCheckedChange = { v -> onUpdate { it.copy(showIcon = v) } },
     )
     CheckboxSetting(
         label = stringResource(id = R.string.display_minutes),
         checked = sim.showMinutes,
+        modifier = Modifier.padding(start = 24.dp),
         enabled = enabled,
         onCheckedChange = { v ->
             onUpdate {
@@ -166,13 +169,14 @@ private fun SimDetailsSettings(
     CheckboxSetting(
         label = stringResource(id = R.string.display_minutes_limit),
         checked = sim.showMinutesLimit,
-        modifier = Modifier.padding(start = 24.dp),
+        modifier = Modifier.padding(start = 48.dp),
         enabled = enabled && sim.showMinutes,
         onCheckedChange = { v -> onUpdate { it.copy(showMinutesLimit = v) } },
     )
     CheckboxSetting(
         label = stringResource(id = R.string.display_traffic),
         checked = sim.showTraffic,
+        modifier = Modifier.padding(start = 24.dp),
         enabled = enabled,
         onCheckedChange = { v ->
             onUpdate {
@@ -186,7 +190,7 @@ private fun SimDetailsSettings(
     CheckboxSetting(
         label = stringResource(id = R.string.display_traffic_limit),
         checked = sim.showTrafficLimit,
-        modifier = Modifier.padding(start = 24.dp),
+        modifier = Modifier.padding(start = 48.dp),
         enabled = enabled && sim.showTraffic,
         onCheckedChange = { v -> onUpdate { it.copy(showTrafficLimit = v) } },
     )

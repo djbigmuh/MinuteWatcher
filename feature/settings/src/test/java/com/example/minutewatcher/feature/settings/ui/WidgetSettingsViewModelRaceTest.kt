@@ -1,23 +1,22 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -32,6 +31,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsViewModelRaceTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -41,19 +43,18 @@ class WidgetSettingsViewModelRaceTest {
     @Before
     fun setup() =
         runTest {
-            Dispatchers.setMain(UnconfinedTestDispatcher())
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
             val snapshotFlow = MutableStateFlow(snapshot)
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 4))
 
             viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
-            runCurrent()
+            advanceUntilIdle()
         }
 
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
+        // MainDispatcherRule handles resetMain()
     }
 
     @Test
@@ -64,9 +65,19 @@ class WidgetSettingsViewModelRaceTest {
 
             whenever(saver.save(any(), any())).thenAnswer {
                 saveStarted.complete(Unit)
-                // Wait for signal to complete save
-                // This simulates I/O time
-                runTest { canCompleteSave.await() }
+                // Use a proper suspendable mock if possible, or wait deterministically.
+                // Since this is a Mockito answer for a suspend function, we can't easily
+                // return a value that suspends without runBlocking or making the answer itself suspend.
+                // In modern mockito-kotlin, answers for suspend functions ARE executed in coroutine.
+                // But the Return type of the lambda must match the Return type of the function.
+
+                // If we use runBlocking here, we might block the test thread if using Single threaded dispatcher.
+                // However, StandardTestDispatcher IS single threaded (usually).
+
+                // To avoid runBlocking, we can use a custom Answer or just accept it if it's the only way
+                // for this specific race test.
+
+                kotlinx.coroutines.runBlocking { canCompleteSave.await() }
                 SaveResult.Success
             }
 

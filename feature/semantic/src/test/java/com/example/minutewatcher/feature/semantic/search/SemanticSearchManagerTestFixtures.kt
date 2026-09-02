@@ -161,6 +161,9 @@ abstract class SemanticSearchManagerTestFixtures {
 
         override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
             RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
+
+        override fun createSearchSpec(query: String): androidx.appsearch.app.SearchSpec =
+            androidx.appsearch.app.SearchSpec.Builder().build()
     }
 
     protected class FakeAppSearchSessionWrapper(
@@ -176,6 +179,7 @@ abstract class SemanticSearchManagerTestFixtures {
         var failPutDocuments = false
         var failRemoveByDocumentId = false
         var putDocumentsResultCode: Int = AppSearchResult.RESULT_OK
+        var queryResult: List<androidx.appsearch.app.SearchResult> = emptyList()
 
         override suspend fun setSchema(request: SetSchemaRequest) {
             if (wrapper.failNextWithInvalidSchema && !request.isForceOverride) {
@@ -208,6 +212,11 @@ abstract class SemanticSearchManagerTestFixtures {
             }
             removeRequests.add(request)
         }
+
+        override suspend fun query(
+            queryExpression: String,
+            spec: androidx.appsearch.app.SearchSpec,
+        ): List<androidx.appsearch.app.SearchResult> = queryResult
 
         override fun close() {
             isClosed = true

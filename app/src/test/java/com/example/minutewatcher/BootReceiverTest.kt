@@ -14,17 +14,15 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
-import kotlinx.coroutines.Dispatchers
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyString
@@ -49,14 +47,15 @@ import kotlin.time.Duration.Companion.milliseconds
 @Config(application = TestMinuteWatcherApp::class, sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class BootReceiverTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private lateinit var context: Context
     private lateinit var workManager: WorkManager
-    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        Dispatchers.setMain(testDispatcher)
 
         val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
         lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -84,7 +83,7 @@ class BootReceiverTest {
 
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
+        // MainDispatcherRule handles resetMain()
     }
 
     @Test

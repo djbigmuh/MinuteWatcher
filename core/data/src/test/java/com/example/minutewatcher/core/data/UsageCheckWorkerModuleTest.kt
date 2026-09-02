@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
@@ -40,6 +42,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     @Mock lateinit var simUsageRepository: SimUsageRepository
 
     @Mock lateinit var simIdentityRepository: SimIdentityRepository
@@ -63,7 +68,7 @@ class UsageCheckWorkerModuleTest {
     @Mock lateinit var usageUseCase: UsageUseCase
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
 
-    private val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher()
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     @Before
     fun setUp() {
@@ -81,7 +86,7 @@ class UsageCheckWorkerModuleTest {
                 capabilities = emptyList(),
             )
 
-        runTest(testDispatcher) {
+        runTest {
             whenever(usageStateRepository.refresh()).thenReturn(
                 com.example.minutewatcher.core.domain.RefreshResult
                     .Success(emptySnapshot),
@@ -96,7 +101,7 @@ class UsageCheckWorkerModuleTest {
 
     @Test
     fun testDoWork_Success() =
-        runTest(testDispatcher) {
+        runTest {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val worker =
                 TestListenableWorkerBuilder<UsageCheckWorker>(context)

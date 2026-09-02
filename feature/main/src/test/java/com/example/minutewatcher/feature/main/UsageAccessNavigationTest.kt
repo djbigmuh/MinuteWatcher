@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
@@ -27,15 +28,12 @@ import com.example.minutewatcher.feature.main.controller.MainViewModelController
 import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -52,6 +50,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class UsageAccessNavigationTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     @get:Rule
     val composeTestRule = createComposeRule()
 
@@ -71,7 +72,7 @@ class UsageAccessNavigationTest {
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L, currentRealtime = 1000000L)
     private val savedStateHandle = SavedStateHandle()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     private val phonePermissionFlow = MutableStateFlow(true)
     private val usageStatsPermissionFlow = MutableStateFlow(false)
@@ -81,8 +82,6 @@ class UsageAccessNavigationTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
-
         refreshFlow.tryEmit(
             com.example.minutewatcher.core.domain.DataRefreshNotifier
                 .RefreshEvent(),
@@ -109,7 +108,7 @@ class UsageAccessNavigationTest {
 
     @After
     fun tearDown() {
-        Dispatchers.resetMain()
+        // MainDispatcherRule handles resetMain()
     }
 
     @Suppress("LongMethod")
@@ -260,13 +259,18 @@ class UsageAccessNavigationTest {
         runTest {
             // Test ViewModel state consistency
             val viewModel = createViewModel(backgroundScope)
+            advanceUntilIdle()
+
             viewModel.setUsageAccessDialog(true)
+            advanceUntilIdle()
             assertTrue(viewModel.showUsageAccessDialog.value)
 
             viewModel.setUsageAccessDialog(true) // Call again
+            advanceUntilIdle()
             assertTrue(viewModel.showUsageAccessDialog.value)
 
             viewModel.setUsageAccessDialog(false)
+            advanceUntilIdle()
             assertFalse(viewModel.showUsageAccessDialog.value)
         }
 }

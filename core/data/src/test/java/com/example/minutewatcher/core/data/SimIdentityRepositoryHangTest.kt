@@ -5,6 +5,7 @@ import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -23,7 +24,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
@@ -46,6 +49,9 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityRepositoryHangTest {
     @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
     val tmpFolder = TemporaryFolder()
 
     private lateinit var context: Context
@@ -57,7 +63,6 @@ class SimIdentityRepositoryHangTest {
     private lateinit var timeProvider: TimeProvider
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var discoveryDeps: SimDiscoveryDependencies
-    private val testDispatcher = UnconfinedTestDispatcher()
     private val mockSimProvider: MockSimProvider =
         mock {
             on { getMockSims(any()) }.thenReturn(null)
@@ -249,8 +254,8 @@ class SimIdentityRepositoryHangTest {
 
             // Act: wait for internal timeout (SEED_TOTAL_TIMEOUT_MS + 2000ms)
             // SEED_TOTAL_TIMEOUT_MS is 13000ms
-            testScheduler.advanceTimeBy(15_100.milliseconds)
-            testScheduler.runCurrent()
+            advanceTimeBy(15_100.milliseconds)
+            runCurrent()
 
             // We expect the flow to emit SeedResult.Fallback, which leads to
             // physicalActiveSims emitting, which leads to activeSimsCache emitting.
@@ -268,7 +273,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test
     fun `saveSimIdentitiesInfo does not block other calls on slow migration`() =
-        runTest(testDispatcher) {
+        runTest {
             val migrationStarted = AtomicBoolean(false)
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
@@ -298,7 +303,7 @@ class SimIdentityRepositoryHangTest {
 
             // Act: First call
             identityRepo.getSimIdentity(0)
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertTrue("Migration should have started", migrationStarted.get())
 
             // Second call for a DIFFERENT slot.
@@ -314,7 +319,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test
     fun `observeActiveSims returns empty list immediately when no SIMs and not initialized`() =
-        runTest(testDispatcher) {
+        runTest {
             // Setup: no permissions yet, so flow won't emit physical SIMs
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
 
@@ -342,7 +347,7 @@ class SimIdentityRepositoryHangTest {
 
     @Test
     fun `saveSimIdentitiesInfo handles DataStore hang without crashing`() =
-        runTest(testDispatcher) {
+        runTest {
             val hangingDataStore = mock<DataStore<Preferences>>()
             whenever(hangingDataStore.data).thenReturn(MutableSharedFlow())
 
@@ -377,15 +382,15 @@ class SimIdentityRepositoryHangTest {
                 }
 
             // Constants.Flow.LONG_TIMEOUT_MS is 10_000L
-            testScheduler.advanceTimeBy(35_000.milliseconds)
-            testScheduler.runCurrent()
+            advanceTimeBy(35_000.milliseconds)
+            runCurrent()
 
             assertTrue("Identity resolution should complete even if DataStore hangs (via exception)", job.isCompleted)
         }
 
     @Test
     fun `seedFlow continues emitting last known value when internal observation hangs`() =
-        runTest(testDispatcher) {
+        runTest {
             val storedSeed = MutableSharedFlow<String>(replay = 1)
             val seedRepo =
                 object : SimIdentitySeedRepository {
@@ -411,7 +416,7 @@ class SimIdentityRepositoryHangTest {
 
             // 1. Emit real seed
             storedSeed.emit("seed_1")
-            testScheduler.runCurrent()
+            runCurrent()
 
             // 2. Resolve identity to ensure we are in Real state and seed_1 is the last known value
             val subInfo = mock<android.telephony.SubscriptionInfo>()
@@ -427,8 +432,8 @@ class SimIdentityRepositoryHangTest {
             // 3. Advance time to trigger the withTimeoutOrNull around emitAll in seedFlow.
             // Since storedSeed (MutableSharedFlow) doesn't emit after our first emit,
             // the withTimeoutOrNull(10s) will eventually time out.
-            testScheduler.advanceTimeBy(15_000.milliseconds)
-            testScheduler.runCurrent()
+            advanceTimeBy(15_000.milliseconds)
+            runCurrent()
 
             // 4. New resolution attempt. It should still work using the last known seed
             // provided by the replay cache of the shared seedFlow.

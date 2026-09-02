@@ -2,8 +2,11 @@ package com.example.minutewatcher
 
 import android.content.BroadcastReceiver
 import android.content.Context
+import com.example.minutewatcher.core.common.di.CommonEntryPoint
 import com.example.minutewatcher.core.common.util.AppLogger
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,10 +35,23 @@ import kotlinx.coroutines.launch
 fun BroadcastReceiver.goAsyncWithScope(
     context: Context,
     pendingResult: BroadcastReceiver.PendingResult,
+    dispatcher: CoroutineDispatcher? = null,
     block: suspend (appContext: Context) -> Unit,
 ) {
     val appContext = context.applicationContext
-    CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+    val finalDispatcher =
+        dispatcher ?: try {
+            EntryPointAccessors
+                .fromApplication(
+                    appContext,
+                    CommonEntryPoint::class.java,
+                ).mainImmediateDispatcher()
+        } catch (e: Exception) {
+            // Fallback for tests not using Hilt or missing CommonEntryPoint
+            Dispatchers.Main.immediate
+        }
+
+    CoroutineScope(finalDispatcher + SupervisorJob()).launch {
         try {
             block(appContext)
         } catch (e: CancellationException) {

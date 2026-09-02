@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -17,7 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -37,9 +39,10 @@ import org.robolectric.annotation.Config
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityRepositoryImplPersistenceTest {
     @get:Rule
-    val tmpFolder = TemporaryFolder()
+    val mainDispatcherRule = MainDispatcherRule()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    @get:Rule
+    val tmpFolder = TemporaryFolder()
     private val migrationService: IdentityMigrationService =
         mock {
             on { migrateLegacyData(any()) } doReturn IdentityMigrationService.MigrationOutcome()
@@ -75,13 +78,13 @@ class SimIdentityRepositoryImplPersistenceTest {
             // 1. Initial save to populate DataStore
             val persistence = SimIdentityPersistence(countingDataStore, migrationService)
             persistence.saveSimIdentitiesInfo(listOf(identity))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             val initialCount = countingDataStore.updateCount
             assertTrue("Initial count should be > 0, was $initialCount", initialCount > 0)
 
             // 2. Save identical data
             persistence.saveSimIdentitiesInfo(listOf(identity))
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             // Verify updateCount didn't increase
             assertEquals("Should not call edit for identical data", initialCount, countingDataStore.updateCount)
@@ -89,7 +92,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
     @Test
     fun `activeSimsCache emits unique values only`() =
-        runTest(testDispatcher) {
+        runTest {
             val appSettingsRepo = mock<AppSettingsRepository>()
             val appSettingsFlow = MutableStateFlow(AppSettings())
             whenever(appSettingsRepo.observeAppSettings()).thenReturn(appSettingsFlow)
@@ -159,7 +162,7 @@ class SimIdentityRepositoryImplPersistenceTest {
     @Test
     @Suppress("LongMethod")
     fun `getSimIdentity returns fresh data when subscribed`() =
-        runTest(testDispatcher) {
+        runTest {
             val appSettingsRepo = mock<AppSettingsRepository>()
             val appSettingsFlow = MutableStateFlow(AppSettings())
             whenever(appSettingsRepo.observeAppSettings()).thenReturn(appSettingsFlow)
@@ -234,8 +237,8 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // Trigger discovery update
             permissionChanges.emit(Unit)
-            testScheduler.advanceTimeBy(1000) // Pass debounce
-            testScheduler.advanceUntilIdle()
+            advanceTimeBy(1000) // Pass debounce
+            advanceUntilIdle()
 
             // 3. Check again
             val id2 = repository.getSimIdentity(0)

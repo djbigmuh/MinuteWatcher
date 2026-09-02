@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CompletableDeferred
@@ -11,7 +12,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -32,14 +32,16 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentitySeedRepositoryImplTest {
     @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
     val tmpFolder = TemporaryFolder()
 
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimIdentitySeedRepositoryImpl
     private val migrationService: IdentityMigrationService = mock()
     private val discovery: SimIdentityDiscovery = mock()
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private val testScope = TestScope(mainDispatcherRule.testDispatcher)
 
     @Before
     fun setup() {

@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.Constants
@@ -15,7 +16,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -84,10 +84,16 @@ class SimIdentitySeedRepositoryImpl
             val firstAttempt =
                 seedMutex.withLock {
                     val seed = tryGetPersistentSeed(generator)
-                    if (seed != null && (_isEphemeralSeedActive.value || cachedEphemeralSeed != null)) {
-                        ephemeralToMigrate = cachedEphemeralSeed
-                        _isEphemeralSeedActive.value = false
-                        cachedEphemeralSeed = null
+                    if (seed != null) {
+                        // Check memory cache first
+                        if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
+                            ephemeralToMigrate = cachedEphemeralSeed
+                            _isEphemeralSeedActive.value = false
+                            cachedEphemeralSeed = null
+                        } else {
+                            // Check persistent marker for partial failure recovery
+                            ephemeralToMigrate = tryGetStoredEphemeralSeed()
+                        }
                     }
                     seed
                 }
@@ -109,6 +115,8 @@ class SimIdentitySeedRepositoryImpl
                             ephemeralToMigrateRetry = cachedEphemeralSeed
                             _isEphemeralSeedActive.value = false
                             cachedEphemeralSeed = null
+                        } else {
+                            ephemeralToMigrateRetry = tryGetStoredEphemeralSeed()
                         }
                         seed
                     } else {
@@ -125,6 +133,13 @@ class SimIdentitySeedRepositoryImpl
             return secondAttempt
         }
 
+    private suspend fun tryGetStoredEphemeralSeed(): String? =
+        try {
+            dataStore.data.map { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] }.firstWithTimeout(100)
+        } catch (e: Exception) {
+            null
+        }
+
     private suspend fun executeMigrationSafely(
         ephemeralSeed: String,
         persistentSeed: String,
@@ -135,7 +150,11 @@ class SimIdentitySeedRepositoryImpl
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Миграция не удалась — оставляем хэш, повторим при следующем вызове
+            // Migration failed - ensure it's kept in storage for next attempt
+            try {
+                dataStore.edit { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] = ephemeralSeed }
+            } catch (_: Exception) {
+            }
             seedMutex.withLock {
                 cachedEphemeralSeed = ephemeralSeed
             }
@@ -153,11 +172,17 @@ class SimIdentitySeedRepositoryImpl
 
             val discoveryResult = discovery.get().discoverSims(persistentSeed)
             if (discoveryResult is SimDiscoveryResult.Available) {
-                migrationService.get().migrateFromEphemeralSeed(
-                    ephemeralSeed = ephemeralSeed,
-                    activeSims = discoveryResult.sims,
-                )
-                AppLogger.d("SimIdentitySeedRepositoryImpl: Ephemeral data migration completed successfully")
+                val outcome =
+                    migrationService.get().migrateFromEphemeralSeed(
+                        ephemeralSeed = ephemeralSeed,
+                        activeSims = discoveryResult.sims,
+                    )
+                if (!outcome.partialFailure) {
+                    dataStore.edit { it.remove(DataStoreKeys.EPHEMERAL_IDENTITY_SEED) }
+                    AppLogger.d("SimIdentitySeedRepositoryImpl: Ephemeral data migration completed successfully")
+                } else {
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: Ephemeral migration finished with partial failure")
+                }
             } else {
                 AppLogger.w("SimIdentitySeedRepositoryImpl: Migration skipped, SIMs not available")
             }
@@ -165,7 +190,7 @@ class SimIdentitySeedRepositoryImpl
             throw e
         } catch (e: Exception) {
             AppLogger.e("SimIdentitySeedRepositoryImpl: Failed to migrate data from ephemeral seed", e)
-            throw e // Пробрасываем, чтобы не сбрасывать флаг
+            throw e // Propagate to keep marker
         }
     }
 
@@ -183,15 +208,18 @@ class SimIdentitySeedRepositoryImpl
         }
 
     private suspend fun DataStore<Preferences>.getOrCreateSeedInternal(generator: () -> String): String {
-        val existing = this.data.map { it[DataStoreKeys.SIM_IDENTITY_SEED] }.first()
-
-        if (!existing.isNullOrEmpty()) return existing
-
-        val newSeed = generator()
+        var resultSeed: String? = null
         this.edit { preferences ->
-            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+            val existing = preferences[DataStoreKeys.SIM_IDENTITY_SEED]
+            if (!existing.isNullOrEmpty()) {
+                resultSeed = existing
+            } else {
+                val newSeed = generator()
+                preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+                resultSeed = newSeed
+            }
         }
-        return newSeed
+        return resultSeed ?: ""
     }
 
     private companion object {

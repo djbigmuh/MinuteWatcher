@@ -153,6 +153,7 @@ dependencies {
     debugImplementation(libs.leakcanaryAndroid)
 
     testImplementation(libs.junit)
+    testImplementation(testFixtures(project(":core:common")))
     testImplementation(libs.mockingCore)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.kotlinxCoroutinesTesting)

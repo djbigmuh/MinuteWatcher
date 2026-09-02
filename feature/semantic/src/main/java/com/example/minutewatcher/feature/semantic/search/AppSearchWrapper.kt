@@ -5,6 +5,8 @@ import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.AppSearchSession
 import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
+import androidx.appsearch.app.SearchResult
+import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
@@ -29,6 +31,8 @@ interface AppSearchWrapper {
     fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest
 
     fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest
+
+    fun createSearchSpec(query: String): SearchSpec
 }
 
 /**
@@ -42,6 +46,11 @@ interface AppSearchSessionWrapper : AutoCloseable {
     suspend fun putDocuments(request: PutDocumentsRequest)
 
     suspend fun removeByDocumentId(request: RemoveByDocumentIdRequest)
+
+    suspend fun query(
+        queryExpression: String,
+        spec: SearchSpec,
+    ): List<SearchResult>
 }
 
 @Singleton
@@ -76,6 +85,12 @@ internal class AppSearchWrapperImpl
             RemoveByDocumentIdRequest
                 .Builder(NAMESPACE)
                 .addIds(ids)
+                .build()
+
+    override fun createSearchSpec(query: String): SearchSpec =
+        SearchSpec.Builder()
+            .addFilterNamespaces(NAMESPACE)
+            .setSnippetCount(10)
                 .build()
     }
 
@@ -118,6 +133,14 @@ internal class AppSearchSessionWrapperImpl(
                 "Failed to remove documents: ${firstError?.errorMessage}",
             )
         }
+    }
+
+    override suspend fun query(
+        queryExpression: String,
+        spec: SearchSpec,
+    ): List<SearchResult> {
+        val searchResults = session.search(queryExpression, spec)
+        return searchResults.nextPageAsync.await()
     }
 
     override fun close() {
