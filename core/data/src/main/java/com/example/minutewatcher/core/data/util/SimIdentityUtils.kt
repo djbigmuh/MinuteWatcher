@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data.util
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.mccStringCompat
 import com.example.minutewatcher.core.common.util.mncStringCompat
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import java.security.MessageDigest
@@ -17,21 +18,34 @@ object SimIdentityUtils {
     fun createIdentityFromInfo(
         info: SubscriptionInfo,
         seed: String,
+    ): SimIdentity = createIdentity(info.subscriptionId, info.simSlotIndex, info.iccId, seed)
+
+    fun createIdentityFromInfo(
+        info: ActiveSimInfo,
+        seed: String,
+    ): SimIdentity = createIdentity(info.subscriptionId, info.slotIndex, info.iccId, seed)
+
+    private fun createIdentity(
+        subscriptionId: Int,
+        slotIndex: Int,
+        iccId: String?,
+        seed: String,
     ): SimIdentity {
-        val iccid = info.iccId
-        return if (!iccid.isNullOrBlank()) {
+        return if (!iccId.isNullOrBlank()) {
             SimIdentity(
-                stableId = "icc_" + hashString(iccid, seed),
-                subscriptionId = info.subscriptionId,
-                slotIndex = info.simSlotIndex,
+                stableId = "icc_" + hashString(iccId, seed),
+                subscriptionId = subscriptionId,
+                slotIndex = slotIndex,
                 source = IdentitySource.ICCID,
+                isStable = true,
             )
         } else {
             SimIdentity(
-                stableId = "sub_${info.subscriptionId}",
-                subscriptionId = info.subscriptionId,
-                slotIndex = info.simSlotIndex,
+                stableId = "sub_$subscriptionId",
+                subscriptionId = subscriptionId,
+                slotIndex = slotIndex,
                 source = IdentitySource.SUBSCRIPTION_ID,
+                isStable = false,
             )
         }
     }

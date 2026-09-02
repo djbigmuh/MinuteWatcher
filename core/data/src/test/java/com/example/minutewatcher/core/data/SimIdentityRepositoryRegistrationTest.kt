@@ -120,11 +120,11 @@ class SimIdentityRepositoryRegistrationTest {
             var activeSubCalls = 0
             val discovery = mock<SimIdentityDiscovery>()
             whenever(discovery.observeSubscriptionChanges()).thenReturn(flowOf(Unit))
-            whenever(discovery.getActiveSubscriptions()).thenAnswer {
+            whenever(discovery.discoverSims(any())).thenAnswer {
                 if (activeSubCalls++ == 0) {
                     throw SecurityException("Mock permission revocation")
                 } else {
-                    emptyList<android.telephony.SubscriptionInfo>()
+                    com.example.minutewatcher.core.model.SimDiscoveryResult.Available(emptyList())
                 }
             }
 

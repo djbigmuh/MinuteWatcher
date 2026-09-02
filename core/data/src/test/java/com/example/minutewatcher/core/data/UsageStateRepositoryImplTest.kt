@@ -102,9 +102,10 @@ class UsageStateRepositoryImplTest {
         subId: Int,
         slot: Int,
     ) = com.example.minutewatcher.core.model.ActiveSimInfo(
-        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID),
+        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID, true),
         slotIndex = slot,
         subscriptionId = subId,
+        iccId = id,
         displayName = "SIM $slot",
         carrierName = "Carrier",
         mccMnc = "12345",

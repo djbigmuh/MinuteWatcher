@@ -4,6 +4,7 @@ data class ActiveSimInfo(
     val identity: SimIdentity,
     val slotIndex: Int,
     val subscriptionId: Int,
+    val iccId: String?,
     val displayName: String?,
     val carrierName: String?,
     val mccMnc: String?,

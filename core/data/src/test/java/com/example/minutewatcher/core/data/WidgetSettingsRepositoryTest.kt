@@ -295,6 +295,7 @@ class WidgetSettingsRepositoryTest {
                 100,
                 0,
                 com.example.minutewatcher.core.model.IdentitySource.ICCID,
+                isStable = true,
             )
         val identity1 =
             SimIdentity(
@@ -302,6 +303,7 @@ class WidgetSettingsRepositoryTest {
                 101,
                 1,
                 com.example.minutewatcher.core.model.IdentitySource.ICCID,
+                isStable = true,
             )
         val identity2 =
             SimIdentity(
@@ -309,6 +311,7 @@ class WidgetSettingsRepositoryTest {
                 null,
                 2,
                 com.example.minutewatcher.core.model.IdentitySource.SLOT_FALLBACK,
+                isStable = false,
             )
 
         return listOf(
@@ -316,6 +319,7 @@ class WidgetSettingsRepositoryTest {
                 identity = identity0,
                 slotIndex = 0,
                 subscriptionId = 100,
+                iccId = "id0",
                 displayName = "MTS",
                 carrierName = "MTS",
                 mccMnc = "25001",
@@ -326,6 +330,7 @@ class WidgetSettingsRepositoryTest {
                 identity = identity1,
                 slotIndex = 1,
                 subscriptionId = 101,
+                iccId = "id1",
                 displayName = "MegaFon",
                 carrierName = "MegaFon",
                 mccMnc = "25002",
@@ -336,6 +341,7 @@ class WidgetSettingsRepositoryTest {
                 identity = identity2,
                 slotIndex = 2,
                 subscriptionId = 102,
+                iccId = null,
                 displayName = "Sim 2",
                 carrierName = "Carrier 2",
                 mccMnc = "25003",

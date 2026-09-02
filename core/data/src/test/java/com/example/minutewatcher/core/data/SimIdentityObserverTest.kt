@@ -9,8 +9,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -111,7 +109,11 @@ class SimIdentityObserverTest {
             verify(fetcher, times(21)).fetchActiveSimsWithRetry(any())
 
             // Now make fetcher succeed
-            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(emptyList())
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
+                com.example.minutewatcher.core.model.SimDiscoveryResult.Available(
+                    emptyList()
+                )
+            )
 
             observer.recover()
             // Pass debounce (500ms) and retry logic
@@ -129,13 +131,13 @@ class SimIdentityObserverTest {
     fun `security exception limit is respected`() =
         runTest {
             observer = createObserver(backgroundScope)
-            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenAnswer {
-                throw SecurityException("Permission denied")
-            }
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
+                com.example.minutewatcher.core.model.SimDiscoveryResult.PermissionMissing,
+            )
 
             // Mock permission changes to emit Unit when first() is called in retryWhen
-            // Use replay = 1 to ensure first() doesn't miss emissions during restart
-            val permissionChanges = MutableSharedFlow<Unit>(replay = 1)
+            // Use replay = 0 to ensure it waits for the next emission
+            val permissionChanges = MutableSharedFlow<Unit>(replay = 0)
             whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
 
             val job =
@@ -149,7 +151,8 @@ class SimIdentityObserverTest {
 
             repeat(51) {
                 permissionChanges.emit(Unit)
-                testScheduler.advanceUntilIdle()
+                testScheduler.advanceTimeBy(3000.milliseconds)
+                testScheduler.runCurrent()
             }
 
             // MAX_SECURITY_ATTEMPTS = 50.

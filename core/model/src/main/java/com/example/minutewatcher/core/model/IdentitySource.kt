@@ -4,4 +4,5 @@ enum class IdentitySource {
     ICCID,
     SUBSCRIPTION_ID,
     SLOT_FALLBACK,
+    MOCK,
 }

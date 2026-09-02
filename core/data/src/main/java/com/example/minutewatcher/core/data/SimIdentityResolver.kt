@@ -1,13 +1,13 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,9 +76,12 @@ internal class SimIdentityResolver
         seedValue: String,
     ): SimIdentity =
         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-            discovery.getActiveSubscriptions().find { it.simSlotIndex == slot }?.let {
-                SimIdentityUtils.createIdentityFromInfo(it, seedValue)
-            } ?: throw SimNotFoundException(slot)
+            val result = discovery.discoverSims(seedValue)
+            val sims = when (result) {
+                is SimDiscoveryResult.Available -> result.sims
+                else -> emptyList()
+            }
+            sims.find { it.slotIndex == slot }?.identity ?: throw SimNotFoundException(slot)
         } ?: throw IOException("Timeout resolving identity for slot $slot")
 
     private suspend fun persistIdentity(

@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
@@ -150,13 +151,16 @@ class SimIdentitySeedRepositoryImpl
             // Store ephemeral seed as requested ("temporary storage" for migration source record)
             dataStore.edit { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] = ephemeralSeed }
 
-            val activeSubscriptions = discovery.get().getActiveSubscriptions()
-            migrationService.get().migrateFromEphemeralSeed(
-                ephemeralSeed = ephemeralSeed,
-                persistentSeed = persistentSeed,
-                activeSubscriptions = activeSubscriptions,
-            )
-            AppLogger.d("SimIdentitySeedRepositoryImpl: Ephemeral data migration completed successfully")
+            val discoveryResult = discovery.get().discoverSims(persistentSeed)
+            if (discoveryResult is SimDiscoveryResult.Available) {
+                migrationService.get().migrateFromEphemeralSeed(
+                    ephemeralSeed = ephemeralSeed,
+                    activeSims = discoveryResult.sims,
+                )
+                AppLogger.d("SimIdentitySeedRepositoryImpl: Ephemeral data migration completed successfully")
+            } else {
+                AppLogger.w("SimIdentitySeedRepositoryImpl: Migration skipped, SIMs not available")
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

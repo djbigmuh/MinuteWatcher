@@ -198,9 +198,9 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
-            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
@@ -227,12 +227,13 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork resets baseline only for default data SIM`() =
         runTest {
-            val identity1 = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID)
+            val identity1 = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, true)
             val activeSim1 =
                 ActiveSimInfo(
                     identity1,
                     0,
                     1,
+                    "1",
                     "MTS",
                     "MTS",
                     "25001",
@@ -240,12 +241,13 @@ class InitialSetupWorkerTest {
                     isDefaultVoice = true,
                 )
 
-            val identity2 = SimIdentity("icc_2", 2, 1, IdentitySource.ICCID)
+            val identity2 = SimIdentity("icc_2", 2, 1, IdentitySource.ICCID, true)
             val activeSim2 =
                 ActiveSimInfo(
                     identity2,
                     1,
                     2,
+                    "2",
                     "MegaFon",
                     "MegaFon",
                     "25002",
@@ -268,9 +270,9 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
-            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
@@ -305,9 +307,9 @@ class InitialSetupWorkerTest {
 
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
-            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID)
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)

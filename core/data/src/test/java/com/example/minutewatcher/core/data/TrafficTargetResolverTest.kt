@@ -80,9 +80,10 @@ class TrafficTargetResolverTest {
         subId: Int,
         isDefaultData: Boolean,
     ) = ActiveSimInfo(
-        identity = SimIdentity("sim_$slot", subId, slot, IdentitySource.ICCID),
+        identity = SimIdentity("sim_$slot", subId, slot, IdentitySource.ICCID, true),
         slotIndex = slot,
         subscriptionId = subId,
+        iccId = "sim_$slot",
         displayName = "SIM $slot",
         carrierName = "Carrier",
         mccMnc = "12345",

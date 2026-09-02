@@ -4,7 +4,11 @@ import android.os.Build
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants.SimConstants
+import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -92,7 +96,7 @@ class SimIdentityDiscovery
         /**
          * Returns a list of active subscriptions for supported slots.
          */
-        fun getActiveSubscriptions(): List<SubscriptionInfo> =
+        private fun getActiveSubscriptions(): List<SubscriptionInfo> =
             if (permissionManager.hasPhoneStatePermission()) {
                 permissionManager
                     .getActiveSubscriptions()
@@ -100,6 +104,42 @@ class SimIdentityDiscovery
             } else {
                 emptyList()
             }
+
+    /**
+     * Discovers active SIM cards and returns a structured result.
+     */
+    fun discoverSims(seed: String): SimDiscoveryResult {
+        if (!permissionManager.hasPhoneStatePermission()) {
+            return SimDiscoveryResult.PermissionMissing
+        }
+
+        return try {
+            val subscriptions = getActiveSubscriptions()
+            val defaultDataSubId = getDefaultDataSubscriptionId()
+            val defaultVoiceSubId = getDefaultVoiceSubscriptionId()
+
+            val discoveredSims = subscriptions.map { info ->
+                val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
+                ActiveSimInfo(
+                    identity = identity,
+                    slotIndex = info.simSlotIndex,
+                    subscriptionId = info.subscriptionId,
+                    iccId = info.iccId,
+                    displayName = info.displayName?.toString(),
+                    carrierName = info.carrierName?.toString(),
+                    mccMnc = SimIdentityUtils.getMccMnc(info),
+                    isDefaultData = info.subscriptionId == defaultDataSubId,
+                    isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
+                )
+            }
+            SimDiscoveryResult.Available(discoveredSims)
+        } catch (e: SecurityException) {
+            SimDiscoveryResult.PermissionMissing
+        } catch (e: Exception) {
+            AppLogger.e("Sim discovery failed", e)
+            SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
+        }
+    }
 
         fun getDefaultDataSubscriptionId(): Int = permissionManager.getDefaultDataSubscriptionId()
 

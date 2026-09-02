@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -89,10 +90,11 @@ class SimIdentitySeedRepositoryImplTest {
             val prefs: Preferences = mock()
             whenever(mockDataStore.data).thenReturn(flowOf(prefs))
             whenever(prefs[DataStoreKeys.SIM_IDENTITY_SEED]).thenReturn("persistent-seed")
+            whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
             val migrationStarted = CompletableDeferred<Unit>()
 
-            whenever(migrationService.migrateFromEphemeralSeed(any(), any(), any())).thenAnswer {
+            whenever(migrationService.migrateFromEphemeralSeed(any(), any())).thenAnswer {
                 migrationStarted.complete(Unit)
                 // Instead of runBlocking, we can use a small delay to simulate work,
                 // but for deterministic wait we need runBlocking if thenAnswer is not suspendable.
@@ -136,8 +138,9 @@ class SimIdentitySeedRepositoryImplTest {
             val prefs: Preferences = mock()
             whenever(mockDataStore.data).thenReturn(flowOf(prefs))
             whenever(prefs[DataStoreKeys.SIM_IDENTITY_SEED]).thenReturn("persistent-seed")
+            whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
-            whenever(migrationService.migrateFromEphemeralSeed(any(), any(), any()))
+            whenever(migrationService.migrateFromEphemeralSeed(any(), any()))
                 .thenThrow(RuntimeException("Migration failed"))
                 .thenReturn(IdentityMigrationService.MigrationOutcome())
 
@@ -149,6 +152,6 @@ class SimIdentitySeedRepositoryImplTest {
 
             // Verification: migrateFromEphemeralSeed should be called twice
             verify(migrationService, times(2))
-                .migrateFromEphemeralSeed(any(), any(), any())
+                .migrateFromEphemeralSeed(any(), any())
         }
 }

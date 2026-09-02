@@ -19,13 +19,15 @@ class DebugMockSimProvider
                         stableId = "sim_$i",
                         subscriptionId = SimConstants.MOCK_SUB_ID_BASE + i,
                         slotIndex = i,
-                        source = IdentitySource.SLOT_FALLBACK,
+                        source = IdentitySource.MOCK,
+                        isStable = true,
                     )
 
                 ActiveSimInfo(
                     identity = identity,
                     slotIndex = i,
                     subscriptionId = identity.subscriptionId ?: (SimConstants.MOCK_SUB_ID_BASE + i),
+                    iccId = "mock_icc_$i",
                     displayName = "SIM ${i + 1}",
                     carrierName = "Mock Carrier ${i + 1}",
                     mccMnc = "001001",

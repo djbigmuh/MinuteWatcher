@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -149,36 +150,9 @@ internal class SimIdentityObserver
                         .flatMapLatest {
                             flow {
                                 val result = fetcher.fetchActiveSimsWithRetry(seed)
-                                generalAttempt.set(0)
-                                securityAttempt.set(0)
-                                _status.value = TrackingStatus.Active
-                                emit(result)
+                                handleDiscoveryResult(result)
                             }.retryWhen { cause, _ ->
                                 if (cause is CancellationException) return@retryWhen false
-
-                                if (cause is SecurityException) {
-                                    val current = securityAttempt.incrementAndGet()
-                                    if (current > MAX_SECURITY_ATTEMPTS) {
-                                        AppLogger.e(
-                                            "SimIdentityObserver: SecurityException threshold reached ($current)",
-                                        )
-                                        _status.value =
-                                            TrackingStatus.Error(
-                                                TrackingStatus.ErrorType.PERMISSION_MISSING,
-                                                "SecurityException limit reached",
-                                            )
-                                        emit(emptyList())
-                                        return@retryWhen false
-                                    }
-                                    AppLogger.w(
-                                        "SimIdentityObserver: SecurityException (attempt $current), " +
-                                            "waiting for re-grant",
-                                    )
-                                    emit(emptyList())
-                                    permissionStateNotifier.changes.first()
-                                    generalAttempt.set(0)
-                                    return@retryWhen true
-                                }
 
                                 val currentAttempt = generalAttempt.incrementAndGet()
                                 if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
@@ -207,14 +181,58 @@ internal class SimIdentityObserver
                                 delay(backoff.milliseconds)
                                 true
                             }.catch { cause ->
-                                if (cause !is SecurityException && cause !is IOException) {
+                                if (cause !is IOException) {
                                     throw cause
                                 }
-                                // Error already handled in retryWhen (status set, empty list emitted)
                             }
                         }
                 }
             }.distinctUntilChanged()
+
+    private suspend fun kotlinx.coroutines.flow.FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
+        result: SimDiscoveryResult,
+    ) {
+        when (result) {
+            is SimDiscoveryResult.Available -> {
+                generalAttempt.set(0)
+                securityAttempt.set(0)
+                _status.value = TrackingStatus.Active
+                emit(result.sims)
+            }
+
+            is SimDiscoveryResult.PermissionMissing -> {
+                val current = securityAttempt.incrementAndGet()
+                if (current > MAX_SECURITY_ATTEMPTS) {
+                    _status.value = TrackingStatus.Error(
+                        TrackingStatus.ErrorType.PERMISSION_MISSING,
+                        "SecurityException limit reached",
+                    )
+                    emit(emptyList())
+                } else {
+                    _status.value = TrackingStatus.Error(
+                        TrackingStatus.ErrorType.PERMISSION_MISSING,
+                        "Permission missing (attempt $current)",
+                    )
+                    emit(emptyList())
+                    permissionStateNotifier.changes.first()
+                    generalAttempt.set(0)
+                    throw IOException("Permission missing, retrying after grant")
+                }
+            }
+
+            is SimDiscoveryResult.Unsupported -> {
+                _status.value = TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "SIM discovery unsupported",
+                )
+                emit(emptyList())
+            }
+
+            is SimDiscoveryResult.Failed -> {
+                throw IOException("SIM discovery failed: ${result.reason}")
+            }
+        }
+    }
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val activeSimsCache: StateFlow<List<ActiveSimInfo>> =

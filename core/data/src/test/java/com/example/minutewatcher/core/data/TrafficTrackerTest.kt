@@ -115,9 +115,10 @@ class TrafficTrackerTest {
         val activeSims =
             listOf(
                 ActiveSimInfo(
-                    identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID),
+                    identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, true),
                     slotIndex = 0,
                     subscriptionId = 1,
+                    iccId = "sim_0",
                     displayName = "SIM 1",
                     carrierName = "Carrier 1",
                     mccMnc = "25001",
@@ -125,9 +126,10 @@ class TrafficTrackerTest {
                     isDefaultVoice = true,
                 ),
                 ActiveSimInfo(
-                    identity = SimIdentity("sim_1", 2, 1, IdentitySource.ICCID),
+                    identity = SimIdentity("sim_1", 2, 1, IdentitySource.ICCID, true),
                     slotIndex = 1,
                     subscriptionId = 2,
+                    iccId = "sim_1",
                     displayName = "SIM 2",
                     carrierName = "Carrier 2",
                     mccMnc = "25002",

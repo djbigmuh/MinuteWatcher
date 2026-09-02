@@ -65,9 +65,10 @@ class ResetManagerTest {
             val identity = "sim_0"
             val mockActiveSim =
                 com.example.minutewatcher.core.model.ActiveSimInfo(
-                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, true),
                     slotIndex = 0,
                     subscriptionId = 1,
+                    iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
                     mccMnc = "25001",
@@ -111,9 +112,10 @@ class ResetManagerTest {
             val identity = "sim_0"
             val mockActiveSim =
                 com.example.minutewatcher.core.model.ActiveSimInfo(
-                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, true),
                     slotIndex = 0,
                     subscriptionId = 1,
+                    iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
                     mccMnc = "25001",
@@ -157,9 +159,10 @@ class ResetManagerTest {
             val identity = "sim_0"
             val mockActiveSim =
                 com.example.minutewatcher.core.model.ActiveSimInfo(
-                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, true),
                     slotIndex = 0,
                     subscriptionId = 1,
+                    iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
                     mccMnc = "25001",
@@ -214,9 +217,10 @@ class ResetManagerTest {
             val identity = "sim_0"
             val mockActiveSim =
                 com.example.minutewatcher.core.model.ActiveSimInfo(
-                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID),
+                    identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, true),
                     slotIndex = 0,
                     subscriptionId = 1,
+                    iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
                     mccMnc = "25001",
@@ -313,9 +317,10 @@ class ResetManagerTest {
         identity: String,
         slot: Int,
     ) = com.example.minutewatcher.core.model.ActiveSimInfo(
-        identity = SimIdentity(identity, slot + 1, slot, IdentitySource.ICCID),
+        identity = SimIdentity(identity, slot + 1, slot, IdentitySource.ICCID, true),
         slotIndex = slot,
         subscriptionId = slot + 1,
+        iccId = identity,
         displayName = "Op $slot",
         carrierName = "Op $slot",
         mccMnc = "2500$slot",

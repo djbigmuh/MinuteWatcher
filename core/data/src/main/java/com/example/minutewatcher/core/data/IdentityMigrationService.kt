@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data
 
-import android.telephony.SubscriptionInfo
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -15,6 +14,7 @@ import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -194,26 +194,23 @@ class IdentityMigrationService
      * Migrates data from identities generated with an ephemeral seed to those generated with a persistent seed.
      *
      * @param ephemeralSeed The ephemeral seed used during DataStore unavailability.
-     * @param persistentSeed The persistent seed recovered from DataStore.
-     * @param activeSubscriptions The list of currently active SIM subscriptions.
+     * @param activeSims The list of currently active SIM info.
      * @return The combined outcome of all migration attempts.
      */
     suspend fun migrateFromEphemeralSeed(
         ephemeralSeed: String,
-        persistentSeed: String,
-        activeSubscriptions: List<SubscriptionInfo>,
+        activeSims: List<ActiveSimInfo>,
     ): MigrationOutcome =
         migrationMutex.withLock {
             var totalOutcome = MigrationOutcome()
-            for (info in activeSubscriptions) {
+            for (simInfo in activeSims) {
                 val ephemeralIdentity =
-                    SimIdentityUtils.createIdentityFromInfo(info, ephemeralSeed)
-                val persistentIdentity =
-                    SimIdentityUtils.createIdentityFromInfo(info, persistentSeed)
+                    SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed)
+                val persistentIdentity = simInfo.identity
 
                 if (ephemeralIdentity.stableId != persistentIdentity.stableId) {
                     AppLogger.d(
-                        "IdentityMigrationService: Migrating ephemeral data for slot ${info.simSlotIndex} " +
+                        "IdentityMigrationService: Migrating ephemeral data for slot ${simInfo.slotIndex} " +
                             "(${ephemeralIdentity.stableId} -> ${persistentIdentity.stableId})",
                     )
                     totalOutcome +=
@@ -469,16 +466,20 @@ class IdentityMigrationService
             conflictKey: Preferences.Key<T>,
             value: T,
             storeName: String,
-        ): MigrationResult =
-            if (this[newKey] == null) {
+        ): MigrationResult {
+            val existingValue = this[newKey]
+            if (existingValue == null) {
                 this[newKey] = value
-                MigrationResult.SUCCESS
-            } else {
-                this[conflictKey] = value
-                AppLogger.w(
-                    "Migration conflict in $storeName: ${newKey.name} already exists. " +
-                        "Legacy value backed up to ${conflictKey.name}",
-                )
-                MigrationResult.CONFLICT
+                return MigrationResult.SUCCESS
             }
+            if (existingValue == value) {
+                return MigrationResult.SUCCESS // Already migrated
+            }
+            this[conflictKey] = value
+            AppLogger.w(
+                "Migration conflict in $storeName: ${newKey.name} already exists. " +
+                    "Legacy value backed up to ${conflictKey.name}",
+            )
+            return MigrationResult.CONFLICT
+        }
     }

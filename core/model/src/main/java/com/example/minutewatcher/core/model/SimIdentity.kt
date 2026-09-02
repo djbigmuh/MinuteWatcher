@@ -5,4 +5,5 @@ data class SimIdentity(
     val subscriptionId: Int?,
     val slotIndex: Int?,
     val source: IdentitySource,
+    val isStable: Boolean,
 )

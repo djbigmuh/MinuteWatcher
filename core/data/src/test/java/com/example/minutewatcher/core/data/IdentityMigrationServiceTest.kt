@@ -73,6 +73,7 @@ class IdentityMigrationServiceTest {
                         subscriptionId = 1,
                         slotIndex = 0,
                         source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        isStable = false,
                     ),
                 )
 
@@ -100,6 +101,7 @@ class IdentityMigrationServiceTest {
                         subscriptionId = 1,
                         slotIndex = 0,
                         source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        isStable = false,
                     ),
                 )
             assertTrue(outcome.migrated > 0)
@@ -123,6 +125,7 @@ class IdentityMigrationServiceTest {
                         subscriptionId = 1,
                         slotIndex = 1,
                         source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        isStable = false,
                     ),
                 )
             assertTrue(outcome.migrated > 0)
@@ -219,6 +222,7 @@ class IdentityMigrationServiceTest {
                         subscriptionId = subId,
                         slotIndex = 0,
                         source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        isStable = false,
                     ),
                 )
             assertTrue(outcome.migrated > 0)
@@ -260,6 +264,7 @@ class IdentityMigrationServiceTest {
                         subscriptionId = 1,
                         slotIndex = 0,
                         source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        isStable = false,
                     ),
                 )
 
@@ -347,6 +352,7 @@ class IdentityMigrationServiceTest {
                     subscriptionId = 1,
                     slotIndex = 0,
                     source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                    isStable = false,
                 )
 
             // Should catch the internal exception and log it, not throw
@@ -374,6 +380,7 @@ class IdentityMigrationServiceTest {
                     subscriptionId = 1,
                     slotIndex = 0,
                     source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                    isStable = false,
                 )
 
             // Launch multiple concurrent migrations
@@ -420,6 +427,7 @@ class IdentityMigrationServiceTest {
                         subscriptionId = 1,
                         slotIndex = 0,
                         source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        isStable = false,
                     ),
                 )
 

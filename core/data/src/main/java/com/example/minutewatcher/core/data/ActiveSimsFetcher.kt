@@ -1,12 +1,10 @@
 package com.example.minutewatcher.core.data
 
-import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.domain.SeedUnavailableException
-import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.SimIdentity
+import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.io.IOException
@@ -34,10 +32,10 @@ internal class ActiveSimsFetcher
          * Programming errors (like NPE) are rethrown immediately without retry.
          *
          * @param seed The identity seed result.
-         * @return List of active SIM info.
+         * @return Discovery result containing list of active SIM info or error state.
          * @throws IOException if terminal storage error occurs.
          */
-        suspend fun fetchActiveSimsWithRetry(seed: SeedResult): List<ActiveSimInfo> {
+        suspend fun fetchActiveSimsWithRetry(seed: SeedResult): SimDiscoveryResult {
             var retryDelay = Constants.Flow.RETRY_DELAY_MS
             val maxDelay = Constants.Flow.LONG_TIMEOUT_MS * MAX_DELAY_MULTIPLIER
             repeat(MAX_FETCH_ATTEMPTS + 1) { attempt ->
@@ -45,8 +43,6 @@ internal class ActiveSimsFetcher
                     return getActiveSimsInternal(seed)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: SecurityException) {
-                    handleFetchRetryException(e, attempt, retryDelay)
                 } catch (e: SeedUnavailableException) {
                     handleFetchRetryException(e, attempt, retryDelay)
                     retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
@@ -55,11 +51,11 @@ internal class ActiveSimsFetcher
                     retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
                 }
             }
-            throw IOException("Terminal DataStore error after ${MAX_FETCH_ATTEMPTS + 1} attempts")
+            return SimDiscoveryResult.Failed(SimDiscoveryFailureReason.STORAGE_ERROR)
         }
 
         @Suppress("ReturnCount", "ThrowsCount")
-        private suspend fun getActiveSimsInternal(seed: SeedResult): List<ActiveSimInfo> {
+        private suspend fun getActiveSimsInternal(seed: SeedResult): SimDiscoveryResult {
             val seedValue =
                 when (seed) {
                     is SeedResult.Real -> seed.value
@@ -68,16 +64,17 @@ internal class ActiveSimsFetcher
                     }
                 }
 
-            val infoList = discovery.getActiveSubscriptions()
+            val discoveryResult = discovery.discoverSims(seedValue)
+            if (discoveryResult !is SimDiscoveryResult.Available) return discoveryResult
+
+            val infoList = discoveryResult.sims
+
             val identities =
-                infoList.map { info ->
-                    val identity = SimIdentityUtils.createIdentityFromInfo(info, seedValue)
-                    cache.getOrCreateCanonical(identity)
+                infoList.map { simInfo ->
+                    cache.getOrCreateCanonical(simInfo.identity)
                 }
 
             persistence.retainMigrated(identities.asSequence().map { it.stableId }.toSet())
-
-            if (infoList.isEmpty()) return emptyList()
 
             try {
                 persistence.saveSimIdentitiesInfo(identities)
@@ -87,28 +84,7 @@ internal class ActiveSimsFetcher
                 AppLogger.e("ActiveSimsFetcher: non-terminal error saving identities, continuing", e)
             }
 
-            return createActiveSimInfoList(infoList, identities)
-        }
-
-        private fun createActiveSimInfoList(
-            infoList: List<SubscriptionInfo>,
-            identities: List<SimIdentity>,
-        ): List<ActiveSimInfo> {
-            val defaultDataSubId = discovery.getDefaultDataSubscriptionId()
-            val defaultVoiceSubId = discovery.getDefaultVoiceSubscriptionId()
-
-            return infoList.zip(identities).map { (info, identity) ->
-                ActiveSimInfo(
-                    identity = identity,
-                    slotIndex = info.simSlotIndex,
-                    subscriptionId = info.subscriptionId,
-                    displayName = info.displayName?.toString(),
-                    carrierName = info.carrierName?.toString(),
-                    mccMnc = SimIdentityUtils.getMccMnc(info),
-                    isDefaultData = info.subscriptionId == defaultDataSubId,
-                    isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
-                )
-            }
+            return SimDiscoveryResult.Available(infoList)
         }
 
         @Suppress("ThrowsCount")
@@ -129,10 +105,6 @@ internal class ActiveSimsFetcher
                     }
                     AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
                     delay(delay.milliseconds)
-                }
-                is SecurityException -> {
-                    AppLogger.e("ActiveSimsFetcher: permission error fetching active SIMs", e)
-                    throw e
                 }
                 else -> throw e
             }
