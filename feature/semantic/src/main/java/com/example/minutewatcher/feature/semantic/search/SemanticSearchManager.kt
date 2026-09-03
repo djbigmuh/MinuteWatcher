@@ -31,6 +31,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -85,6 +86,7 @@ open class SemanticSearchManager
 
         private val initMutex = Mutex()
         private val indexMutex = Mutex()
+    private val consecutiveMutexTimeouts = AtomicInteger(0)
 
         @VisibleForTesting
         constructor(
@@ -119,6 +121,7 @@ open class SemanticSearchManager
                 indexMutex.withLock {
                     lastSnapshotHash = null
                     lastSnapshotVersion = null
+                    consecutiveMutexTimeouts.set(0)
                 }
                 val flow =
                     lastSnapshotFlow ?: run {
@@ -196,10 +199,7 @@ open class SemanticSearchManager
                                     }
 
                                     IndexResult.MutexTimeout -> {
-                                        AppLogger.w("SemanticSearchManager: indexing skipped due to mutex timeout")
-                                        if (_status.value is TrackingStatus.Indexing) {
-                                            _status.value = TrackingStatus.Idle
-                                        }
+                                        AppLogger.w("SemanticSearchManager: indexing skipped due to mutex timeout (another indexing in progress)")
                                     }
                                 }
                             } catch (e: CancellationException) {
@@ -226,8 +226,18 @@ open class SemanticSearchManager
 
         if (!mutexAcquired) {
             AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrent indexing in progress)")
+            val count = consecutiveMutexTimeouts.incrementAndGet()
+            if (count >= 2) {
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Indexing mutex stuck",
+                    )
+            }
             return IndexResult.MutexTimeout
         }
+
+        consecutiveMutexTimeouts.set(0)
 
         return try {
             val result =

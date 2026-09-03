@@ -81,9 +81,6 @@ class AppSearchErrorHandler
             currentStatus: TrackingStatus,
             errorOverride: String? = null,
         ): TrackingStatus {
-            val baseMessage = errorOverride ?: "Indexing failed"
-            val failureMessage = "Indexing failed after $MAX_CONSECUTIVE_INDEX_FAILURES consecutive errors"
-
             // Idempotency check: if status is already NOT_SUPPORTED, do nothing.
             if (currentStatus is TrackingStatus.Error &&
                 currentStatus.type == TrackingStatus.ErrorType.NOT_SUPPORTED
@@ -91,11 +88,20 @@ class AppSearchErrorHandler
                 return currentStatus
             }
 
+            val isSameErrorType =
+                currentStatus is TrackingStatus.Error &&
+                    currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR
+
             val newState =
                 failureState.updateAndGet { (count, _) ->
-                    (count + 1) to timeProvider.elapsedRealtime()
+                    val newCount = if (isSameErrorType) count + 1 else 1
+                    newCount to timeProvider.elapsedRealtime()
                 }
+
             val failures = newState.first
+            val baseMessage = errorOverride ?: "Indexing failed"
+            val failureMessage = "Indexing failed after $MAX_CONSECUTIVE_INDEX_FAILURES consecutive errors"
+
             return if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
                     "SemanticSearchManager: $failures consecutive indexing failures. " +

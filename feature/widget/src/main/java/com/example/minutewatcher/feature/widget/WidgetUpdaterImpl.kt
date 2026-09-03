@@ -38,53 +38,41 @@ class WidgetUpdaterImpl
     private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
     override suspend fun updateAll(): WidgetUpdateResult {
-        currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
-
         updateMutex.lock()
-        var lockHeld = true
-        val result =
-            try {
-                // Re-check after acquiring the lock to handle race conditions where another
-                // coroutine started the update while we were waiting for the mutex.
-                val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
-                if (activeUpdate != null) {
-                    updateMutex.unlock()
-                    lockHeld = false
-                    joinInProgressUpdate(activeUpdate)
-                } else {
-                    startNewUpdate()
-                }
-            } finally {
-                if (lockHeld) {
-                    updateMutex.unlock()
-                }
-            }
-        return result
+        val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
+        if (activeUpdate != null) {
+            updateMutex.unlock()
+            return joinInProgressUpdate(activeUpdate)
+        }
+
+        val deferred = CompletableDeferred<WidgetUpdateResult>()
+        currentUpdate.set(deferred)
+        updateMutex.unlock()
+
+        return startNewUpdate(deferred)
     }
 
-    private suspend fun startNewUpdate(): WidgetUpdateResult {
-            val deferred = CompletableDeferred<WidgetUpdateResult>()
-            currentUpdate.set(deferred)
+    private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
         return try {
-                val result = executeUpdateProcess()
-                deferred.complete(result)
+            val result = executeUpdateProcess()
+            deferred.complete(result)
             result
         } catch (e: CancellationException) {
             deferred.completeExceptionally(e)
             throw e
         } catch (e: Exception) {
             AppLogger.e("WidgetUpdater: update failed", e)
-                val failure =
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    )
-                deferred.complete(failure)
+            val failure =
+                WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                )
+            deferred.complete(failure)
             failure
-            } finally {
-                currentUpdate.compareAndSet(deferred, null)
-            }
+        } finally {
+            currentUpdate.compareAndSet(deferred, null)
+        }
     }
 
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =

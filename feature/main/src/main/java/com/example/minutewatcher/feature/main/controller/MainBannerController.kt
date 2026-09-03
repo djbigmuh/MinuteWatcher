@@ -8,10 +8,10 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
+import dagger.Lazy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -39,16 +39,13 @@ import javax.inject.Singleton
  * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
  */
 @Singleton
-class MainBannerController
-@Suppress("unused") // Parameters are used in combine/stateIn lambdas; IDE false positive
-    @Inject
-    constructor(
-        private val trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
-        private val permissionRepository: PermissionRepository,
-        private val appSettingsRepository: AppSettingsRepository,
-        private val seedRepository: SimIdentitySeedRepository,
-        @ApplicationScope private val scope: CoroutineScope,
-    ) : TrackingStatusProvider {
+class MainBannerController @Inject constructor(
+    private val trackingStatusRepository: Lazy<TrackingStatusRepository>,
+    private val permissionRepository: PermissionRepository,
+    private val appSettingsRepository: AppSettingsRepository,
+    private val seedRepository: SimIdentitySeedRepository,
+    @ApplicationScope private val scope: CoroutineScope,
+) : TrackingStatusProvider {
     override val key: String = "banners"
 
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
@@ -130,7 +127,7 @@ class MainBannerController
         }.distinctUntilChanged()
             .stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                started = SharingStarted.Eagerly,
                 initialValue = TrackingBannerState(),
             )
 

@@ -98,8 +98,8 @@ class UpdateCoordinator
                         isObservationStarted.set(false)
                         throw e
                     } catch (e: Exception) {
-                        isObservationStarted.set(false)
                         AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                        isObservationStarted.set(false)
                     }
                 }
             }
@@ -143,6 +143,10 @@ class UpdateCoordinator
                 if (observationScope.getJob() !== newJob) return@launch
                 if (!isObservationStarted.get()) return@launch
 
+                // Job finished while we expected it to be running.
+                // Reset flag to allow ensureObservationStarted() to proceed.
+                isObservationStarted.set(false)
+
                 val restartCount = observationRestartCount.incrementAndGet()
                 if (restartCount >= MAX_OBSERVATION_RESTARTS) {
                     AppLogger.e("UpdateCoordinator: observation restart limit reached ($restartCount)")
@@ -161,8 +165,13 @@ class UpdateCoordinator
                 )
                 kotlinx.coroutines.delay(delayMs.milliseconds)
 
-                if (isObservationStarted.get() && (observationScope.getJob() === newJob)) {
-                    restartObservation()
+                if (observationScope.getJob() === newJob) {
+                    stateMutex.withLock {
+                        lastSnapshotHash = null
+                        consecutiveUpdateFailures = 0
+                        _status.value = TrackingStatus.Idle
+                    }
+                    ensureObservationStarted()
                 }
             }
         monitoringJob.set(newMonitoringJob)
@@ -172,20 +181,6 @@ class UpdateCoordinator
         val exponent = (restartCount - 1).coerceAtMost(MAX_RESTART_DELAY_EXPONENT)
         return (INITIAL_RESTART_DELAY_MS * (1 shl exponent)).coerceAtMost(MAX_RESTART_DELAY_MS)
     }
-
-        /**
-         * Restarts the observation of usage state snapshots.
-         *
-         * Safe to call from any coroutine context.
-         */
-        suspend fun restartObservation() {
-            stateMutex.withLock {
-                lastSnapshotHash = null
-                consecutiveUpdateFailures = 0
-                _status.value = TrackingStatus.Idle
-            }
-            setupObservation()
-        }
 
     @Suppress("ReturnCount")
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {

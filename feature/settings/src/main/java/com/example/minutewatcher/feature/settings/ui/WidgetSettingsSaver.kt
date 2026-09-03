@@ -69,7 +69,7 @@ open class WidgetSettingsSaver
     ): SaveResult {
         if (state.settingsLoadFailed) {
             AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
-            return SaveResult.Failed()
+            return SaveResult.Failed("Settings were not loaded")
         }
 
         // Выполняем защитную валидацию.
@@ -87,8 +87,8 @@ open class WidgetSettingsSaver
             throw e
         } catch (e: Exception) {
             AppLogger.e("Failed to save general widget settings", e)
-            SaveResult.Failed()
-            }
+            SaveResult.Failed("Failed to save general settings")
+        }
         }
 
     private suspend fun trySaveSimSettings(

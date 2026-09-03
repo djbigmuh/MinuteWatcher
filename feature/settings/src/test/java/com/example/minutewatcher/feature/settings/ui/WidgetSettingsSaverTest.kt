@@ -63,7 +63,7 @@ class WidgetSettingsSaverTest {
             val result = saver.save(state)
 
             // Then: Result should be Failed
-            assertEquals(SaveResult.Failed(), result)
+            assertEquals(SaveResult.Failed("Failed to save general settings"), result)
         }
 
     @Test

@@ -17,9 +17,10 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -61,190 +62,201 @@ class WidgetSettingsViewModel
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
-    private val autoSaveFlow = MutableSharedFlow<Long>(extraBufferCapacity = 64)
-    private val autoSaveCounter = AtomicLong(0L)
+    private val autoSaveTrigger = MutableStateFlow(0L)
+    private val lastSavedVersion = AtomicLong(0L)
+    private var autoSaveJob: Job? = null
 
-        private var loadJob: Job? = null
+    private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
 
-        val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
+    val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
-        init {
-            loadSettings()
-            setupAutoSave()
-        }
+    init {
+        loadSettings()
+        setupAutoSave()
+    }
 
     private fun setupAutoSave() {
-        viewModelScope.launch {
-            @OptIn(FlowPreview::class)
-            autoSaveFlow
-                .debounce(400.milliseconds)
-                .collect {
-                    saveAndNotify()
-                }
-        }
-        }
+        autoSaveJob?.cancel()
+        autoSaveJob =
+            viewModelScope.launch {
+                @OptIn(FlowPreview::class)
+                autoSaveTrigger
+                    .debounce(400.milliseconds)
+                    .collect { version ->
+                        if (version > lastSavedVersion.get() && version > 0) {
+                            saveAndNotify()
+                        }
+                    }
+            }
+    }
 
-        /**
-         * Retries loading the widget settings.
-         */
-        fun retryLoad() {
-            loadSettings()
-        }
+    /**
+     * Retries loading the widget settings.
+     */
+    fun retryLoad() {
+        loadSettings()
+    }
 
-        private fun loadSettings() {
-            loadOuterJob?.cancel()
-            loadOuterJob =
-                viewModelScope.launch {
-                    // Отменяем и ЖДЁМ завершения предыдущей загрузки
-                    loadJob?.cancelAndJoin()
+    private fun loadSettings() {
+        loadOuterJob?.cancel()
+        loadOuterJob =
+            viewModelScope.launch {
+                // Отменяем и ЖДЁМ завершения предыдущей загрузки
+                loadJob?.cancelAndJoin()
 
-                    loadJob =
-                        launch {
-                            try {
-                                val loaded =
-                                    withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                        loader.load()
-                                    }
-                                ensureActive()
-                                if (loaded != null) {
-                                    reduce { copy(settings = loaded, isLoadError = false) }
-                                } else {
-                                    AppLogger.e("Failed to load widget settings: timeout")
-                                    reduce { copy(isLoadError = true) }
+                loadJob =
+                    launch {
+                        try {
+                            val loaded =
+                                withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                                    loader.load()
                                 }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("Failed to load widget settings", e)
+                            ensureActive()
+                            if (loaded != null) {
+                                reduce { copy(settings = loaded, isLoadError = false) }
+                            } else {
+                                AppLogger.e("Failed to load widget settings: timeout")
                                 reduce { copy(isLoadError = true) }
                             }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to load widget settings", e)
+                            reduce { copy(isLoadError = true) }
                         }
-                }
-        }
-
-        /**
-         * Обновляет текущее состояние настроек виджета.
-         */
-        fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-            reduce {
-                val currentSettings = settings ?: return@reduce this
-                copy(
-                    isLoadError = false,
-                    settings = transform(currentSettings).copy(widgetLimitExceeded = false),
-                )
-            }
-            autoSaveFlow.tryEmit(autoSaveCounter.incrementAndGet())
-        }
-
-        /**
-         * Обновляет настройки конкретной SIM-карты.
-         */
-        fun updateSimSettings(
-            slot: Int,
-            transform: (SimSettingsState) -> SimSettingsState,
-        ) {
-            reduce {
-                val currentSettings = settings ?: return@reduce this
-                val updatedSimStates = currentSettings.simStates.toMutableMap()
-                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                updatedSimStates[slot] = transform(currentSimState)
-
-                copy(
-                    isLoadError = false,
-                    settings =
-                        currentSettings.copy(
-                            simStates = updatedSimStates,
-                            widgetLimitExceeded = false,
-                        ),
-                )
-            }
-            autoSaveFlow.tryEmit(autoSaveCounter.incrementAndGet())
-        }
-
-        /**
-         * Сбрасывает результат сохранения.
-         */
-        fun consumeSaveResult() {
-            reduce { copy(saveResult = null) }
-        }
-
-        /**
-         * Сохраняет текущие настройки и уведомляет систему об изменениях.
-         */
-        suspend fun saveAndNotify() {
-            // Проверяем, не идет ли уже сохранение
-            if (state.value.isSaving) {
-                AppLogger.d("saveAndNotify: already in progress (state.isSaving=true)")
-                reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
-                return
-            }
-
-            try {
-                // Атомарно обновляем состояние и захватываем актуальное значение
-                val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
-                val result = performSaveInternal(currentState)
-                currentCoroutineContext().ensureActive()
-                reduce { copy(saveResult = result) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to save widget settings", e)
-                currentCoroutineContext().ensureActive()
-                reduce { copy(saveResult = SaveResult.Failed()) }
-            } finally {
-                withContext(NonCancellable) {
-                    try {
-                        reduce { copy(isSaving = false) }
-                    } catch (e: Exception) {
-                        AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
                     }
-                }
             }
+    }
+
+    /**
+     * Обновляет текущее состояние настроек виджета.
+     */
+    fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
+        reduce {
+            val currentSettings = settings ?: return@reduce this
+            copy(
+                isLoadError = false,
+                settings = transform(currentSettings).copy(widgetLimitExceeded = false),
+            )
+        }
+        autoSaveTrigger.update { it + 1 }
+    }
+
+    /**
+     * Обновляет настройки конкретной SIM-карты.
+     */
+    fun updateSimSettings(
+        slot: Int,
+        transform: (SimSettingsState) -> SimSettingsState,
+    ) {
+        reduce {
+            val currentSettings = settings ?: return@reduce this
+            val updatedSimStates = currentSettings.simStates.toMutableMap()
+            val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+            updatedSimStates[slot] = transform(currentSimState)
+
+            copy(
+                isLoadError = false,
+                settings =
+                    currentSettings.copy(
+                        simStates = updatedSimStates,
+                        widgetLimitExceeded = false,
+                    ),
+            )
+        }
+        autoSaveTrigger.update { it + 1 }
+    }
+
+    /**
+     * Сбрасывает результат сохранения.
+     */
+    fun consumeSaveResult() {
+        reduce { copy(saveResult = null) }
+    }
+
+    /**
+     * Сохраняет текущие настройки и уведомляет систему об изменениях.
+     */
+    suspend fun saveAndNotify() {
+        // Проверяем, не идет ли уже сохранение
+        if (state.value.isSaving) {
+            AppLogger.d("saveAndNotify: already in progress (state.isSaving=true)")
+            reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
+            return
         }
 
-        private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
-            val settings = currentState.settings
-            return when {
-                currentState.isLoadError || (settings?.settingsLoadFailed == true) -> {
-                    AppLogger.w("saveAndNotify skipped: settings load failed previously")
-                    SaveResult.Failed("Settings were not loaded")
-                }
-
-                settings == null -> {
-                    AppLogger.w("saveAndNotify called before settings were loaded")
-                    SaveResult.Failed("Settings are still loading")
-                }
-
-                else -> {
-                    executeSave(settings)
+        val versionBeforeSave = autoSaveTrigger.value
+        try {
+            // Атомарно обновляем состояние и захватываем актуальное значение
+            val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
+            val result = performSaveInternal(currentState)
+            currentCoroutineContext().ensureActive()
+            if (result is SaveResult.Success) {
+                lastSavedVersion.set(versionBeforeSave)
+            }
+            reduce { copy(saveResult = result) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Failed to save widget settings", e)
+            currentCoroutineContext().ensureActive()
+            reduce { copy(saveResult = SaveResult.Failed("Failed to save settings")) }
+        } finally {
+            withContext(NonCancellable) {
+                try {
+                    reduce { copy(isSaving = false) }
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
                 }
             }
-        }
-
-        private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
-            val validatedState = WidgetSettingsState.validate(state)
-            val isPartial = validatedState.simListLoadFailed
-            if (isPartial) {
-                AppLogger.w(
-                    "saveAndNotify: SIM list was not loaded successfully. " +
-                        "Saving only general settings via skipSimSettings = true.",
-                )
-            }
-
-            val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
-            val result =
-                withTimeoutOrNull(timeout) {
-                    saver.save(validatedState, skipSimSettings = isPartial)
-                }
-
-            return result ?: run {
-                AppLogger.e("saveAndNotify: operation timed out after ${timeout.inWholeMilliseconds}ms")
-                SaveResult.Failed("Saving timed out. Storage might be slow or unavailable.")
-            }
-        }
-
-        companion object {
-            private val LOAD_TIMEOUT: Duration = 15.seconds
         }
     }
+
+    private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
+        // Read latest settings right before execution to avoid saving stale data
+        // if user modified them while we were transitioning to isSaving=true.
+        val currentSettings = state.value.settings
+        return when {
+            currentState.isLoadError || (currentSettings?.settingsLoadFailed == true) -> {
+                AppLogger.w("saveAndNotify skipped: settings load failed previously")
+                SaveResult.Failed("Settings were not loaded")
+            }
+
+            currentSettings == null -> {
+                AppLogger.w("saveAndNotify called before settings were loaded")
+                SaveResult.Failed("Settings are still loading")
+            }
+
+            else -> {
+                executeSave(currentSettings)
+            }
+        }
+    }
+
+    private suspend fun executeSave(state: WidgetSettingsState): SaveResult {
+        val validatedState = WidgetSettingsState.validate(state)
+        val isPartial = validatedState.simListLoadFailed
+        if (isPartial) {
+            AppLogger.w(
+                "saveAndNotify: SIM list was not loaded successfully. " +
+                    "Saving only general settings via skipSimSettings = true.",
+            )
+        }
+
+        val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
+        val result =
+            withTimeoutOrNull(timeout) {
+                saver.save(validatedState, skipSimSettings = isPartial)
+            }
+
+        return result ?: run {
+            AppLogger.e("saveAndNotify: operation timed out after ${timeout.inWholeMilliseconds}ms")
+            SaveResult.Failed("Saving timed out. Storage might be slow or unavailable.")
+        }
+    }
+
+    companion object {
+        private val LOAD_TIMEOUT: Duration = 15.seconds
+    }
+}

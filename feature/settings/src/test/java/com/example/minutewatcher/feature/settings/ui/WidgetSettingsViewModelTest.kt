@@ -161,7 +161,7 @@ class WidgetSettingsViewModelTest {
                     override suspend fun save(
                         state: WidgetSettingsState,
                         skipSimSettings: Boolean,
-                    ): SaveResult = SaveResult.Failed()
+                    ): SaveResult = SaveResult.Failed("Generic failure")
                 }
             val vm = WidgetSettingsViewModel(loader, failingSaver, usageStateRepository)
             advanceUntilIdle()
@@ -169,7 +169,7 @@ class WidgetSettingsViewModelTest {
             vm.saveAndNotify()
             advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed(), vm.state.value.saveResult)
+            assertEquals(SaveResult.Failed("Generic failure"), vm.state.value.saveResult)
         }
 
     @Test

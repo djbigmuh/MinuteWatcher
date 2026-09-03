@@ -202,7 +202,9 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val jobs =
                 List(count) {
                     launch {
-                        val flow = MutableStateFlow<TrackingStatus>(TrackingStatus.Ready(0L))
+                        val flow = MutableStateFlow<TrackingStatus>(
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "existing"),
+                        )
                         flow.value = errorHandler.handleIndexFailure(flow.value)
                     }
                 }
