@@ -14,6 +14,7 @@ import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import dagger.Lazy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,21 +81,22 @@ class MainBannerController @Inject constructor(
 
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
-        private val isObservationStarted = AtomicBoolean(false)
+    private val isObservationStarted = AtomicBoolean(false)
     private val observationScope = FlowObservationScope<Map<String, TrackingStatus>>(scope, "MainBannerController")
 
-        val trackingStatus: StateFlow<Map<String, TrackingStatus>> =
-            trackingStatusRepository
-                .get()
-                .observeTrackingStatus()
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = emptyMap(),
-                )
+    val trackingStatus: StateFlow<Map<String, TrackingStatus>> by lazy {
+        trackingStatusRepository
+            .get()
+            .observeTrackingStatus()
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyMap(),
+            )
+    }
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val trackingBannerState: StateFlow<TrackingBannerState> =
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val trackingBannerState: StateFlow<TrackingBannerState> by lazy {
         combine(
             trackingStatus,
             permissionRepository.phoneStatePermissionGranted,
@@ -136,6 +138,7 @@ class MainBannerController @Inject constructor(
                 started = SharingStarted.Eagerly,
                 initialValue = TrackingBannerState(),
             )
+    }
 
     private data class BannerFlags(
         val retry: Int,
@@ -159,27 +162,26 @@ class MainBannerController @Inject constructor(
         ensureObservationStarted()
     }
 
-
-        private fun ensureObservationStarted() {
-            if (isObservationStarted.get()) return
-            scope.launch {
-                if (isObservationStarted.compareAndSet(false, true)) {
-                    try {
-                        setupObservation()
-                    } catch (e: CancellationException) {
-                        isObservationStarted.set(false)
-                        throw e
-                    } catch (e: Exception) {
-                        isObservationStarted.set(false)
-                        AppLogger.e("MainBannerController: Failed to setup observation", e)
-                    }
+    private fun ensureObservationStarted() {
+        if (isObservationStarted.get()) return
+        scope.launch {
+            if (isObservationStarted.compareAndSet(false, true)) {
+                try {
+                    setupObservation()
+                } catch (e: CancellationException) {
+                    isObservationStarted.set(false)
+                    throw e
+                } catch (e: Exception) {
+                    isObservationStarted.set(false)
+                    AppLogger.e("MainBannerController: Failed to setup observation", e)
                 }
             }
         }
+    }
 
     private suspend fun setupObservation() {
         observationScope.observe(trackingStatus) { statusMap ->
-                currentCoroutineContext().ensureActive()
+            currentCoroutineContext().ensureActive()
 
             // Update _status based on banner errors
             val hasError = statusMap.values.any { it is TrackingStatus.Error }
@@ -190,17 +192,17 @@ class MainBannerController @Inject constructor(
             }
 
             val appsearch = statusMap["appsearch"]
-                val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                if (currentErrorType != lastAppSearchErrorType) {
-                    lastAppSearchErrorType = currentErrorType
-                    appSearchRetryCount.value = 0
-                    appSearchBannerDismissed.value = false
-                    if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                        AppLogger.w("MainBannerController: AppSearch not supported on this device")
-                    }
+            val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+            if (currentErrorType != lastAppSearchErrorType) {
+                lastAppSearchErrorType = currentErrorType
+                appSearchRetryCount.value = 0
+                appSearchBannerDismissed.value = false
+                if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                    AppLogger.w("MainBannerController: AppSearch not supported on this device")
                 }
             }
         }
+    }
 
     /**
      * Attempts to recover tracking observation.
@@ -214,4 +216,4 @@ class MainBannerController @Inject constructor(
         _status.value = TrackingStatus.Idle
         ensureObservationStarted()
     }
-    }
+}
