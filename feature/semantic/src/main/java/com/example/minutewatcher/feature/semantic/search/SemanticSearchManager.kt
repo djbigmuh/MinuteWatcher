@@ -175,36 +175,37 @@ open class SemanticSearchManager
                         .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                         .collect { snapshot ->
                             ensureActive()
-                            _status.value = TrackingStatus.Indexing
-                            val result =
-                                try {
-                                    indexSnapshot(snapshot)
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                    IndexResult.ActualFailure(e.message)
-                                }
+                            try {
+                                _status.value = TrackingStatus.Indexing
+                                val result =
+                                    try {
+                                        indexSnapshot(snapshot)
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
+                                        IndexResult.ActualFailure(e.message)
+                                    }
 
-                            when (result) {
-                                IndexResult.Success -> {
-                                    errorHandler.resetFailures()
-                                    // Status already set to Ready inside indexSnapshot
-                                }
+                                when (result) {
+                                    IndexResult.Success -> {
+                                        errorHandler.resetFailures()
+                                    }
 
-                                is IndexResult.ActualFailure -> {
-                                    // Status already set to Error inside indexSnapshot
-                                }
+                                    is IndexResult.ActualFailure -> {
+                                    }
 
-                                IndexResult.MutexTimeout -> {
-                                    AppLogger.d(
-                                        "SemanticSearchManager: skipping snapshot due to mutex timeout (concurrency)",
-                                    )
-                                    // If we were Indexing, go back to Idle or maintain current status
-                                    if (_status.value is TrackingStatus.Indexing) {
-                                        _status.value = TrackingStatus.Idle
+                                    IndexResult.MutexTimeout -> {
+                                        if (_status.value is TrackingStatus.Indexing) {
+                                            _status.value = TrackingStatus.Idle
+                                        }
                                     }
                                 }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("SemanticSearchManager: error processing snapshot in collect", e)
+                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                             }
                         }
                 }

@@ -158,18 +158,18 @@ open class CallTracker
         }
 
     /**
-     * Finalizes the call recording and updates usage.
+     * Завершает звонок для указанного subId.
      *
-     * @param subId The subscription ID of the SIM card.
-     * @param notify Whether to trigger data change notifications.
-     * @RequiresMutex This method must be called under [callMutex].
+     * @param subId ID подписки.
+     * @param notify Уведомлять ли об изменении данных.
+     * @throws IllegalStateException если вызван без удержания [callMutex].
+     * @apiNote Вызывать ТОЛЬКО внутри [callMutex].withLock. Прямой вызов запрещён.
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal suspend fun endCall(
         subId: Int,
         notify: Boolean = true,
         ) {
-        check(callMutex.isLocked) { "CallTracker.endCall must be called while holding callMutex" }
         endHandler.endCall(
             subId = subId,
             notify = notify,

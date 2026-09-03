@@ -43,9 +43,9 @@ class MainBannerController
     @Inject
     constructor(
         private val trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
-        permissionRepository: PermissionRepository,
-        appSettingsRepository: AppSettingsRepository,
-        seedRepository: SimIdentitySeedRepository,
+        private val permissionRepository: PermissionRepository,
+        private val appSettingsRepository: AppSettingsRepository,
+        private val seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
     override val key: String = "banners"

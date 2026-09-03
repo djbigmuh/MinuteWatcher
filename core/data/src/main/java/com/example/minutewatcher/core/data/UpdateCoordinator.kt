@@ -187,11 +187,12 @@ class UpdateCoordinator
     @Suppress("ReturnCount")
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
         currentCoroutineContext().ensureActive()
-        val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         if (snapshot.suppressWidgetUpdate) {
             return
         }
+
+        val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         val shouldUpdate = checkShouldUpdate(newHash)
         if (!shouldUpdate) return

@@ -90,7 +90,14 @@ class WidgetUpdaterImpl
             var lastOutcome: UpdateOutcome? = null
             val success =
                 retryManager.updateWithRetry { attempt ->
-                    performSingleUpdate(attempt).also { lastOutcome = it }
+                    try {
+                        performSingleUpdate(attempt).also { lastOutcome = it }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
+                        UpdateOutcome.Retry.also { lastOutcome = it }
+                    }
                 }
 
             if (success) {
@@ -114,7 +121,7 @@ class WidgetUpdaterImpl
             return handleLimitExceeded()
         }
 
-        val isRetryable = lastOutcome == UpdateOutcome.Retry
+        val isRetryable = lastOutcome == UpdateOutcome.Retry || lastOutcome == null
         return WidgetUpdateResult.Failure(
             wasCoalesced = false,
             isRetryable = isRetryable,

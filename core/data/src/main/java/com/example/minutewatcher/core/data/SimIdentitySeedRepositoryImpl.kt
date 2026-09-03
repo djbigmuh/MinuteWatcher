@@ -138,6 +138,8 @@ class SimIdentitySeedRepositoryImpl
             dataStore.data
                 .map { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] }
                 .firstWithTimeout(EPHEMERAL_READ_TIMEOUT_MS)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLogger.w("SimIdentitySeedRepositoryImpl: Failed to read stored ephemeral seed", e)
             null
@@ -205,6 +207,8 @@ class SimIdentitySeedRepositoryImpl
         } catch (_: TimeoutCancellationException) {
             AppLogger.w("SimIdentitySeedRepositoryImpl: Timeout accessing seed in DataStore")
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLogger.w("SimIdentitySeedRepositoryImpl: Error accessing seed in DataStore", e)
             null
