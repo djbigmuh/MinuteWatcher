@@ -286,9 +286,7 @@ class IdentityMigrationService
             }
         }
 
-        private suspend fun findLegacySuffixes(
-            activeIdentity: SimIdentity,
-        ): List<String> {
+    private suspend fun findLegacySuffixes(activeIdentity: SimIdentity): List<String> {
             val suffixes = mutableListOf<String>()
 
             // 1. V1 Slot-based Migration:

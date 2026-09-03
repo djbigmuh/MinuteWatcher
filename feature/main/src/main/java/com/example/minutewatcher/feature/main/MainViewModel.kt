@@ -69,13 +69,13 @@ class MainViewModel
                     showUsageAccessDialog,
                     showLimitDialog,
                     showOnboardingDialog,
-                ) { params: Array<Any?> ->
+                ) { state, settings, usageDialog, limitDialog, onboardingDialog ->
                     DataForPrompt(
-                        state = params[0] as SimCardListState,
-                        settings = params[1] as AppSettings,
-                        usageAccess = params[2] as Boolean,
-                        limitDialog = params[3] as LimitDialogData?,
-                        onboardingDialogShowing = params[4] as Boolean,
+                        state = state,
+                        settings = settings,
+                        usageAccess = usageDialog,
+                        limitDialog = limitDialog,
+                        onboardingDialogShowing = onboardingDialog,
                     )
                 }.collect { data ->
                     val onboardingCompleted = data.settings.onboardingCompleted

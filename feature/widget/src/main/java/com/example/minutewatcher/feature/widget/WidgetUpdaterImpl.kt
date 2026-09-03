@@ -41,6 +41,7 @@ class WidgetUpdaterImpl
         currentUpdate.get()?.takeIf { !it.isCompleted }?.let { return joinInProgressUpdate(it) }
 
         updateMutex.lock()
+        var lockHeld = true
         val result =
             try {
                 // Re-check after acquiring the lock to handle race conditions where another
@@ -48,12 +49,13 @@ class WidgetUpdaterImpl
                 val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
                 if (activeUpdate != null) {
                     updateMutex.unlock()
+                    lockHeld = false
                     joinInProgressUpdate(activeUpdate)
                 } else {
                     startNewUpdate()
                 }
             } finally {
-                if (updateMutex.isLocked) {
+                if (lockHeld) {
                     updateMutex.unlock()
                 }
             }

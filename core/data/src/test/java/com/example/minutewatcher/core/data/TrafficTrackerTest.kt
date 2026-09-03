@@ -946,7 +946,6 @@ class TrafficTrackerTest {
                 baselineManager.baselineNeedsRetry.containsKey("other_sim"),
             )
         }
-
 }
 
 private fun createSimUsage(id: String) =

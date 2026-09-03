@@ -23,6 +23,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -59,18 +60,21 @@ class TrafficTracker
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private val trafficMutex = Mutex()
+    private val isInitialized = AtomicBoolean(false)
 
     init {
-        scope.launch {
-            try {
-                updateTrafficUsage()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: Failed to initialize traffic tracking", e)
+        if (isInitialized.compareAndSet(false, true)) {
+            scope.launch {
+                try {
+                    updateTrafficUsage()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficTracker: Failed to initialize traffic tracking", e)
+                }
+            }
             }
         }
-    }
 
         override suspend fun recover() {
             updateTrafficUsage()
@@ -128,13 +132,13 @@ class TrafficTracker
             }
         }
 
-        private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                simIdentityRepository.observeActiveSims().first()
-            } ?: run {
-                AppLogger.e("TrafficTracker: timeout fetching active sims")
-                emptyList()
-            }
+    private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
+        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            simIdentityRepository.observeActiveSims().first()
+        } ?: run {
+            AppLogger.e("TrafficTracker: timeout fetching active sims")
+            emptyList()
+        }
 
         private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
             if (activeSims.isEmpty()) {
@@ -210,8 +214,8 @@ class TrafficTracker
             ) {
                 baselineManager.baselineNeedsRetry.remove(targetIdentity)
                 errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                return@withLock
-            }
+                    return@withLock
+                }
 
             // Handle results
             val finalStats = statsResult

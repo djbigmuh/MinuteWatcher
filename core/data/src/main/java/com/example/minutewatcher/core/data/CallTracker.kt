@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
@@ -11,6 +12,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,12 +36,12 @@ import javax.inject.Singleton
 open class CallTracker
     @Inject
     internal constructor(
-        @dagger.hilt.android.qualifiers.ApplicationContext context: Context,
+        @ApplicationContext context: Context,
         private val callSessionRepository: CallSessionRepository,
         dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
         telephonyManager: TelephonyManager,
-        @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
+        @ApplicationScope private val scope: CoroutineScope,
         private val attributionResolver: CallAttributionResolver,
         private val startHandler: CallStartHandler,
         private val endHandler: CallEndHandler,
@@ -51,25 +54,29 @@ open class CallTracker
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
+    private val isInitialized = AtomicBoolean(false)
+
     init {
-        scope.launch {
-            permissionStateNotifier.changes.collect {
+        if (isInitialized.compareAndSet(false, true)) {
+            scope.launch {
+                permissionStateNotifier.changes.collect {
+                    try {
+                        refreshStatus(force = true)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
+                    }
+                }
+            }
+            scope.launch {
                 try {
                     refreshStatus(force = true)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
+                    AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                 }
-            }
-        }
-        scope.launch {
-            try {
-                refreshStatus(force = true)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("CallTracker: Failed to initialize call tracking", e)
             }
         }
     }

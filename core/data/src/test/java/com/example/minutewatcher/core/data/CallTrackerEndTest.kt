@@ -673,6 +673,4 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             assertTrue("Status should be Error", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
         }
-
-
 }

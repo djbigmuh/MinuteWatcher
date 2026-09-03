@@ -196,6 +196,7 @@ open class SemanticSearchManager
                                     }
 
                                     IndexResult.MutexTimeout -> {
+                                        AppLogger.w("SemanticSearchManager: indexing skipped due to mutex timeout")
                                         if (_status.value is TrackingStatus.Indexing) {
                                             _status.value = TrackingStatus.Idle
                                         }
@@ -224,7 +225,7 @@ open class SemanticSearchManager
             } ?: false
 
         if (!mutexAcquired) {
-            AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrency)")
+            AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrent indexing in progress)")
             return IndexResult.MutexTimeout
         }
 

@@ -40,6 +40,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class MainBannerController
+@Suppress("unused") // Parameters are used in combine/stateIn lambdas; IDE false positive
     @Inject
     constructor(
         private val trackingStatusRepository: dagger.Lazy<TrackingStatusRepository>,
