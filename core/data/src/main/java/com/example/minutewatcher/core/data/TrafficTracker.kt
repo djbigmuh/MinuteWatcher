@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,20 +66,50 @@ class TrafficTracker
     init {
         if (isInitialized.compareAndSet(false, true)) {
             scope.launch {
-                try {
-                    updateTrafficUsage()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("TrafficTracker: Failed to initialize traffic tracking", e)
-                }
-            }
+                initializeWithRetry()
             }
         }
+    }
 
-        override suspend fun recover() {
-            updateTrafficUsage()
+    private suspend fun initializeWithRetry() {
+        var attempt = 0
+        val maxAttempts = 3
+        while (true) {
+            try {
+                updateTrafficUsageLogic()
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: SecurityException) {
+                // Status already set in updateTrafficUsageLogic.
+                // We stop retrying immediately as per instruction.
+                return
+            } catch (e: Exception) {
+                if (e.message == "Traffic update timeout") {
+                    // We stop retrying immediately on timeout as per instruction.
+                    return
+                }
+                attempt++
+                if (attempt >= maxAttempts) {
+                    AppLogger.e("TrafficTracker: Initialization failed after $maxAttempts attempts", e)
+                    return
+                }
+                val delayMs = 1000L * (1 shl (attempt - 1))
+                AppLogger.w("TrafficTracker: Initialization failed (attempt $attempt), retrying in ${delayMs}ms", e)
+                delay(delayMs.milliseconds)
+            }
         }
+    }
+
+    override suspend fun recover() {
+        try {
+            initializeWithRetry()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("TrafficTracker: Recovery failed", e)
+        }
+    }
 
         suspend fun resetBaseline(identity: String) {
             if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
@@ -103,6 +134,16 @@ class TrafficTracker
 
         suspend fun updateTrafficUsage() {
             try {
+                updateTrafficUsageLogic()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Handled in updateTrafficUsageLogic (status set, error logged)
+            }
+        }
+
+    private suspend fun updateTrafficUsageLogic() {
+            try {
                 val currentStatus = _status.value
                 val isTimeoutError =
                     (currentStatus is TrackingStatus.Error) &&
@@ -123,12 +164,20 @@ class TrafficTracker
                             TrackingStatus.ErrorType.UNKNOWN,
                             "Traffic update timeout",
                         )
+                    throw Exception("Traffic update timeout")
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: SecurityException) {
+                AppLogger.e("TrafficTracker: SecurityException during update", e)
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                throw e
             } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: Unexpected error during update", e)
-                errorHandler.handleUpdateError(e, _status)
+                if (e.message != "Traffic update timeout") {
+                    AppLogger.e("TrafficTracker: Unexpected error during update", e)
+                    errorHandler.handleUpdateError(e, _status)
+                }
+                throw e
             }
         }
 

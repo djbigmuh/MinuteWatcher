@@ -108,11 +108,7 @@ androidxMaterialIconsCore = { group = "androidx.compose.material", name = "mater
 androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 screenshot-validation-api = { group = "com.android.tools.screenshot", name = "screenshot-validation-api", version.ref = "screenshot" }
 
-# Build logic dependencies
-# Used via libs.findLibrary() in build-logic/build.gradle.kts
-# IDE may incorrectly report these as unused — they ARE used.
-android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
-kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+
 
 
 [plugins]

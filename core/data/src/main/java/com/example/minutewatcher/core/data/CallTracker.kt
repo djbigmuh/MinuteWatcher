@@ -15,10 +15,15 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,6 +31,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.pow
 
 /**
  * Implementation of call tracking logic that monitors call events and records duration.
@@ -55,20 +61,11 @@ open class CallTracker
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
     private val isInitialized = AtomicBoolean(false)
+    private var permissionObserverJob: Job? = null
 
     init {
         if (isInitialized.compareAndSet(false, true)) {
-            scope.launch {
-                permissionStateNotifier.changes.collect {
-                    try {
-                        refreshStatus(force = true)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
-                    }
-                }
-            }
+            startPermissionObserver()
             scope.launch {
                 try {
                     refreshStatus(force = true)
@@ -78,6 +75,39 @@ open class CallTracker
                     AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                 }
             }
+        }
+    }
+
+    private fun startPermissionObserver() {
+        permissionObserverJob?.cancel()
+        permissionObserverJob = scope.launch(SupervisorJob()) {
+            permissionStateNotifier.changes
+                .retryWhen { cause, attempt ->
+                    if (attempt < 10 && cause !is CancellationException) {
+                        val delayTime = (2.0.pow(attempt.toDouble()) * 1000).toLong().coerceAtMost(30000)
+                        AppLogger.w(
+                            "CallTracker: Permission observer failed (attempt $attempt), retrying in ${delayTime}ms",
+                            cause,
+                        )
+                        delay(delayTime)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .catch { e ->
+                    AppLogger.e("CallTracker: Permission observer died permanently", e)
+                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                }
+                .collect {
+                    try {
+                        refreshStatus(force = true)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
+                    }
+                }
         }
     }
 
@@ -237,12 +267,13 @@ open class CallTracker
     }
 
     override suspend fun recover() {
-            try {
-                clearSessionsAndRefresh("recovery")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("CallTracker: recovery failed", e)
-            }
+        startPermissionObserver()
+        try {
+            clearSessionsAndRefresh("recovery")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("CallTracker: recovery failed", e)
         }
+    }
     }

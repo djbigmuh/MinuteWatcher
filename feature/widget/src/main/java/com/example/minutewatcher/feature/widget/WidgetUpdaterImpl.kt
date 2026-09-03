@@ -54,7 +54,14 @@ class WidgetUpdaterImpl
 
     private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
         return try {
-            val result = executeUpdateProcess()
+            val result =
+                withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                    executeUpdateProcess()
+                } ?: WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
+                    isRetryable = true,
+                    reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                )
             deferred.complete(result)
             result
         } catch (e: CancellationException) {
@@ -71,6 +78,8 @@ class WidgetUpdaterImpl
             deferred.complete(failure)
             failure
         } finally {
+            // compareAndSet is safe because joinInProgressUpdate awaits the stable Deferred reference
+            // already obtained via AtomicReference. The clearing simply allows next update cycle.
             currentUpdate.compareAndSet(deferred, null)
         }
     }
@@ -141,8 +150,14 @@ class WidgetUpdaterImpl
                 isRetryable = true,
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
             )
-        } catch (e: CancellationException) {
-            throw e
+        } catch (_: CancellationException) {
+            // Return Failure instead of pro-throwing to handle remote cancellation gracefully for joined updates.
+            // This prevents the caller from crashing if the main update process is cancelled.
+            WidgetUpdateResult.Failure(
+                wasCoalesced = true,
+                isRetryable = true,
+                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+            )
         } catch (e: Exception) {
             AppLogger.e("WidgetUpdater: joinInProgressUpdate failed", e)
             WidgetUpdateResult.Failure(

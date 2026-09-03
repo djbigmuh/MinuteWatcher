@@ -148,17 +148,24 @@ class UpdateCoordinator
                 isObservationStarted.set(false)
 
                 val restartCount = observationRestartCount.incrementAndGet()
-                if (restartCount >= MAX_OBSERVATION_RESTARTS) {
-                    AppLogger.e("UpdateCoordinator: observation restart limit reached ($restartCount)")
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                            "Widget observation failed permanently after $restartCount restarts",
-                        )
-                    return@launch
-                }
 
-                val delayMs = calculateRestartDelay(restartCount)
+                val delayMs =
+                    if (restartCount >= MAX_OBSERVATION_RESTARTS) {
+                        AppLogger.e(
+                            "UpdateCoordinator: observation restart limit reached ($restartCount), " +
+                                "entering degraded mode",
+                        )
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Widget observation failed after $restartCount restarts. " +
+                                    "Retrying in ${MAX_RESTART_COOLDOWN_MS / 1000}s",
+                            )
+                        MAX_RESTART_COOLDOWN_MS
+                    } else {
+                        calculateRestartDelay(restartCount)
+                    }
+
                 AppLogger.w(
                     "UpdateCoordinator: observation terminated unexpectedly, " +
                         "scheduling restart #$restartCount in ${delayMs}ms",
@@ -169,7 +176,10 @@ class UpdateCoordinator
                     stateMutex.withLock {
                         lastSnapshotHash = null
                         consecutiveUpdateFailures = 0
-                        _status.value = TrackingStatus.Idle
+                        // В деградированном режиме оставляем Error для информирования UI
+                        if (restartCount < MAX_OBSERVATION_RESTARTS) {
+                            _status.value = TrackingStatus.Idle
+                        }
                     }
                     ensureObservationStarted()
                 }
@@ -404,5 +414,6 @@ class UpdateCoordinator
         private const val MAX_OBSERVATION_RESTARTS = 5
         private const val INITIAL_RESTART_DELAY_MS = 5000L
         private const val MAX_RESTART_DELAY_MS = 80_000L
+        private const val MAX_RESTART_COOLDOWN_MS = 300_000L
     }
     }

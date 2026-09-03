@@ -37,13 +37,19 @@ import javax.inject.Singleton
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via observed flows.
  *
  * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
+ *
+ * Примечание к конструктору: параметры trackingStatusRepository, permissionRepository,
+ * appSettingsRepository и seedRepository используются только в инициализаторах свойств
+ * (внутри лямбда-выражений combine/stateIn). Поскольку они захватываются лямбдами
+ * как значения параметров конструктора и не используются в методах класса после инициализации,
+ * модификатор 'val' удален для предотвращения создания ненужных backing fields и экономии памяти.
  */
 @Singleton
 class MainBannerController @Inject constructor(
-    private val trackingStatusRepository: Lazy<TrackingStatusRepository>,
-    private val permissionRepository: PermissionRepository,
-    private val appSettingsRepository: AppSettingsRepository,
-    private val seedRepository: SimIdentitySeedRepository,
+    trackingStatusRepository: Lazy<TrackingStatusRepository>,
+    permissionRepository: PermissionRepository,
+    appSettingsRepository: AppSettingsRepository,
+    seedRepository: SimIdentitySeedRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) : TrackingStatusProvider {
     override val key: String = "banners"

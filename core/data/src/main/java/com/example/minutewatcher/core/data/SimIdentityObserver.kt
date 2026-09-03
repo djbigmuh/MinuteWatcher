@@ -34,12 +34,14 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,9 +67,14 @@ internal class SimIdentityObserver
 
     private val generalAttempt = AtomicLong(0)
     private val securityAttempt = AtomicLong(0)
+    private val isObservationInitialized = AtomicBoolean(false)
     private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     override suspend fun recover() {
+        if (!isObservationInitialized.get()) {
+            AppLogger.w("SimIdentityObserver: recover() called before observation was initialized, ignoring")
+            return
+        }
         generalAttempt.set(0)
         securityAttempt.set(0)
         _status.value = TrackingStatus.Idle
@@ -136,11 +143,20 @@ internal class SimIdentityObserver
         seedFlow
             .flatMapLatest { seed ->
                 if (seed is SeedResult.Fallback) {
+                    AppLogger.w("SimIdentityObserver: seed resolution failed, using Fallback. SIM discovery will be inactive.")
+                    _status.value = TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "SIM identity seed unavailable",
+                    )
                     flow {
-                        delay(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
                         emit(emptyList())
                     }
                 } else {
+                    if (_status.value is TrackingStatus.Error &&
+                        (_status.value as TrackingStatus.Error).message == "SIM identity seed unavailable"
+                    ) {
+                        _status.value = TrackingStatus.Idle
+                    }
                     merge(
                         discovery.observeSubscriptionChanges(),
                         manualTrigger,
@@ -251,7 +267,9 @@ internal class SimIdentityObserver
                 .onEach { sims ->
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     cache.cleanupManual(activeSlots)
-                }.stateIn(
+                }
+                .onStart { isObservationInitialized.set(true) }
+                .stateIn(
                     scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
                     SharingStarted.Eagerly,

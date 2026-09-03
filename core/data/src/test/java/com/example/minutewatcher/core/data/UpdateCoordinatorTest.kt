@@ -459,7 +459,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `observation stops restarting after 5 consecutive crashes`() {
+    fun `observation enters degraded mode after 5 consecutive crashes`() {
         runTest {
             val supervisorJob = SupervisorJob()
             val testDispatcher = StandardTestDispatcher(testScheduler)
@@ -490,30 +490,34 @@ class UpdateCoordinatorTest {
             // 1. Emit snapshot to trigger observation loop
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "CrashLoop"))
 
-            // Allow time for 5 crashes and 4 restarts (since 5th restart is suppressed)
-            // Delays:
-            // 1st crash -> restart #1 in 5s
-            // 2nd crash -> restart #2 in 10s
-            // 3rd crash -> restart #3 in 20s
-            // 4th crash -> restart #4 in 40s
-            // 5th crash -> limit reached, no more restarts
+            // Delays for 1-4 restarts: 5s, 10s, 20s, 40s. Total = 75s.
+            // 5th crash (4th restart) triggers degraded delay: 300s (5 min).
 
-            val totalWaitTime = (5 + 10 + 20 + 40 + 5) * 1000L // ~80s total + some buffer
-            testScheduler.advanceTimeBy(totalWaitTime.milliseconds)
+            val exponentialDelaysTotal = (5 + 10 + 20 + 40) * 1000L
+            testScheduler.advanceTimeBy(exponentialDelaysTotal.milliseconds)
             testScheduler.advanceUntilIdle()
+
+            // At this point we had 1 initial + 4 restarts = 5 calls.
+            verify(localWidgetUpdater, times(5)).updateAll()
+
+            // Next delay should be 300s.
+            // Wait 299s - no more calls
+            testScheduler.advanceTimeBy(299_000.milliseconds)
+            testScheduler.runCurrent()
+            verify(localWidgetUpdater, times(5)).updateAll()
+
+            // Wait more - 6th call should happen
+            testScheduler.advanceTimeBy(2000.milliseconds)
+            testScheduler.advanceUntilIdle()
+            verify(localWidgetUpdater, times(6)).updateAll()
 
             // Status should be Error
             val status = coordinator.status.value
-            assertTrue("Status should be Error after max restarts", status is TrackingStatus.Error)
-            assertEquals(
-                "Widget observation failed permanently after 5 restarts",
-                (status as TrackingStatus.Error).message,
+            assertTrue("Status should be Error in degraded mode", status is TrackingStatus.Error)
+            assertTrue(
+                "Error message should contain retry info, got: ${(status as TrackingStatus.Error).message}",
+                status.message!!.contains("Retrying in 300s"),
             )
-
-            // Verify number of calls to updateAll.
-            // Each observation attempt calls updateAll once after debounce.
-            // 1 initial + 4 restarts = 5 calls total.
-            verify(localWidgetUpdater, times(5)).updateAll()
 
             supervisorJob.cancel()
         }
@@ -967,4 +971,75 @@ class UpdateCoordinatorTest {
             // Should call updateAll AGAIN (total 2) because hash was reset on terminal failure
             verify(widgetUpdater, times(2)).updateAll()
         }
+
+    @Test
+    fun `reactive update resets observation restart counter`() {
+        runTest {
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val supervisorScope = CoroutineScope(testDispatcher + supervisorJob)
+
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    supervisorScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Setup: 5+ crashes, then success
+            var callCount = 0
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                callCount++
+                if (callCount <= 5) throw TestCrashException("Crash $callCount")
+                WidgetUpdateResult.Success()
+            }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+            coordinator.status
+            testScheduler.runCurrent()
+
+            // 1. Trigger crashes
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "Crashes"))
+
+            // Advance time enough to reach degraded mode
+            testScheduler.advanceTimeBy(150_000.milliseconds)
+            testScheduler.advanceUntilIdle()
+
+            assertTrue("Should have at least 5 calls, got $callCount", callCount >= 5)
+            assertTrue(coordinator.status.value is TrackingStatus.Error)
+
+            val countBeforeSuccess = callCount
+
+            // 2. Succeed on next attempt
+            testScheduler.advanceTimeBy(300_000.milliseconds)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals("Should have made one more call (success)", countBeforeSuccess + 1, callCount)
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+
+            // 3. Trigger 7th call (or next) - it should have reset restartCount to 0
+            whenever(widgetUpdater.updateAll()).thenAnswer { throw TestCrashException("New Crash") }
+            snapshotFlow.emit(createSnapshot(timestamp = 2000L, content = "New Crash"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.advanceUntilIdle()
+            val countAfterNewCrash = callCount
+
+            // Should retry in 5s (reset backoff), not 300s
+            testScheduler.advanceTimeBy(5000.milliseconds)
+            testScheduler.advanceUntilIdle()
+
+            // One more call should happen
+            assertEquals("Should have retried in 5s due to reset", countAfterNewCrash + 1, callCount)
+            assertTrue(coordinator.status.value !is TrackingStatus.Error)
+
+            supervisorJob.cancel()
+        }
+    }
 }

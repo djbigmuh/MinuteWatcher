@@ -66,3 +66,8 @@ We enforce strict static analysis. Your code must pass:
 As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:
 - **Baseline Profile (Beta)** and **Robolectric (Beta)** are explicitly permitted until stable versions with equivalent fixes are available.
 - Before introducing a new non-stable dependency, please discuss it in an issue and document the reason in `libs.versions.toml`.
+
+## Version Management
+
+- **Gradle Version Catalog:** When updating `AGP` (Android Gradle Plugin) or `Kotlin` versions, you MUST update both
+  `gradle/libs.versions.toml` and `gradle/build-logic.versions.toml` to keep the main project and build-logic in sync.

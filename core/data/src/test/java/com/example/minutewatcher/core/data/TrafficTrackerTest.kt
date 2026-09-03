@@ -55,6 +55,7 @@ class TrafficTrackerTest {
             setupPermissionMocks()
             setupIdentityMocks()
             setupUsageMocks()
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(0L))
 
             val baselineManager =
                 TrafficBaselineManager(
@@ -89,7 +90,7 @@ class TrafficTrackerTest {
                     permissionChecker = TrafficPermissionChecker(permissionManager),
                     scope = this,
                 )
-            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
             clearInvocations(
                 simIdentityRepository,
                 simUsageRepository,

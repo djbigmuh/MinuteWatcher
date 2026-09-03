@@ -14,7 +14,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,7 +66,6 @@ class WidgetSettingsViewModel
     private var autoSaveJob: Job? = null
 
     private var loadJob: Job? = null
-    private var loadOuterJob: Job? = null
 
     val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
@@ -99,33 +97,27 @@ class WidgetSettingsViewModel
     }
 
     private fun loadSettings() {
-        loadOuterJob?.cancel()
-        loadOuterJob =
+        loadJob?.cancel()
+        loadJob =
             viewModelScope.launch {
-                // Отменяем и ЖДЁМ завершения предыдущей загрузки
-                loadJob?.cancelAndJoin()
-
-                loadJob =
-                    launch {
-                        try {
-                            val loaded =
-                                withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
-                                    loader.load()
-                                }
-                            ensureActive()
-                            if (loaded != null) {
-                                reduce { copy(settings = loaded, isLoadError = false) }
-                            } else {
-                                AppLogger.e("Failed to load widget settings: timeout")
-                                reduce { copy(isLoadError = true) }
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("Failed to load widget settings", e)
-                            reduce { copy(isLoadError = true) }
+                try {
+                    val loaded =
+                        withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
+                            loader.load()
                         }
+                    ensureActive()
+                    if (loaded != null) {
+                        reduce { copy(settings = loaded, isLoadError = false) }
+                    } else {
+                        AppLogger.e("Failed to load widget settings: timeout")
+                        reduce { copy(isLoadError = true) }
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to load widget settings", e)
+                    reduce { copy(isLoadError = true) }
+                }
             }
     }
 
