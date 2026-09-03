@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -835,5 +836,135 @@ class UpdateCoordinatorTest {
 
             // Total calls should be 2 (one forced, one reactive)
             assertEquals(2, callCount)
+        }
+
+    @Test
+    fun `forced update suppresses updates after max failures from exceptions`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Mock updateAll to throw exception
+            whenever(widgetUpdater.updateAll()).thenThrow(RuntimeException("Persistent exception"))
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // 1. Perform forced update 5 times, each throwing an exception
+            repeat(Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                coordinator.notifyDataChanged(updateWidget = true, force = true)
+            }
+
+            // Should have attempted to call updateAll 5 times
+            verify(widgetUpdater, times(Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES)).updateAll()
+
+            // Status should be Error
+            val status = coordinator.status.value
+            assertTrue("Status should be Error after max failures from exceptions", status is TrackingStatus.Error)
+
+            // 2. 6th forced update attempt should be suppressed (no more calls to updateAll)
+            val result = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse("Forced update should be suppressed", result)
+
+            // Verify count remains at limit
+            verify(widgetUpdater, times(Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES)).updateAll()
+        }
+
+    @Test
+    fun `notifyRefresh is called only on successful forced update`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // 1. Success case
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+            val successResult = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertTrue(successResult)
+            verify(dataRefreshNotifier, times(1)).notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+
+            // 2. Failure case
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Failure())
+            val failureResult = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse(failureResult)
+            // Still 1, not 2
+            verify(dataRefreshNotifier, times(1)).notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+
+            // 3. Exception case
+            whenever(widgetUpdater.updateAll()).thenThrow(RuntimeException("Exception"))
+            val exceptionResult = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse(exceptionResult)
+            // Still 1
+            verify(dataRefreshNotifier, times(1)).notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+        }
+
+    @Test
+    fun `terminal failure resets hash to allow retry on same content`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. Emit snapshot s1, it fails with TERMINAL
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(isRetryable = false, reason = WidgetUpdateResult.FailureReason.TERMINAL),
+            )
+
+            val s1 = createSnapshot(timestamp = 1000L, content = "A")
+            snapshotFlow.tryEmit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, times(1)).updateAll()
+            assertTrue(coordinator.status.value is TrackingStatus.Error)
+
+            // 2. Emit another snapshot with SAME content (same hash)
+            val s2 = s1.copy(timestamp = 2000L)
+            snapshotFlow.tryEmit(s2)
+
+            // Make it succeed now
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should call updateAll AGAIN (total 2) because hash was reset on terminal failure
+            verify(widgetUpdater, times(2)).updateAll()
         }
 }

@@ -164,7 +164,12 @@ class MainBannerController
             if (isObservationStarted.get()) return
             scope.launch {
                 if (isObservationStarted.compareAndSet(false, true)) {
-                    setupObservation(trackingStatus)
+                    try {
+                        setupObservation(trackingStatus)
+                    } catch (e: Exception) {
+                        isObservationStarted.set(false)
+                        AppLogger.e("MainBannerController: Failed to setup observation", e)
+                    }
                 }
             }
         }
@@ -191,12 +196,8 @@ class MainBannerController
      * **Thread Safety:** Safe to call from any coroutine context.
      */
     override suspend fun recover() {
-        if (observationScope.getJob() == null) {
-            AppLogger.w("MainBannerController: re-subscribing to tracking status during recover")
-            setupObservation(trackingStatus)
-        } else {
-            observationScope.recover()
-        }
+        isObservationStarted.set(false)
+        ensureObservationStarted()
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false
     }

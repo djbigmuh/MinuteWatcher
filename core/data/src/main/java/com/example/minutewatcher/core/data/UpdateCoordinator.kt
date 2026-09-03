@@ -79,18 +79,25 @@ class UpdateCoordinator
         override suspend fun recover() {
             monitoringJob.get()?.cancel()
             observationRestartCount.set(0)
-            if (!isObservationStarted.get()) {
-                ensureObservationStarted()
-            } else {
-                restartObservation()
+            stateMutex.withLock {
+                lastSnapshotHash = null
+                consecutiveUpdateFailures = 0
+                _status.value = TrackingStatus.Idle
             }
+            isObservationStarted.set(false)
+            ensureObservationStarted()
         }
 
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
             scope.launch {
                 if (isObservationStarted.compareAndSet(false, true)) {
-                    setupObservation()
+                    try {
+                        setupObservation()
+                    } catch (e: Exception) {
+                        isObservationStarted.set(false)
+                        AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                    }
                 }
             }
         }
@@ -263,24 +270,27 @@ class UpdateCoordinator
             WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
                 AppLogger.e(
                     "UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), " +
-                        "keeping current hash",
+                        "resetting hash to force retry on next data change",
                 )
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.NOT_SUPPORTED,
                         "Widget size limit exceeded",
                     )
+                lastSnapshotHash = null
                 handleUpdateFailure()
             }
 
             WidgetUpdateResult.FailureReason.TERMINAL -> {
-                // For terminal failures we don't reset hash to avoid immediate retry loops
-                AppLogger.w("UpdateCoordinator: terminal failure encountered, keeping current hash")
+                // For terminal failures we reset hash to ensure the next data change
+                // will trigger a fresh update attempt, bypassing the hash-match check.
+                AppLogger.w("UpdateCoordinator: terminal failure encountered, resetting hash")
                 _status.value =
                     TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                        TrackingStatus.ErrorType.UNKNOWN,
                         "Terminal widget update failure",
-                        )
+                    )
+                lastSnapshotHash = null
                 handleUpdateFailure()
             }
         }
@@ -339,7 +349,9 @@ class UpdateCoordinator
 
             return if (force) {
                 val success = performForcedUpdate()
-                dataRefreshNotifier.notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+                if (success) {
+                    dataRefreshNotifier.notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+                }
                 success
             } else {
                 dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
@@ -371,14 +383,7 @@ class UpdateCoordinator
                         SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
                     true
                 } else {
-                    val isRetryable = (result as? WidgetUpdateResult.Failure)?.isRetryable ?: true
-                    if (isRetryable) {
-                        consecutiveUpdateFailures++
-                    }
-                    AppLogger.w(
-                        "Force widget update reported failure ($consecutiveUpdateFailures), " +
-                            "isRetryable=$isRetryable",
-                    )
+                    handleUpdateFailure()
                     false
                 }
             }
@@ -386,6 +391,9 @@ class UpdateCoordinator
             throw e
         } catch (e: Exception) {
             AppLogger.w("Force widget update failed, hash not updated", e)
+            stateMutex.withLock {
+                handleUpdateFailure()
+            }
             false
         }
     }

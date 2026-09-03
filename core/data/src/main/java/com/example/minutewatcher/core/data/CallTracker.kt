@@ -154,8 +154,8 @@ open class CallTracker
         } catch (e: SecurityException) {
             AppLogger.e("Permission revoked in checkPermissions", e)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                false
-            }
+            false
+        }
 
     /**
      * Finalizes the call recording and updates usage.
