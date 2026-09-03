@@ -225,13 +225,13 @@ class WidgetSettingsRepository
                         simSettingsMap[fallbackKey] = simSettings
                     }
                 } catch (e: SeedUnavailableException) {
-                    AppLogger.w("saveSimSettings: seed unavailable for slot $slot. Skipping this SIM.", e)
-                    failedSlots.add(slot)
+                    AppLogger.w("saveSimSettings: seed unavailable for slot $slot. Saving with fallback key.", e)
+                    simSettingsMap["sim_$slot"] = simSettings
                 } catch (e: SimNotFoundException) {
-                    AppLogger.w("saveSimSettings: SIM not found in slot $slot. Skipping this SIM.", e)
-                    failedSlots.add(slot)
+                    AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
+                    simSettingsMap["sim_$slot"] = simSettings
                 } catch (e: InvalidSlotException) {
-                    AppLogger.w("saveSimSettings: invalid slot $slot. Skipping this SIM.", e)
+                    AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
                     failedSlots.add(slot)
                 }
             }

@@ -86,7 +86,7 @@ class TrafficTracker
                 return
             } catch (e: Exception) {
                 if (e.message == "Traffic update timeout") {
-                    // We stop retrying immediately on timeout as per instruction.
+                    AppLogger.w("TrafficTracker: Initialization stopped due to timeout", e)
                     return
                 }
                 attempt++
@@ -137,7 +137,7 @@ class TrafficTracker
                 updateTrafficUsageLogic()
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Handled in updateTrafficUsageLogic (status set, error logged)
             }
         }

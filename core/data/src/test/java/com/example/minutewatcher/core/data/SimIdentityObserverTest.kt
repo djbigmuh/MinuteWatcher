@@ -112,7 +112,7 @@ class SimIdentityObserverTest {
 
             // Now make fetcher succeed
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
-                com.example.minutewatcher.core.model.SimDiscoveryResult.Available(
+                SimDiscoveryResult.Available(
                     emptyList(),
                 ),
             )
@@ -134,7 +134,7 @@ class SimIdentityObserverTest {
         runTest {
             observer = createObserver(backgroundScope)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
-                com.example.minutewatcher.core.model.SimDiscoveryResult.PermissionMissing,
+                SimDiscoveryResult.PermissionMissing,
             )
 
             // Mock permission changes to emit Unit when first() is called in retryWhen

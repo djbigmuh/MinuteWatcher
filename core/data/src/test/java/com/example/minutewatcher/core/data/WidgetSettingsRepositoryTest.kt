@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -141,6 +142,19 @@ class WidgetSettingsRepositoryTest {
             repository.saveSimSettings(state)
 
             verify(simWidgetVisibilityRepository).setSimSettingsBatch(any())
+        }
+
+    @Test
+    fun `saveSimSettings saves with fallback key when seed is unavailable`() =
+        runTest {
+            val simState = SimSettingsState(showSim = true)
+            val state = WidgetSettingsState(simStates = mapOf(0 to simState))
+
+            whenever(simIdentityRepository.getIdentity(0)).thenThrow(SeedUnavailableException(0))
+
+            repository.saveSimSettings(state)
+
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(mapOf("sim_0" to simState))
         }
 
     private fun createMockActiveSims(): List<ActiveSimInfo> =

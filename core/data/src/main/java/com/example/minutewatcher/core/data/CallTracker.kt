@@ -17,7 +17,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.pow
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of call tracking logic that monitors call events and records duration.
@@ -80,7 +80,7 @@ open class CallTracker
 
     private fun startPermissionObserver() {
         permissionObserverJob?.cancel()
-        permissionObserverJob = scope.launch(SupervisorJob()) {
+        permissionObserverJob = scope.launch {
             permissionStateNotifier.changes
                 .retryWhen { cause, attempt ->
                     if (attempt < 10 && cause !is CancellationException) {
@@ -89,7 +89,7 @@ open class CallTracker
                             "CallTracker: Permission observer failed (attempt $attempt), retrying in ${delayTime}ms",
                             cause,
                         )
-                        delay(delayTime)
+                        delay(delayTime.milliseconds)
                         true
                     } else {
                         false
