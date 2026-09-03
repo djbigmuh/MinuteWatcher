@@ -152,20 +152,19 @@ class MainBannerController
     )
 
     init {
-        initialize()
-    }
-
-    private fun initialize() {
-        _status.value = TrackingStatus.Active
         ensureObservationStarted()
     }
+
 
         private fun ensureObservationStarted() {
             if (isObservationStarted.get()) return
             scope.launch {
                 if (isObservationStarted.compareAndSet(false, true)) {
                     try {
-                        setupObservation(trackingStatus)
+                        setupObservation()
+                    } catch (e: CancellationException) {
+                        isObservationStarted.set(false)
+                        throw e
                     } catch (e: Exception) {
                         isObservationStarted.set(false)
                         AppLogger.e("MainBannerController: Failed to setup observation", e)
@@ -174,17 +173,26 @@ class MainBannerController
             }
         }
 
-        private suspend fun setupObservation(statusFlow: StateFlow<Map<String, TrackingStatus>>) {
-            observationScope.observe(statusFlow) { status ->
+    private suspend fun setupObservation() {
+        observationScope.observe(trackingStatus) { statusMap ->
                 currentCoroutineContext().ensureActive()
-                val appsearch = status["appsearch"]
+
+            // Update _status based on banner errors
+            val hasError = statusMap.values.any { it is TrackingStatus.Error }
+            _status.value = if (hasError) {
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Banner errors detected")
+            } else {
+                TrackingStatus.Active
+            }
+
+            val appsearch = statusMap["appsearch"]
                 val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
                 if (currentErrorType != lastAppSearchErrorType) {
                     lastAppSearchErrorType = currentErrorType
                     appSearchRetryCount.value = 0
                     appSearchBannerDismissed.value = false
                     if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                        AppLogger.w("AppSearch not supported on this device")
+                        AppLogger.w("MainBannerController: AppSearch not supported on this device")
                     }
                 }
             }
@@ -197,8 +205,9 @@ class MainBannerController
      */
     override suspend fun recover() {
         isObservationStarted.set(false)
-        ensureObservationStarted()
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false
+        _status.value = TrackingStatus.Idle
+        ensureObservationStarted()
     }
     }

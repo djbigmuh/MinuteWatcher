@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
@@ -11,11 +12,13 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -48,6 +51,7 @@ class TrafficTracker
         private val targetResolver: TrafficTargetResolver,
         private val errorHandler: TrafficErrorHandler,
         private val permissionChecker: TrafficPermissionChecker,
+        @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
 
@@ -55,6 +59,18 @@ class TrafficTracker
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
         private val trafficMutex = Mutex()
+
+    init {
+        scope.launch {
+            try {
+                updateTrafficUsage()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: Failed to initialize traffic tracking", e)
+            }
+        }
+    }
 
         override suspend fun recover() {
             updateTrafficUsage()
@@ -159,28 +175,10 @@ class TrafficTracker
             }
         }
 
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     private suspend fun performTrafficUpdate(
         target: TargetInfo,
         targetIdentity: String,
     ) {
-        // 1. Чтение начальных данных вне лока (тяжёлый запрос для прогрева кэша)
-        val initialUsage =
-                simUsageRepository
-                    .getSimUsage(targetIdentity)
-                    .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                    ?: run {
-                        errorHandler.handleUsageReadTimeout(targetIdentity, _status)
-                        return
-                    }
-
-        // 2. Спекулятивный расчет статистики вне лока.
-        // Используем lastResetDate, предполагая отсутствие активных ретраев (наиболее частый случай).
-        val initialRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-        val speculativeStartTime = if (initialRetryCount != null) 0L else initialUsage.lastResetDate
-        var statsResult = baselineManager.getCurrentMobileBytes(speculativeStartTime)
-
-        // 3. Вся остальная логика — внутри мьютекса
         trafficMutex.withLock {
             val currentActive =
                 simIdentityRepository
@@ -197,22 +195,14 @@ class TrafficTracker
                 simUsageRepository
                     .getSimUsage(targetIdentity)
                     .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
-                    ?: return@withLock
+                    ?: run {
+                        errorHandler.handleUsageReadTimeout(targetIdentity, _status)
+                        return@withLock
+                    }
 
             val currentRetryCount = baselineManager.baselineNeedsRetry[targetIdentity]
-
-            // Определяем актуальный startTime на основе текущего состояния под локом
             val actualStartTime = if (currentRetryCount != null) 0L else currentUsage.lastResetDate
-
-            // Если состояние изменилось (reset date или retry status), пересчитываем статы под локом.
-            // Это быстро (синхронный системный вызов NetworkStatsManager).
-            if (actualStartTime != speculativeStartTime) {
-                AppLogger.d(
-                    "TrafficTracker: speculative stats stale for $targetIdentity " +
-                        "(expected $speculativeStartTime, actual $actualStartTime), recalculating under lock",
-                )
-                statsResult = baselineManager.getCurrentMobileBytes(actualStartTime)
-                }
+            val statsResult = baselineManager.getCurrentMobileBytes(actualStartTime)
 
             // Check retry limit
             if ((currentRetryCount != null) &&
@@ -220,8 +210,8 @@ class TrafficTracker
             ) {
                 baselineManager.baselineNeedsRetry.remove(targetIdentity)
                 errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                    return@withLock
-                }
+                return@withLock
+            }
 
             // Handle results
             val finalStats = statsResult

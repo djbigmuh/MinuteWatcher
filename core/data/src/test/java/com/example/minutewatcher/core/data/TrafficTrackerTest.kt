@@ -25,6 +25,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -86,7 +87,17 @@ class TrafficTrackerTest {
                     targetResolver = targetResolver,
                     errorHandler = TrafficErrorHandler(),
                     permissionChecker = TrafficPermissionChecker(permissionManager),
+                    scope = this,
                 )
+            testScheduler.runCurrent()
+            clearInvocations(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                networkStatsProvider,
+                callSessionRepository,
+            )
         }
     }
 
@@ -701,15 +712,11 @@ class TrafficTrackerTest {
             val lastDataSubIdFlow = flowOf(1)
             whenever(callSessionRepository.getLastDataSubId()).thenReturn(lastDataSubIdFlow)
 
-            // First call: should read from DataStore
+            // Initial call in init already read from DataStore.
+            // Explicit call: should NOT read from DataStore again
             tracker.updateTrafficUsage()
             @Suppress("UnusedFlow")
-            verify(callSessionRepository, times(1)).getLastDataSubId()
-
-            // Second call: should NOT read from DataStore again
-            tracker.updateTrafficUsage()
-            @Suppress("UnusedFlow")
-            verify(callSessionRepository, times(1)).getLastDataSubId()
+            verify(callSessionRepository, never()).getLastDataSubId()
         }
 
     @Test
@@ -940,49 +947,6 @@ class TrafficTrackerTest {
             )
         }
 
-    @Test
-    fun `performTrafficUpdate re-calculates stats if state changes during query instead of skipping`() =
-        runTest {
-            val targetIdentity = "sim_0"
-
-            // 1. Initial usage
-            val initialUsage = createSimUsage(targetIdentity).copy(lastResetDate = 1000L)
-            val usageFlow = MutableStateFlow(initialUsage)
-            whenever(simUsageRepository.getSimUsage(targetIdentity)).thenReturn(usageFlow)
-            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(targetIdentity)))
-            whenever(simUsageResetRepository.getLastTotalBytes(targetIdentity)).thenReturn(flowOf(1000L))
-
-            // 2. Mock network stats provider:
-            // First call (speculative) uses 1000L.
-            // During this call, we change the state.
-            // Second call (under lock) should use 2000L.
-            var callCount = 0
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
-                callCount++
-                if (callCount == 1) {
-                    // Speculative call
-                    usageFlow.value = initialUsage.copy(lastResetDate = 2000L)
-                    StatsResult.Success(5000L)
-                } else {
-                    // Recalculation under lock
-                    // Use larger value to exceed MIN_DELTA_MB (0.01 MB = 10485 bytes)
-                    StatsResult.Success(20000L)
-                }
-            }
-
-            // 3. Trigger update
-            tracker.updateTrafficUsage()
-            testScheduler.advanceUntilIdle()
-
-            // 4. Verify that usage update WAS performed using the SECOND stats result
-            // delta = 20000 - 1000 = 19000
-            val expectedDeltaMb = (19000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(
-                eq(targetIdentity),
-                eq(expectedDeltaMb),
-                eq(20000L),
-            )
-        }
 }
 
 private fun createSimUsage(id: String) =

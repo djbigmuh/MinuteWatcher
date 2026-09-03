@@ -94,6 +94,9 @@ class UpdateCoordinator
                 if (isObservationStarted.compareAndSet(false, true)) {
                     try {
                         setupObservation()
+                    } catch (e: CancellationException) {
+                        isObservationStarted.set(false)
+                        throw e
                     } catch (e: Exception) {
                         isObservationStarted.set(false)
                         AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
@@ -347,6 +350,8 @@ class UpdateCoordinator
             force: Boolean,
         ): Boolean {
             if (!updateWidget) return true
+
+            ensureObservationStarted()
 
             return if (force) {
                 val success = performForcedUpdate()

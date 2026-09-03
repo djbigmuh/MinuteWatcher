@@ -33,6 +33,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
@@ -50,6 +51,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             timeProvider.setTime(500000000L)
             timeProvider.setRealtime(500000000L)
             val now = timeProvider.now()
@@ -71,6 +73,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
@@ -99,6 +102,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             val startTime = now - 1000L
@@ -124,6 +128,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             // Mock both direct call AND permission check to throw
             whenever(permissionManager.hasPhoneStatePermission()).thenThrow(SecurityException())
@@ -145,6 +150,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             // Arrange: saved boot time is in the future relative to current (impossible session)
             val now = timeProvider.now()
             val startTime = now - 1000L
@@ -170,6 +176,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val currentRealtime = timeProvider.elapsedRealtime()
             val currentUptime = timeProvider.uptimeMillis()
@@ -195,6 +202,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
@@ -215,6 +223,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             val uptime = timeProvider.uptimeMillis()
@@ -241,6 +250,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val subId = 1
 
             // Tracking is disabled
@@ -287,6 +297,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
 
             // Tracking is disabled
             whenever(appSettingsRepository.getAppSettings())
@@ -317,6 +328,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             // Arrange
             val subId = 1
             val identity = "id_1"
@@ -356,6 +368,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val subId = 1
             val identity = "id_1"
             val now = timeProvider.now()
@@ -391,6 +404,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             // Arrange
             val subId = 1
             val now = timeProvider.now()
@@ -425,6 +439,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val subId = 1
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
@@ -458,6 +473,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             // Arrange: Trigger timeout
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(MutableSharedFlow())
 
@@ -485,6 +501,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
 
@@ -504,6 +521,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
 
@@ -525,6 +543,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
 
@@ -546,6 +565,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
 
@@ -567,6 +587,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
 
@@ -592,6 +613,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(settingsFlow)
 
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
 
             // Setup active session
             val now = timeProvider.now()
@@ -618,6 +640,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            testDispatcher.scheduler.runCurrent()
 
             // Setup active session data
             val subId = 1

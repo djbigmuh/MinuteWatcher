@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.settings.ui
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -15,6 +14,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -91,14 +92,12 @@ class WidgetSettingsViewModel
             loadSettings()
         }
 
-        /**
-         * Загружает настройки виджета, используя паттерн сериализации через мьютекс.
-         */
         private fun loadSettings() {
             loadOuterJob?.cancel()
             loadOuterJob =
                 viewModelScope.launch {
-                    loadJob?.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    // Отменяем и ЖДЁМ завершения предыдущей загрузки
+                    loadJob?.cancelAndJoin()
 
                     loadJob =
                         launch {
@@ -185,11 +184,13 @@ class WidgetSettingsViewModel
                 // Атомарно обновляем состояние и захватываем актуальное значение
                 val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
                 val result = performSaveInternal(currentState)
+                currentCoroutineContext().ensureActive()
                 reduce { copy(saveResult = result) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save widget settings", e)
+                currentCoroutineContext().ensureActive()
                 reduce { copy(saveResult = SaveResult.Failed()) }
             } finally {
                 withContext(NonCancellable) {

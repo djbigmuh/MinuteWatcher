@@ -127,7 +127,7 @@ internal class SimIdentityObserver
             }.distinctUntilChanged()
                 .shareIn(
                     scope,
-                    SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    SharingStarted.Eagerly,
                     replay = 1,
                 )
 
