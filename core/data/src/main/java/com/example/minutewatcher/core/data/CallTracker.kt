@@ -44,7 +44,7 @@ open class CallTracker
     internal constructor(
         @ApplicationContext context: Context,
         private val callSessionRepository: CallSessionRepository,
-        dataChangeNotifier: DataChangeNotifier,
+        private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
         telephonyManager: TelephonyManager,
         @ApplicationScope private val scope: CoroutineScope,
@@ -118,8 +118,6 @@ open class CallTracker
             callSessionRepository,
             permissionManager,
             telephonyManager,
-            dataChangeNotifier,
-            ::endCall,
         ) { _status.value = it }
 
     /**
@@ -156,7 +154,9 @@ open class CallTracker
             endCallAction = ::endCall,
             isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
             callMutex = callMutex,
-        ) { sessionCleaner.clearAllSessions() }
+            clearAllCallSessions = { sessionCleaner.clearAllSessions() },
+            notifyDataChanged = { dataChangeNotifier.notifyDataChanged() },
+        )
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
@@ -203,16 +203,7 @@ open class CallTracker
             false
         }
 
-    /**
-     * Завершает звонок для указанного subId.
-     *
-     * @param subId ID подписки.
-     * @param notify Уведомлять ли об изменении данных.
-     * @throws IllegalStateException если вызван без удержания [callMutex].
-     * @apiNote Вызывать ТОЛЬКО внутри [callMutex].withLock. Прямой вызов запрещён.
-     */
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal suspend fun endCall(
+    private suspend fun endCall(
         subId: Int,
         notify: Boolean = true,
         ) {

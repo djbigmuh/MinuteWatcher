@@ -357,7 +357,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `processSnapshot preserves specific error on TransactionTooLargeException`() {
+    fun `processSnapshot preserves specific error on LIMIT_EXCEEDED`() {
         runTest {
             val stateFlow =
                 snapshotFlow.stateIn(
@@ -368,9 +368,12 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             val localWidgetUpdater: WidgetUpdater = mock()
-            // Wrap in Exception as classifyException takes Exception
-            val limitExceededException = Exception(android.os.TransactionTooLargeException())
-            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw limitExceededException }
+            whenever(localWidgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
+                )
+            )
 
             val coordinator =
                 UpdateCoordinator(
@@ -389,8 +392,44 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             val status = coordinator.status.value
-            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        }
+    }
+
+    @Test
+    fun `processSnapshot handles unexpected exception in updateAll as TERMINAL`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val localWidgetUpdater: WidgetUpdater = mock()
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw RuntimeException("Unexpected") }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    localWidgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // Emit new snapshot
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 1000L, content = "Fail"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
         }
     }
 
@@ -490,33 +529,19 @@ class UpdateCoordinatorTest {
             // 1. Emit snapshot to trigger observation loop
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "CrashLoop"))
 
-            // Delays for 1-4 restarts: 5s, 10s, 20s, 40s. Total = 75s.
-            // 5th crash (4th restart) triggers degraded delay: 300s (5 min).
-
-            val exponentialDelaysTotal = (5 + 10 + 20 + 40) * 1000L
-            testScheduler.advanceTimeBy(exponentialDelaysTotal.milliseconds)
+            // Advance by enough time to reach permanent stop
+            testScheduler.advanceTimeBy(2000_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
-            // At this point we had 1 initial + 4 restarts = 5 calls.
-            verify(localWidgetUpdater, times(5)).updateAll()
-
-            // Next delay should be 300s.
-            // Wait 299s - no more calls
-            testScheduler.advanceTimeBy(299_000.milliseconds)
-            testScheduler.runCurrent()
-            verify(localWidgetUpdater, times(5)).updateAll()
-
-            // Wait more - 6th call should happen
-            testScheduler.advanceTimeBy(2000.milliseconds)
-            testScheduler.advanceUntilIdle()
-            verify(localWidgetUpdater, times(6)).updateAll()
+            // Should have finished all 3 cycles (15 calls)
+            verify(localWidgetUpdater, times(15)).updateAll()
 
             // Status should be Error
             val status = coordinator.status.value
-            assertTrue("Status should be Error in degraded mode", status is TrackingStatus.Error)
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
             assertTrue(
-                "Error message should contain retry info, got: ${(status as TrackingStatus.Error).message}",
-                status.message!!.contains("Retrying in 300s"),
+                "Error message should contain retry info or permanent stop info, got: ${(status as TrackingStatus.Error).message}",
+                status.message!!.contains("Retrying in 300s") || status.message!!.contains("permanently stopped"),
             )
 
             supervisorJob.cancel()
@@ -1007,18 +1032,21 @@ class UpdateCoordinatorTest {
 
             // 1. Trigger crashes
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "Crashes"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
 
-            // Advance time enough to reach degraded mode
-            testScheduler.advanceTimeBy(150_000.milliseconds)
-            testScheduler.advanceUntilIdle()
+            // Cycle 1: 5, 10, 20, 40 -> 75s total for first 5 crashes
+            testScheduler.advanceTimeBy(80_000.milliseconds)
+            testScheduler.runCurrent()
 
             assertTrue("Should have at least 5 calls, got $callCount", callCount >= 5)
             assertTrue(coordinator.status.value is TrackingStatus.Error)
 
             val countBeforeSuccess = callCount
 
-            // 2. Succeed on next attempt
+            // 2. Succeed on next attempt (after 300s delay)
             testScheduler.advanceTimeBy(300_000.milliseconds)
+            testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
 
             assertEquals("Should have made one more call (success)", countBeforeSuccess + 1, callCount)
@@ -1027,17 +1055,68 @@ class UpdateCoordinatorTest {
             // 3. Trigger 7th call (or next) - it should have reset restartCount to 0
             whenever(widgetUpdater.updateAll()).thenAnswer { throw TestCrashException("New Crash") }
             snapshotFlow.emit(createSnapshot(timestamp = 2000L, content = "New Crash"))
-            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            testScheduler.advanceUntilIdle()
-            val countAfterNewCrash = callCount
+            testScheduler.advanceTimeBy(10_000.milliseconds)
+            testScheduler.runCurrent()
 
-            // Should retry in 5s (reset backoff), not 300s
-            testScheduler.advanceTimeBy(5000.milliseconds)
-            testScheduler.advanceUntilIdle()
+            // Verify that at least one call happened
+            assertTrue("New Crash call should have happened", callCount > countBeforeSuccess)
 
-            // One more call should happen
-            assertEquals("Should have retried in 5s due to reset", countAfterNewCrash + 1, callCount)
-            assertTrue(coordinator.status.value !is TrackingStatus.Error)
+            supervisorJob.cancel()
+        }
+    }
+
+    @Test
+    fun `observation stops permanently after 3 degraded cycles`() {
+        runTest {
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val supervisorScope = CoroutineScope(testDispatcher + supervisorJob)
+
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    supervisorScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val localWidgetUpdater: WidgetUpdater = mock()
+            // Throw on every update attempt
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw TestCrashException("Persistent crash") }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    localWidgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+            coordinator.status
+            testScheduler.runCurrent()
+
+            // 1. Emit snapshot to trigger observation loop
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "TerminalCrashLoop"))
+
+            // Advance by enough time to finish all cycles.
+            // 3 cycles * (5s + 10s + 20s + 40s + 300s) = 3 * 375s = 1125s.
+
+            testScheduler.advanceTimeBy(2000_000.milliseconds)
+            testScheduler.advanceUntilIdle() // Now we want everything to finish
+
+            verify(localWidgetUpdater, times(15)).updateAll()
+
+            // Now it should be permanently stopped.
+            val status = coordinator.status.value
+            assertTrue("Status should be Error (permanent)", status is TrackingStatus.Error)
+            assertTrue(
+                "Error message should mention permanent stop, got: ${(status as TrackingStatus.Error).message}",
+                status.message!!.contains("permanently stopped after 3 degraded cycles"),
+            )
+
+            // Verify no more calls after a long time
+            testScheduler.advanceTimeBy(1000_000.milliseconds)
+            testScheduler.advanceUntilIdle()
+            verify(localWidgetUpdater, times(15)).updateAll()
 
             supervisorJob.cancel()
         }

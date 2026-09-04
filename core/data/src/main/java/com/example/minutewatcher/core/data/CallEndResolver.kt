@@ -9,7 +9,6 @@ import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 
@@ -22,11 +21,9 @@ internal class CallEndResolver(
     private val callSessionRepository: CallSessionRepository,
     private val permissionManager: PermissionManager,
     private val telephonyManager: TelephonyManager,
-    private val dataChangeNotifier: DataChangeNotifier,
-    private val endCall: suspend (Int, Boolean) -> Unit,
     private val setError: (TrackingStatus.Error) -> Unit,
 ) {
-    suspend fun resolveUnknownSubIdEnd() {
+    suspend fun resolveUnknownSubIdEnd(): List<Int> {
         if (!permissionManager.hasPhoneStatePermission()) {
             AppLogger.w("CallEndResolver: permission revoked during resolveUnknownSubIdEnd")
             setError(
@@ -35,8 +32,7 @@ internal class CallEndResolver(
                     "Permission revoked during call end resolution",
                 ),
             )
-            dataChangeNotifier.notifyDataChanged()
-            return
+            return emptyList()
         }
         val activeSubIds =
             try {
@@ -52,14 +48,17 @@ internal class CallEndResolver(
 
         if (activeSubIds.isEmpty()) {
             AppLogger.d("Call ended with unknown subId and no active sessions found")
+            return emptyList()
         } else if (isDeviceIdle(activeSubIds)) {
-            handleGlobalIdle(activeSubIds)
+            AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
+            return activeSubIds
         } else {
             val target: Int? = findTargetSubId(activeSubIds)
             if (target != null) {
-                endCall(target, true)
+                return listOf(target)
             } else {
                 handleAmbiguousIdle(activeSubIds)
+                return emptyList()
             }
         }
     }
@@ -84,20 +83,6 @@ internal class CallEndResolver(
             @Suppress("DEPRECATION")
             telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
         }
-    }
-
-    private suspend fun handleGlobalIdle(activeSubIds: List<Int>) {
-        AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-        for (subId in activeSubIds) {
-            try {
-                endCall(subId, false)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to end call for subId $subId during global idle", e)
-            }
-        }
-        dataChangeNotifier.notifyDataChanged()
     }
 
     private fun handleAmbiguousIdle(activeSubIds: List<Int>) {

@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
@@ -53,6 +54,7 @@ class TrafficTracker
         private val targetResolver: TrafficTargetResolver,
         private val errorHandler: TrafficErrorHandler,
         private val permissionChecker: TrafficPermissionChecker,
+        private val permissionStateNotifier: PermissionStateNotifier,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
         override val key: String = "traffic"
@@ -62,11 +64,47 @@ class TrafficTracker
 
         private val trafficMutex = Mutex()
     private val isInitialized = AtomicBoolean(false)
+    private val initializationFailed = AtomicBoolean(false)
 
     init {
         if (isInitialized.compareAndSet(false, true)) {
             scope.launch {
                 initializeWithRetry()
+            }
+            startAutomaticRecoveryObservers()
+        }
+    }
+
+    private fun startAutomaticRecoveryObservers() {
+        scope.launch {
+            try {
+                permissionStateNotifier.changes.collect {
+                    if (initializationFailed.get() &&
+                        permissionManager.hasPhoneStatePermission() &&
+                        permissionManager.hasUsageStatsPermission()
+                    ) {
+                        AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
+                        initializeWithRetry()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: Permission observer failed", e)
+            }
+        }
+        scope.launch {
+            try {
+                simIdentityRepository.observeActiveSims().collect {
+                    if (initializationFailed.get()) {
+                        AppLogger.d("TrafficTracker: attempting auto-recovery after SIM change")
+                        initializeWithRetry()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: SIM observer failed", e)
             }
         }
     }
@@ -77,21 +115,25 @@ class TrafficTracker
         while (true) {
             try {
                 updateTrafficUsageLogic()
+                initializationFailed.set(false)
                 return
             } catch (e: CancellationException) {
                 throw e
             } catch (_: SecurityException) {
                 // Status already set in updateTrafficUsageLogic.
                 // We stop retrying immediately as per instruction.
+                initializationFailed.set(true)
                 return
             } catch (e: Exception) {
                 if (e.message == "Traffic update timeout") {
                     AppLogger.w("TrafficTracker: Initialization stopped due to timeout", e)
+                    initializationFailed.set(true)
                     return
                 }
                 attempt++
                 if (attempt >= maxAttempts) {
                     AppLogger.e("TrafficTracker: Initialization failed after $maxAttempts attempts", e)
+                    initializationFailed.set(true)
                     return
                 }
                 val delayMs = 1000L * (1 shl (attempt - 1))
@@ -102,12 +144,12 @@ class TrafficTracker
     }
 
     override suspend fun recover() {
-        try {
+        if (initializationFailed.compareAndSet(true, false)) {
+            AppLogger.d("TrafficTracker: attempting manual recovery")
             initializeWithRetry()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("TrafficTracker: Recovery failed", e)
+        } else {
+            // Already initialized or in progress, but we can trigger an update anyway
+            updateTrafficUsage()
         }
     }
 

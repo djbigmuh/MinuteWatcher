@@ -80,25 +80,10 @@ class SimIdentitySeedRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override suspend fun getOrCreateSeed(generator: () -> String): String {
-            var ephemeralToMigrate: String? = null
-            val firstAttempt =
-                seedMutex.withLock {
-                    val seed = tryGetPersistentSeed(generator)
-                    if (seed != null) {
-                        // Check memory cache first
-                        if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
-                            ephemeralToMigrate = cachedEphemeralSeed
-                            _isEphemeralSeedActive.value = false
-                            cachedEphemeralSeed = null
-                        } else {
-                            // Check persistent marker for partial failure recovery
-                            ephemeralToMigrate = tryGetStoredEphemeralSeed()
-                        }
-                    }
-                    seed
-                }
-
+            // 1. First attempt outside mutex
+            val firstAttempt = tryGetPersistentSeed(generator)
             if (firstAttempt != null) {
+                val ephemeralToMigrate = resolveEphemeralToMigrate()
                 ephemeralToMigrate?.let { executeMigrationSafely(it, firstAttempt) }
                 return firstAttempt
             }
@@ -106,32 +91,50 @@ class SimIdentitySeedRepositoryImpl
             AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed, retrying in 500ms...")
             kotlinx.coroutines.delay(RETRY_DELAY_MS.milliseconds)
 
-            var ephemeralToMigrateRetry: String? = null
-            val secondAttempt =
-                seedMutex.withLock {
-                    val seed = tryGetPersistentSeed(generator)
-                    if (seed != null) {
-                        if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
-                            ephemeralToMigrateRetry = cachedEphemeralSeed
-                            _isEphemeralSeedActive.value = false
-                            cachedEphemeralSeed = null
-                        } else {
-                            ephemeralToMigrateRetry = tryGetStoredEphemeralSeed()
-                        }
-                        seed
-                    } else {
-                        AppLogger.e(
-                            "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
-                                "All SIM identities will change. Previous statistics will be orphaned.",
-                        )
-                        _isEphemeralSeedActive.value = true
-                        cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
-                    }
-                }
+            // 2. Second attempt outside mutex
+            val secondAttempt = tryGetPersistentSeed(generator)
+            if (secondAttempt != null) {
+                val ephemeralToMigrate = resolveEphemeralToMigrate()
+                ephemeralToMigrate?.let { executeMigrationSafely(it, secondAttempt) }
+                return secondAttempt
+            }
 
-            ephemeralToMigrateRetry?.let { executeMigrationSafely(it, secondAttempt) }
-            return secondAttempt
+            // 3. Fallback to ephemeral seed under mutex (cache management only)
+            return seedMutex.withLock {
+                AppLogger.e(
+                    "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
+                        "All SIM identities will change. Previous statistics will be orphaned.",
+                )
+                _isEphemeralSeedActive.value = true
+                cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+            }
         }
+
+    /**
+     * Determines if there is an ephemeral seed that needs to be migrated to a persistent one.
+     * Checks memory cache first (guarded by mutex), then DataStore.
+     */
+    private suspend fun resolveEphemeralToMigrate(): String? {
+        val memoryResult =
+            seedMutex.withLock {
+                if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
+                    val found = cachedEphemeralSeed
+                    _isEphemeralSeedActive.value = false
+                    cachedEphemeralSeed = null
+                    // Wrap in Result to distinguish between "not found" and "found null"
+                    Result.success(found)
+                } else {
+                    null
+                }
+            }
+
+        return if (memoryResult != null) {
+            memoryResult.getOrNull()
+        } else {
+            // DataStore read is now outside the mutex
+            tryGetStoredEphemeralSeed()
+        }
+    }
 
     private suspend fun tryGetStoredEphemeralSeed(): String? =
         try {

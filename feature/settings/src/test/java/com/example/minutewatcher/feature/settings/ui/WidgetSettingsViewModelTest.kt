@@ -663,4 +663,102 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
             saveJob.join()
         }
+
+    @Test
+    fun `updateSettings queues transforms before load and applies them after successful load`() =
+        runTest {
+            val deferred = CompletableDeferred<WidgetSettingsState>()
+            val slowLoader = object : WidgetSettingsLoader {
+                override suspend fun load(): WidgetSettingsState = deferred.await()
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
+                    WidgetSaveResult.Success
+
+                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
+                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+            }
+
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            runCurrent()
+
+            // 1. Queue updates
+            vm.updateSettings { it.copy(fontSize = 4) }
+            vm.updateSettings { it.copy(layoutMode = 2) }
+            runCurrent()
+
+            // 2. Load succeeds
+            val initialState = WidgetSettingsState(fontSize = 1, layoutMode = 1)
+            deferred.complete(initialState)
+            advanceUntilIdle()
+
+            // 3. Verify applied
+            val finalSettings = vm.state.value.settings
+            assertNotNull(finalSettings)
+            assertEquals(4, finalSettings!!.fontSize)
+            assertEquals(2, finalSettings.layoutMode)
+
+            // 4. Verify auto-save triggered (advance time for debounce)
+            advanceTimeBy(500.milliseconds)
+            runCurrent()
+            verify(saver).save(any(), any())
+        }
+
+    @Test
+    fun `updateSimSettings queues transforms before load and applies them after successful load`() =
+        runTest {
+            val deferred = CompletableDeferred<WidgetSettingsState>()
+            val slowLoader = object : WidgetSettingsLoader {
+                override suspend fun load(): WidgetSettingsState = deferred.await()
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
+                    WidgetSaveResult.Success
+
+                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
+                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+            }
+
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            runCurrent()
+
+            // 1. Queue SIM update
+            vm.updateSimSettings(0) { it.copy(showTraffic = true) }
+            runCurrent()
+
+            // 2. Load succeeds
+            deferred.complete(WidgetSettingsState())
+            advanceUntilIdle()
+
+            // 3. Verify applied
+            val simState = vm.state.value.settings?.simStates?.get(0)
+            assertNotNull(simState)
+            assertTrue(simState!!.showTraffic)
+        }
+
+    @Test
+    fun `pendingUpdates queue respects MAX_PENDING_UPDATES limit`() =
+        runTest {
+            val deferred = CompletableDeferred<WidgetSettingsState>()
+            val slowLoader = object : WidgetSettingsLoader {
+                override suspend fun load(): WidgetSettingsState = deferred.await()
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
+                    WidgetSaveResult.Success
+
+                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
+                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+            }
+
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            runCurrent()
+
+            // 1. Flood with updates
+            repeat(110) { i ->
+                vm.updateSettings { it.copy(fontSize = i) }
+            }
+            runCurrent()
+
+            // 2. Load
+            deferred.complete(WidgetSettingsState(fontSize = -1))
+            advanceUntilIdle()
+
+            // 3. Last applied should be 109
+            assertEquals(109, vm.state.value.settings?.fontSize)
+        }
 }

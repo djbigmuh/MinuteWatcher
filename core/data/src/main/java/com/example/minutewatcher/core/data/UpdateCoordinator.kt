@@ -27,8 +27,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,9 +58,8 @@ class UpdateCoordinator
 
     private var lastSnapshotHash: Int? = null
     private var consecutiveUpdateFailures = 0
-    private val observationRestartCount =
-        java.util.concurrent.atomic
-            .AtomicInteger(0)
+    private val observationRestartCount = AtomicInteger(0)
+    private val degradedCycleCount = AtomicInteger(0)
     private val stateMutex = Mutex()
 
     private val isObservationStarted = AtomicBoolean(false)
@@ -79,6 +78,7 @@ class UpdateCoordinator
         override suspend fun recover() {
             monitoringJob.get()?.cancel()
             observationRestartCount.set(0)
+            degradedCycleCount.set(0)
             stateMutex.withLock {
                 lastSnapshotHash = null
                 consecutiveUpdateFailures = 0
@@ -151,9 +151,24 @@ class UpdateCoordinator
 
                 val delayMs =
                     if (restartCount >= MAX_OBSERVATION_RESTARTS) {
+                        val cycles = degradedCycleCount.incrementAndGet()
+                        if (cycles >= MAX_DEGRADED_CYCLES) {
+                            AppLogger.e(
+                                "UpdateCoordinator: observation restart limit reached ($restartCount) " +
+                                    "and max degraded cycles reached ($cycles). Permanent stop.",
+                            )
+                            _status.value =
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                                    "Widget observation permanently stopped after $cycles degraded cycles",
+                                )
+                            isObservationStarted.set(false)
+                            return@launch
+                        }
+
                         AppLogger.e(
                             "UpdateCoordinator: observation restart limit reached ($restartCount), " +
-                                "entering degraded mode",
+                                "entering degraded mode (cycle $cycles)",
                         )
                         _status.value =
                             TrackingStatus.Error(
@@ -161,6 +176,7 @@ class UpdateCoordinator
                                 "Widget observation failed after $restartCount restarts. " +
                                     "Retrying in ${MAX_RESTART_COOLDOWN_MS / 1000}s",
                             )
+                        observationRestartCount.set(0)
                         MAX_RESTART_COOLDOWN_MS
                     } else {
                         calculateRestartDelay(restartCount)
@@ -231,27 +247,15 @@ class UpdateCoordinator
 
     private suspend fun performWidgetUpdate(): WidgetUpdateResult =
         try {
-            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                widgetUpdater.updateAll()
-            } ?: run {
-                AppLogger.w(
-                    "UpdateCoordinator: Widget update timed out after " +
-                        "${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms",
-                )
-                WidgetUpdateResult.Failure(isRetryable = true)
-            }
+            widgetUpdater.updateAll()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            AppLogger.e("UpdateCoordinator: widget update failed in processSnapshot", e)
-            val isRetryable = isRetryableException(e)
-            val reason =
-                when {
-                    isRemoteViewsLimitException(e) -> WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
-                    !isRetryable -> WidgetUpdateResult.FailureReason.TERMINAL
-                    else -> WidgetUpdateResult.FailureReason.TRANSIENT
-                }
-            WidgetUpdateResult.Failure(isRetryable = isRetryable, reason = reason)
+            AppLogger.e("UpdateCoordinator: unexpected widget update failure", e)
+            WidgetUpdateResult.Failure(
+                isRetryable = false,
+                reason = WidgetUpdateResult.FailureReason.TERMINAL,
+            )
         }
 
     private suspend fun handleUpdateResult(
@@ -262,6 +266,7 @@ class UpdateCoordinator
             if (result.isSuccess) {
                 _status.value = TrackingStatus.Active
                 observationRestartCount.set(0)
+                degradedCycleCount.set(0)
                 consecutiveUpdateFailures = 0
                 lastSnapshotHash = newHash
             } else if ((result is WidgetUpdateResult.Failure) && !result.wasCoalesced) {
@@ -303,24 +308,6 @@ class UpdateCoordinator
                 handleUpdateFailure()
             }
         }
-    }
-
-    private fun isRetryableException(e: Exception): Boolean =
-        when {
-            isRemoteViewsLimitException(e) -> false
-            e is SecurityException -> false
-            e is IllegalArgumentException -> true
-            e is IllegalStateException -> false
-            else -> true
-        }
-
-    private fun isRemoteViewsLimitException(e: Throwable): Boolean {
-        var current: Throwable? = e
-        while (current != null) {
-            if (current is android.os.TransactionTooLargeException) return true
-            current = current.cause
-        }
-        return false
     }
 
         private fun handleUpdateFailure() {
@@ -390,6 +377,7 @@ class UpdateCoordinator
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
                     observationRestartCount.set(0)
+                    degradedCycleCount.set(0)
                     lastSnapshotHash =
                         SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
                     true
@@ -412,6 +400,7 @@ class UpdateCoordinator
     private companion object {
         private const val MAX_RESTART_DELAY_EXPONENT = 4
         private const val MAX_OBSERVATION_RESTARTS = 5
+        private const val MAX_DEGRADED_CYCLES = 3
         private const val INITIAL_RESTART_DELAY_MS = 5000L
         private const val MAX_RESTART_DELAY_MS = 80_000L
         private const val MAX_RESTART_COOLDOWN_MS = 300_000L

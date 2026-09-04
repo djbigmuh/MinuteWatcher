@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
@@ -65,6 +67,9 @@ class WidgetSettingsViewModel
     private val lastSavedVersion = AtomicLong(0L)
     private var autoSaveJob: Job? = null
 
+    private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
+    private val pendingUpdatesMutex = Mutex()
+
     private var loadJob: Job? = null
 
     val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
@@ -82,7 +87,7 @@ class WidgetSettingsViewModel
                 autoSaveTrigger
                     .debounce(400.milliseconds)
                     .collect { version ->
-                        if (version > lastSavedVersion.get() && version > 0) {
+                        if ((version > lastSavedVersion.get()) && (version > 0)) {
                             saveAndNotify()
                         }
                     }
@@ -107,7 +112,7 @@ class WidgetSettingsViewModel
                         }
                     ensureActive()
                     if (loaded != null) {
-                        reduce { copy(settings = loaded, isLoadError = false) }
+                        applyPendingUpdatesAndSet(loaded)
                     } else {
                         AppLogger.e("Failed to load widget settings: timeout")
                         reduce { copy(isLoadError = true) }
@@ -125,8 +130,13 @@ class WidgetSettingsViewModel
      * Обновляет текущее состояние настроек виджета.
      */
     fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
+        val currentSettings = state.value.settings
+        if (currentSettings == null) {
+            queueUpdate(transform)
+            return
+        }
+
         reduce {
-            val currentSettings = settings ?: return@reduce this
             copy(
                 isLoadError = false,
                 settings = transform(currentSettings).copy(widgetLimitExceeded = false),
@@ -142,8 +152,18 @@ class WidgetSettingsViewModel
         slot: Int,
         transform: (SimSettingsState) -> SimSettingsState,
     ) {
+        val currentSettings = state.value.settings
+        if (currentSettings == null) {
+            queueUpdate { settings ->
+                val updatedSimStates = settings.simStates.toMutableMap()
+                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                updatedSimStates[slot] = transform(currentSimState)
+                settings.copy(simStates = updatedSimStates)
+            }
+            return
+        }
+
         reduce {
-            val currentSettings = settings ?: return@reduce this
             val updatedSimStates = currentSettings.simStates.toMutableMap()
             val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
             updatedSimStates[slot] = transform(currentSimState)
@@ -158,6 +178,47 @@ class WidgetSettingsViewModel
             )
         }
         autoSaveTrigger.update { it + 1 }
+    }
+
+    private fun queueUpdate(transform: (WidgetSettingsState) -> WidgetSettingsState) {
+        viewModelScope.launch {
+            pendingUpdatesMutex.withLock {
+                if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
+                    AppLogger.w("WidgetSettingsViewModel: pendingUpdates limit reached, dropping oldest update")
+                    pendingUpdates.removeAt(0)
+                }
+                pendingUpdates.add(transform)
+                AppLogger.d("WidgetSettingsViewModel: update queued (total: ${pendingUpdates.size})")
+            }
+        }
+    }
+
+    private suspend fun applyPendingUpdatesAndSet(loaded: WidgetSettingsState) {
+        val finalSettings =
+            pendingUpdatesMutex.withLock {
+                if (pendingUpdates.isEmpty()) {
+                    loaded
+                } else {
+                    AppLogger.d("WidgetSettingsViewModel: applying ${pendingUpdates.size} pending updates")
+                    var current = loaded
+                    pendingUpdates.forEach { transform ->
+                        current = transform(current)
+                    }
+                    pendingUpdates.clear()
+                    current
+                }
+            }
+
+        reduce {
+            copy(
+                settings = finalSettings.copy(widgetLimitExceeded = false),
+                isLoadError = false,
+            )
+        }
+
+        if (finalSettings !== loaded) {
+            autoSaveTrigger.update { it + 1 }
+        }
     }
 
     /**
@@ -250,5 +311,6 @@ class WidgetSettingsViewModel
 
     companion object {
         private val LOAD_TIMEOUT: Duration = 15.seconds
+        private const val MAX_PENDING_UPDATES = 100
     }
 }

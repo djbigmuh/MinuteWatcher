@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,8 +33,10 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -87,6 +90,7 @@ open class SemanticSearchManager
         private val initMutex = Mutex()
         private val indexMutex = Mutex()
     private val consecutiveMutexTimeouts = AtomicInteger(0)
+    private val mutexBackoffMs = AtomicLong(INITIAL_BACKOFF_MS)
 
         @VisibleForTesting
         constructor(
@@ -122,6 +126,7 @@ open class SemanticSearchManager
                     lastSnapshotHash = null
                     lastSnapshotVersion = null
                     consecutiveMutexTimeouts.set(0)
+                    mutexBackoffMs.set(INITIAL_BACKOFF_MS)
                 }
                 val flow =
                     lastSnapshotFlow ?: run {
@@ -199,7 +204,12 @@ open class SemanticSearchManager
                                     }
 
                                     IndexResult.MutexTimeout -> {
-                                        AppLogger.w("SemanticSearchManager: indexing skipped due to mutex timeout (another indexing in progress)")
+                                        val count = consecutiveMutexTimeouts.get()
+                                        if (count < 3) {
+                                            AppLogger.d("SemanticSearchManager: indexing skipped due to mutex timeout (cycle $count)")
+                                        } else {
+                                            AppLogger.w("SemanticSearchManager: indexing consistently skipped due to mutex timeout ($count consecutive)")
+                                        }
                                     }
                                 }
                             } catch (e: CancellationException) {
@@ -225,8 +235,10 @@ open class SemanticSearchManager
             } ?: false
 
         if (!mutexAcquired) {
-            AppLogger.w("SemanticSearchManager: indexMutex acquisition timed out (concurrent indexing in progress)")
             val count = consecutiveMutexTimeouts.incrementAndGet()
+            val currentBackoff = mutexBackoffMs.get()
+            mutexBackoffMs.set(min(currentBackoff * 2, MAX_BACKOFF_MS))
+
             if (count >= 2) {
                 _status.value =
                     TrackingStatus.Error(
@@ -234,10 +246,12 @@ open class SemanticSearchManager
                         "Indexing mutex stuck",
                     )
             }
+            delay(currentBackoff.milliseconds)
             return IndexResult.MutexTimeout
         }
 
         consecutiveMutexTimeouts.set(0)
+        mutexBackoffMs.set(INITIAL_BACKOFF_MS)
 
         return try {
             val result =
@@ -402,4 +416,9 @@ open class SemanticSearchManager
                 Result.failure(e)
             }
         }
+
+    private companion object {
+        private const val INITIAL_BACKOFF_MS = 1000L
+        private const val MAX_BACKOFF_MS = 30_000L
+    }
 }

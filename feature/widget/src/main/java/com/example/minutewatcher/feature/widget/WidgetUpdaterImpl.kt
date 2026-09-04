@@ -138,18 +138,11 @@ class WidgetUpdaterImpl
     ): WidgetUpdateResult {
         AppLogger.d("WidgetUpdater: update already in progress, waiting")
         return try {
-            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                deferred.await()
-            }?.let { result ->
-                when (result) {
-                    is WidgetUpdateResult.Success -> result.copy(wasCoalesced = true)
-                    is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
-                }
-            } ?: WidgetUpdateResult.Failure(
-                wasCoalesced = true,
-                isRetryable = true,
-                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-            )
+            val result = deferred.await()
+            when (result) {
+                is WidgetUpdateResult.Success -> result.copy(wasCoalesced = true)
+                is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
+            }
         } catch (_: CancellationException) {
             // Return Failure instead of pro-throwing to handle remote cancellation gracefully for joined updates.
             // This prevents the caller from crashing if the main update process is cancelled.
@@ -297,18 +290,8 @@ class WidgetUpdaterImpl
             isProbe: Boolean,
         ): UpdateResult =
             try {
-                val success =
-                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
-                        true
-                    } ?: false
-
-                if (success) {
-                    UpdateResult.Success(wasFull = isFullAttempt)
-                } else {
-                    AppLogger.w("WidgetUpdater: renderAll timed out after ${Constants.Time.WIDGET_UPDATE_TIMEOUT_MS}ms")
-                    UpdateResult.GenericFailure(isRetryable = true)
-                }
+                renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
+                UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

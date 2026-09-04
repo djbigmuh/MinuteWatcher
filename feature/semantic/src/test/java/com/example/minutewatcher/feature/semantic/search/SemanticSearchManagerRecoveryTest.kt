@@ -68,23 +68,19 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     fun `recover resets failure counters`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val flow = MutableStateFlow(createSnapshotWithOneSim())
 
-            // Use initialize to ensure counter increments through the collect loop
-            manager.initialize(flow)
-            testScheduler.advanceUntilIdle()
-
-            // 1. Force failures via the loop to reach the limit
+            // 1. Force failures manually to reach the limit
             fakeWrapper.failAllPutDocuments = true
             repeat(AppSearchErrorHandler.MAX_CONSECUTIVE_INDEX_FAILURES) { i ->
-                // Ensure each snapshot is different from the previous one AND the initial one
-                flow.value = createTestSnapshot(200L + i)
-                testScheduler.advanceUntilIdle()
+                manager.indexSnapshot(createTestSnapshot(200L + i))
             }
 
             assertTrue("Status should be Error after 5 failures", manager.status.value is TrackingStatus.Error)
             val errorHandler = getErrorHandler(manager)
-            assertTrue(errorHandler.consecutiveIndexFailures >= 5)
+            assertTrue(
+                "Counter should be >= 5, but was ${errorHandler.consecutiveIndexFailures}",
+                errorHandler.consecutiveIndexFailures >= 5
+            )
 
             // 2. Call recover
             manager.recover()
