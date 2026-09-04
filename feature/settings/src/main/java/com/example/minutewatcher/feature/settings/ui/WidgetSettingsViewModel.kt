@@ -16,17 +16,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
-import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -63,8 +61,7 @@ class WidgetSettingsViewModel
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
-    private val autoSaveTrigger = MutableStateFlow(0L)
-    private val lastSavedVersion = AtomicLong(0L)
+    private val autoSaveTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var autoSaveJob: Job? = null
 
     private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
@@ -86,10 +83,8 @@ class WidgetSettingsViewModel
                 @OptIn(FlowPreview::class)
                 autoSaveTrigger
                     .debounce(400.milliseconds)
-                    .collect { version ->
-                        if ((version > lastSavedVersion.get()) && (version > 0)) {
-                            saveAndNotify()
-                        }
+                    .collect {
+                        saveAndNotify()
                     }
             }
     }
@@ -136,13 +131,23 @@ class WidgetSettingsViewModel
             return
         }
 
+        var changed = false
         reduce {
-            copy(
-                isLoadError = false,
-                settings = transform(currentSettings).copy(widgetLimitExceeded = false),
-            )
+            val transformed = transform(currentSettings)
+            val validated = WidgetSettingsState.validate(transformed)
+            if (validated != currentSettings) {
+                changed = true
+                copy(
+                    isLoadError = false,
+                    settings = validated.copy(widgetLimitExceeded = false),
+                )
+            } else {
+                this
+            }
         }
-        autoSaveTrigger.update { it + 1 }
+        if (changed) {
+            autoSaveTrigger.tryEmit(Unit)
+        }
     }
 
     /**
@@ -158,26 +163,37 @@ class WidgetSettingsViewModel
                 val updatedSimStates = settings.simStates.toMutableMap()
                 val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
                 updatedSimStates[slot] = transform(currentSimState)
-                settings.copy(simStates = updatedSimStates)
+                WidgetSettingsState.validate(settings.copy(simStates = updatedSimStates))
             }
             return
         }
 
+        var changed = false
         reduce {
             val updatedSimStates = currentSettings.simStates.toMutableMap()
             val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
             updatedSimStates[slot] = transform(currentSimState)
 
-            copy(
-                isLoadError = false,
-                settings =
+            val validated =
+                WidgetSettingsState.validate(
                     currentSettings.copy(
                         simStates = updatedSimStates,
-                        widgetLimitExceeded = false,
                     ),
-            )
+                )
+
+            if (validated != currentSettings) {
+                changed = true
+                copy(
+                    isLoadError = false,
+                    settings = validated.copy(widgetLimitExceeded = false),
+                )
+            } else {
+                this
+            }
         }
-        autoSaveTrigger.update { it + 1 }
+        if (changed) {
+            autoSaveTrigger.tryEmit(Unit)
+        }
     }
 
     private fun queueUpdate(transform: (WidgetSettingsState) -> WidgetSettingsState) {
@@ -197,7 +213,7 @@ class WidgetSettingsViewModel
         val finalSettings =
             pendingUpdatesMutex.withLock {
                 if (pendingUpdates.isEmpty()) {
-                    loaded
+                    WidgetSettingsState.validate(loaded)
                 } else {
                     AppLogger.d("WidgetSettingsViewModel: applying ${pendingUpdates.size} pending updates")
                     var current = loaded
@@ -205,7 +221,7 @@ class WidgetSettingsViewModel
                         current = transform(current)
                     }
                     pendingUpdates.clear()
-                    current
+                    WidgetSettingsState.validate(current)
                 }
             }
 
@@ -216,8 +232,8 @@ class WidgetSettingsViewModel
             )
         }
 
-        if (finalSettings !== loaded) {
-            autoSaveTrigger.update { it + 1 }
+        if (finalSettings != loaded) {
+            autoSaveTrigger.tryEmit(Unit)
         }
     }
 
@@ -239,15 +255,11 @@ class WidgetSettingsViewModel
             return
         }
 
-        val versionBeforeSave = autoSaveTrigger.value
         try {
             // Атомарно обновляем состояние и захватываем актуальное значение
             val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
             val result = performSaveInternal(currentState)
             currentCoroutineContext().ensureActive()
-            if (result is SaveResult.Success) {
-                lastSavedVersion.set(versionBeforeSave)
-            }
             reduce { copy(saveResult = result) }
         } catch (e: CancellationException) {
             throw e

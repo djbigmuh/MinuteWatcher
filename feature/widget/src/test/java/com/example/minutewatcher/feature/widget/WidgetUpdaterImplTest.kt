@@ -6,10 +6,13 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -673,5 +676,38 @@ class WidgetUpdaterImplTest {
 
             assertTrue("First update should succeed", result1.isSuccess)
             assertTrue("Second update should succeed (either coalesced or new)", result2.isSuccess)
+        }
+
+    @Test(expected = CancellationException::class)
+    fun `updateAll propagates CancellationException when joined caller is cancelled`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings())
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            val startBarrier = CompletableDeferred<Unit>()
+            val finishBarrier = CompletableDeferred<Unit>()
+
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        startBarrier.complete(Unit)
+                        finishBarrier.await()
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, fakeRenderer)
+
+            // Start first update
+            launch { updater.updateAll() }
+            startBarrier.await()
+
+            // Joined update should throw CancellationException if its scope is cancelled
+            val joinedUpdateJob = async { updater.updateAll() }
+            joinedUpdateJob.cancel()
+            joinedUpdateJob.await()
         }
 }

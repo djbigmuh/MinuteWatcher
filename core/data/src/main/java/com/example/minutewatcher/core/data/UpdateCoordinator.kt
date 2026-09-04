@@ -24,9 +24,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -76,6 +78,7 @@ class UpdateCoordinator
          * Safe to call from any coroutine context.
          */
         override suspend fun recover() {
+            AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
             monitoringJob.get()?.cancel()
             observationRestartCount.set(0)
             degradedCycleCount.set(0)
@@ -99,6 +102,11 @@ class UpdateCoordinator
                         throw e
                     } catch (e: Exception) {
                         AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                        _status.value =
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Failed to start widget observation: ${e.message}",
+                            )
                         isObservationStarted.set(false)
                     }
                 }
@@ -115,11 +123,31 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
-            val flow =
+            val rawFlow =
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+
+            // Ensure flow produces at least one snapshot within timeout before starting monitoring.
+            // This prevents "silent hangs" if the data source is corrupted or inactive.
+            // We use rawFlow (without debounce) to avoid extra delay during initialization check.
+            val firstSnapshot =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    rawFlow.first()
+                }
+
+            if (firstSnapshot == null) {
+                AppLogger.e("UpdateCoordinator: Widget observation failed to start - timeout waiting for snapshot flow")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Widget observation failed to start",
+                    )
+                isObservationStarted.set(false)
+                return
+            }
+
+            val flow = rawFlow.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
 
             val newJob =
                 observationScope.observe(flow, handler) { snapshot ->
@@ -133,6 +161,7 @@ class UpdateCoordinator
                 }
 
             launchMonitoringJob(newJob)
+            _status.value = TrackingStatus.Active
         }
 
     private fun launchMonitoringJob(newJob: Job) {
@@ -212,14 +241,17 @@ class UpdateCoordinator
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
         currentCoroutineContext().ensureActive()
 
-        if (snapshot.suppressWidgetUpdate) {
-            return
-        }
-
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
         val shouldUpdate = checkShouldUpdate(newHash)
         if (!shouldUpdate) return
+
+        if (snapshot.suppressWidgetUpdate) {
+            stateMutex.withLock {
+                lastSnapshotHash = newHash
+            }
+            return
+        }
 
         // Обновление виджета при отсутствии активных SIM выполняется
         // намеренно — виджет должен корректно отобразить состояние

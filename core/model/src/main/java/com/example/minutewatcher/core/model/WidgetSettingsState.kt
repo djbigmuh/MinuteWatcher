@@ -48,32 +48,36 @@ data class WidgetSettingsState(
          * @param state Исходное состояние.
          * @return Валидированное состояние.
          */
-        fun validate(state: WidgetSettingsState): WidgetSettingsState =
-            state.copy(
-                layoutMode =
-                    state.layoutMode.coerceIn(
-                        Constants.Widget.MIN_LAYOUT_MODE,
-                        Constants.Widget.MAX_LAYOUT_MODE,
-                    ),
-                simArrangement =
-                    state.simArrangement.coerceIn(
-                        Constants.Widget.MIN_SIM_ARRANGEMENT,
-                        Constants.Widget.MAX_SIM_ARRANGEMENT,
-                    ),
-                transparency =
-                    state.transparency.coerceIn(
-                        Constants.Widget.MIN_TRANSPARENCY,
-                        Constants.Widget.MAX_TRANSPARENCY,
-                    ),
-                fontSize =
-                    state.fontSize.coerceIn(
-                        Constants.Widget.MIN_FONT_SIZE,
-                        Constants.Widget.MAX_FONT_SIZE,
-                    ),
-                // Сбрасываем флаг превышения лимита при сохранении настроек пользователем.
-                // Это позволяет вручную "вылечить" виджет, если пользователь изменил состав данных.
-                widgetLimitExceeded = false,
-            )
+        fun validate(state: WidgetSettingsState): WidgetSettingsState {
+            val validated =
+                state.copy(
+                    layoutMode =
+                        state.layoutMode.coerceIn(
+                            Constants.Widget.MIN_LAYOUT_MODE,
+                            Constants.Widget.MAX_LAYOUT_MODE,
+                        ),
+                    simArrangement =
+                        state.simArrangement.coerceIn(
+                            Constants.Widget.MIN_SIM_ARRANGEMENT,
+                            Constants.Widget.MAX_SIM_ARRANGEMENT,
+                        ),
+                    transparency =
+                        state.transparency.coerceIn(
+                            Constants.Widget.MIN_TRANSPARENCY,
+                            Constants.Widget.MAX_TRANSPARENCY,
+                        ),
+                    fontSize =
+                        state.fontSize.coerceIn(
+                            Constants.Widget.MIN_FONT_SIZE,
+                            Constants.Widget.MAX_FONT_SIZE,
+                        ),
+                    backgroundColor = state.backgroundColor,
+                    // Сбрасываем флаг превышения лимита при сохранении настроек пользователем.
+                    // Это позволяет вручную "вылечить" виджет, если пользователь изменил состав данных.
+                    widgetLimitExceeded = false,
+                )
+            return if (validated == state) state else validated
+        }
     }
 }
 

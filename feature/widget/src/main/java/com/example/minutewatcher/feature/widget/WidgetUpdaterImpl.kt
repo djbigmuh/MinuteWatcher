@@ -37,6 +37,15 @@ class WidgetUpdaterImpl
     private val updateMutex = Mutex()
     private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
+    /**
+     * Triggers an update for all application widgets.
+     *
+     * This operation is typically bounded by a timeout (e.g., WIDGET_UPDATE_TIMEOUT_MS).
+     * Supports coalescing: if an update is already in progress, the caller will join it.
+     *
+     * @return [WidgetUpdateResult] indicating the outcome of the update.
+     * @throws CancellationException if the coroutine scope is cancelled.
+     */
     override suspend fun updateAll(): WidgetUpdateResult {
         updateMutex.lock()
         val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
@@ -143,15 +152,8 @@ class WidgetUpdaterImpl
                 is WidgetUpdateResult.Success -> result.copy(wasCoalesced = true)
                 is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
             }
-        } catch (_: CancellationException) {
-            // Return Failure instead of pro-throwing to handle remote cancellation gracefully for joined updates.
-            // This prevents the caller from crashing if the main update process is cancelled.
-            WidgetUpdateResult.Failure(
-                wasCoalesced = true,
-                isRetryable = true,
-                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-            )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             AppLogger.e("WidgetUpdater: joinInProgressUpdate failed", e)
             WidgetUpdateResult.Failure(
                 wasCoalesced = true,

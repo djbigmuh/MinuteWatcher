@@ -9,8 +9,10 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,8 +30,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.stub
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -74,6 +78,9 @@ class SimIdentityRepositoryRegistrationTest {
 
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(seedRepository.seedFlow).thenReturn(flowOf("test_seed"))
+        seedRepository.stub {
+            on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
+        }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
@@ -120,7 +127,7 @@ class SimIdentityRepositoryRegistrationTest {
     @Test
     fun `test observeActiveSims recovers after permission regrant`() =
         runTest {
-            val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+            val permissionChanges = MutableSharedFlow<Unit>(replay = 1)
             whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
 
             // 1. Setup discovery to throw SecurityException on first call, then succeed
@@ -129,10 +136,9 @@ class SimIdentityRepositoryRegistrationTest {
             whenever(discovery.observeSubscriptionChanges()).thenReturn(flowOf(Unit))
             whenever(discovery.discoverSims(any())).thenAnswer {
                 if (activeSubCalls++ == 0) {
-                    throw SecurityException("Mock permission revocation")
+                    SimDiscoveryResult.PermissionMissing
                 } else {
-                    com.example.minutewatcher.core.model.SimDiscoveryResult
-                        .Available(emptyList())
+                    SimDiscoveryResult.Available(emptyList())
                 }
             }
 

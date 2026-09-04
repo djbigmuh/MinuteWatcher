@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.IdentitySource
@@ -100,7 +101,7 @@ class SimIdentityRepositoryImplPersistenceTest {
             val seedRepository =
                 mock<SimIdentitySeedRepository> {
                     on { seedFlow } doReturn flowOf("test_seed")
-                    on { getOrCreateSeed(any()) } doReturn "test_seed"
+                    on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
                 }
 
             val permissionManager =
@@ -170,7 +171,7 @@ class SimIdentityRepositoryImplPersistenceTest {
             val seedRepository =
                 mock<SimIdentitySeedRepository> {
                     on { seedFlow } doReturn flowOf("test_seed")
-                    on { getOrCreateSeed(any()) } doReturn "test_seed"
+                    on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
                 }
 
             val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)

@@ -80,35 +80,34 @@ open class CallTracker
 
     private fun startPermissionObserver() {
         permissionObserverJob?.cancel()
-        permissionObserverJob = scope.launch {
-            permissionStateNotifier.changes
-                .retryWhen { cause, attempt ->
-                    if (attempt < 10 && cause !is CancellationException) {
-                        val delayTime = (2.0.pow(attempt.toDouble()) * 1000).toLong().coerceAtMost(30000)
-                        AppLogger.w(
-                            "CallTracker: Permission observer failed (attempt $attempt), retrying in ${delayTime}ms",
-                            cause,
-                        )
-                        delay(delayTime.milliseconds)
-                        true
-                    } else {
-                        false
+        permissionObserverJob =
+            scope.launch {
+                permissionStateNotifier.changes
+                    .retryWhen { cause, attempt ->
+                        if (attempt < 10 && cause !is CancellationException) {
+                            val delayTime = (2.0.pow(attempt.toDouble()) * 1000).toLong().coerceAtMost(30000)
+                            AppLogger.w(
+                                "CallTracker: Permission observer failed (attempt $attempt), retrying in ${delayTime}ms",
+                                cause,
+                            )
+                            delay(delayTime.milliseconds)
+                            true
+                        } else {
+                            false
+                        }
+                    }.catch { e ->
+                        AppLogger.e("CallTracker: Permission observer died permanently", e)
+                        _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    }.collect {
+                        try {
+                            refreshStatus(force = true)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
+                        }
                     }
-                }
-                .catch { e ->
-                    AppLogger.e("CallTracker: Permission observer died permanently", e)
-                    _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                }
-                .collect {
-                    try {
-                        refreshStatus(force = true)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
-                    }
-                }
-        }
+            }
     }
 
     private val callMutex = Mutex()

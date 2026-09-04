@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -71,7 +72,7 @@ class SimRepositoryImplTest {
         seedRepository =
             mock {
                 on { seedFlow } doReturn flowOf("test_seed")
-                on { getOrCreateSeed(any()) } doReturn "test_seed"
+                on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
             }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
 

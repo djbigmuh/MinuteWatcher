@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.IdentitySource
@@ -84,7 +85,7 @@ class SimIdentityRepositoryHangTest {
         seedRepository =
             mock {
                 on { seedFlow } doReturn flowOf("test_seed")
-                on { getOrCreateSeed(any()) } doReturn "test_seed"
+                on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
             }
         whenever(permissionStateNotifier.changes).thenReturn(flowOf(Unit))
 
@@ -152,9 +153,9 @@ class SimIdentityRepositoryHangTest {
                         // No-op
                     }
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
                         delay(1000.seconds)
-                        return "seed"
+                        return SeedResolutionResult.Persistent("seed")
                     }
                 }
 
@@ -202,9 +203,9 @@ class SimIdentityRepositoryHangTest {
                         // No-op
                     }
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
                         delay(1000.seconds)
-                        return "seed"
+                        return SeedResolutionResult.Persistent("seed")
                     }
                 }
 
@@ -399,7 +400,8 @@ class SimIdentityRepositoryHangTest {
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String = "generated_seed"
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
+                        SeedResolutionResult.Persistent("generated_seed")
                 }
 
             val identityRepo =

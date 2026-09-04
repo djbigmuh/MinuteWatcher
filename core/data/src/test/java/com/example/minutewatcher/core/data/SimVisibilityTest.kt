@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,7 +53,7 @@ class SimVisibilityTest {
     private val seedRepository: SimIdentitySeedRepository =
         mock {
             on { seedFlow } doReturn flowOf("test_seed")
-            on { getOrCreateSeed(any()) } doReturn "test_seed"
+            on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
         }
     private val migrationService: IdentityMigrationService = mock()
     private val mockSimProvider: MockSimProvider =

@@ -106,9 +106,24 @@ internal class SimIdentityObserver
                             }
                             emit(initial)
                         },
-                        seedRepository.seedFlow
-                            .filter { it.isNotEmpty() }
-                            .map { SeedResult.Real(it) as SeedResult },
+                        flow {
+                            // Ensure the update flow also respects a startup timeout to prevent infinite merge wait.
+                            // If seedRepository.seedFlow hangs (e.g. storage corruption), this flow will complete
+                            // after timeout, allowing the parent flow to settle on Fallback.
+                            val firstValue =
+                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                    seedRepository.seedFlow.first { it.isNotEmpty() }
+                                }
+                            if (firstValue != null) {
+                                emitAll(
+                                    seedRepository.seedFlow
+                                        .filter { it.isNotEmpty() }
+                                        .map { SeedResult.Real(it) },
+                                )
+                            } else {
+                                AppLogger.e("SimIdentityObserver: seed update flow timed out - updates will be unavailable")
+                            }
+                        },
                     ).onEach { attempt.set(0) }
                         .retryWhen { cause, _ ->
                             if (cause is CancellationException) return@retryWhen false
@@ -143,11 +158,14 @@ internal class SimIdentityObserver
         seedFlow
             .flatMapLatest { seed ->
                 if (seed is SeedResult.Fallback) {
-                    AppLogger.w("SimIdentityObserver: seed resolution failed, using Fallback. SIM discovery will be inactive.")
-                    _status.value = TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "SIM identity seed unavailable",
+                    AppLogger.w(
+                        "SimIdentityObserver: seed resolution failed, using Fallback. SIM discovery will be inactive.",
                     )
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "SIM identity seed unavailable",
+                        )
                     flow {
                         emit(emptyList())
                     }
@@ -166,22 +184,26 @@ internal class SimIdentityObserver
                     }.debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                         .flatMapLatest {
                             flow {
-                                val result = fetcher.fetchActiveSimsWithRetry(seed)
-                                handleDiscoveryResult(result)
+                                while (true) {
+                                    val result = fetcher.fetchActiveSimsWithRetry(seed)
+                                    val shouldRetry = handleDiscoveryResult(result)
+                                    if (!shouldRetry) break
+                                }
                             }.retryWhen { cause, _ ->
                                 if (cause is CancellationException) return@retryWhen false
+                                if (cause !is IOException) return@retryWhen false
 
                                 val currentAttempt = generalAttempt.incrementAndGet()
                                 if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
                                     AppLogger.e(
-                                        "SimIdentityObserver: physicalActiveSims discovery stopped " +
-                                            "after $currentAttempt consecutive failures",
+                                        "SimIdentityObserver: physicalActiveSims recovery stopped " +
+                                            "after $currentAttempt consecutive IO failures",
                                         cause,
                                     )
                                     _status.value =
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.UNKNOWN,
-                                            "SIM discovery stopped after $currentAttempt consecutive failures",
+                                            "SIM recovery stopped after $currentAttempt consecutive IO failures",
                                         )
                                     emit(emptyList())
                                     return@retryWhen false
@@ -190,7 +212,7 @@ internal class SimIdentityObserver
                                 val backoff =
                                     INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
                                 AppLogger.e(
-                                    "SimIdentityObserver: physicalActiveSims discovery failure " +
+                                    "SimIdentityObserver: physicalActiveSims IO failure " +
                                         "(attempt $currentAttempt), restarting in ${backoff}ms",
                                     cause,
                                 )
@@ -198,21 +220,24 @@ internal class SimIdentityObserver
                                 delay(backoff.milliseconds)
                                 true
                             }.catch { cause ->
-                                if (cause !is IOException) {
-                                    throw cause
-                                }
+                                if (cause !is IOException) throw cause
+                                // Final IOException after all retries is caught here to prevent flow from dying.
+                                // The error status is already set inside retryWhen.
                             }
                         }
                 }
             }.distinctUntilChanged()
 
-    private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(result: SimDiscoveryResult) {
+    private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
+        result: SimDiscoveryResult,
+    ): Boolean {
         when (result) {
             is SimDiscoveryResult.Available -> {
                 generalAttempt.set(0)
                 securityAttempt.set(0)
                 _status.value = TrackingStatus.Active
                 emit(result.sims)
+                return false
             }
 
             is SimDiscoveryResult.PermissionMissing -> {
@@ -224,6 +249,7 @@ internal class SimIdentityObserver
                             "SecurityException limit reached",
                         )
                     emit(emptyList())
+                    return false
                 } else {
                     _status.value =
                         TrackingStatus.Error(
@@ -231,9 +257,11 @@ internal class SimIdentityObserver
                             "Permission missing (attempt $current)",
                         )
                     emit(emptyList())
-                    permissionStateNotifier.changes.first()
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        permissionStateNotifier.changes.first()
+                    }
                     generalAttempt.set(0)
-                    throw IOException("Permission missing, retrying after grant")
+                    return true
                 }
             }
 
@@ -244,10 +272,34 @@ internal class SimIdentityObserver
                         "SIM discovery unsupported",
                     )
                 emit(emptyList())
+                return false
             }
 
             is SimDiscoveryResult.Failed -> {
-                throw IOException("SIM discovery failed: ${result.reason}")
+                val currentAttempt = generalAttempt.incrementAndGet()
+                if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
+                    AppLogger.e(
+                        "SimIdentityObserver: physicalActiveSims discovery stopped " +
+                            "after $currentAttempt consecutive logical failures: ${result.reason}",
+                    )
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "SIM discovery stopped after $currentAttempt failures: ${result.reason}",
+                        )
+                    emit(emptyList())
+                    return false
+                }
+
+                val backoff =
+                    INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
+                AppLogger.e(
+                    "SimIdentityObserver: physicalActiveSims discovery logical failure " +
+                        "(attempt $currentAttempt): ${result.reason}, retrying in ${backoff}ms",
+                )
+                emit(emptyList())
+                delay(backoff.milliseconds)
+                return true
             }
         }
     }
@@ -267,8 +319,7 @@ internal class SimIdentityObserver
                 .onEach { sims ->
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     cache.cleanupManual(activeSlots)
-                }
-                .onStart { isObservationInitialized.set(true) }
+                }.onStart { isObservationInitialized.set(true) }
                 .stateIn(
                     scope,
                     // Eagerly: поток критичен для корректности UI, остановка недопустима.
@@ -278,7 +329,7 @@ internal class SimIdentityObserver
 
         private suspend fun generateSeedWithRetry(): String? =
             withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                seedRepository.getOrCreateSeed { UUID.randomUUID().toString() }
+                seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }.seed
             }
 
         companion object {

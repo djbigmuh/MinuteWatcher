@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.SimIdentity
@@ -160,7 +161,8 @@ class SimIdentityRepositoryRaceTest {
 
                 override suspend fun setSeed(seed: String) = Unit
 
-                override suspend fun getOrCreateSeed(generator: () -> String): String = "gen"
+                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
+                    SeedResolutionResult.Persistent("gen")
             }
 
         return SimIdentityRepositoryTestHelper.createRepository(
@@ -205,7 +207,8 @@ class SimIdentityRepositoryRaceTest {
                         storedSeed.value = seed
                     }
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String = storedSeed.value
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
+                        SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
@@ -269,7 +272,8 @@ class SimIdentityRepositoryRaceTest {
                         storedSeed.value = seed
                     }
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String = storedSeed.value
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
+                        SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()

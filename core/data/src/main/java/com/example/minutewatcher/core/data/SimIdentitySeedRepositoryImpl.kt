@@ -7,11 +7,13 @@ import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,38 +77,46 @@ class SimIdentitySeedRepositoryImpl
         /**
          * Returns the existing seed or creates a new one atomically.
          *
+         * **Important:** If DataStore is unavailable after repeated attempts, returns an ephemeral
+         * seed which is NOT persisted. SIM identities will be unstable until storage access is restored.
+         *
          * @param generator Lambda that provides a new seed if needed.
-         * @return The resulting seed string.
+         * @return The resulting seed resolution result.
          * Safe to call from any coroutine context.
          */
-        override suspend fun getOrCreateSeed(generator: () -> String): String {
-            // 1. First attempt outside mutex
-            val firstAttempt = tryGetPersistentSeed(generator)
-            if (firstAttempt != null) {
-                val ephemeralToMigrate = resolveEphemeralToMigrate()
-                ephemeralToMigrate?.let { executeMigrationSafely(it, firstAttempt) }
-                return firstAttempt
-            }
+        override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
+            repeat(MAX_RETRIES) { attempt ->
+                val attemptNum = attempt + 1
+                try {
+                    val persistentSeed = tryGetPersistentSeed(generator)
+                    if (persistentSeed != null) {
+                        val ephemeralToMigrate = resolveEphemeralToMigrate()
+                        ephemeralToMigrate?.let { executeMigrationSafely(it, persistentSeed) }
+                        return SeedResolutionResult.Persistent(persistentSeed)
+                    }
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access returned null (attempt $attemptNum)")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed (attempt $attemptNum)", e)
+                }
 
-            AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access failed, retrying in 500ms...")
-            kotlinx.coroutines.delay(RETRY_DELAY_MS.milliseconds)
-
-            // 2. Second attempt outside mutex
-            val secondAttempt = tryGetPersistentSeed(generator)
-            if (secondAttempt != null) {
-                val ephemeralToMigrate = resolveEphemeralToMigrate()
-                ephemeralToMigrate?.let { executeMigrationSafely(it, secondAttempt) }
-                return secondAttempt
+                if (attemptNum < MAX_RETRIES) {
+                    val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying persistent seed access in ${delayMs}ms...")
+                    delay(delayMs.milliseconds)
+                }
             }
 
             // 3. Fallback to ephemeral seed under mutex (cache management only)
             return seedMutex.withLock {
                 AppLogger.e(
-                    "CRITICAL: DataStore unavailable after retry, using ephemeral seed. " +
+                    "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
                         "All SIM identities will change. Previous statistics will be orphaned.",
                 )
                 _isEphemeralSeedActive.value = true
-                cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+                val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+                SeedResolutionResult.Ephemeral(seed)
             }
         }
 
@@ -233,7 +243,8 @@ class SimIdentitySeedRepositoryImpl
     }
 
     private companion object {
-        private const val RETRY_DELAY_MS = 500L
+        private const val INITIAL_RETRY_DELAY_MS = 500L
+        private const val MAX_RETRIES = 3
         private const val EPHEMERAL_READ_TIMEOUT_MS = 100L
     }
     }

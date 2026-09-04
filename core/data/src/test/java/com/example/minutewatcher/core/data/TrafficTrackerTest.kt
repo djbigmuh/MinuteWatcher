@@ -187,7 +187,7 @@ class TrafficTrackerTest {
             val message = (status as TrackingStatus.Error).message
             assertTrue(
                 "Unexpected message: $message",
-                message == "Timeout reading lastTotalBytes" || message == "Traffic update timeout"
+                message == "Timeout reading lastTotalBytes" || message == "Traffic update timeout",
             )
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
@@ -208,7 +208,7 @@ class TrafficTrackerTest {
             val message = (status as TrackingStatus.Error).message
             assertTrue(
                 "Unexpected message: $message",
-                message == "Timeout reading simUsage" || message == "Traffic update timeout"
+                message == "Timeout reading simUsage" || message == "Traffic update timeout",
             )
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
@@ -463,10 +463,16 @@ class TrafficTrackerTest {
                     listOf(
                         ActiveSimInfo(
                             identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
-                            slotIndex = 0, subscriptionId = 1, iccId = "sim_0", displayName = "SIM 1",
-                            carrierName = "Carrier 1", mccMnc = "25001", isDefaultData = true, isDefaultVoice = true,
-                        )
-                    )
+                            slotIndex = 0,
+                            subscriptionId = 1,
+                            iccId = "sim_0",
+                            displayName = "SIM 1",
+                            carrierName = "Carrier 1",
+                            mccMnc = "25001",
+                            isDefaultData = true,
+                            isDefaultVoice = true,
+                        ),
+                    ),
                 )
             }
 
@@ -505,13 +511,20 @@ class TrafficTrackerTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
 
-            val activeSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0, subscriptionId = 1, iccId = "sim_0", displayName = "SIM 1",
-                    carrierName = "Carrier 1", mccMnc = "25001", isDefaultData = true, isDefaultVoice = true,
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "sim_0",
+                        displayName = "SIM 1",
+                        carrierName = "Carrier 1",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
                 )
-            )
             simFlow.emit(activeSims)
             testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
@@ -520,18 +533,23 @@ class TrafficTrackerTest {
         }
 
     private fun createTracker(scope: CoroutineScope): TrafficTracker {
-        val baselineManager = TrafficBaselineManager(
-            simIdentityRepository,
-            simUsageRepository,
-            simUsageResetRepository,
-            permissionManager,
-            timeProvider,
-            networkStatsProvider
-        )
+        val baselineManager =
+            TrafficBaselineManager(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                timeProvider,
+                networkStatsProvider,
+            )
         val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
-        val simChangeHandler = TrafficSimChangeHandler(
-            callSessionRepository, simIdentityRepository, simUsageResetRepository, baselineManager
-        )
+        val simChangeHandler =
+            TrafficSimChangeHandler(
+                callSessionRepository,
+                simIdentityRepository,
+                simUsageResetRepository,
+                baselineManager,
+            )
         val targetResolver = TrafficTargetResolver(permissionManager)
 
         return TrafficTracker(

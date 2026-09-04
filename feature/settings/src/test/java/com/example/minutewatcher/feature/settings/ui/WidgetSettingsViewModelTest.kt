@@ -537,6 +537,50 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
+    fun `updateSettings validates state immediately in memory`() =
+        runTest {
+            initViewModel()
+
+            // Test out-of-range value
+            viewModel.updateSettings {
+                it.copy(transparency = 150) // Max is 100
+            }
+            runCurrent()
+
+            val currentSettings = viewModel.state.value.settings
+            assertNotNull(currentSettings)
+            assertEquals(100, currentSettings!!.transparency)
+        }
+
+    @Test
+    fun `pending updates are validated before setting state`() =
+        runTest {
+            val deferred = CompletableDeferred<WidgetSettingsState>()
+            val slowLoader = object : WidgetSettingsLoader {
+                override suspend fun load(): WidgetSettingsState = deferred.await()
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
+                    WidgetSaveResult.Success
+
+                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
+                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+            }
+
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            runCurrent()
+
+            // Queue invalid update
+            vm.updateSettings { it.copy(fontSize = 10) } // Max is 4
+            runCurrent()
+
+            deferred.complete(WidgetSettingsState(fontSize = 1))
+            advanceUntilIdle()
+
+            val finalSettings = vm.state.value.settings
+            assertNotNull(finalSettings)
+            assertEquals(4, finalSettings!!.fontSize)
+        }
+
+    @Test
     fun `loadSettings DOES update state while saveAndNotify is in progress`() =
         runTest {
             val loadDeferred1 = CompletableDeferred<WidgetSettingsState>()
@@ -750,7 +794,7 @@ class WidgetSettingsViewModelTest {
 
             // 1. Flood with updates
             repeat(110) { i ->
-                vm.updateSettings { it.copy(fontSize = i) }
+                vm.updateSettings { it.copy(fontSize = i % 5) }
             }
             runCurrent()
 
@@ -758,7 +802,7 @@ class WidgetSettingsViewModelTest {
             deferred.complete(WidgetSettingsState(fontSize = -1))
             advanceUntilIdle()
 
-            // 3. Last applied should be 109
-            assertEquals(109, vm.state.value.settings?.fontSize)
+            // 3. Last applied should be 4 (109 % 5)
+            assertEquals(4, vm.state.value.settings?.fontSize)
         }
 }

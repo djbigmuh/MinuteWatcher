@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -81,9 +82,9 @@ class SimIdentitySeedRaceTest {
         runTest {
             val seedFlow = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
-            // Mock getOrCreateSeed to hang so it doesn't auto-generate seed during timeout
-            whenever(seedRepository.getOrCreateSeed(any())).thenAnswer {
-                "generated"
+            // Mock getOrCreateSeedOrEphemeralFallback to hang so it doesn't auto-generate seed during timeout
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any())).thenAnswer {
+                SeedResolutionResult.Persistent("generated")
             }
 
             val repository =
@@ -120,7 +121,11 @@ class SimIdentitySeedRaceTest {
         runTest {
             val seedFlow = MutableSharedFlow<String>(replay = 1).apply { tryEmit("") }
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
-            whenever(seedRepository.getOrCreateSeed(any())).doReturn("test-seed")
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any())).doReturn(
+                SeedResolutionResult.Persistent(
+                    "test-seed"
+                )
+            )
 
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
             whenever(mockSubInfo.subscriptionId).thenReturn(1)

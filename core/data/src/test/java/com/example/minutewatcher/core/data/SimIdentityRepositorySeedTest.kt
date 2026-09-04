@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.IdentitySource
@@ -108,12 +109,13 @@ class SimIdentityRepositorySeedTest {
                         storedSeed.emit(seed)
                     }
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
                         val current = storedSeed.replayCache.firstOrNull() ?: ""
                         if (current.isEmpty()) {
                             delay(60.seconds)
                         }
-                        return current.ifEmpty { generator() }
+                        val seed = current.ifEmpty { generator() }
+                        return SeedResolutionResult.Persistent(seed)
                     }
                 }
 
@@ -175,9 +177,9 @@ class SimIdentityRepositorySeedTest {
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
                         delay(60.seconds)
-                        return "generated"
+                        return SeedResolutionResult.Persistent("generated")
                     }
                 }
 
@@ -239,9 +241,9 @@ class SimIdentityRepositorySeedTest {
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
-                    override suspend fun getOrCreateSeed(generator: () -> String): String {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
                         delay(60.seconds)
-                        return "generated"
+                        return SeedResolutionResult.Persistent("generated")
                     }
                 }
 

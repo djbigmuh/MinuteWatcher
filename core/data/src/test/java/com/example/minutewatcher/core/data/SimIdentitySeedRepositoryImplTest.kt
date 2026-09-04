@@ -68,7 +68,7 @@ class SimIdentitySeedRepositoryImplTest {
                 (1..50)
                     .map {
                         async {
-                            repository.getOrCreateSeed { "seed-$it" }
+                            repository.getOrCreateSeedOrEphemeralFallback { "seed-$it" }.seed
                         }
                     }.awaitAll()
 
@@ -101,7 +101,7 @@ class SimIdentitySeedRepositoryImplTest {
             val repo = SimIdentitySeedRepositoryImpl(failingDataStore, { migrationService }, { discovery })
 
             // 1. Enter ephemeral mode
-            val ephemeralSeed = repo.getOrCreateSeed { "ephemeral-seed" }
+            val ephemeralSeed = repo.getOrCreateSeedOrEphemeralFallback { "ephemeral-seed" }.seed
             assertEquals("ephemeral-seed", ephemeralSeed)
             assertTrue(repo.isEphemeralSeedActive.value)
 
@@ -119,17 +119,17 @@ class SimIdentitySeedRepositoryImplTest {
                 IdentityMigrationService.MigrationOutcome()
             }
 
-            // Start getOrCreateSeed which should trigger migration
-            val firstCall = async { repo.getOrCreateSeed { "should-not-be-used" } }
+            // Start getOrCreateSeedOrEphemeralFallback which should trigger migration
+            val firstCall = async { repo.getOrCreateSeedOrEphemeralFallback { "should-not-be-used" } }
 
             // Wait for migration to start
             migrationStarted.await()
 
             // 3. Concurrent call should not be blocked
-            val secondCall = async { repo.getOrCreateSeed { "should-not-be-used" } }
+            val secondCall = async { repo.getOrCreateSeedOrEphemeralFallback { "should-not-be-used" } }
 
             // Second call should complete even if migration is running
-            val secondResult = withTimeout(100.milliseconds) { secondCall.await() }
+            val secondResult = withTimeout(100.milliseconds) { secondCall.await() }.seed
             assertEquals("persistent-seed", secondResult)
 
             // Cleanup
@@ -161,7 +161,7 @@ class SimIdentitySeedRepositoryImplTest {
             val repo = SimIdentitySeedRepositoryImpl(failingDataStore, { migrationService }, { discovery })
 
             // 1. Enter ephemeral mode
-            repo.getOrCreateSeed { "ephemeral-seed" }
+            repo.getOrCreateSeedOrEphemeralFallback { "ephemeral-seed" }
 
             // 2. Make migration fail
             shouldFail = false
@@ -173,10 +173,10 @@ class SimIdentitySeedRepositoryImplTest {
                 .thenReturn(IdentityMigrationService.MigrationOutcome())
 
             // First call triggers migration which fails
-            repo.getOrCreateSeed { "should-not-be-used" }
+            repo.getOrCreateSeedOrEphemeralFallback { "should-not-be-used" }
 
             // Second call should trigger migration AGAIN
-            repo.getOrCreateSeed { "should-not-be-used" }
+            repo.getOrCreateSeedOrEphemeralFallback { "should-not-be-used" }
 
             // Verification: migrateFromEphemeralSeed should be called twice
             verify(migrationService, times(2))

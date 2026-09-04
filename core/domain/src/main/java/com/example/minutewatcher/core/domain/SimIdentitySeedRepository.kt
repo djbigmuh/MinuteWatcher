@@ -34,9 +34,13 @@ interface SimIdentitySeedRepository {
     /**
      * Returns the existing seed or creates a new one using the provided generator.
      *
+     * **Important:** If DataStore is unavailable after repeated attempts, returns an ephemeral
+     * seed which is NOT persisted. SIM identities will be unstable until storage access is restored.
+     *
      * @param generator Function to generate a new seed if needed.
-     * @throws IOException if storage access fails.
+     * @return [SeedResolutionResult] containing either a persistent or ephemeral seed.
+     * @throws IOException if critical storage access fails (though usually falls back to ephemeral).
      * @throws CancellationException if the coroutine is cancelled.
      */
-    suspend fun getOrCreateSeed(generator: () -> String): String
+    suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult
 }
