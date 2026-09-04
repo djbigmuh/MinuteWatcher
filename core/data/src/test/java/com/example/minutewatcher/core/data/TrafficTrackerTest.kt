@@ -120,7 +120,7 @@ class TrafficTrackerTest {
         }
     }
 
-    private suspend fun TestScope.startTracker(): TrafficTracker {
+    private fun TestScope.startTracker(): TrafficTracker {
         val t = createTracker(backgroundScope)
         testScheduler.advanceUntilIdle()
         clearInvocations(

@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -45,15 +46,17 @@ open class WidgetSettingsSaver
             state: WidgetSettingsState,
             skipSimSettings: Boolean = false,
         ): SaveResult {
-            if (!saveMutex.tryLock()) {
-                AppLogger.d("WidgetSettingsSaver: save already in progress, returning AlreadyInProgress")
-                return SaveResult.AlreadyInProgress
-            }
+            val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
+            val result =
+                withTimeoutOrNull(timeout) {
+                    saveMutex.withLock {
+                        performSave(state, skipSimSettings)
+                    }
+                }
 
-            return try {
-                performSave(state, skipSimSettings)
-            } finally {
-                saveMutex.unlock()
+            return result ?: run {
+                AppLogger.e("WidgetSettingsSaver: save timed out waiting for lock")
+                SaveResult.Failed("Save timed out waiting for lock")
             }
         }
 

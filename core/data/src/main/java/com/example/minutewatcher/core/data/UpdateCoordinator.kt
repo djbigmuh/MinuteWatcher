@@ -172,10 +172,6 @@ class UpdateCoordinator
                 if (observationScope.getJob() !== newJob) return@launch
                 if (!isObservationStarted.get()) return@launch
 
-                // Job finished while we expected it to be running.
-                // Reset flag to allow ensureObservationStarted() to proceed.
-                isObservationStarted.set(false)
-
                 val restartCount = observationRestartCount.incrementAndGet()
 
                 val delayMs =
@@ -226,7 +222,9 @@ class UpdateCoordinator
                             _status.value = TrackingStatus.Idle
                         }
                     }
-                    ensureObservationStarted()
+                    if (isObservationStarted.compareAndSet(true, false)) {
+                        ensureObservationStarted()
+                    }
                 }
             }
         monitoringJob.set(newMonitoringJob)

@@ -34,6 +34,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -238,7 +239,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // Trigger discovery update
             permissionChanges.emit(Unit)
-            advanceTimeBy(1000) // Pass debounce
+            advanceTimeBy(1000.milliseconds) // Pass debounce
             advanceUntilIdle()
 
             // 3. Check again

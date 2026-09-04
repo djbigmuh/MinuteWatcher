@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.settings.ui
 
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -11,6 +12,7 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -60,9 +62,11 @@ class WidgetSettingsViewModel
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
+        @ApplicationScope private val externalScope: CoroutineScope,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
     private val autoSaveTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var autoSaveJob: Job? = null
+    private var lastSavedSettings: WidgetSettingsState? = null
 
     private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
     private val pendingUpdatesMutex = Mutex()
@@ -232,6 +236,10 @@ class WidgetSettingsViewModel
             )
         }
 
+        if (lastSavedSettings == null) {
+            lastSavedSettings = finalSettings
+        }
+
         if (finalSettings != loaded) {
             autoSaveTrigger.tryEmit(Unit)
         }
@@ -252,14 +260,24 @@ class WidgetSettingsViewModel
         if (state.value.isSaving) {
             AppLogger.d("saveAndNotify: already in progress (state.isSaving=true)")
             reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
+            autoSaveTrigger.tryEmit(Unit)
             return
         }
 
         try {
             // Атомарно обновляем состояние и захватываем актуальное значение
             val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
+            val settingsToSave = state.value.settings
             val result = performSaveInternal(currentState)
             currentCoroutineContext().ensureActive()
+
+            if (result == SaveResult.AlreadyInProgress) {
+                autoSaveTrigger.tryEmit(Unit)
+            }
+
+            if ((result is SaveResult.Success || result is SaveResult.PartialSuccess) && settingsToSave != null) {
+                lastSavedSettings = settingsToSave
+            }
             reduce { copy(saveResult = result) }
         } catch (e: CancellationException) {
             throw e
@@ -311,14 +329,38 @@ class WidgetSettingsViewModel
 
         val timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds
         val result =
-            withTimeoutOrNull(timeout) {
-                saver.save(validatedState, skipSimSettings = isPartial)
+            withContext(NonCancellable) {
+                withTimeoutOrNull(timeout) {
+                    saver.save(validatedState, skipSimSettings = isPartial)
+                }
             }
 
         return result ?: run {
             AppLogger.e("saveAndNotify: operation timed out after ${timeout.inWholeMilliseconds}ms")
             SaveResult.Failed("Saving timed out. Storage might be slow or unavailable.")
         }
+    }
+
+    override fun onCleared() {
+        autoSaveJob?.cancel()
+        val currentSettings = state.value.settings
+        val lastSaved = lastSavedSettings
+
+        if (currentSettings != null && currentSettings != lastSaved) {
+            AppLogger.d("WidgetSettingsViewModel: executing emergency save onCleared")
+            externalScope.launch {
+                withContext(NonCancellable) {
+                    try {
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            saver.save(currentSettings, skipSimSettings = currentSettings.simListLoadFailed)
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetSettingsViewModel: emergency save failed", e)
+                    }
+                }
+            }
+        }
+        super.onCleared()
     }
 
     companion object {

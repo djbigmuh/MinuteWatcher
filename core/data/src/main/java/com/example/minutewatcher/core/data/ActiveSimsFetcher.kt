@@ -95,14 +95,12 @@ internal class ActiveSimsFetcher
         ) {
             when (e) {
                 is SeedUnavailableException -> {
-                    if (attempt == MAX_FETCH_ATTEMPTS) throw e
+                    if (attempt == MAX_FETCH_ATTEMPTS) return
                     AppLogger.w("ActiveSimsFetcher: Seed unavailable, retrying fetch (attempt ${attempt + 1})")
                     delay(delay.milliseconds)
                 }
                 is IOException -> {
-                    if (attempt == MAX_FETCH_ATTEMPTS) {
-                        throw IOException("Terminal DataStore error after ${MAX_FETCH_ATTEMPTS + 1} attempts", e)
-                    }
+                    if (attempt == MAX_FETCH_ATTEMPTS) return
                     AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
                     delay(delay.milliseconds)
                 }

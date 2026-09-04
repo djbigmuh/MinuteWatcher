@@ -220,17 +220,14 @@ class SimIdentityObserverTest {
             // To test recovery after true Fallback, we'd need to re-initialize observation.
             // But for now, we just verify the current behavior.
 
-            // Adjusting test to verify Fallback state remains after updateFlow timeout.
+            // Adjusting test to verify that the flow NOW RECOVERS even after timeout
+            // because we removed the restrictive 10s startup timeout in Instruction 8.
             seedFlow.value = "recovered_seed"
             testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.runCurrent()
 
-            // It should still be Error because updateFlow finished after 10s.
             val finalStatus = observer.status.value
-            assertTrue(
-                "Status should remain Error after timeout, but was $finalStatus",
-                finalStatus is TrackingStatus.Error
-            )
+            assertEquals(TrackingStatus.Active, finalStatus)
             job.cancel()
         }
 

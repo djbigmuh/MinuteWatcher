@@ -79,9 +79,9 @@ class TrafficTracker
         scope.launch {
             try {
                 permissionStateNotifier.changes.collect {
-                    if (initializationFailed.get() &&
-                        permissionManager.hasPhoneStatePermission() &&
-                        permissionManager.hasUsageStatsPermission()
+                    if (permissionManager.hasPhoneStatePermission() &&
+                        permissionManager.hasUsageStatsPermission() &&
+                        initializationFailed.compareAndSet(true, false)
                     ) {
                         AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
                         initializeWithRetry()
@@ -96,7 +96,7 @@ class TrafficTracker
         scope.launch {
             try {
                 simIdentityRepository.observeActiveSims().collect {
-                    if (initializationFailed.get()) {
+                    if (initializationFailed.compareAndSet(true, false)) {
                         AppLogger.d("TrafficTracker: attempting auto-recovery after SIM change")
                         initializeWithRetry()
                     }
@@ -115,7 +115,6 @@ class TrafficTracker
         while (true) {
             try {
                 updateTrafficUsageLogic()
-                initializationFailed.set(false)
                 return
             } catch (e: CancellationException) {
                 throw e

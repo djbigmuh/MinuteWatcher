@@ -39,6 +39,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.concurrent.Executor
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -178,7 +179,7 @@ class SimIdentityRepositoryRegistrationTest {
             // 3. Trigger permission regrant signal
             permissionChanges.emit(Unit)
             // Advance time to pass debounce (300ms) and potential backoffs
-            advanceTimeBy(10000)
+            advanceTimeBy(10000.milliseconds)
             advanceUntilIdle()
             runCurrent()
 

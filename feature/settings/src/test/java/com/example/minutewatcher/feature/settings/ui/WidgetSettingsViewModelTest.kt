@@ -65,7 +65,7 @@ class WidgetSettingsViewModelTest {
     }
 
     private fun TestScope.initViewModel() {
-        viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+        viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository, backgroundScope)
         advanceUntilIdle()
     }
 
@@ -84,7 +84,7 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
 
             // Initial load in init
-            val initialViewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            val initialViewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
             assertTrue(initialViewModel.state.value.isLoadError)
 
@@ -126,7 +126,7 @@ class WidgetSettingsViewModelTest {
                 }
             val realSaver = WidgetSettingsSaver(blockingLoader, mock())
             whenever(loader.load()).thenReturn(WidgetSettingsState())
-            val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             launch { vm.saveAndNotify() }
@@ -163,7 +163,7 @@ class WidgetSettingsViewModelTest {
                         skipSimSettings: Boolean,
                     ): SaveResult = SaveResult.Failed("Generic failure")
                 }
-            val vm = WidgetSettingsViewModel(loader, failingSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, failingSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             vm.saveAndNotify()
@@ -221,7 +221,7 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, localSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, localSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             vm.updateSettings { it.copy(fontSize = 1) }
@@ -280,7 +280,7 @@ class WidgetSettingsViewModelTest {
                 }
 
             // 1. Create VM (triggers first load in init)
-            val vm = WidgetSettingsViewModel(fakeLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(fakeLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
 
             // 2. Trigger second load while first is still pending
@@ -328,7 +328,7 @@ class WidgetSettingsViewModelTest {
                         skipSimSettings: Boolean,
                     ): SaveResult = throw CancellationException("Test cancellation")
                 }
-            val vm = WidgetSettingsViewModel(loader, cancelingSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, cancelingSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             vm.saveAndNotify()
@@ -354,7 +354,7 @@ class WidgetSettingsViewModelTest {
                 }
             val realSaver = WidgetSettingsSaver(hangingLoader, mock())
             whenever(loader.load()).thenReturn(WidgetSettingsState())
-            val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, realSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             val saveJob =
@@ -386,7 +386,7 @@ class WidgetSettingsViewModelTest {
                         return SaveResult.Success
                     }
                 }
-            val vm = WidgetSettingsViewModel(loader, partialSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, partialSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             vm.updateSettings { it.copy(simListLoadFailed = true) }
@@ -404,7 +404,7 @@ class WidgetSettingsViewModelTest {
         runTest {
             // Имитировать ошибку загрузки
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
@@ -421,7 +421,7 @@ class WidgetSettingsViewModelTest {
         runTest {
             // Имитировать ошибку загрузки
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
@@ -437,7 +437,7 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify returns Failed when loading failed previously`() =
         runTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, saver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
@@ -467,7 +467,7 @@ class WidgetSettingsViewModelTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             // Do NOT advance time, so it's still loading inside init -> loadSettings
 
             vm.saveAndNotify()
@@ -492,7 +492,7 @@ class WidgetSettingsViewModelTest {
                         return SaveResult.Success
                     }
                 }
-            val vm = WidgetSettingsViewModel(loader, capturingSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, capturingSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             // Test MAX values
@@ -565,7 +565,7 @@ class WidgetSettingsViewModelTest {
                 override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
             }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
 
             // Queue invalid update
@@ -622,7 +622,7 @@ class WidgetSettingsViewModelTest {
                 }
 
             // Create a NEW vm for this test to avoid shared state
-            val vm = WidgetSettingsViewModel(controlledLoader, controlledSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(controlledLoader, controlledSaver, usageStateRepository, backgroundScope)
             runCurrent()
 
             // 1. Complete initial load
@@ -676,7 +676,7 @@ class WidgetSettingsViewModelTest {
                 }
 
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 1))
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             // 1. Initial state
@@ -721,7 +721,7 @@ class WidgetSettingsViewModelTest {
                 override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
             }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
 
             // 1. Queue updates
@@ -759,7 +759,7 @@ class WidgetSettingsViewModelTest {
                 override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
             }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
 
             // 1. Queue SIM update
@@ -789,7 +789,7 @@ class WidgetSettingsViewModelTest {
                 override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
             }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository)
+            val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
 
             // 1. Flood with updates
@@ -804,5 +804,120 @@ class WidgetSettingsViewModelTest {
 
             // 3. Last applied should be 4 (109 % 5)
             assertEquals(4, vm.state.value.settings?.fontSize)
+        }
+
+    @Test
+    fun `onCleared triggers emergency save if settings are unsaved`() =
+        runTest {
+            initViewModel()
+
+            // 1. Change setting, but don't wait for debounce
+            viewModel.updateSettings { it.copy(fontSize = 4) }
+            runCurrent()
+
+            // Verify no save yet
+            verify(saver, never()).save(any(), any())
+
+            // 2. Act: Call onCleared via reflection
+            val method = viewModel.javaClass.getDeclaredMethod("onCleared")
+            method.isAccessible = true
+            method.invoke(viewModel)
+            runCurrent()
+
+            // 3. Assert: Verify emergency save was triggered
+            verify(saver).save(any(), any())
+        }
+
+    @Test
+    fun `saveAndNotify is not interrupted by scope cancellation`() =
+        runTest {
+            val saveGate = CompletableDeferred<Unit>()
+            val controlledSaver = object : WidgetSettingsSaver(loader, mock()) {
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean): SaveResult {
+                    saveGate.await()
+                    return SaveResult.Success
+                }
+            }
+
+            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
+            advanceUntilIdle()
+
+            // Use a separate job for saveAndNotify to cancel it independently
+            val job = launch {
+                vm.saveAndNotify()
+            }
+            runCurrent()
+            assertTrue(vm.state.value.isSaving)
+
+            // Cancel the calling job
+            job.cancel()
+            runCurrent()
+
+            // Complete the save in the background (NonCancellable should protect executeSave)
+            saveGate.complete(Unit)
+            advanceUntilIdle()
+
+            // Verify isSaving is eventually false
+            assertFalse(vm.state.value.isSaving)
+        }
+
+    @Test
+    fun `sequential updates trigger multiple saves ensuring final state is persisted`() =
+        runTest {
+            val capturedStates = mutableListOf<WidgetSettingsState>()
+            var saveGate = CompletableDeferred<Unit>()
+            val controlledSaver = object : WidgetSettingsSaver(loader, mock()) {
+                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean): SaveResult {
+                    capturedStates.add(state)
+                    saveGate.await()
+                    return SaveResult.Success
+                }
+            }
+
+            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
+            advanceUntilIdle()
+
+            // 1. First update
+            vm.updateSettings { it.copy(fontSize = 1) }
+            advanceTimeBy(500.milliseconds)
+            runCurrent()
+
+            assertTrue(vm.state.value.isSaving)
+            assertEquals(1, capturedStates.size)
+            assertEquals(1, capturedStates.last().fontSize)
+
+            // 2. Second save attempt manually while first is saving
+            // Re-create gate for second save
+            val firstSaveGate = saveGate
+            saveGate = CompletableDeferred()
+
+            // Manual call instead of auto-save to trigger AlreadyInProgress immediately
+            val secondSaveJob = launch {
+                vm.saveAndNotify()
+            }
+            runCurrent()
+
+            // Should have triggered AlreadyInProgress in ViewModel and re-emitted to autoSaveTrigger
+            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
+
+            // 3. Complete first save
+            firstSaveGate.complete(Unit)
+            runCurrent()
+            advanceUntilIdle()
+
+            // isSaving should be false now
+            assertFalse(vm.state.value.isSaving)
+
+            // 4. Advance time for the second (auto-save) debounce triggered by the retry
+            advanceTimeBy(500.milliseconds)
+            runCurrent()
+
+            // Should have saved again with current state
+            // (Note: we didn't change the state in step 2, but the retry should still happen)
+            assertEquals(2, capturedStates.size)
+
+            saveGate.complete(Unit)
+            advanceUntilIdle()
+            secondSaveJob.join()
         }
 }

@@ -107,22 +107,14 @@ internal class SimIdentityObserver
                             emit(initial)
                         },
                         flow {
-                            // Ensure the update flow also respects a startup timeout to prevent infinite merge wait.
-                            // If seedRepository.seedFlow hangs (e.g. storage corruption), this flow will complete
-                            // after timeout, allowing the parent flow to settle on Fallback.
-                            val firstValue =
-                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                    seedRepository.seedFlow.first { it.isNotEmpty() }
-                                }
-                            if (firstValue != null) {
-                                emitAll(
-                                    seedRepository.seedFlow
-                                        .filter { it.isNotEmpty() }
-                                        .map { SeedResult.Real(it) },
-                                )
-                            } else {
-                                AppLogger.e("SimIdentityObserver: seed update flow timed out - updates will be unavailable")
-                            }
+                            // We don't use a timeout here because we want this flow to eventually
+                            // recover even if the seed takes a long time to arrive (e.g. slow storage).
+                            // The initial Fallback will be emitted by the sibling flow in merge.
+                            emitAll(
+                                seedRepository.seedFlow
+                                    .filter { it.isNotEmpty() }
+                                    .map { SeedResult.Real(it) },
+                            )
                         },
                     ).onEach { attempt.set(0) }
                         .retryWhen { cause, _ ->
@@ -220,9 +212,18 @@ internal class SimIdentityObserver
                                 delay(backoff.milliseconds)
                                 true
                             }.catch { cause ->
-                                if (cause !is IOException) throw cause
-                                // Final IOException after all retries is caught here to prevent flow from dying.
-                                // The error status is already set inside retryWhen.
+                                if (cause is CancellationException) throw cause
+                                AppLogger.e("SimIdentityObserver: physicalActiveSims flow error", cause)
+
+                                // If it's a terminal IOException after all retries, it's already handled in retryWhen.
+                                // We only set error status for truly unexpected exceptions that reached here directly.
+                                if (cause !is IOException) {
+                                    _status.value = TrackingStatus.Error(
+                                        TrackingStatus.ErrorType.UNKNOWN,
+                                        cause.message ?: "Unexpected flow error"
+                                    )
+                                }
+                                emit(emptyList())
                             }
                         }
                 }

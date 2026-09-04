@@ -191,8 +191,8 @@ class WidgetUpdaterImplTest {
     @Test
     fun `updateAll coalesces concurrent calls`() =
         runTest {
-            val startBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
-            val finishBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val startBarrier = CompletableDeferred<Unit>()
+            val finishBarrier = CompletableDeferred<Unit>()
 
             val fakeRenderer =
                 object : WidgetRenderer {
@@ -598,8 +598,8 @@ class WidgetUpdaterImplTest {
                 mockSettings.value = transform(mockSettings.value)
             }
 
-            val startBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
-            val finishBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val startBarrier = CompletableDeferred<Unit>()
+            val finishBarrier = CompletableDeferred<Unit>()
             var callCount = 0
 
             val fakeRenderer =
@@ -651,7 +651,7 @@ class WidgetUpdaterImplTest {
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
 
-            val finishBarrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val finishBarrier = CompletableDeferred<Unit>()
             val fakeRenderer =
                 object : WidgetRenderer {
                     override suspend fun renderAll(
