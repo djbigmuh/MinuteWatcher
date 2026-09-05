@@ -94,7 +94,13 @@ class UpdateCoordinator
         }
 
         private fun ensureObservationStarted() {
-            if (isObservationStarted.get()) return
+            if (isObservationStarted.get()) {
+                // Проверяем, что джоб наблюдения ещё активен
+                val job = observationScope.getJob()
+                if (job?.isActive == true) return
+                // Джоб завершён — сбрасываем флаг для перезапуска
+                isObservationStarted.set(false)
+            }
             scope.launch {
                 if (isObservationStarted.compareAndSet(false, true)) {
                     try {

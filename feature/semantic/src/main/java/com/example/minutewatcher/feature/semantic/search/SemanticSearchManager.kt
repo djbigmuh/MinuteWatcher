@@ -248,6 +248,7 @@ open class SemanticSearchManager
                     )
             }
             delay(currentBackoff.milliseconds)
+            resetLastSnapshotState()
             return IndexResult.MutexTimeout
         }
 

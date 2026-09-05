@@ -116,7 +116,7 @@ class MainInitializationController
 
         if (isSuccess) {
             if (lastRefreshAt == 0L) {
-                onUpdateLastRefreshAt(timeProvider.now())
+                onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
             }
             return true
         }

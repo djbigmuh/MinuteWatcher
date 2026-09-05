@@ -3,7 +3,6 @@ package com.example.minutewatcher.feature.main.controller
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
 import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Container for controllers used by MainViewModel.
@@ -18,7 +17,6 @@ import javax.inject.Singleton
  * @property dataRefreshNotifier Notifier for data refresh events.
  * @property widgetObservationRecovery Lazy reference to coordinator for recovery.
  */
-@Singleton
 class MainViewModelControllers
     @Inject
     constructor(
@@ -26,6 +24,7 @@ class MainViewModelControllers
         val refresh: MainSimRefreshController,
         val settings: MainSettingsController,
         val simData: MainSimDataController,
+        val resume: MainResumeController,
         val dataRefreshNotifier: DataRefreshNotifier,
         val widgetObservationRecovery: dagger.Lazy<WidgetUpdateCoordinator>,
     )

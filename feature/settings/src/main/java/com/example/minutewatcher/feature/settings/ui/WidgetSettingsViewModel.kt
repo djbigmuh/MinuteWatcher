@@ -277,7 +277,7 @@ class WidgetSettingsViewModel
                 autoSaveTrigger.tryEmit(Unit)
             }
 
-            if ((result is SaveResult.Success || result is SaveResult.PartialSuccess) && settingsToSave != null) {
+            if (result is SaveResult.Success && settingsToSave != null) {
                 lastSavedSettings = settingsToSave
             }
             reduce { copy(saveResult = result) }

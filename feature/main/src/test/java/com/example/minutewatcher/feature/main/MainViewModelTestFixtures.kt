@@ -24,6 +24,7 @@ import com.example.minutewatcher.feature.main.controller.AutoResetScheduler
 import com.example.minutewatcher.feature.main.controller.MainBannerController
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainInitializationController
+import com.example.minutewatcher.feature.main.controller.MainResumeController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
 import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
@@ -57,7 +58,6 @@ abstract class MainViewModelTestFixtures {
 
     protected val testDispatcher: TestDispatcher get() = mainDispatcherRule.testDispatcher
     protected val testScope by lazy { TestScope(testDispatcher) }
-    protected val testScheduler get() = testDispatcher.scheduler
 
     protected val simIdentityRepository: SimIdentityRepository = mock()
     protected val simLimitsRepository: SimLimitsRepository = mock()
@@ -202,14 +202,20 @@ abstract class MainViewModelTestFixtures {
                 ioDispatcher = testDispatcher,
                 scope = scope,
             )
+        val resumeController =
+            MainResumeController(
+                timeProvider = timeProvider,
+                savedStateHandle = savedStateHandle,
+            )
 
         return MainViewModelControllers(
             banner = bannerController,
             refresh = refreshController,
             settings = settingsController,
             simData = simDataController,
+            resume = resumeController,
             dataRefreshNotifier = dataRefreshNotifier,
-            widgetObservationRecovery = dagger.Lazy { updateCoordinator },
+            widgetObservationRecovery = { updateCoordinator },
         )
     }
 }

@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainInitializationController
-import com.example.minutewatcher.feature.main.controller.MainResumeController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -54,8 +53,6 @@ class MainViewModel
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
-
-    private val resumeController = MainResumeController(timeProvider, savedStateHandle)
 
         init {
             initController.initializeApp(
@@ -201,7 +198,7 @@ class MainViewModel
             controllers.refresh.refreshSimCardsNow(
                 scope = viewModelScope,
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
-                onSuccess = { lastRefreshAt = timeProvider.now() },
+                onSuccess = { lastRefreshAt = timeProvider.elapsedRealtime() },
                 onComplete = onComplete,
             )
         }
@@ -219,14 +216,11 @@ class MainViewModel
             }
 
         fun onActivityResume() {
-            resumeController.onActivityResume(
+            controllers.resume.onActivityResume(
                 scope = viewModelScope,
                 initController = initController,
-                lastRefreshAt = lastRefreshAt,
                 onRefreshNeeded = {
-                    if (refreshAndNotify(force = false)) {
-                        lastRefreshAt = timeProvider.now()
-                    }
+                    refreshAndNotify(force = false)
                 },
             ) {
                 lastRefreshAt = it
@@ -234,6 +228,6 @@ class MainViewModel
         }
 
         companion object {
-            internal const val KEY_LAST_REFRESH_TIME = "last_refresh_time"
+            const val KEY_LAST_REFRESH_TIME = "last_refresh_time"
         }
     }

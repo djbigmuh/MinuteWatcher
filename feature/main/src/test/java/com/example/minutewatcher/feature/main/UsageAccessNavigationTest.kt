@@ -21,6 +21,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainBannerController
 import com.example.minutewatcher.feature.main.controller.MainDialogController
+import com.example.minutewatcher.feature.main.controller.MainResumeController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
 import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
@@ -146,6 +147,12 @@ class UsageAccessNavigationTest {
                 scope = scope,
             )
 
+        val resumeController =
+            MainResumeController(
+                timeProvider = timeProvider,
+                savedStateHandle = savedStateHandle,
+            )
+
         val autoResetScheduler =
             com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
                 savedStateHandle,
@@ -168,8 +175,9 @@ class UsageAccessNavigationTest {
                 refresh = refreshController,
                 settings = settingsController,
                 simData = simDataController,
+                resume = resumeController,
                 dataRefreshNotifier = dataRefreshNotifier,
-                widgetObservationRecovery = dagger.Lazy { updateCoordinator },
+                widgetObservationRecovery = { updateCoordinator },
             )
 
         return MainViewModel(

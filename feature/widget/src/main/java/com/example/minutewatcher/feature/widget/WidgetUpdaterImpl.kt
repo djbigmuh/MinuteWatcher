@@ -205,7 +205,10 @@ class WidgetUpdaterImpl
                 }
 
             return when {
-                success -> WidgetUpdateResult.Success(wasCoalesced = false)
+                success -> {
+                    limitExceededHandled.set(false)
+                    WidgetUpdateResult.Success(wasCoalesced = false)
+                }
                 lastOutcome is UpdateOutcome.LimitExceeded ->
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
@@ -291,6 +294,7 @@ class WidgetUpdaterImpl
                     if (result.wasFull) {
                         limitManager.setWidgetLimitExceeded(value = false)
                     }
+                    limitExceededHandled.set(false)
                     UpdateOutcome.Success()
                 }
 
