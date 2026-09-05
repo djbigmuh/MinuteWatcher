@@ -46,6 +46,7 @@ class ResetManager
          */
         private val resetMutex = Mutex()
     private val lastResetCheck = ConcurrentHashMap<String, Long>()
+    private val pendingResets = ConcurrentHashMap.newKeySet<String>()
 
         /**
          * Checks and performs automatic resets for all active SIMs.
@@ -128,37 +129,44 @@ class ResetManager
 
             val shouldCheck =
                 resetMutex.withLock {
-                    // 1. Skip if we checked this identity recently (e.g. within the last hour)
-                    // This check is the primary protection against redundant work from concurrent callers.
                     val lastCheck = lastResetCheck[identity]
-                    if ((lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)) {
+                    val isCoolingDown = (lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)
+                    if (isCoolingDown || !pendingResets.add(identity)) {
                         false
                     } else {
-                        // Mark as checked immediately to ensure next concurrent call skips.
-                        lastResetCheck[identity] = nowElapsed
                         true
                     }
                 }
 
             var success = false
             if (shouldCheck) {
-                // 2. Perform the reset check and operation OUTSIDE the global lock.
-                // Operations for individual SIMs are already synchronized in repositories.
-                val usage =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        simUsageRepository.getSimUsage(identity).first()
+                try {
+                    val usage =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            simUsageRepository.getSimUsage(identity).first()
+                        }
+
+                    if (usage == null) {
+                        AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+                    } else {
+                        val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
+
+                        if (resetPerformed) {
+                            resetIdentities.add(identity)
+                        }
+                        success = true
                     }
 
-                if (usage == null) {
-                    AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
-                } else {
-                    val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
-
-                    if (resetPerformed) {
-                        resetIdentities.add(identity)
+                    if (success) {
+                        resetMutex.withLock {
+                            lastResetCheck[identity] = nowElapsed
+                        }
                     }
-                    success = true
+                } finally {
+                    pendingResets.remove(identity)
                 }
+            } else {
+                success = true // Skip or already pending is not a failure of the coordinator
             }
             return success
         }

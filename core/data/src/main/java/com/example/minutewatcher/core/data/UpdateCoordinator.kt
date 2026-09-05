@@ -26,8 +26,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -62,11 +60,12 @@ class UpdateCoordinator
     private var consecutiveUpdateFailures = 0
     private val observationRestartCount = AtomicInteger(0)
     private val degradedCycleCount = AtomicInteger(0)
-    private val stateMutex = Mutex()
+    private val stateLock = Any()
 
     private val isObservationStarted = AtomicBoolean(false)
     private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
     private val monitoringJob = AtomicReference<Job?>(null)
+    private val currentObservationJob = AtomicReference<Job?>(null)
 
     init {
         ensureObservationStarted()
@@ -80,9 +79,10 @@ class UpdateCoordinator
         override suspend fun recover() {
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
             monitoringJob.get()?.cancel()
+            observationScope.getJob()?.cancel()
             observationRestartCount.set(0)
             degradedCycleCount.set(0)
-            stateMutex.withLock {
+            synchronized(stateLock) {
                 lastSnapshotHash = null
                 consecutiveUpdateFailures = 0
                 _status.value = TrackingStatus.Idle
@@ -160,6 +160,7 @@ class UpdateCoordinator
                     }
                 }
 
+            currentObservationJob.set(newJob)
             launchMonitoringJob(newJob)
             _status.value = TrackingStatus.Active
         }
@@ -169,7 +170,7 @@ class UpdateCoordinator
         val newMonitoringJob =
             scope.launch {
                 newJob.join()
-                if (observationScope.getJob() !== newJob) return@launch
+                if (currentObservationJob.get() !== newJob) return@launch
                 if (!isObservationStarted.get()) return@launch
 
                 val restartCount = observationRestartCount.incrementAndGet()
@@ -214,7 +215,7 @@ class UpdateCoordinator
                 kotlinx.coroutines.delay(delayMs.milliseconds)
 
                 if (observationScope.getJob() === newJob) {
-                    stateMutex.withLock {
+                    synchronized(stateLock) {
                         lastSnapshotHash = null
                         consecutiveUpdateFailures = 0
                         // В деградированном режиме оставляем Error для информирования UI
@@ -245,7 +246,7 @@ class UpdateCoordinator
         if (!shouldUpdate) return
 
         if (snapshot.suppressWidgetUpdate) {
-            stateMutex.withLock {
+            synchronized(stateLock) {
                 lastSnapshotHash = newHash
             }
             return
@@ -258,22 +259,22 @@ class UpdateCoordinator
         handleUpdateResult(result, newHash)
     }
 
-    private suspend fun checkShouldUpdate(newHash: Int): Boolean =
-        stateMutex.withLock {
-                if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                    AppLogger.d(
-                        "UpdateCoordinator: widget update suppressed due to too many failures " +
-                            "($consecutiveUpdateFailures)",
-                    )
-                    return@withLock false
-                }
-
-                if (newHash == lastSnapshotHash) {
-                    AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                    return@withLock false
-                }
-                true
+    private fun checkShouldUpdate(newHash: Int): Boolean =
+        synchronized(stateLock) {
+            if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                AppLogger.d(
+                    "UpdateCoordinator: widget update suppressed due to too many failures " +
+                        "($consecutiveUpdateFailures)",
+                )
+                return@synchronized false
             }
+
+            if (newHash == lastSnapshotHash) {
+                AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
+                return@synchronized false
+            }
+            true
+        }
 
     private suspend fun performWidgetUpdate(): WidgetUpdateResult =
         try {
@@ -288,11 +289,11 @@ class UpdateCoordinator
             )
         }
 
-    private suspend fun handleUpdateResult(
+    private fun handleUpdateResult(
         result: WidgetUpdateResult,
         newHash: Int,
     ) {
-        stateMutex.withLock {
+        synchronized(stateLock) {
             if (result.isSuccess) {
                 _status.value = TrackingStatus.Active
                 observationRestartCount.set(0)
@@ -390,7 +391,7 @@ class UpdateCoordinator
         }
 
     private suspend fun performForcedUpdate(): Boolean {
-        stateMutex.withLock {
+        synchronized(stateLock) {
             if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
                 AppLogger.w(
                     "UpdateCoordinator: forced widget update suppressed due to too many failures " +
@@ -400,16 +401,18 @@ class UpdateCoordinator
             }
         }
 
+        val currentSnapshot = usageStateRepository.observeSnapshot().value
+        val currentHash = SnapshotUtils.calculateContentHash(currentSnapshot)
+
         return try {
             val result = widgetUpdater.updateAll()
 
-            stateMutex.withLock {
+            synchronized(stateLock) {
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
                     observationRestartCount.set(0)
                     degradedCycleCount.set(0)
-                    lastSnapshotHash =
-                        SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
+                    lastSnapshotHash = currentHash
                     true
                 } else {
                     handleUpdateFailure()
@@ -420,7 +423,7 @@ class UpdateCoordinator
             throw e
         } catch (e: Exception) {
             AppLogger.w("Force widget update failed, hash not updated", e)
-            stateMutex.withLock {
+            synchronized(stateLock) {
                 handleUpdateFailure()
             }
             false

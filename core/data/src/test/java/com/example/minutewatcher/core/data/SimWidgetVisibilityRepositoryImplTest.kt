@@ -128,4 +128,23 @@ class SimWidgetVisibilityRepositoryImplTest {
             assertEquals(true, result?.showTraffic)
             assertEquals(false, result?.showTrafficLimit)
         }
+
+    @Test
+    fun `clearOrphanedSettings correctly extracts identity for longest prefix match`() =
+        runTest {
+            // Key: widget_show_sim_icon_icc_abc
+            // Identity should be: icc_abc
+            // If prefix widget_show_sim_ matched, identity would be icon_icc_abc (incorrect)
+
+            val identity = "icc_abc"
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.showSimIconKey(identity)] = true
+            }
+
+            // Should remove it because icc_abc is NOT in active set
+            repository.clearOrphanedSettings(emptyList())
+
+            val prefs = dataStore.data.first()
+            assertNull(prefs[DataStoreKeys.showSimIconKey(identity)])
+        }
 }

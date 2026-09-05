@@ -294,6 +294,28 @@ class TrackingBannerMapperTest {
         assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
     }
 
+    @Test
+    fun `mapToBannerState hides all banners when statusMap is empty and permissions granted`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+
+        assertFalse(state.showTrafficErrorBanner)
+        assertFalse(state.showTrafficFallbackBanner)
+        assertFalse(state.showCallsErrorBanner)
+        assertFalse(state.showAppSearchErrorBanner)
+        assertFalse(state.showShortcutsErrorBanner)
+        assertFalse(state.showUsageAccessBanner)
+        assertEquals(PermissionUiState.GRANTED, state.phonePermissionState)
+        assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
+        assertFalse(state.observationFailed)
+    }
+
     private fun mapToBannerStateWithAppSearch(
         statusMap: Map<String, TrackingStatus>,
         retryCount: Int = 0,

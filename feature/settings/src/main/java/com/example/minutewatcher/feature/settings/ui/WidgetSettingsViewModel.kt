@@ -346,17 +346,19 @@ class WidgetSettingsViewModel
         val currentSettings = state.value.settings
         val lastSaved = lastSavedSettings
 
-        if (currentSettings != null && currentSettings != lastSaved) {
+        if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
             AppLogger.d("WidgetSettingsViewModel: executing emergency save onCleared")
             externalScope.launch {
-                withContext(NonCancellable) {
-                    try {
+                try {
+                    withContext(NonCancellable) {
                         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                             saver.save(currentSettings, skipSimSettings = currentSettings.simListLoadFailed)
                         }
-                    } catch (e: Exception) {
-                        AppLogger.e("WidgetSettingsViewModel: emergency save failed", e)
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetSettingsViewModel: emergency save failed", e)
                 }
             }
         }

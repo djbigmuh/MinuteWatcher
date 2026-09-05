@@ -4,8 +4,11 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimDiscoveryResult
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,7 +16,9 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -157,18 +162,18 @@ class SimIdentityObserverTest {
 
             // Advance time to pass initial debounce from setup emission
             testScheduler.advanceTimeBy(1000.milliseconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
 
-            repeat(51) {
+            repeat(6) {
                 permissionChanges.emit(Unit)
                 testScheduler.advanceTimeBy(3000.milliseconds)
                 testScheduler.runCurrent()
             }
 
-            // MAX_SECURITY_ATTEMPTS = 50.
-            // Attempt 1..50 return true. Attempt 51 returns false.
-            // Total calls = 51.
-            verify(fetcher, times(51)).fetchActiveSimsWithRetry(any())
+            // MAX_SECURITY_ATTEMPTS = 5.
+            // Attempt 1..5 return true. Attempt 6 returns false.
+            // Total calls = 6.
+            verify(fetcher, times(6)).fetchActiveSimsWithRetry(any())
 
             job.cancel()
         }
@@ -209,19 +214,6 @@ class SimIdentityObserverTest {
             assertEquals("SIM identity seed unavailable", (status as TrackingStatus.Error).message)
             assertTrue(observer.activeSimsCache.value.isEmpty())
 
-            // Arrange for recovery
-            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
-                SimDiscoveryResult.Available(emptyList()),
-            )
-
-            // Recover when seed becomes available
-            // Note: with Instruction 14, recovery only works if it happens within 10s of flow start.
-            // In this test, we wait 15s, so the update flow is ALREADY dead.
-            // To test recovery after true Fallback, we'd need to re-initialize observation.
-            // But for now, we just verify the current behavior.
-
-            // Adjusting test to verify that the flow NOW RECOVERS even after timeout
-            // because we removed the restrictive 10s startup timeout in Instruction 8.
             seedFlow.value = "recovered_seed"
             testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.runCurrent()
@@ -232,27 +224,250 @@ class SimIdentityObserverTest {
         }
 
     @Test
+    fun `seedFlow does not emit Fallback if Real seed arrives before timeout`() =
+        runTest {
+            val seedFlow = MutableSharedFlow<String>(replay = 1)
+            whenever(seedRepository.seedFlow).thenReturn(seedFlow)
+
+            seedRepository.stub {
+                on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("too_late")
+            }
+
+            observer = createObserver(backgroundScope)
+
+            val emissions = mutableListOf<SeedResult>()
+            val job = launch {
+                observer.seedFlow.collect { emissions.add(it) }
+            }
+
+            testScheduler.advanceTimeBy(5000.milliseconds)
+            seedFlow.emit("real_seed")
+            testScheduler.runCurrent()
+
+            testScheduler.advanceTimeBy(10000.milliseconds)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals("Should have only one emission", 1, emissions.size)
+            assertTrue("Should be Real emission", emissions[0] is SeedResult.Real)
+            assertEquals("real_seed", (emissions[0] as SeedResult.Real).value)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `seedFlow resets exhausted and emits Real if seed arrives after many failures`() =
+        runTest {
+            val seedFlow = MutableSharedFlow<String>(replay = 1)
+            whenever(seedRepository.seedFlow).thenReturn(seedFlow)
+
+            var shouldFail = true
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any())).thenAnswer {
+                if (shouldFail) {
+                    throw IOException("Simulated DataStore error")
+                }
+                SeedResolutionResult.Persistent("real_seed")
+            }
+
+            observer = createObserver(backgroundScope)
+
+            val emissions = mutableListOf<SeedResult>()
+            val job = launch {
+                observer.seedFlow.collect { emissions.add(it) }
+            }
+
+            testScheduler.advanceTimeBy(5000.milliseconds)
+            testScheduler.runCurrent()
+
+            seedFlow.emit("late_real_seed")
+            testScheduler.runCurrent()
+
+            shouldFail = true
+            testScheduler.advanceTimeBy(200_000.milliseconds)
+            testScheduler.advanceUntilIdle()
+
+            assertTrue("Should have emitted something", emissions.isNotEmpty())
+            assertTrue(emissions.any { it is SeedResult.Real && it.value == "late_real_seed" })
+
+            val lastEmission = emissions.last()
+            assertTrue("Last emission should be Real, but was $lastEmission", lastEmission is SeedResult.Real)
+            assertEquals("late_real_seed", (lastEmission as SeedResult.Real).value)
+
+            job.cancel()
+        }
+
+    @Test
     fun `recover should return early if observation is not initialized`() =
         runTest {
-            // Arrange
-            // We create the observer but don't start collecting from it yet.
-            // However, it's SharingStarted.Eagerly, so it starts automatically in the backgroundScope.
-            // To simulate "not initialized", we'd need a way to prevent the background job from running.
-            // In runTest with backgroundScope, the job starts almost immediately.
-
-            // Let's use a scope that we can control.
             val testScope = TestScope(testScheduler)
             observer = createObserver(testScope)
-
-            // Act
-            observer.recover()
-
-            // Assert: verify that manualTrigger wasn't emitted or counters weren't reset?
-            // Actually, we can just check if it logs or if the trigger works after initialization.
-
-            // Verification of "not initialized" is tricky because of Eagerly sharing.
-            // But we can check if it's idempotent.
             observer.recover()
             observer.recover()
+        }
+
+    @Test
+    fun `physicalActiveSims does NOT emit emptyList until limit is exceeded after having valid data`() =
+        runTest {
+            // Тестируем логику retryWhen изолированно
+            val emissions = mutableListOf<List<String>>()
+            var callCount = 0
+
+            val testFlow = flow<List<String>> {
+                while (true) {
+                    callCount++
+                    if (callCount == 1) {
+                        emit(listOf("sim1"))
+                        break // Успех
+                    } else if (callCount <= 3) {
+                        throw IOException("Transient")
+                    } else {
+                        break
+                    }
+                }
+            }.retryWhen { cause, attempt ->
+                if (cause !is IOException) return@retryWhen false
+                if (attempt >= 2L) {
+                    emit(emptyList()) // Финальная эмиссия
+                    false
+                } else {
+                    true
+                }
+            }
+
+            // 1. Успешный запуск
+            val job = launch { testFlow.collect { emissions.add(it) } }
+            testScheduler.advanceUntilIdle()
+            assertEquals(listOf(listOf("sim1")), emissions)
+
+            // 2. Проверим поведение при ошибке (как будто flow перезапустился во flatMapLatest)
+            val failingFlow = flow<List<String>> {
+                throw IOException("Failing")
+            }.retryWhen { cause, attempt ->
+                if (attempt < 2L) {
+                    // Имитируем логику: не эмитим ничего
+                    true
+                } else {
+                    emit(emptyList())
+                    false
+                }
+            }.catch { /* swallow final exception for verification */ }
+
+            val emissions2 = mutableListOf<List<String>>()
+            launch { failingFlow.collect { emissions2.add(it) } }
+            testScheduler.advanceUntilIdle()
+
+            assertEquals("Should only contain the final empty list", listOf(emptyList<String>()), emissions2)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `seedFlow timeout is exactly SEED_GENERATION_TIMEOUT_MS`() =
+        runTest {
+            val seedFlow = MutableStateFlow("")
+            whenever(seedRepository.seedFlow).thenReturn(seedFlow)
+
+            val hangingRepo = object : SimIdentitySeedRepository by seedRepository {
+                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
+                    delay(20_000)
+                    return SeedResolutionResult.Persistent("too_late")
+                }
+            }
+
+            observer = SimIdentityObserver(
+                discovery = discovery,
+                seedRepository = hangingRepo,
+                appSettingsRepository = appSettingsRepository,
+                mockSimProvider = mockSimProvider,
+                fetcher = fetcher,
+                scope = backgroundScope,
+                cache = cache,
+                permissionStateNotifier = permissionStateNotifier,
+            )
+
+            val emissions = mutableListOf<SeedResult>()
+            val job = launch {
+                observer.seedFlow.collect { emissions.add(it) }
+            }
+
+            // 1. Advance just before SEED_GENERATION_TIMEOUT_MS (10s)
+            testScheduler.advanceTimeBy(9_000.milliseconds)
+            testScheduler.runCurrent()
+            assertEquals("Should not have emitted Fallback yet", 0, emissions.size)
+
+            // 2. Advance to trigger timeout
+            testScheduler.advanceTimeBy(2_000.milliseconds)
+            testScheduler.runCurrent()
+
+            assertTrue("Should have emitted Fallback after timeout", emissions.any { it is SeedResult.Fallback })
+
+            job.cancel()
+        }
+
+    @Test
+    fun `activeSimsCache coalesces simultaneous changes of settings and physical sims`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 0))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val physicalSims = listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "icc_1",
+                    displayName = "SIM 1",
+                    carrierName = "Carrier",
+                    mccMnc = "12345",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            )
+
+            var shouldReturnData = false
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenAnswer {
+                if (shouldReturnData) SimDiscoveryResult.Available(physicalSims)
+                else SimDiscoveryResult.Available(emptyList())
+            }
+
+            whenever(mockSimProvider.getMockSims(any())).thenAnswer { invocation ->
+                val count = invocation.getArgument<Int>(0)
+                if (count > 0) {
+                    List(count) { i ->
+                        ActiveSimInfo(
+                            identity = SimIdentity("mock_$i", i, i, IdentitySource.ICCID, isStable = false),
+                            slotIndex = i,
+                            subscriptionId = i,
+                            iccId = "mock_$i",
+                            displayName = "Mock $i",
+                            carrierName = "Mock",
+                            mccMnc = "00000",
+                            isDefaultData = i == 0,
+                            isDefaultVoice = i == 0,
+                        )
+                    }
+                } else null
+            }
+
+            observer = createObserver(backgroundScope)
+            val emissions = mutableListOf<List<ActiveSimInfo>>()
+            val job = launch { observer.activeSimsCache.collect { emissions.add(it) } }
+
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.runCurrent()
+            assertEquals(1, emissions.size)
+
+            // Simultaneous change
+            shouldReturnData = true
+            observer.recover()
+            settingsFlow.value = AppSettings(benchmarkSimCount = 2)
+
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.runCurrent()
+
+            assertEquals("Should have only one new emission after coalescing", 2, emissions.size)
+            assertEquals(2, emissions.last().size)
+            assertTrue(emissions.last().all { it.displayName?.contains("Mock") == true })
+
+            job.cancel()
         }
 }

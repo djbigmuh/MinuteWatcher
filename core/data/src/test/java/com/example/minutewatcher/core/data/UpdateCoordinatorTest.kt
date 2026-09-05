@@ -9,11 +9,13 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -1014,6 +1016,73 @@ class UpdateCoordinatorTest {
         }
 
     @Test
+    fun `suppressWidgetUpdate does not change consecutiveUpdateFailures`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            // Mock update to fail
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(isRetryable = true, reason = WidgetUpdateResult.FailureReason.TRANSIENT),
+            )
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. Fail 4 times
+            for (i in 1..4) {
+                snapshotFlow.tryEmit(createSnapshot(timestamp = i * 1000L, content = "Fail $i"))
+                testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+                testScheduler.runCurrent()
+            }
+            verify(widgetUpdater, times(4)).updateAll()
+            // Counter should be 4. Status should not be terminal error yet.
+            assertTrue(coordinator.status.value !is TrackingStatus.Error || (coordinator.status.value as TrackingStatus.Error).type != TrackingStatus.ErrorType.DATABASE_ERROR)
+
+            // 2. Emit suppressed snapshot
+            val suppressed = createSnapshot(timestamp = 5000L, content = "Suppressed", suppressUpdate = true)
+            snapshotFlow.tryEmit(suppressed)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Verify updateAll was NOT called
+            verify(widgetUpdater, times(4)).updateAll()
+
+            // 3. Emit normal snapshot that fails
+            val normal = createSnapshot(timestamp = 6000L, content = "Normal", suppressUpdate = false)
+            snapshotFlow.tryEmit(normal)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Total calls should be 5
+            verify(widgetUpdater, times(5)).updateAll()
+
+            // Status should now be terminal error because failure count reached 5
+            val status = coordinator.status.value
+            assertTrue("Status should be terminal Error after 5 failures", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+
+            // 4. Emit one more normal snapshot - should be suppressed by failure limit
+            snapshotFlow.tryEmit(createSnapshot(timestamp = 7000L, content = "Final"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+            verify(widgetUpdater, times(5)).updateAll() // Still 5
+        }
+    }
+
+    @Test
     fun `reactive update resets observation restart counter`() {
         runTest {
             val supervisorJob = SupervisorJob()
@@ -1137,4 +1206,101 @@ class UpdateCoordinatorTest {
             supervisorJob.cancel()
         }
     }
+
+    @Test
+    fun `performForcedUpdate updates hash based on snapshot before updateAll`() =
+        runTest {
+            val initialState = createSnapshot(timestamp = 1000L, content = "Initial")
+            val intermediateState = createSnapshot(timestamp = 2000L, content = "Intermediate")
+            val snapshotFlow = MutableStateFlow(initialState)
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+
+            val updateStarted = CompletableDeferred<Unit>()
+            val canFinishUpdate = CompletableDeferred<Unit>()
+            var callCount = 0
+
+            val localWidgetUpdater = object : WidgetUpdater {
+                override suspend fun updateAll(): WidgetUpdateResult {
+                    callCount++
+                    updateStarted.complete(Unit)
+                    canFinishUpdate.await()
+                    return WidgetUpdateResult.Success()
+                }
+            }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    localWidgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // 1. Trigger forced update
+            val forcedUpdateJob = launch {
+                coordinator.notifyDataChanged(updateWidget = true, force = true)
+            }
+
+            updateStarted.await()
+
+            // 2. Change snapshot while update is running
+            snapshotFlow.value = intermediateState
+
+            // 3. Finish update
+            canFinishUpdate.complete(Unit)
+            forcedUpdateJob.join()
+
+            // 4. Verification: если хэш был Initial, Intermediate триггерит реактивное обновление
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Total calls should be 2: one forced (for Initial), one reactive (for Intermediate)
+            assertEquals("Should have updated twice", 2, callCount)
+        }
+
+    @Test
+    fun `recover during active join starts new monitoring exactly once`() =
+        runTest {
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
+            val supervisorScope = CoroutineScope(testDispatcher + supervisorJob)
+
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    supervisorScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. Trigger observation. Observation job will be active.
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "Initial"))
+            testScheduler.advanceUntilIdle()
+
+            // 2. Call recover() which cancels previous jobs and starts new one.
+            coordinator.recover()
+            testScheduler.advanceUntilIdle()
+
+            // 3. Emit new snapshot and verify only one update happens (from the new observation job)
+            // If the old monitoring job wasn't cancelled or its join logic failed, we might see duplicate behavior.
+            snapshotFlow.emit(createSnapshot(timestamp = 2000L, content = "AfterRecover"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Total updates: 1 (Initial) + 1 (AfterRecover) = 2.
+            // If observation restart logic triggered incorrectly, we'd see more.
+            verify(widgetUpdater, times(2)).updateAll()
+
+            supervisorJob.cancel()
+        }
 }

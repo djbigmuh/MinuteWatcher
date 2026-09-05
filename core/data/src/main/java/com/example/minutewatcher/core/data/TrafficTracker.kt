@@ -282,6 +282,7 @@ class TrafficTracker
 
             if (targetIdentity !in currentActive) {
                 AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")
+                _status.value = TrackingStatus.Idle
                 return@withLock
             }
 
@@ -364,18 +365,24 @@ class TrafficTracker
                 _status.value = TrackingStatus.Active
                 AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
             } else {
-                baselineManager.baselineNeedsRetry[targetIdentity] = currentPending + 1
-                val reason =
-                    if (statsResult is StatsResult.Error) {
-                        statsResult.exception.message
-                    } else {
-                        "Stats unavailable"
-                    }
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        reason ?: "Stats unavailable, retry pending",
-                    )
+                val nextRetry = currentPending + 1
+                if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                    errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                } else {
+                    baselineManager.baselineNeedsRetry[targetIdentity] = nextRetry
+                    val reason =
+                        if (statsResult is StatsResult.Error) {
+                            statsResult.exception.message
+                        } else {
+                            "Stats unavailable"
+                        }
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            reason ?: "Stats unavailable, retry pending",
+                        )
+                }
             }
         }
 

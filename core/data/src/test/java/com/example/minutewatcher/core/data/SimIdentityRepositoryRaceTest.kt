@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -10,9 +11,13 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -319,6 +324,72 @@ class SimIdentityRepositoryRaceTest {
                 "All concurrent calls for same slot must return referentially equal SimIdentity instance",
                 results.all { it === first },
             )
+        }
+
+    @Test
+    fun `getSimIdentity for different slots can resolve in parallel`() =
+        runTest {
+            val storedSeed = MutableStateFlow("parallel-test-seed")
+            val seedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = storedSeed
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+                    override suspend fun setSeed(seed: String) {}
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
+                        SeedResolutionResult.Persistent(storedSeed.value)
+                }
+
+            // Мокаем медленное обнаружение SIM
+            val discoveryStarted = CompletableDeferred<Unit>()
+
+            val slowDiscovery = object : SimIdentityDiscovery(mock()) {
+                override fun discoverSims(seed: String): SimDiscoveryResult {
+                    discoveryStarted.complete(Unit)
+                    return SimDiscoveryResult.Available(emptyList<ActiveSimInfo>())
+                }
+
+                override fun observeSubscriptionChanges(): Flow<Unit> = flowOf(Unit)
+            }
+
+            val mockSub0 = mock<SubscriptionInfo> {
+                on { simSlotIndex } doReturn 0
+                on { subscriptionId } doReturn 100
+                on { iccId } doReturn "icc_0"
+            }
+            val mockSub1 = mock<SubscriptionInfo> {
+                on { simSlotIndex } doReturn 1
+                on { subscriptionId } doReturn 101
+                on { iccId } doReturn "icc_1"
+            }
+
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSub0, mockSub1))
+
+            val repository = SimIdentityRepositoryTestHelper.createRepository(
+                discoveryDeps = SimDiscoveryDependencies(
+                    mock(),
+                    mock(),
+                    permissionManager,
+                    mock { on { changes } doReturn flowOf(Unit) }),
+                dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) { tmpFolder.newFile("parallel_test.pb") },
+                seedRepository = seedRepo,
+                appSettingsRepository = appSettingsRepository,
+                migrationService = migrationService,
+                mockSimProvider = mockSimProvider,
+                timeProvider = mock { on { elapsedRealtime() } doReturn 1000L },
+                scope = backgroundScope,
+            )
+
+            // Запускаем два резолва параллельно
+            val job0 = async { repository.getSimIdentity(0) }
+            val job1 = async { repository.getSimIdentity(1) }
+
+            val res0 = job0.await()
+            val res1 = job1.await()
+
+            // Проверяем что оба успешно получили identity
+            // StableId генерируется как icc_<hash> если есть iccid
+            assertTrue("Actual ID0: ${res0.stableId}", res0.stableId.startsWith("icc_"))
+            assertTrue("Actual ID1: ${res1.stableId}", res1.stableId.startsWith("icc_"))
         }
 
     @Test

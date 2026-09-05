@@ -34,13 +34,20 @@ internal class SimIdentityResolver
             activeSimsCache: StateFlow<List<ActiveSimInfo>>,
             seedFlow: Flow<SeedResult>,
             activeSimsMutex: Mutex,
-        ): SimIdentity =
-            activeSimsMutex.withLock {
-                if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                    throw InvalidSlotException(slot)
-                }
+        ): SimIdentity {
+            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                throw InvalidSlotException(slot)
+            }
 
-                // 1. Fast check
+            // 1. Fast atomic check without mutex
+            activeSimsCache.value.find { it.slotIndex == slot }?.let {
+                cache.removeManual(slot)
+                return it.identity
+            }
+            cache.getManual(slot)?.let { return it }
+
+            return activeSimsMutex.withLock {
+                // Double-check cache inside lock to prevent redundant resolution
                 activeSimsCache.value.find { it.slotIndex == slot }?.let {
                     cache.removeManual(slot)
                     return@withLock it.identity
@@ -58,6 +65,7 @@ internal class SimIdentityResolver
 
                 identity
             }
+        }
 
     private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): String {
             val seed =

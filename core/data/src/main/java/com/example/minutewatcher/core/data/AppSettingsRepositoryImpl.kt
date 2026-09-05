@@ -114,7 +114,13 @@ class AppSettingsRepositoryImpl
             updateMutex.withLock {
                 dataStore.edit { prefs ->
                     val current = prefs.toAppSettings()
-                    val updated = transform(current)
+                    val updated =
+                        try {
+                            transform(current)
+                        } catch (e: Exception) {
+                            AppLogger.e("updateAppSettings: transform failed", e)
+                            throw e
+                        }
                     applyUpdatedSettings(prefs, updated)
                 }
             }

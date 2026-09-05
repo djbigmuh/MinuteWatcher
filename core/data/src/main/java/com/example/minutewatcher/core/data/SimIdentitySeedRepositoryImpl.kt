@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
@@ -46,6 +47,7 @@ class SimIdentitySeedRepositoryImpl
         // Это соответствует принципу Dependency Inversion.
 
         private val seedMutex = Mutex()
+    private val migrationInProgress = AtomicBoolean(false)
 
     private val _isEphemeralSeedActive = MutableStateFlow(value = false)
         override val isEphemeralSeedActive: StateFlow<Boolean> = _isEphemeralSeedActive.asStateFlow()
@@ -91,7 +93,15 @@ class SimIdentitySeedRepositoryImpl
                     val persistentSeed = tryGetPersistentSeed(generator)
                     if (persistentSeed != null) {
                         val ephemeralToMigrate = resolveEphemeralToMigrate()
-                        ephemeralToMigrate?.let { executeMigrationSafely(it, persistentSeed) }
+                        ephemeralToMigrate?.let { seed ->
+                            if (migrationInProgress.compareAndSet(false, true)) {
+                                try {
+                                    executeMigrationSafely(seed, persistentSeed)
+                                } finally {
+                                    migrationInProgress.set(false)
+                                }
+                            }
+                        }
                         return SeedResolutionResult.Persistent(persistentSeed)
                     }
                     AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access returned null (attempt $attemptNum)")
@@ -120,6 +130,11 @@ class SimIdentitySeedRepositoryImpl
             }
         }
 
+    private sealed interface EphemeralResolutionResult {
+        data class Found(val seed: String?) : EphemeralResolutionResult
+        data object NotChecked : EphemeralResolutionResult
+    }
+
     /**
      * Determines if there is an ephemeral seed that needs to be migrated to a persistent one.
      * Checks memory cache first (guarded by mutex), then DataStore.
@@ -131,18 +146,21 @@ class SimIdentitySeedRepositoryImpl
                     val found = cachedEphemeralSeed
                     _isEphemeralSeedActive.value = false
                     cachedEphemeralSeed = null
-                    // Wrap in Result to distinguish between "not found" and "found null"
-                    Result.success(found)
+                    if (found != null) {
+                        EphemeralResolutionResult.Found(found)
+                    } else {
+                        // Ephemeral mode is active but seed is not in memory -> check storage
+                        EphemeralResolutionResult.NotChecked
+                    }
                 } else {
-                    null
+                    // Not in ephemeral mode -> definitely nothing to migrate, skip storage
+                    EphemeralResolutionResult.Found(null)
                 }
             }
 
-        return if (memoryResult != null) {
-            memoryResult.getOrNull()
-        } else {
-            // DataStore read is now outside the mutex
-            tryGetStoredEphemeralSeed()
+        return when (memoryResult) {
+            is EphemeralResolutionResult.Found -> memoryResult.seed
+            is EphemeralResolutionResult.NotChecked -> tryGetStoredEphemeralSeed()
         }
     }
 
@@ -170,7 +188,13 @@ class SimIdentitySeedRepositoryImpl
         } catch (e: Exception) {
             // Migration failed - ensure it's kept in storage for next attempt
             try {
-                dataStore.edit { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] = ephemeralSeed }
+                val stored =
+                    dataStore.data
+                        .map { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] }
+                        .firstWithTimeout(EPHEMERAL_READ_TIMEOUT_MS)
+                if (stored != ephemeralSeed) {
+                    dataStore.edit { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] = ephemeralSeed }
+                }
             } catch (_: Exception) {
             }
             seedMutex.withLock {

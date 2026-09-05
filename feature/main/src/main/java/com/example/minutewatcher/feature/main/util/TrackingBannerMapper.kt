@@ -17,12 +17,12 @@ object TrackingBannerMapper {
         appSearchBannerDismissed: Boolean = false,
         isStorageDegraded: Boolean = false,
     ): TrackingBannerState {
-        val traffic = statusMap["traffic"]
-        val appsearch = statusMap["appsearch"]
-        val shortcuts = statusMap["shortcuts"]
-        val calls = statusMap["calls"]
+        val traffic = statusMap.getOrDefault("traffic", TrackingStatus.Idle)
+        val appsearch = statusMap.getOrDefault("appsearch", TrackingStatus.Idle)
+        val shortcuts = statusMap.getOrDefault("shortcuts", TrackingStatus.Idle)
+        val calls = statusMap.getOrDefault("calls", TrackingStatus.Idle)
 
-        val widgetError = statusMap["widget_observation"] as? TrackingStatus.Error
+        val widgetError = statusMap.getOrDefault("widget_observation", TrackingStatus.Idle) as? TrackingStatus.Error
         val isDatabaseError = widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
         val isSizeLimitError = widgetError?.message?.contains("size limit") == true
         val observationFailed = (isDatabaseError && !isSizeLimitError) || isStorageDegraded

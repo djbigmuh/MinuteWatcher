@@ -85,11 +85,13 @@ internal class SimIdentityObserver
             flow {
                 val attempt = AtomicLong(0)
                 var exhausted = false
+                val realEmitted = AtomicBoolean(false)
+                val lastWasReal = AtomicBoolean(false)
                 emitAll(
                     merge(
                         flow {
                             val initial =
-                                withTimeoutOrNull(SEED_TOTAL_TIMEOUT_MS.milliseconds) {
+                                withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
                                     val current = seedRepository.seedFlow.first()
                                     if (current.isNotEmpty()) {
                                         SeedResult.Real(current)
@@ -98,25 +100,36 @@ internal class SimIdentityObserver
                                         if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
                                     }
                                 } ?: SeedResult.Fallback
-                            if (initial is SeedResult.Fallback) {
-                                AppLogger.e(
-                                    "SimIdentityObserver: seed unavailable after timeout, emitting Fallback. " +
-                                        "SIM identity resolution will fail until seed is available.",
-                                )
+
+                            if (initial is SeedResult.Real) {
+                                if (realEmitted.compareAndSet(false, true)) {
+                                    lastWasReal.set(true)
+                                    emit(initial)
+                                }
+                            } else if (initial is SeedResult.Fallback) {
+                                if (!realEmitted.get()) {
+                                    AppLogger.e(
+                                        "SimIdentityObserver: seed unavailable after timeout, emitting Fallback. " +
+                                            "SIM identity resolution will fail until seed is available.",
+                                    )
+                                    lastWasReal.set(false)
+                                    emit(initial)
+                                }
                             }
-                            emit(initial)
                         },
                         flow {
-                            // We don't use a timeout here because we want this flow to eventually
-                            // recover even if the seed takes a long time to arrive (e.g. slow storage).
-                            // The initial Fallback will be emitted by the sibling flow in merge.
-                            emitAll(
-                                seedRepository.seedFlow
-                                    .filter { it.isNotEmpty() }
-                                    .map { SeedResult.Real(it) },
-                            )
+                            seedRepository.seedFlow
+                                .filter { it.isNotEmpty() }
+                                .collect {
+                                    realEmitted.set(true)
+                                    lastWasReal.set(true)
+                                    emit(SeedResult.Real(it))
+                                }
                         },
-                    ).onEach { attempt.set(0) }
+                    ).onEach {
+                        attempt.set(0)
+                        exhausted = false
+                    }
                         .retryWhen { cause, _ ->
                             if (cause is CancellationException) return@retryWhen false
                             val currentAttempt = attempt.incrementAndGet()
@@ -135,7 +148,7 @@ internal class SimIdentityObserver
                             true
                         },
                 )
-                if (exhausted) {
+                if (exhausted && !lastWasReal.get()) {
                     emit(SeedResult.Fallback)
                 }
             }.distinctUntilChanged()
@@ -208,7 +221,6 @@ internal class SimIdentityObserver
                                         "(attempt $currentAttempt), restarting in ${backoff}ms",
                                     cause,
                                 )
-                                emit(emptyList())
                                 delay(backoff.milliseconds)
                                 true
                             }.catch { cause ->
@@ -305,7 +317,7 @@ internal class SimIdentityObserver
         }
     }
 
-        @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
             combine(
                 physicalActiveSims,
@@ -316,7 +328,8 @@ internal class SimIdentityObserver
             ) { physical, benchmarkSimCount ->
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
                 mocks ?: physical
-            }.distinctUntilChanged()
+            }.debounce(50.milliseconds)
+                .distinctUntilChanged()
                 .onEach { sims ->
                     val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
                     cache.cleanupManual(activeSlots)
@@ -339,9 +352,6 @@ internal class SimIdentityObserver
             private const val MAX_SEED_BACKOFF_MS = 10000L
             private const val MAX_SEED_RETRIES = 10
             private const val MAX_GENERAL_ATTEMPTS = 20
-            private const val MAX_SECURITY_ATTEMPTS = 50
-
-            private const val SEED_TOTAL_TIMEOUT_MS =
-                (Constants.Flow.SEED_GENERATION_TIMEOUT_MS + Constants.Flow.SEED_TOTAL_TIMEOUT_EXTRA_MS)
+            private const val MAX_SECURITY_ATTEMPTS = 5
         }
     }

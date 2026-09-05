@@ -27,7 +27,6 @@ class SimWidgetVisibilityRepositoryImpl
     constructor(
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimWidgetVisibilityRepository {
-        private val prefixMap = DataStoreKeys.ALL_WIDGET_PREFIXES.associateWith { it.length }
         // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
         // Это соответствует принципу Dependency Inversion.
 
@@ -149,7 +148,7 @@ class SimWidgetVisibilityRepositoryImpl
         /**
          * Extracts identity from a DataStore key name by matching known widget prefixes.
          *
-         * **Prefix Matching:** Uses [prefixMap] (ordered by length descending)
+         * **Prefix Matching:** Uses [DataStoreKeys.ALL_WIDGET_PREFIXES] (ordered by length descending)
          * to ensure the most specific prefix is matched first.
          *
          * **Validation:** Extracted identity must start with a valid prefix (icc_, sub_, sim_)
@@ -162,7 +161,7 @@ class SimWidgetVisibilityRepositoryImpl
         private fun extractIdentity(keyName: String): String? {
             if (!keyName.startsWith("widget_show_")) return null
 
-            val matchedPrefix = prefixMap.keys.firstOrNull { keyName.startsWith(it) } ?: return null
+            val matchedPrefix = DataStoreKeys.ALL_WIDGET_PREFIXES.firstOrNull { keyName.startsWith(it) } ?: return null
 
             return keyName.removePrefix(matchedPrefix).takeIf { identity ->
                 identity.isNotEmpty() &&

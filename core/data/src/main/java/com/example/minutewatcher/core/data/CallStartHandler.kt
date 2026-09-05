@@ -89,11 +89,17 @@ internal class CallStartHandler
                 retryHelper.readWithRetry(
                     label = "getBootTime",
                 ) { callSessionRepository.getBootTime(targetSubId) }
-            val identity = attributionResolver.resolveIdentity(targetSubId)
+            val savedIdentityResult =
+                retryHelper.readWithRetry(
+                    label = "getCallIdentity",
+                ) { callSessionRepository.getCallIdentity(targetSubId) }
+
+            val currentIdentity = attributionResolver.resolveIdentity(targetSubId)
             return CallStartData(
                 startTimeResult = startTimeResult,
                 bootTimeResult = bootTimeResult,
-                identity = identity,
+                identity = savedIdentityResult.getOrNull(),
+                currentIdentity = currentIdentity,
                 now = timeProvider.now(),
                 bootTime = timeProvider.elapsedRealtime(),
                 uptime = timeProvider.uptimeMillis(),
@@ -122,6 +128,10 @@ internal class CallStartHandler
                             )
 
                 if (!isStale) {
+                    if (data.identity != null && data.identity != data.currentIdentity) {
+                        AppLogger.w("CallTracker: identity changed during active call for subId $targetSubId (saved=${data.identity}, current=${data.currentIdentity})")
+                        return
+                    }
                     AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
                     return
                 }
@@ -139,8 +149,8 @@ internal class CallStartHandler
             callSessionRepository.setCallStartTime(targetSubId, data.now)
             callSessionRepository.setBootTime(targetSubId, data.bootTime)
             callSessionRepository.setUptime(targetSubId, data.uptime)
-            callSessionRepository.setCallIdentity(targetSubId, data.identity)
-            AppLogger.d("Call start recorded for subId $targetSubId at ${data.now} (identity=${data.identity})")
+            callSessionRepository.setCallIdentity(targetSubId, data.currentIdentity)
+            AppLogger.d("Call start recorded for subId $targetSubId at ${data.now} (identity=${data.currentIdentity})")
         }
 
         private suspend fun handleStartTimeFailure(

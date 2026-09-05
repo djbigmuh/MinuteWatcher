@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
@@ -51,18 +50,16 @@ class SimIdentityPersistence
             if (validIdentities.isEmpty()) return
 
             try {
-                withTimeout(
-                    (Constants.Flow.LONG_TIMEOUT_MS * DOUBLE_TIMEOUT_MULTIPLIER).milliseconds,
-                ) {
-                    saveMutex.withLock {
-                        // Миграция выполняется до edit — она изменяет другие ключи
-                        // и не конфликтует с последующим edit.
-                        val preEditPrefs = fetchCurrentPrefs()
-                        val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
-                        val failedIds = performMigrations(toMigrate)
+                // 1. Предварительная миграция вне глобального мьютекса сохранения
+                // Это предотвращает блокировку сохранения других SIM-карт при долгих миграциях.
+                val preEditPrefs = fetchCurrentPrefs()
+                val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
+                val failedIds = performMigrations(toMigrate)
 
+                // 2. Атомарное обновление под мьютексом
+                withTimeout(SAVE_TIMEOUT_MS.milliseconds) {
+                    saveMutex.withLock {
                         // Оптимизация: проверяем необходимость обновления ДО вызова edit.
-                        // Это предотвращает лишние записи в DataStore и инкремент счетчиков в тестах.
                         val anyUpdateRequired = validIdentities.any { isIdentityUpdateRequired(it, preEditPrefs) }
                         if (!anyUpdateRequired && toMigrate.isEmpty()) return@withLock
 
@@ -235,6 +232,6 @@ class SimIdentityPersistence
         }
 
         companion object {
-            private const val DOUBLE_TIMEOUT_MULTIPLIER = 2
+            private const val SAVE_TIMEOUT_MS = 60_000L
         }
     }

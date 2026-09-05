@@ -409,6 +409,28 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `performTrafficUpdate sets Idle status if target identity disappears from active`() =
+        runTest {
+            val tracker = startTracker()
+            // 1. Initial status is Active after startTracker() usually (if mocks allow)
+            // But startTracker clears invocations. Let's force an update to Active first.
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+            tracker.updateTrafficUsage()
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+
+            // 2. Mock SIM disappearance during next update
+            // We need to return empty active identities AFTER resolve() but BEFORE performTrafficUpdate lock
+            // However, getActiveIdentities is called inside performTrafficUpdate.
+            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(emptyList()))
+
+            tracker.updateTrafficUsage()
+
+            // 3. Status should be Idle
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+        }
+
+    @Test
     fun `ensureInMemoryLastDataSubId avoids redundant DataStore reads`() =
         runTest {
             val tracker = startTracker()

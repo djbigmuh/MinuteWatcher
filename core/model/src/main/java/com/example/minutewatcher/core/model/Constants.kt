@@ -173,7 +173,6 @@ object Constants {
         const val CALL_SESSION_READ_TIMEOUT_MS = 2000L
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
-        const val SEED_TOTAL_TIMEOUT_EXTRA_MS = 3_000L
 
         /** Total timeout for traffic update operation, including mutex acquisition. */
         const val TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS = 15_000L

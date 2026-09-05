@@ -35,7 +35,7 @@ import javax.inject.Singleton
  */
 @Singleton
 @Suppress("TooManyFunctions")
-class IdentityMigrationService
+open class IdentityMigrationService
     @Inject
     constructor(
         @AppDataStore private val appDataStore: DataStore<Preferences>,
@@ -178,7 +178,7 @@ class IdentityMigrationService
          * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
-        suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =
+        open suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =
             migrationMutex.withLock {
                 try {
                     performMigration(activeIdentity)

@@ -214,4 +214,26 @@ class SettingsRepositoryImplTest {
             // 3. getAppSettingsOnce should return the new value
             assertEquals(true, repository.getAppSettingsOnce().onboardingCompleted)
         }
+
+    @Test
+    fun testUpdateAppSettings_ThrowsException_DoesNotModifyDataStore() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            // 1. Initial state
+            dataStore.edit { it[DataStoreKeys.APP_THEME] = AppTheme.DARK.value }
+
+            // 2. Attempt update that throws
+            try {
+                repository.updateAppSettings {
+                    // Try to modify theme but then throw
+                    throw RuntimeException("Simulated failure")
+                }
+            } catch (_: Exception) {
+            }
+
+            // 3. Verify DataStore is unchanged
+            val prefs = dataStore.data.first()
+            assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
+        }
 }

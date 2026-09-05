@@ -829,6 +829,33 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
+    fun `onCleared does NOT trigger save if lastSavedSettings is null`() =
+        runTest {
+            initViewModel()
+
+            // Force lastSavedSettings to null via reflection
+            val lastSavedField = viewModel.javaClass.getDeclaredField("lastSavedSettings")
+            lastSavedField.isAccessible = true
+            lastSavedField.set(viewModel, null)
+
+            // Change something to make current != lastSaved (if it were non-null)
+            viewModel.updateSettings { it.copy(fontSize = 4) }
+            runCurrent()
+
+            // Verify no auto-save yet (debounce 400ms)
+            verify(saver, never()).save(any(), any())
+
+            // Act: Call onCleared
+            val method = viewModel.javaClass.getDeclaredMethod("onCleared")
+            method.isAccessible = true
+            method.invoke(viewModel)
+            runCurrent()
+
+            // Assert: Verify NO save was triggered because lastSavedSettings is null
+            verify(saver, never()).save(any(), any())
+        }
+
+    @Test
     fun `saveAndNotify is not interrupted by scope cancellation`() =
         runTest {
             val saveGate = CompletableDeferred<Unit>()

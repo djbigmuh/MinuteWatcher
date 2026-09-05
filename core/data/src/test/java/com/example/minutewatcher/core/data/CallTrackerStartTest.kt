@@ -1,6 +1,9 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -260,5 +263,77 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             assertTrue("Expected Error status, but got $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
             assertTrue(status.message?.contains("Timeout") == true)
+        }
+
+    @Test
+    fun `onCallStarted does not overwrite startTime if session is already active`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+
+            // 1. Start first call
+            timeProvider.setTime(1000L)
+            timeProvider.setRealtime(1000L)
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Verify first start time is set
+            verify(callSessionRepository).setCallStartTime(eq(1), eq(1000L))
+
+            // 2. Mock that there's an active session
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            // 3. Second OFFHOOK event
+            timeProvider.setTime(2000L)
+            timeProvider.setRealtime(2000L)
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Verify that 2000L was NOT set as startTime
+            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(2000L))
+        }
+
+    @Test
+    fun `onCallStarted ignores event if SIM identity changed during active call`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+
+            // Arrange: active session with identity "id_1"
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+
+            // Act: NEW event with identity "id_new"
+            // We need to update observeActiveSims because resolveIdentity uses it
+            val mockIdentity = SimIdentity(
+                stableId = "id_new",
+                subscriptionId = 1,
+                slotIndex = 0,
+                source = IdentitySource.ICCID,
+                isStable = true,
+            )
+            val mockSim = ActiveSimInfo(
+                identity = mockIdentity,
+                slotIndex = 0,
+                subscriptionId = 1,
+                iccId = "id_new",
+                displayName = "SIM 1",
+                carrierName = "Carrier",
+                mccMnc = "12345",
+                isDefaultData = true,
+                isDefaultVoice = true,
+            )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(mockSim)))
+
+            timeProvider.setTime(2000L)
+            timeProvider.setRealtime(2000L) // Ensure session is not stale
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            // Assert: verify no new startTime was set
+            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(2000L))
         }
 }

@@ -22,7 +22,7 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
-class SimIdentityDiscovery
+open class SimIdentityDiscovery
     @Inject
     constructor(
         private val discoveryDeps: SimDiscoveryDependencies,
@@ -36,7 +36,7 @@ class SimIdentityDiscovery
          * Observes changes in SIM subscriptions.
          * Emits whenever subscriptions might have changed.
          */
-        fun observeSubscriptionChanges(): Flow<Unit> =
+        open fun observeSubscriptionChanges(): Flow<Unit> =
             callbackFlow {
                 val listener =
                     object : SubscriptionManager.OnSubscriptionsChangedListener() {
@@ -108,7 +108,7 @@ class SimIdentityDiscovery
     /**
      * Discovers active SIM cards and returns a structured result.
      */
-    fun discoverSims(seed: String): SimDiscoveryResult {
+    open fun discoverSims(seed: String): SimDiscoveryResult {
         if (!permissionManager.hasPhoneStatePermission()) {
             return SimDiscoveryResult.PermissionMissing
         }
