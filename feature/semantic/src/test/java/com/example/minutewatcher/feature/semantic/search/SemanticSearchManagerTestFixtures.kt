@@ -41,9 +41,9 @@ abstract class SemanticSearchManagerTestFixtures {
     @Before
     open fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        whenever(timeProvider.now()).thenAnswer { currentTime }
-        whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime }
-        whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime }
+        whenever(timeProvider.now()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
+        whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
+        whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
 
         fakeWrapper = FakeAppSearchWrapper()
         dataStore =

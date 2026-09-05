@@ -1,16 +1,15 @@
 package com.example.minutewatcher.feature.main.controller
 
+import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -18,27 +17,25 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Safe to call from any coroutine context.
  */
-class MainResumeController
-    @Inject
-    constructor(
-        private val timeProvider: TimeProvider,
-    ) {
-        private var resumeRefreshJob: Job? = null
-    private val lastResumeTimestamp = MutableStateFlow(-1L)
+class MainResumeController(
+    private val timeProvider: TimeProvider,
+    private val savedStateHandle: SavedStateHandle,
+) {
+    private var resumeRefreshJob: Job? = null
 
-        fun onActivityResume(
-            scope: CoroutineScope,
-            initController: MainInitializationController,
-            lastRefreshAt: Long,
-            onRefreshNeeded: suspend () -> Unit,
-            onUpdateLastRefreshAt: (Long) -> Unit,
-        ) {
-            val now = timeProvider.elapsedRealtime()
-            val last = lastResumeTimestamp.value
-            if ((last != -1L) && (now - last < RESUME_DEBOUNCE_MS)) {
-                return
-            }
-            lastResumeTimestamp.value = now
+    fun onActivityResume(
+        scope: CoroutineScope,
+        initController: MainInitializationController,
+        lastRefreshAt: Long,
+        onRefreshNeeded: suspend () -> Unit,
+        onUpdateLastRefreshAt: (Long) -> Unit,
+    ) {
+        val now = timeProvider.elapsedRealtime()
+        val last = savedStateHandle.get<Long>(KEY_LAST_RESUME_TIMESTAMP) ?: -1L
+        if ((last != -1L) && (now - last < RESUME_DEBOUNCE_MS)) {
+            return
+        }
+        savedStateHandle[KEY_LAST_RESUME_TIMESTAMP] = now
 
             scope.launch {
                 resumeRefreshJob?.cancelAndJoin()
@@ -84,5 +81,6 @@ class MainResumeController
         companion object {
             private const val RESUME_REFRESH_THRESHOLD_MS = 60_000L
             private const val RESUME_DEBOUNCE_MS = 5_000L
+            private const val KEY_LAST_RESUME_TIMESTAMP = "last_resume_timestamp"
         }
     }

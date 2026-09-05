@@ -22,6 +22,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -67,6 +68,7 @@ class UpdateCoordinatorTest {
             initTestLogger()
             snapshotFlow.tryEmit(createEmptySnapshot())
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(flowOf(listOf(mock())))
         }
     }
 

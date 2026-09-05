@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainInitializationController
+import com.example.minutewatcher.feature.main.controller.MainResumeController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -53,6 +54,8 @@ class MainViewModel
         val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
         val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
+
+    private val resumeController = MainResumeController(timeProvider, savedStateHandle)
 
         init {
             initController.initializeApp(
@@ -216,7 +219,7 @@ class MainViewModel
             }
 
         fun onActivityResume() {
-            controllers.resume.onActivityResume(
+            resumeController.onActivityResume(
                 scope = viewModelScope,
                 initController = initController,
                 lastRefreshAt = lastRefreshAt,

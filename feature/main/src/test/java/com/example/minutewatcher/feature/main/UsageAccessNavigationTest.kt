@@ -161,9 +161,6 @@ class UsageAccessNavigationTest {
                 timeProvider = timeProvider,
                 ioDispatcher = testDispatcher,
             )
-        val resumeController =
-            com.example.minutewatcher.feature.main.controller
-                .MainResumeController(timeProvider)
 
         val controllers =
             MainViewModelControllers(
@@ -171,7 +168,6 @@ class UsageAccessNavigationTest {
                 refresh = refreshController,
                 settings = settingsController,
                 simData = simDataController,
-                resume = resumeController,
                 dataRefreshNotifier = dataRefreshNotifier,
                 widgetObservationRecovery = dagger.Lazy { updateCoordinator },
             )

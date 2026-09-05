@@ -52,7 +52,7 @@ class SimIdentitySeedRepositoryImpl
     private val _isEphemeralSeedActive = MutableStateFlow(value = false)
         override val isEphemeralSeedActive: StateFlow<Boolean> = _isEphemeralSeedActive.asStateFlow()
 
-    // Access is guarded by seedMutex
+    @Volatile
     private var cachedEphemeralSeed: String? = null
 
         /**

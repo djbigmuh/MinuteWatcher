@@ -228,11 +228,12 @@ open class SemanticSearchManager
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
-        val mutexAcquired =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                indexMutex.lock()
-                true
-            } ?: false
+        val deadline = timeProvider.elapsedRealtime() + Constants.Flow.SHORT_TIMEOUT_MS
+        var mutexAcquired = false
+        while (!mutexAcquired && timeProvider.elapsedRealtime() < deadline) {
+            mutexAcquired = indexMutex.tryLock()
+            if (!mutexAcquired) delay(50.milliseconds)
+        }
 
         if (!mutexAcquired) {
             val count = consecutiveMutexTimeouts.incrementAndGet()

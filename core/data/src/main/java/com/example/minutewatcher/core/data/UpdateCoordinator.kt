@@ -98,6 +98,8 @@ class UpdateCoordinator
             scope.launch {
                 if (isObservationStarted.compareAndSet(false, true)) {
                     try {
+                        usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
+                        AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
                         setupObservation()
                     } catch (e: CancellationException) {
                         isObservationStarted.set(false)
@@ -117,9 +119,6 @@ class UpdateCoordinator
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
-            val currentJob = currentCoroutineContext()[Job]
-            monitoringJob.get()?.takeIf { it !== currentJob }?.cancel()
-
             val handler =
                 CoroutineExceptionHandler { _, cause ->
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
@@ -172,6 +171,7 @@ class UpdateCoordinator
                         if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
                     }
 
+            monitoringJob.get()?.cancel()
             val newJob =
                 observationScope.observe(flow, handler) { snapshot ->
                     try {
@@ -197,14 +197,15 @@ class UpdateCoordinator
                 }
 
             currentObservationJob.set(newJob)
-            launchMonitoringJob(newJob)
+            val monitoring = launchMonitoringJob(newJob)
+            monitoringJob.set(monitoring)
             _status.value = TrackingStatus.Active
         }
 
-    private fun launchMonitoringJob(newJob: Job) {
+    private fun launchMonitoringJob(newJob: Job): Job? {
+        if (!newJob.isActive) return null
         // Мониторинг завершения: если наблюдение упало — перезапускаем с экспоненциальной задержкой.
-        val newMonitoringJob =
-            scope.launch {
+        return scope.launch {
                 newJob.join()
                 if (currentObservationJob.get() !== newJob) return@launch
                 if (!isObservationStarted.get()) return@launch
@@ -264,7 +265,6 @@ class UpdateCoordinator
                     }
                 }
             }
-        monitoringJob.set(newMonitoringJob)
     }
 
     private fun calculateRestartDelay(restartCount: Int): Long {

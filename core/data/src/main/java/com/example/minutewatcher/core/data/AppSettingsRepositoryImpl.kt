@@ -53,9 +53,8 @@ class AppSettingsRepositoryImpl
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("DataStore error in appSettingsState, restarting in 1s", e)
-                    emit(AppSettings()) // emit defaults while waiting for recovery
-                        delay(1000.milliseconds)
-                    }
+                    delay(1000.milliseconds)
+                }
             }
         }.stateIn(
             scope,

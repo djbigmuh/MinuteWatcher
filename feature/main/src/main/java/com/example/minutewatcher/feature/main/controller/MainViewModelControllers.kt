@@ -26,7 +26,6 @@ class MainViewModelControllers
         val refresh: MainSimRefreshController,
         val settings: MainSettingsController,
         val simData: MainSimDataController,
-        val resume: MainResumeController,
         val dataRefreshNotifier: DataRefreshNotifier,
         val widgetObservationRecovery: dagger.Lazy<WidgetUpdateCoordinator>,
     )

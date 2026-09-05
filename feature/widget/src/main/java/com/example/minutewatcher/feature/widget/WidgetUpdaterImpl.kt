@@ -100,8 +100,6 @@ class WidgetUpdaterImpl
             deferred.complete(failure)
             failure
         } finally {
-            // compareAndSet is safe because joinInProgressUpdate awaits the stable Deferred reference
-            // already obtained via AtomicReference. The clearing simply allows next update cycle.
             currentUpdate.compareAndSet(deferred, null)
         }
     }

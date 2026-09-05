@@ -140,10 +140,9 @@ internal class SimIdentityObserver
                             delay(backoff.milliseconds)
                             true
                         }.catch { cause ->
-                            if (cause !is CancellationException) {
-                                AppLogger.e("SimIdentityObserver: seedFlow failed, emitting Fallback", cause)
-                                if (!realEmitted.get()) emit(SeedResult.Fallback)
-                            }
+                            if (cause is CancellationException) throw cause
+                            AppLogger.e("SimIdentityObserver: seedFlow failed, emitting Fallback", cause)
+                            if (!realEmitted.get()) emit(SeedResult.Fallback)
                         },
                     )
                 }

@@ -24,7 +24,6 @@ import com.example.minutewatcher.feature.main.controller.AutoResetScheduler
 import com.example.minutewatcher.feature.main.controller.MainBannerController
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainInitializationController
-import com.example.minutewatcher.feature.main.controller.MainResumeController
 import com.example.minutewatcher.feature.main.controller.MainSettingsController
 import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
@@ -204,14 +203,11 @@ abstract class MainViewModelTestFixtures {
                 scope = scope,
             )
 
-        val resumeController = MainResumeController(timeProvider)
-
         return MainViewModelControllers(
             banner = bannerController,
             refresh = refreshController,
             settings = settingsController,
             simData = simDataController,
-            resume = resumeController,
             dataRefreshNotifier = dataRefreshNotifier,
             widgetObservationRecovery = dagger.Lazy { updateCoordinator },
         )
