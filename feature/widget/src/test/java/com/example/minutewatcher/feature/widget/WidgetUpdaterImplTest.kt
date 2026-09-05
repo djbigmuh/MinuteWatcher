@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
+import android.os.TransactionTooLargeException
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -709,5 +710,47 @@ class WidgetUpdaterImplTest {
             val joinedUpdateJob = async { updater.updateAll() }
             joinedUpdateJob.cancel()
             joinedUpdateJob.await()
+        }
+
+    @Test
+    fun `handleLimitExceeded propagates CancellationException`() =
+        runTest {
+            var callCount = 0
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        callCount++
+                        if (callCount == 1) {
+                            // First attempt fails with LimitExceeded
+                            throw IllegalArgumentException(
+                                "RemoteViews too large",
+                                TransactionTooLargeException(),
+                            )
+                        } else {
+                            // Second attempt (inside handleLimitExceeded) is cancelled
+                            throw CancellationException("Simulated cancellation")
+                        }
+                    }
+                }
+            val updater = createUpdater(backgroundScope, rendererMock)
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            try {
+                updater.updateAll()
+            } catch (e: CancellationException) {
+                assertEquals("Simulated cancellation", e.message)
+                return@runTest
+            }
+            error("Expected CancellationException to be thrown")
         }
 }

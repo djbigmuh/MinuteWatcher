@@ -168,18 +168,22 @@ class WidgetUpdaterImpl
 
             var lastOutcome: UpdateOutcome? = null
             val success =
-                retryManager.updateWithRetry { _ ->
-                    when (val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)) {
-                        is UpdateResult.Success -> UpdateOutcome.Success()
-                        is UpdateResult.LimitExceeded -> UpdateOutcome.LimitExceeded.also { lastOutcome = it }
-                        is UpdateResult.GenericFailure -> {
-                            if (result.isRetryable) {
-                                UpdateOutcome.Retry.also { lastOutcome = it }
-                            } else {
-                                UpdateOutcome.Stop.also { lastOutcome = it }
+                try {
+                    retryManager.updateWithRetry { _ ->
+                        when (val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)) {
+                            is UpdateResult.Success -> UpdateOutcome.Success()
+                            is UpdateResult.LimitExceeded -> UpdateOutcome.LimitExceeded.also { lastOutcome = it }
+                            is UpdateResult.GenericFailure -> {
+                                if (result.isRetryable) {
+                                    UpdateOutcome.Retry.also { lastOutcome = it }
+                                } else {
+                                    UpdateOutcome.Stop.also { lastOutcome = it }
+                                }
                             }
                         }
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 }
 
             return when {

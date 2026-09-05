@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -16,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -222,7 +224,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             // 1. Manually lock the indexMutex to cause timeout
             val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
             indexMutexField.isAccessible = true
-            val indexMutex = indexMutexField.get(manager) as kotlinx.coroutines.sync.Mutex
+            val indexMutex = indexMutexField.get(manager) as Mutex
 
             indexMutex.lock()
             try {
@@ -246,5 +248,40 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             } finally {
                 indexMutex.unlock()
             }
+        }
+
+    @Test
+    fun `consecutiveMutexTimeouts is reset after successful acquisition`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Manually lock the indexMutex to cause timeout
+            val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
+            indexMutexField.isAccessible = true
+            val indexMutex = indexMutexField.get(manager) as Mutex
+
+            val timeoutsField = SemanticSearchManager::class.java.getDeclaredField("consecutiveMutexTimeouts")
+            timeoutsField.isAccessible = true
+            val timeouts = timeoutsField.get(manager) as AtomicInteger
+
+            indexMutex.lock()
+            try {
+                // First timeout
+                manager.indexSnapshot(createSnapshotWithOneSim())
+                assertEquals(1, timeouts.get())
+
+                // Second timeout -> should set Error status
+                manager.indexSnapshot(createSnapshotWithOneSim())
+                assertEquals(2, timeouts.get())
+                assertTrue(manager.status.value is TrackingStatus.Error)
+            } finally {
+                indexMutex.unlock()
+            }
+
+            // 2. Now call indexSnapshot successfully
+            manager.indexSnapshot(createSnapshotWithOneSim())
+
+            // 3. Verify counter is reset to 0
+            assertEquals(0, timeouts.get())
         }
 }

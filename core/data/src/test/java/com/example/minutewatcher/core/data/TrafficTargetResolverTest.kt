@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -25,7 +26,7 @@ class TrafficTargetResolverTest {
     @Test
     fun `resolve returns Success when default data SIM is identified via SubscriptionManager`() {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
-        val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+        val mockSubInfo = mock<SubscriptionInfo>()
         whenever(mockSubInfo.subscriptionId).thenReturn(1)
         whenever(mockSubInfo.simSlotIndex).thenReturn(0)
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
@@ -69,6 +70,22 @@ class TrafficTargetResolverTest {
                 createActiveSim(0, 1, isDefaultData = false),
                 createActiveSim(1, 2, isDefaultData = false),
             )
+
+        val result = resolver.resolve(activeSims)
+
+        assertEquals(TrafficTargetResolver.TargetResult.InconsistentFirmware, result)
+    }
+
+    @Test
+    fun `resolve returns InconsistentFirmware when simSlotIndex is out of supported range and no fallback`() {
+        whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+        val mockSubInfo = mock<SubscriptionInfo>()
+        whenever(mockSubInfo.subscriptionId).thenReturn(1)
+        whenever(mockSubInfo.simSlotIndex).thenReturn(10) // Out of range (> 9)
+        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
+        // No SIM marked as isDefaultData=true to avoid fallback success
+        val activeSims = listOf(createActiveSim(0, 2, isDefaultData = false))
 
         val result = resolver.resolve(activeSims)
 

@@ -132,7 +132,7 @@ class UpdateCoordinator
             val maxAttempts = 3
             var delayMs = Constants.Flow.RETRY_DELAY_MS
 
-            while (attempt < maxAttempts && firstSnapshot == null) {
+            while ((attempt < maxAttempts) && (firstSnapshot == null)) {
                 val rawFlow =
                     usageStateRepository
                         .observeSnapshot()
@@ -167,7 +167,9 @@ class UpdateCoordinator
                 usageStateRepository
                     .observeSnapshot()
                     .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                    .debounce { snapshot ->
+                        if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
+                    }
 
             val newJob =
                 observationScope.observe(flow, handler) { snapshot ->
@@ -245,7 +247,7 @@ class UpdateCoordinator
                     "UpdateCoordinator: observation terminated unexpectedly, " +
                         "scheduling restart #$restartCount in ${delayMs}ms",
                 )
-                kotlinx.coroutines.delay(delayMs.milliseconds)
+                delay(delayMs.milliseconds)
 
                 if (observationScope.getJob() === newJob) {
                     synchronized(stateLock) {
@@ -356,7 +358,6 @@ class UpdateCoordinator
                         "Widget size limit exceeded",
                     )
                 lastSnapshotHash = null
-                handleUpdateFailure()
             }
 
             WidgetUpdateResult.FailureReason.TERMINAL -> {
@@ -369,7 +370,6 @@ class UpdateCoordinator
                         "Terminal widget update failure",
                     )
                 lastSnapshotHash = null
-                handleUpdateFailure()
             }
         }
     }

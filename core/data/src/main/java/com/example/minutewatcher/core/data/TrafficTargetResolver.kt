@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.Constants.SimConstants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -59,6 +60,11 @@ class TrafficTargetResolver
                 }
             } catch (e: Exception) {
                 AppLogger.e("Error getting default data SIM", e)
+            }
+
+            if ((targetSim != -1) && (targetSim !in SimConstants.SUPPORTED_SLOT_INDICES)) {
+                AppLogger.w("TrafficTargetResolver: simSlotIndex $targetSim out of supported range, falling back")
+                targetSim = -1
             }
 
             if (targetSim == -1) {

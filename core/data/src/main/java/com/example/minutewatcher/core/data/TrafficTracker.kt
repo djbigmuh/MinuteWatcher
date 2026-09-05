@@ -4,8 +4,10 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
+import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -29,6 +31,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
+
+internal class TrafficUpdateTimeoutException(message: String = MESSAGE) : Exception(message) {
+    companion object {
+        const val MESSAGE = "Traffic update timeout"
+    }
+}
 
 /**
  * Tracks mobile traffic usage for the device.
@@ -133,7 +141,7 @@ class TrafficTracker
     }
 
     private fun isTerminalInitError(e: Exception): Boolean =
-        e is SecurityException || e.message == "Traffic update timeout"
+        (e is SecurityException) || (e is TrafficUpdateTimeoutException)
 
     override suspend fun recover() {
         if (initializationFailed.compareAndSet(true, false)) {
@@ -182,7 +190,7 @@ class TrafficTracker
             val isTimeoutError =
                 (currentStatus is TrackingStatus.Error) &&
                     (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN) &&
-                    (currentStatus.message == "Traffic update timeout")
+                    (currentStatus.message == TrafficUpdateTimeoutException.MESSAGE)
             if (isTimeoutError) {
                 _status.value = TrackingStatus.Idle
             }
@@ -197,9 +205,9 @@ class TrafficTracker
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
-                        "Traffic update timeout",
+                        TrafficUpdateTimeoutException.MESSAGE,
                     )
-                throw Exception("Traffic update timeout")
+                throw TrafficUpdateTimeoutException()
             }
         } catch (e: CancellationException) {
             throw e
@@ -208,7 +216,7 @@ class TrafficTracker
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             throw e
         } catch (e: Exception) {
-            if (e.message != "Traffic update timeout") {
+            if (e !is TrafficUpdateTimeoutException) {
                 AppLogger.e("TrafficTracker: Unexpected error during update", e)
                 errorHandler.handleUpdateError(e, _status)
             }
@@ -257,9 +265,17 @@ class TrafficTracker
 
         val target = result.target
 
-        simChangeHandler.withSimChangeLock {
-            val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
-            targetIdentity?.let { performTrafficUpdate(target, it) }
+        try {
+            simChangeHandler.withSimChangeLock {
+                val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
+                targetIdentity?.let { performTrafficUpdate(target, it) }
+            }
+        } catch (e: InvalidSlotException) {
+            AppLogger.w("TrafficTracker: InvalidSlotException for slot ${target.slot}", e)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+        } catch (e: SimNotFoundException) {
+            AppLogger.w("TrafficTracker: SimNotFoundException for slot ${target.slot}", e)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
         }
     }
 

@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -187,7 +188,7 @@ class TrafficTrackerTest {
             val message = (status as TrackingStatus.Error).message
             assertTrue(
                 "Unexpected message: $message",
-                message == "Timeout reading lastTotalBytes" || message == "Traffic update timeout",
+                message == "Timeout reading lastTotalBytes" || message == TrafficUpdateTimeoutException.MESSAGE,
             )
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
@@ -208,7 +209,7 @@ class TrafficTrackerTest {
             val message = (status as TrackingStatus.Error).message
             assertTrue(
                 "Unexpected message: $message",
-                message == "Timeout reading simUsage" || message == "Traffic update timeout",
+                message == "Timeout reading simUsage" || message == TrafficUpdateTimeoutException.MESSAGE,
             )
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
@@ -552,6 +553,19 @@ class TrafficTrackerTest {
             testScheduler.advanceUntilIdle()
 
             assertEquals(TrackingStatus.Active, localTracker.status.value)
+        }
+
+    @Test
+    fun `updateTrafficUsage handles InvalidSlotException gracefully`() =
+        runTest {
+            val tracker = startTracker()
+            whenever(simIdentityRepository.getIdentity(any())).thenThrow(InvalidSlotException(99))
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("Invalid SIM slot index: 99", (status as TrackingStatus.Error).message)
         }
 
     private fun createTracker(scope: CoroutineScope): TrafficTracker {

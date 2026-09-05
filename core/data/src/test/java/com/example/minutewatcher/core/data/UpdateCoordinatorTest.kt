@@ -103,6 +103,41 @@ class UpdateCoordinatorTest {
     }
 
     @Test
+    fun `manual update triggers immediate update without debounce`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // Emit new snapshot with isManualUpdate = true
+            val s1 = createSnapshot(timestamp = 1000L, content = "Manual", isManual = true)
+            snapshotFlow.tryEmit(s1)
+
+            // Advance by very small time, much less than DEBOUNCE_MS
+            testScheduler.advanceTimeBy(10.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should call updateAll immediately
+            verify(widgetUpdater, times(1)).updateAll()
+        }
+    }
+
+    @Test
     fun `observation ignores duplicate snapshot content`() {
         runTest {
             val stateFlow =
@@ -338,6 +373,51 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             verify(widgetUpdater, times(6)).updateAll()
+        }
+    }
+
+    @Test
+    fun `consecutiveUpdateFailures is not incremented on LIMIT_EXCEEDED`() {
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
+                ),
+            )
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            // Trigger observation
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // Emit 6 different snapshots that trigger LIMIT_EXCEEDED
+            for (i in 1..6) {
+                snapshotFlow.tryEmit(createSnapshot(timestamp = i * 1000L, content = "Large $i"))
+                testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+                testScheduler.runCurrent()
+            }
+
+            // Should call updateAll 6 times (not suppressed)
+            verify(widgetUpdater, times(6)).updateAll()
+
+            // Status should be NOT_SUPPORTED, not DATABASE_ERROR
+            val status = coordinator.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
         }
     }
 
@@ -706,9 +786,11 @@ class UpdateCoordinatorTest {
         timestamp: Long,
         content: String,
         suppressUpdate: Boolean = false,
+        isManual: Boolean = false,
     ) = GlobalSnapshot(
         version = SchemaVersion(1, 0, content.hashCode()),
         timestamp = timestamp,
+        isManualUpdate = isManual,
         suppressWidgetUpdate = suppressUpdate,
         simSnapshots =
             listOf(
