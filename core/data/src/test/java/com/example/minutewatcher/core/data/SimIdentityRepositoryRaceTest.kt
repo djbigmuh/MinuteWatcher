@@ -215,7 +215,7 @@ class SimIdentityRepositoryRaceTest {
                     ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
-            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+            val mockSubInfo = mock<SubscriptionInfo>()
             whenever(mockSubInfo.simSlotIndex).thenReturn(0)
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
             whenever(mockSubInfo.iccId).thenReturn("icc_1")
@@ -281,7 +281,7 @@ class SimIdentityRepositoryRaceTest {
                     ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
-            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+            val mockSubInfo = mock<SubscriptionInfo>()
             whenever(mockSubInfo.simSlotIndex).thenReturn(0)
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
             whenever(mockSubInfo.iccId).thenReturn("icc_instance_test")

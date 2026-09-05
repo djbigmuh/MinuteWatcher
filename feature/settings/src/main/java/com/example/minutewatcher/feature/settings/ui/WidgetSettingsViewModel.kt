@@ -265,9 +265,11 @@ class WidgetSettingsViewModel
         }
 
         try {
-            // Атомарно обновляем состояние и захватываем актуальное значение
+            // Атомарно обновляем состояние и захватываем актуальное значение.
+            // Используем currentState.settings, а не state.value.settings, чтобы избежать
+            // гонки состояний, если настройки будут изменены другой корутиной сразу после updateAndGet.
             val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
-            val settingsToSave = state.value.settings
+            val settingsToSave = currentState.settings
             val result = performSaveInternal(currentState)
             currentCoroutineContext().ensureActive()
 
@@ -297,9 +299,9 @@ class WidgetSettingsViewModel
     }
 
     private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
-        // Read latest settings right before execution to avoid saving stale data
-        // if user modified them while we were transitioning to isSaving=true.
-        val currentSettings = state.value.settings
+        // Используем настройки из currentState, захваченного при входе в режим сохранения,
+        // чтобы обеспечить консистентность данных.
+        val currentSettings = currentState.settings
         return when {
             currentState.isLoadError || (currentSettings?.settingsLoadFailed == true) -> {
                 AppLogger.w("saveAndNotify skipped: settings load failed previously")
@@ -350,10 +352,15 @@ class WidgetSettingsViewModel
             AppLogger.d("WidgetSettingsViewModel: executing emergency save onCleared")
             externalScope.launch {
                 try {
-                    withContext(NonCancellable) {
+                    // Используем withTimeoutOrNull без NonCancellable.
+                    // Поскольку это запускается в externalScope, сохранение не будет прервано при очистке ViewModel,
+                    // но таймаут корректно сработает и прервет операцию, если она зависнет.
+                    val result =
                         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                             saver.save(currentSettings, skipSimSettings = currentSettings.simListLoadFailed)
                         }
+                    if (result == null) {
+                        AppLogger.w("WidgetSettingsViewModel: emergency save timed out")
                     }
                 } catch (e: CancellationException) {
                     throw e

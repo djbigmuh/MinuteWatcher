@@ -17,10 +17,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,28 +43,25 @@ class AppSettingsRepositoryImpl
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : AppSettingsRepository {
-        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
-        // Это соответствует принципу Dependency Inversion.
-
-        private val appSettingsState =
-            dataStore.data
-                .map { prefs -> prefs.toAppSettings() }
-                .retryWhen { cause, attempt ->
-                    if ((cause is IOException) && (attempt < 3)) {
-                        AppLogger.w("DataStore error in appSettingsState, retrying ($attempt)...")
+    private val appSettingsState: StateFlow<AppSettings> =
+        flow {
+            while (true) {
+                try {
+                    emitAll(dataStore.data.map { prefs -> prefs.toAppSettings() })
+                    break // DataStore flow completed normally (should not happen in practice)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("DataStore error in appSettingsState, restarting in 1s", e)
+                    emit(AppSettings()) // emit defaults while waiting for recovery
                         delay(1000.milliseconds)
-                        true
-                    } else {
-                        false
                     }
-                }.catch { e ->
-                    AppLogger.e("Critical DataStore error in appSettingsState, using defaults", e)
-                    emit(AppSettings())
-                }.stateIn(
-                    scope,
-                    SharingStarted.Eagerly,
-                    AppSettings(),
-                )
+            }
+        }.stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            AppSettings(),
+        )
 
         /**
          * Returns a flow of application settings.

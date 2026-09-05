@@ -839,8 +839,8 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             // Mock long-running update using a fake object to avoid runBlocking in mocks
-            val updateStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
-            val updateCanFinish = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val updateStarted = CompletableDeferred<Unit>()
+            val updateCanFinish = CompletableDeferred<Unit>()
             var callCount = 0
             val longRunningUpdater =
                 object : WidgetUpdater {

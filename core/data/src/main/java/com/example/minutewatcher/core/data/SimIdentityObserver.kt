@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -81,81 +82,66 @@ internal class SimIdentityObserver
         manualTrigger.emit(Unit)
     }
 
-        val seedFlow: Flow<SeedResult> =
-            flow {
-                val attempt = AtomicLong(0)
-                val exhausted = AtomicBoolean(false)
-                val realEmitted = AtomicBoolean(false)
-                val lastWasReal = AtomicBoolean(false)
-                emitAll(
-                    merge(
-                        flow {
-                            val initial =
-                                withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                                    val current = seedRepository.seedFlow.first()
-                                    if (current.isNotEmpty()) {
-                                        SeedResult.Real(current)
-                                    } else {
-                                        val generated = generateSeedWithRetry()
-                                        if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
-                                    }
-                                } ?: SeedResult.Fallback
+    val seedFlow: Flow<SeedResult> =
+        flow<SeedResult> {
+            val attempt = AtomicLong(0)
+            val realEmitted = AtomicBoolean(false)
+            emitAll(
+                merge<SeedResult>(
+                    flow {
+                        val initial =
+                            withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                                val current = seedRepository.seedFlow.filter { it.isNotEmpty() }.firstOrNull()
+                                if (current != null) {
+                                    SeedResult.Real(current)
+                                } else {
+                                    val generated = generateSeedWithRetry()
+                                    if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
+                                }
+                            } ?: SeedResult.Fallback
 
-                            if (initial is SeedResult.Real) {
-                                if (realEmitted.compareAndSet(false, true)) {
-                                    lastWasReal.set(true)
-                                    emit(initial)
-                                }
-                            } else if (initial is SeedResult.Fallback) {
-                                if (!realEmitted.get()) {
-                                    AppLogger.e(
-                                        "SimIdentityObserver: seed unavailable after timeout, emitting Fallback. " +
-                                            "SIM identity resolution will fail until seed is available.",
-                                    )
-                                    lastWasReal.set(false)
-                                    emit(initial)
-                                }
+                        if (initial is SeedResult.Real) {
+                            if (realEmitted.compareAndSet(false, true)) {
+                                emit(initial)
                             }
-                        },
-                        flow {
-                            seedRepository.seedFlow
-                                .filter { it.isNotEmpty() }
-                                .collect {
-                                    realEmitted.set(true)
-                                    lastWasReal.set(true)
-                                    emit(SeedResult.Real(it))
-                                }
-                        },
-                    ).onEach {
-                        attempt.set(0)
-                        exhausted.set(false)
-                    }.retryWhen { cause, _ ->
-                        if (cause is CancellationException) return@retryWhen false
-                        val currentAttempt = attempt.incrementAndGet()
-                        if (currentAttempt > MAX_SEED_RETRIES) {
-                            AppLogger.e("SimIdentityObserver: seedFlow max retries exceeded, falling back", cause)
-                            exhausted.set(true)
-                            return@retryWhen false
+                        } else if (!realEmitted.get()) {
+                            AppLogger.e(
+                                "SimIdentityObserver: seed unavailable after timeout, emitting Fallback. " +
+                                    "SIM identity resolution will fail until seed is available.",
+                            )
+                            emit(initial)
                         }
-                        val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
-                        AppLogger.e(
-                            "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), " +
-                                "retrying in ${backoff}ms",
-                            cause,
-                        )
-                        delay(backoff.milliseconds)
-                        true
                     },
-                )
-                if (exhausted.get() && !lastWasReal.get()) {
-                    emit(SeedResult.Fallback)
-                }
-            }.distinctUntilChanged()
-                .shareIn(
-                    scope,
-                    SharingStarted.Eagerly,
-                    replay = 1,
-                )
+                    seedRepository.seedFlow
+                        .filter { it.isNotEmpty() }
+                        .onEach { realEmitted.set(true) }
+                        .map { SeedResult.Real(it) },
+                ).onEach {
+                    attempt.set(0)
+                }.retryWhen { cause, _ ->
+                    if (cause is CancellationException) return@retryWhen false
+                    val currentAttempt = attempt.incrementAndGet()
+                    if (currentAttempt > MAX_SEED_RETRIES) {
+                        AppLogger.e("SimIdentityObserver: seedFlow max retries exceeded, using Fallback")
+                        if (!realEmitted.get()) emit(SeedResult.Fallback)
+                        return@retryWhen false
+                    }
+                    val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
+                    AppLogger.e(
+                        "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), " +
+                            "retrying in ${backoff}ms",
+                        cause,
+                    )
+                    delay(backoff.milliseconds)
+                    true
+                },
+            )
+        }.distinctUntilChanged()
+            .shareIn(
+                scope,
+                SharingStarted.Eagerly,
+                replay = 1,
+            )
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private val physicalActiveSims: Flow<List<ActiveSimInfo>> =

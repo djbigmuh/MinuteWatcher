@@ -210,7 +210,7 @@ open class CallTracker
     private suspend fun endCall(
         subId: Int,
         notify: Boolean = true,
-        ) {
+    ) {
         endHandler.endCall(
             subId = subId,
             notify = notify,
@@ -222,7 +222,7 @@ open class CallTracker
         ) {
             settingsHandler.isCallTrackingEnabled()
         }
-        }
+    }
 
     private suspend fun clearSessionsAndRefresh(tag: String) {
         var operationCompleted = false
@@ -244,10 +244,10 @@ open class CallTracker
                     } catch (e: Exception) {
                         AppLogger.e("CallTracker: Failed to refresh status in finally during $tag", e)
                     }
-                    }
                 }
             }
         }
+    }
 
     fun onBoot() {
         scope.launch {
@@ -277,4 +277,4 @@ open class CallTracker
         private const val RETRY_DELAY_BASE_MS = 1000
         private const val RETRY_DELAY_MAX_MS = 30000L
     }
-    }
+}

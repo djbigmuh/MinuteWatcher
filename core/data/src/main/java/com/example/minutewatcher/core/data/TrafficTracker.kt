@@ -57,12 +57,12 @@ class TrafficTracker
         private val permissionStateNotifier: PermissionStateNotifier,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
-        override val key: String = "traffic"
+    override val key: String = "traffic"
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-        private val trafficMutex = Mutex()
+    private val trafficMutex = Mutex()
     private val isInitialized = AtomicBoolean(false)
     private val initializationFailed = AtomicBoolean(false)
 
@@ -110,37 +110,30 @@ class TrafficTracker
     }
 
     private suspend fun initializeWithRetry() {
-        var attempt = 0
-        val maxAttempts = 3
-        while (true) {
+        for (attempt in 1..MAX_INIT_ATTEMPTS) {
             try {
                 updateTrafficUsageLogic()
                 return
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: SecurityException) {
-                // Status already set in updateTrafficUsageLogic.
-                // We stop retrying immediately as per instruction.
-                initializationFailed.set(true)
-                return
             } catch (e: Exception) {
-                if (e.message == "Traffic update timeout") {
-                    AppLogger.w("TrafficTracker: Initialization stopped due to timeout", e)
+                if (isTerminalInitError(e)) {
+                    AppLogger.e("TrafficTracker: terminal init error", e)
                     initializationFailed.set(true)
                     return
                 }
-                attempt++
-                if (attempt >= maxAttempts) {
-                    AppLogger.e("TrafficTracker: Initialization failed after $maxAttempts attempts", e)
-                    initializationFailed.set(true)
-                    return
-                }
-                val delayMs = 1000L * (1 shl (attempt - 1))
-                AppLogger.w("TrafficTracker: Initialization failed (attempt $attempt), retrying in ${delayMs}ms", e)
+                if (attempt >= MAX_INIT_ATTEMPTS) break
+
+                val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
+                AppLogger.w("TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms", e)
                 delay(delayMs.milliseconds)
             }
         }
+        initializationFailed.set(true)
     }
+
+    private fun isTerminalInitError(e: Exception): Boolean =
+        e is SecurityException || e.message == "Traffic update timeout"
 
     override suspend fun recover() {
         if (initializationFailed.compareAndSet(true, false)) {
@@ -152,76 +145,76 @@ class TrafficTracker
         }
     }
 
-        suspend fun resetBaseline(identity: String) {
-            if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
-                AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
-                return
-            }
-            simChangeHandler.withSimChangeLock {
-                trafficMutex.withLock {
-                    if (!permissionChecker.checkPermissions(_status)) return@withLock
-                    baselineManager.resetBaseline(identity, _status) {
-                        val currentDataSubId =
-                            try {
-                                permissionManager.getDefaultDataSubscriptionId()
-                            } catch (_: Exception) {
-                                -1
-                            }
-                        simChangeHandler.updateLastDataSubId(currentDataSubId)
-                    }
+    suspend fun resetBaseline(identity: String) {
+        if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
+            return
+        }
+        simChangeHandler.withSimChangeLock {
+            trafficMutex.withLock {
+                if (!permissionChecker.checkPermissions(_status)) return@withLock
+                baselineManager.resetBaseline(identity, _status) {
+                    val currentDataSubId =
+                        try {
+                            permissionManager.getDefaultDataSubscriptionId()
+                        } catch (_: Exception) {
+                            -1
+                        }
+                    simChangeHandler.updateLastDataSubId(currentDataSubId)
                 }
             }
         }
+    }
 
-        suspend fun updateTrafficUsage() {
-            try {
-                updateTrafficUsageLogic()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Handled in updateTrafficUsageLogic (status set, error logged)
-            }
+    suspend fun updateTrafficUsage() {
+        try {
+            updateTrafficUsageLogic()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Handled in updateTrafficUsageLogic (status set, error logged)
         }
+    }
 
     private suspend fun updateTrafficUsageLogic() {
-            try {
-                val currentStatus = _status.value
-                val isTimeoutError =
-                    (currentStatus is TrackingStatus.Error) &&
-                        (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN) &&
-                        (currentStatus.message == "Traffic update timeout")
-                if (isTimeoutError) {
-                    _status.value = TrackingStatus.Idle
-                }
-
-                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-                    if (!permissionChecker.checkPermissions(_status)) return@withTimeoutOrNull
-
-                    val activeSims = fetchActiveSims()
-                    handleActiveSims(activeSims)
-                } ?: run {
-                    AppLogger.e("TrafficTracker: Traffic update timed out")
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Traffic update timeout",
-                        )
-                    throw Exception("Traffic update timeout")
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: SecurityException) {
-                AppLogger.e("TrafficTracker: SecurityException during update", e)
-                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-                throw e
-            } catch (e: Exception) {
-                if (e.message != "Traffic update timeout") {
-                    AppLogger.e("TrafficTracker: Unexpected error during update", e)
-                    errorHandler.handleUpdateError(e, _status)
-                }
-                throw e
+        try {
+            val currentStatus = _status.value
+            val isTimeoutError =
+                (currentStatus is TrackingStatus.Error) &&
+                    (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN) &&
+                    (currentStatus.message == "Traffic update timeout")
+            if (isTimeoutError) {
+                _status.value = TrackingStatus.Idle
             }
+
+            withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                if (!permissionChecker.checkPermissions(_status)) return@withTimeoutOrNull
+
+                val activeSims = fetchActiveSims()
+                handleActiveSims(activeSims)
+            } ?: run {
+                AppLogger.e("TrafficTracker: Traffic update timed out")
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Traffic update timeout",
+                    )
+                throw Exception("Traffic update timeout")
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SecurityException) {
+            AppLogger.e("TrafficTracker: SecurityException during update", e)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            throw e
+        } catch (e: Exception) {
+            if (e.message != "Traffic update timeout") {
+                AppLogger.e("TrafficTracker: Unexpected error during update", e)
+                errorHandler.handleUpdateError(e, _status)
+            }
+            throw e
         }
+    }
 
     private suspend fun fetchActiveSims(): List<ActiveSimInfo> =
         withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
@@ -231,44 +224,44 @@ class TrafficTracker
             emptyList()
         }
 
-        private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
-            if (activeSims.isEmpty()) {
-                trafficMutex.withLock {
-                    baselineManager.cleanupRetries(emptySet())
-                    _status.value = TrackingStatus.Idle
-                }
-                return
-            }
-
-            val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
+    private suspend fun handleActiveSims(activeSims: List<ActiveSimInfo>) {
+        if (activeSims.isEmpty()) {
             trafficMutex.withLock {
-                baselineManager.cleanupRetries(activeIdentities)
-            }
-
-            processActiveSimsTraffic(activeSims)
-        }
-
-        private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
-            val result = targetResolver.resolve(activeSims)
-
-            if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
                 baselineManager.cleanupRetries(emptySet())
-                errorHandler.handleInconsistentFirmware(_status)
-                return
+                _status.value = TrackingStatus.Idle
             }
-
-            if (result !is TrafficTargetResolver.TargetResult.Success) {
-                AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
-                return
-            }
-
-            val target = result.target
-
-            simChangeHandler.withSimChangeLock {
-                val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
-                targetIdentity?.let { performTrafficUpdate(target, it) }
-            }
+            return
         }
+
+        val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
+        trafficMutex.withLock {
+            baselineManager.cleanupRetries(activeIdentities)
+        }
+
+        processActiveSimsTraffic(activeSims)
+    }
+
+    private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
+        val result = targetResolver.resolve(activeSims)
+
+        if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
+            baselineManager.cleanupRetries(emptySet())
+            errorHandler.handleInconsistentFirmware(_status)
+            return
+        }
+
+        if (result !is TrafficTargetResolver.TargetResult.Success) {
+            AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
+            return
+        }
+
+        val target = result.target
+
+        simChangeHandler.withSimChangeLock {
+            val targetIdentity = simChangeHandler.handleSimChangeIfNeeded(target, _status)
+            targetIdentity?.let { performTrafficUpdate(target, it) }
+        }
+    }
 
     private suspend fun performTrafficUpdate(
         target: TargetInfo,
@@ -306,8 +299,8 @@ class TrafficTracker
             ) {
                 baselineManager.baselineNeedsRetry.remove(targetIdentity)
                 errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                    return@withLock
-                }
+                return@withLock
+            }
 
             // Handle results
             val finalStats = statsResult
@@ -347,53 +340,58 @@ class TrafficTracker
                     return@withLock
                 }
                 _status.value = TrackingStatus.Active
-                }
             }
-        }
-
-        private suspend fun handleRetryAction(
-            target: TargetInfo,
-            targetIdentity: String,
-            currentPending: Int,
-            statsResult: StatsResult,
-        ) {
-            if (statsResult is StatsResult.Success) {
-                withContext(NonCancellable) {
-                    simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
-                    simChangeHandler.updateLastDataSubId(target.dataSubId)
-                }
-                baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                _status.value = TrackingStatus.Active
-                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
-            } else {
-                val nextRetry = currentPending + 1
-                if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                    errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                } else {
-                    baselineManager.baselineNeedsRetry[targetIdentity] = nextRetry
-                    val reason =
-                        if (statsResult is StatsResult.Error) {
-                            statsResult.exception.message
-                        } else {
-                            "Stats unavailable"
-                        }
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            reason ?: "Stats unavailable, retry pending",
-                        )
-                }
-            }
-        }
-
-        private suspend fun fetchLastTotalBytes(
-            targetIdentity: String,
-            statsResult: StatsResult,
-        ): Long? {
-            if (statsResult !is StatsResult.Success) return null
-            return simUsageResetRepository
-                .getLastTotalBytes(targetIdentity)
-                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
         }
     }
+
+    private suspend fun handleRetryAction(
+        target: TargetInfo,
+        targetIdentity: String,
+        currentPending: Int,
+        statsResult: StatsResult,
+    ) {
+        if (statsResult is StatsResult.Success) {
+            withContext(NonCancellable) {
+                simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                simChangeHandler.updateLastDataSubId(target.dataSubId)
+            }
+            baselineManager.baselineNeedsRetry.remove(targetIdentity)
+            _status.value = TrackingStatus.Active
+            AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
+        } else {
+            val nextRetry = currentPending + 1
+            if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+            } else {
+                baselineManager.baselineNeedsRetry[targetIdentity] = nextRetry
+                val reason =
+                    if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message
+                    } else {
+                        "Stats unavailable"
+                    }
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        reason ?: "Stats unavailable, retry pending",
+                    )
+            }
+        }
+    }
+
+    private suspend fun fetchLastTotalBytes(
+        targetIdentity: String,
+        statsResult: StatsResult,
+    ): Long? {
+        if (statsResult !is StatsResult.Success) return null
+        return simUsageResetRepository
+            .getLastTotalBytes(targetIdentity)
+            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+    }
+
+    private companion object {
+        private const val MAX_INIT_ATTEMPTS = 3
+        private const val INIT_RETRY_BASE_MS = 1000L
+    }
+}

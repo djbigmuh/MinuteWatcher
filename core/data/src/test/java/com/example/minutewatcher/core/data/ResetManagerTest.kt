@@ -304,7 +304,7 @@ class ResetManagerTest {
 
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
             whenever(simUsageRepository.getSimUsage(id0)).thenReturn(flowOf(createMockSimUsage(id0)))
-            whenever(simUsageRepository.getSimUsage(id1)).thenAnswer { throw java.io.IOException("Test failure") }
+            whenever(simUsageRepository.getSimUsage(id1)).thenAnswer { throw IOException("Test failure") }
 
             whenever(simUsageResetRepository.resetSimUsageIfDue(eq(id0), any(), any())).thenReturn(true)
 

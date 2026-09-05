@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -123,21 +124,36 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
-            val rawFlow =
-                usageStateRepository
-                    .observeSnapshot()
-                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-
             // Ensure flow produces at least one snapshot within timeout before starting monitoring.
             // This prevents "silent hangs" if the data source is corrupted or inactive.
-            // We use rawFlow (without debounce) to avoid extra delay during initialization check.
-            val firstSnapshot =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    rawFlow.first()
+            // We use a retry loop with exponential backoff to handle slow initial snapshots.
+            var firstSnapshot: GlobalSnapshot? = null
+            var attempt = 0
+            val maxAttempts = 3
+            var delayMs = Constants.Flow.RETRY_DELAY_MS
+
+            while (attempt < maxAttempts && firstSnapshot == null) {
+                val rawFlow =
+                    usageStateRepository
+                        .observeSnapshot()
+                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+
+                firstSnapshot =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        rawFlow.first()
+                    }
+                if (firstSnapshot == null) {
+                    attempt++
+                    if (attempt < maxAttempts) {
+                        AppLogger.w("UpdateCoordinator: snapshot not ready, retry $attempt/$maxAttempts")
+                        delay(delayMs.milliseconds)
+                        delayMs *= 2
+                    }
                 }
+            }
 
             if (firstSnapshot == null) {
-                AppLogger.e("UpdateCoordinator: Widget observation failed to start - timeout waiting for snapshot flow")
+                AppLogger.e("UpdateCoordinator: Widget observation failed to start after $maxAttempts attempts")
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -147,7 +163,11 @@ class UpdateCoordinator
                 return
             }
 
-            val flow = rawFlow.debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+            val flow =
+                usageStateRepository
+                    .observeSnapshot()
+                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                    .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
 
             val newJob =
                 observationScope.observe(flow, handler) { snapshot ->
