@@ -123,8 +123,8 @@ class SimIdentitySeedRaceTest {
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
             whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any())).doReturn(
                 SeedResolutionResult.Persistent(
-                    "test-seed"
-                )
+                    "test-seed",
+                ),
             )
 
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()

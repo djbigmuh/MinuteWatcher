@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
@@ -65,7 +66,7 @@ class ResetManagerTest {
         runTest {
             val identity = "sim_0"
             val mockActiveSim =
-                com.example.minutewatcher.core.model.ActiveSimInfo(
+                ActiveSimInfo(
                     identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, isStable = true),
                     slotIndex = 0,
                     subscriptionId = 1,
@@ -112,7 +113,7 @@ class ResetManagerTest {
         runTest {
             val identity = "sim_0"
             val mockActiveSim =
-                com.example.minutewatcher.core.model.ActiveSimInfo(
+                ActiveSimInfo(
                     identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, isStable = true),
                     slotIndex = 0,
                     subscriptionId = 1,
@@ -159,7 +160,7 @@ class ResetManagerTest {
         runTest {
             val identity = "sim_0"
             val mockActiveSim =
-                com.example.minutewatcher.core.model.ActiveSimInfo(
+                ActiveSimInfo(
                     identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, isStable = true),
                     slotIndex = 0,
                     subscriptionId = 1,
@@ -217,7 +218,7 @@ class ResetManagerTest {
         runTest {
             val identity = "sim_0"
             val mockActiveSim =
-                com.example.minutewatcher.core.model.ActiveSimInfo(
+                ActiveSimInfo(
                     identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, isStable = true),
                     slotIndex = 0,
                     subscriptionId = 1,
@@ -372,7 +373,7 @@ class ResetManagerTest {
     private fun createMockSimInfo(
         identity: String,
         slot: Int,
-    ) = com.example.minutewatcher.core.model.ActiveSimInfo(
+    ) = ActiveSimInfo(
         identity = SimIdentity(identity, slot + 1, slot, IdentitySource.ICCID, isStable = true),
         slotIndex = slot,
         subscriptionId = slot + 1,

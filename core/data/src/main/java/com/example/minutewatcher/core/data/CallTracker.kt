@@ -84,10 +84,15 @@ open class CallTracker
             scope.launch {
                 permissionStateNotifier.changes
                     .retryWhen { cause, attempt ->
-                        if (attempt < 10 && cause !is CancellationException) {
-                            val delayTime = (2.0.pow(attempt.toDouble()) * 1000).toLong().coerceAtMost(30000)
+                        if (attempt < MAX_RETRY_ATTEMPTS && cause !is CancellationException) {
+                            val delayTime =
+                                (
+                                    2.0.pow(attempt.toDouble()) *
+                                        RETRY_DELAY_BASE_MS
+                                    ).toLong().coerceAtMost(RETRY_DELAY_MAX_MS)
                             AppLogger.w(
-                                "CallTracker: Permission observer failed (attempt $attempt), retrying in ${delayTime}ms",
+                                "CallTracker: Permission observer failed (attempt $attempt), " +
+                                    "retrying in ${delayTime}ms",
                                 cause,
                             )
                             delay(delayTime.milliseconds)
@@ -265,5 +270,11 @@ open class CallTracker
         } catch (e: Exception) {
             AppLogger.e("CallTracker: recovery failed", e)
         }
+    }
+
+    companion object {
+        private const val MAX_RETRY_ATTEMPTS = 10
+        private const val RETRY_DELAY_BASE_MS = 1000
+        private const val RETRY_DELAY_MAX_MS = 30000L
     }
     }

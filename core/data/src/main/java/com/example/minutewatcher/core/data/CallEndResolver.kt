@@ -34,34 +34,42 @@ internal class CallEndResolver(
             )
             return emptyList()
         }
-        val activeSubIds =
-            try {
-                callSessionRepository.getActiveCallSubIds()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: SecurityException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to read active call sessions on unknown subId end", e)
+
+        val activeSubIds = fetchActiveSubIds()
+        return when {
+            activeSubIds.isEmpty() -> {
+                AppLogger.d("Call ended with unknown subId and no active sessions found")
                 emptyList()
             }
 
-        if (activeSubIds.isEmpty()) {
-            AppLogger.d("Call ended with unknown subId and no active sessions found")
-            return emptyList()
-        } else if (isDeviceIdle(activeSubIds)) {
-            AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-            return activeSubIds
-        } else {
-            val target: Int? = findTargetSubId(activeSubIds)
-            if (target != null) {
-                return listOf(target)
-            } else {
-                handleAmbiguousIdle(activeSubIds)
-                return emptyList()
+            isDeviceIdle(activeSubIds) -> {
+                AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
+                activeSubIds
+            }
+
+            else -> {
+                val target = findTargetSubId(activeSubIds)
+                if (target != null) {
+                    listOf(target)
+                } else {
+                    handleAmbiguousIdle(activeSubIds)
+                    emptyList()
+                }
             }
         }
     }
+
+    private suspend fun fetchActiveSubIds(): List<Int> =
+        try {
+            callSessionRepository.getActiveCallSubIds()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SecurityException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("Failed to read active call sessions on unknown subId end", e)
+            emptyList()
+        }
 
     @Suppress("MissingPermission")
     private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {

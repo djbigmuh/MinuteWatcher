@@ -114,28 +114,60 @@ internal class CallStartHandler
         ) {
             if (data.startTimeResult.isFailure) {
                 handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull(), statusFlow, cleanupCounters)
-                return
-            }
-
-            val startTime = data.startTimeResult.getOrThrow()
-            if (startTime != 0L) {
-                val savedBootTime = data.bootTimeResult.getOrElse { 0L }
-                val isStale =
-                    (savedBootTime > data.bootTime) ||
-                        (
-                            (savedBootTime > 0) &&
-                                ((data.bootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS)
-                            )
-
-                if (!isStale) {
-                    if (data.identity != null && data.identity != data.currentIdentity) {
-                        AppLogger.w("CallTracker: identity changed during active call for subId $targetSubId (saved=${data.identity}, current=${data.currentIdentity})")
+            } else {
+                val startTime = data.startTimeResult.getOrThrow()
+                if (startTime != 0L) {
+                    val savedBootTime = data.bootTimeResult.getOrElse { 0L }
+                    val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, cleanupCounters)
+                    if (!isStale) {
+                        handleActiveSession(targetSubId, data)
                         return
                     }
-                    AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
-                    return
                 }
 
+                recordCallStart(targetSubId, data)
+            }
+        }
+
+    private fun handleActiveSession(
+        targetSubId: Int,
+        data: CallStartData,
+    ) {
+        if (data.identity != null && data.identity != data.currentIdentity) {
+            AppLogger.w(
+                "CallTracker: identity changed during active call for subId $targetSubId" +
+                    " (saved=${data.identity}, current=${data.currentIdentity})",
+            )
+        } else {
+            AppLogger.d("CallTracker: session already active for subId $targetSubId, ignoring start event")
+        }
+    }
+
+    private suspend fun recordCallStart(
+        targetSubId: Int,
+        data: CallStartData,
+    ) {
+        callSessionRepository.setCallStartTime(targetSubId, data.now)
+        callSessionRepository.setBootTime(targetSubId, data.bootTime)
+        callSessionRepository.setUptime(targetSubId, data.uptime)
+        callSessionRepository.setCallIdentity(targetSubId, data.currentIdentity)
+        AppLogger.d("Call start recorded for subId $targetSubId at ${data.now} (identity=${data.currentIdentity})")
+    }
+
+    private suspend fun validateSessionStaleness(
+        targetSubId: Int,
+        savedBootTime: Long,
+        currentBootTime: Long,
+        cleanupCounters: suspend (Int) -> Unit,
+    ): Boolean {
+        val isStale =
+            (savedBootTime > currentBootTime) ||
+                (
+                    (savedBootTime > 0) &&
+                        ((currentBootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS)
+                    )
+
+        if (isStale) {
                 AppLogger.w("CallTracker: clearing stale session for subId $targetSubId")
                 try {
                     cleanupCounters(targetSubId)
@@ -145,12 +177,7 @@ internal class CallStartHandler
                     AppLogger.e("Non-fatal error clearing stale session", e)
                 }
             }
-
-            callSessionRepository.setCallStartTime(targetSubId, data.now)
-            callSessionRepository.setBootTime(targetSubId, data.bootTime)
-            callSessionRepository.setUptime(targetSubId, data.uptime)
-            callSessionRepository.setCallIdentity(targetSubId, data.currentIdentity)
-            AppLogger.d("Call start recorded for subId $targetSubId at ${data.now} (identity=${data.currentIdentity})")
+        return isStale
         }
 
         private suspend fun handleStartTimeFailure(

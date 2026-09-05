@@ -84,7 +84,7 @@ internal class SimIdentityObserver
         val seedFlow: Flow<SeedResult> =
             flow {
                 val attempt = AtomicLong(0)
-                var exhausted = false
+                val exhausted = AtomicBoolean(false)
                 val realEmitted = AtomicBoolean(false)
                 val lastWasReal = AtomicBoolean(false)
                 emitAll(
@@ -128,27 +128,26 @@ internal class SimIdentityObserver
                         },
                     ).onEach {
                         attempt.set(0)
-                        exhausted = false
-                    }
-                        .retryWhen { cause, _ ->
-                            if (cause is CancellationException) return@retryWhen false
-                            val currentAttempt = attempt.incrementAndGet()
-                            if (currentAttempt > MAX_SEED_RETRIES) {
-                                AppLogger.e("SimIdentityObserver: seedFlow max retries exceeded, falling back", cause)
-                                exhausted = true
-                                return@retryWhen false
-                            }
-                            val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
-                            AppLogger.e(
-                                "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), " +
-                                    "retrying in ${backoff}ms",
-                                cause,
-                            )
-                            delay(backoff.milliseconds)
-                            true
-                        },
+                        exhausted.set(false)
+                    }.retryWhen { cause, _ ->
+                        if (cause is CancellationException) return@retryWhen false
+                        val currentAttempt = attempt.incrementAndGet()
+                        if (currentAttempt > MAX_SEED_RETRIES) {
+                            AppLogger.e("SimIdentityObserver: seedFlow max retries exceeded, falling back", cause)
+                            exhausted.set(true)
+                            return@retryWhen false
+                        }
+                        val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
+                        AppLogger.e(
+                            "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), " +
+                                "retrying in ${backoff}ms",
+                            cause,
+                        )
+                        delay(backoff.milliseconds)
+                        true
+                    },
                 )
-                if (exhausted && !lastWasReal.get()) {
+                if (exhausted.get() && !lastWasReal.get()) {
                     emit(SeedResult.Fallback)
                 }
             }.distinctUntilChanged()
@@ -230,10 +229,11 @@ internal class SimIdentityObserver
                                 // If it's a terminal IOException after all retries, it's already handled in retryWhen.
                                 // We only set error status for truly unexpected exceptions that reached here directly.
                                 if (cause !is IOException) {
-                                    _status.value = TrackingStatus.Error(
-                                        TrackingStatus.ErrorType.UNKNOWN,
-                                        cause.message ?: "Unexpected flow error"
-                                    )
+                                    _status.value =
+                                        TrackingStatus.Error(
+                                            TrackingStatus.ErrorType.UNKNOWN,
+                                            cause.message ?: "Unexpected flow error",
+                                        )
                                 }
                                 emit(emptyList())
                             }

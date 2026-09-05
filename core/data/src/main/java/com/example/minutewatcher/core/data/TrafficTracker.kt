@@ -188,7 +188,8 @@ class TrafficTracker
                 val currentStatus = _status.value
                 val isTimeoutError =
                     (currentStatus is TrackingStatus.Error) &&
-                        (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN)
+                        (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN) &&
+                        (currentStatus.message == "Traffic update timeout")
                 if (isTimeoutError) {
                     _status.value = TrackingStatus.Idle
                 }

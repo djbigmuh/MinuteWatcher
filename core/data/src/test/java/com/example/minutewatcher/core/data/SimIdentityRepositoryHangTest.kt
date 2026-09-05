@@ -153,7 +153,9 @@ class SimIdentityRepositoryHangTest {
                         // No-op
                     }
 
-                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
                         delay(1000.seconds)
                         return SeedResolutionResult.Persistent("seed")
                     }
@@ -203,7 +205,9 @@ class SimIdentityRepositoryHangTest {
                         // No-op
                     }
 
-                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
                         delay(1000.seconds)
                         return SeedResolutionResult.Persistent("seed")
                     }
@@ -400,8 +404,9 @@ class SimIdentityRepositoryHangTest {
 
                     override suspend fun setSeed(seed: String) = storedSeed.emit(seed)
 
-                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
-                        SeedResolutionResult.Persistent("generated_seed")
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult = SeedResolutionResult.Persistent("generated_seed")
                 }
 
             val identityRepo =

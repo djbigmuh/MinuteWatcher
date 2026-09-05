@@ -145,9 +145,15 @@ class MainViewModel
 
     fun retryWidgetObservation() {
         viewModelScope.launch {
-            controllers.widgetObservationRecovery.get().recover()
+            try {
+                controllers.widgetObservationRecovery.get().recover()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("MainViewModel: retryWidgetObservation failed", e)
             }
         }
+    }
 
         // Delegate Settings Actions
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)

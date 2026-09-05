@@ -6,8 +6,13 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.MeasurementUnit
+import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -707,7 +712,7 @@ class UpdateCoordinatorTest {
         suppressWidgetUpdate = suppressUpdate,
         simSnapshots =
             listOf(
-                com.example.minutewatcher.core.model.SimSnapshot(
+                SimSnapshot(
                     slot = 0,
                     identity = "sim_0",
                     operatorName = "MTS",
@@ -715,19 +720,19 @@ class UpdateCoordinatorTest {
                     autoResetDay = 1,
                     entities =
                         mapOf(
-                            com.example.minutewatcher.core.model.PackageType.MINUTES to
-                                com.example.minutewatcher.core.model.SemanticEntity(
+                            PackageType.MINUTES to
+                                SemanticEntity(
                                     id = content, // Use content here to change hash
                                     simSlot = 0,
                                     operatorName = "MTS",
-                                    packageType = com.example.minutewatcher.core.model.PackageType.MINUTES,
+                                    packageType = PackageType.MINUTES,
                                     limit = 100L,
                                     used = 10L,
                                     remaining = 90L,
-                                    unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
+                                    unit = MeasurementUnit.MINUTES,
                                     periodStart = 0L,
                                     periodEnd = 0L,
-                                    sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM,
+                                    sourceType = DataSourceType.SYSTEM,
                                     lastUpdateTime = 0L,
                                 ),
                         ),
@@ -1049,7 +1054,10 @@ class UpdateCoordinatorTest {
             }
             verify(widgetUpdater, times(4)).updateAll()
             // Counter should be 4. Status should not be terminal error yet.
-            assertTrue(coordinator.status.value !is TrackingStatus.Error || (coordinator.status.value as TrackingStatus.Error).type != TrackingStatus.ErrorType.DATABASE_ERROR)
+            assertTrue(
+                coordinator.status.value !is TrackingStatus.Error ||
+                    (coordinator.status.value as TrackingStatus.Error).type != TrackingStatus.ErrorType.DATABASE_ERROR,
+            )
 
             // 2. Emit suppressed snapshot
             val suppressed = createSnapshot(timestamp = 5000L, content = "Suppressed", suppressUpdate = true)
@@ -1219,14 +1227,15 @@ class UpdateCoordinatorTest {
             val canFinishUpdate = CompletableDeferred<Unit>()
             var callCount = 0
 
-            val localWidgetUpdater = object : WidgetUpdater {
-                override suspend fun updateAll(): WidgetUpdateResult {
-                    callCount++
-                    updateStarted.complete(Unit)
-                    canFinishUpdate.await()
-                    return WidgetUpdateResult.Success()
+            val localWidgetUpdater =
+                object : WidgetUpdater {
+                    override suspend fun updateAll(): WidgetUpdateResult {
+                        callCount++
+                        updateStarted.complete(Unit)
+                        canFinishUpdate.await()
+                        return WidgetUpdateResult.Success()
+                    }
                 }
-            }
 
             val coordinator =
                 UpdateCoordinator(
@@ -1237,9 +1246,10 @@ class UpdateCoordinatorTest {
                 )
 
             // 1. Trigger forced update
-            val forcedUpdateJob = launch {
-                coordinator.notifyDataChanged(updateWidget = true, force = true)
-            }
+            val forcedUpdateJob =
+                launch {
+                    coordinator.notifyDataChanged(updateWidget = true, force = true)
+                }
 
             updateStarted.await()
 

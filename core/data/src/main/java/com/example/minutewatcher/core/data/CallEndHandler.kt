@@ -90,25 +90,26 @@ internal class CallEndHandler
         notifyDataChanged: suspend () -> Unit,
     ) {
         val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
-        if (effectiveSubId == -1) {
-            val subIdsToEnd = callEndResolver.resolveUnknownSubIdEnd()
-            if (subIdsToEnd.isNotEmpty()) {
-                val notifyEach = subIdsToEnd.size == 1
-                subIdsToEnd.forEach { id ->
-                    try {
-                        endCallAction(id, notifyEach)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to end call for subId $id during resolution", e)
-                    }
-                }
-                if (!notifyEach) {
-                    notifyDataChanged()
-                }
-            }
-        } else {
+        if (effectiveSubId != -1) {
             endCallAction(effectiveSubId, true)
+            return
+        }
+
+            val subIdsToEnd = callEndResolver.resolveUnknownSubIdEnd()
+        if (subIdsToEnd.isEmpty()) return
+
+        val notifyEach = subIdsToEnd.size == 1
+        subIdsToEnd.forEach { id ->
+            try {
+                endCallAction(id, notifyEach)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to end call for subId $id during resolution", e)
+            }
+        }
+        if (!notifyEach) {
+            notifyDataChanged()
         }
     }
 

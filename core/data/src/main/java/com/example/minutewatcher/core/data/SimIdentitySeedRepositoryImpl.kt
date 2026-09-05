@@ -104,7 +104,9 @@ class SimIdentitySeedRepositoryImpl
                         }
                         return SeedResolutionResult.Persistent(persistentSeed)
                     }
-                    AppLogger.w("SimIdentitySeedRepositoryImpl: Persistent seed access returned null (attempt $attemptNum)")
+                    AppLogger.w(
+                        "SimIdentitySeedRepositoryImpl: Persistent seed access returned null (attempt $attemptNum)",
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -131,7 +133,10 @@ class SimIdentitySeedRepositoryImpl
         }
 
     private sealed interface EphemeralResolutionResult {
-        data class Found(val seed: String?) : EphemeralResolutionResult
+        data class Found(
+            val seed: String?,
+        ) : EphemeralResolutionResult
+
         data object NotChecked : EphemeralResolutionResult
     }
 

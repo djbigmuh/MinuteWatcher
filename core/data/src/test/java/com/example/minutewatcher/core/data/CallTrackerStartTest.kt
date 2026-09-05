@@ -308,24 +308,26 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
 
             // Act: NEW event with identity "id_new"
             // We need to update observeActiveSims because resolveIdentity uses it
-            val mockIdentity = SimIdentity(
-                stableId = "id_new",
-                subscriptionId = 1,
-                slotIndex = 0,
-                source = IdentitySource.ICCID,
-                isStable = true,
-            )
-            val mockSim = ActiveSimInfo(
-                identity = mockIdentity,
-                slotIndex = 0,
-                subscriptionId = 1,
-                iccId = "id_new",
-                displayName = "SIM 1",
-                carrierName = "Carrier",
-                mccMnc = "12345",
-                isDefaultData = true,
-                isDefaultVoice = true,
-            )
+            val mockIdentity =
+                SimIdentity(
+                    stableId = "id_new",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true,
+                )
+            val mockSim =
+                ActiveSimInfo(
+                    identity = mockIdentity,
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "id_new",
+                    displayName = "SIM 1",
+                    carrierName = "Carrier",
+                    mccMnc = "12345",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(mockSim)))
 
             timeProvider.setTime(2000L)

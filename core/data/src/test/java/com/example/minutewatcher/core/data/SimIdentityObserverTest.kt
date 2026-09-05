@@ -185,23 +185,27 @@ class SimIdentityObserverTest {
             val seedFlow = MutableStateFlow("") // Initial empty seed
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
 
-            val hangingRepo = object : SimIdentitySeedRepository by seedRepository {
-                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-                    delay(60_000)
-                    return SeedResolutionResult.Persistent("too_late")
+            val hangingRepo =
+                object : SimIdentitySeedRepository by seedRepository {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        delay(60_000.milliseconds)
+                        return SeedResolutionResult.Persistent("too_late")
+                    }
                 }
-            }
 
-            observer = SimIdentityObserver(
-                discovery = discovery,
-                seedRepository = hangingRepo,
-                appSettingsRepository = appSettingsRepository,
-                mockSimProvider = mockSimProvider,
-                fetcher = fetcher,
-                scope = backgroundScope,
-                cache = cache,
-                permissionStateNotifier = permissionStateNotifier,
-            )
+            observer =
+                SimIdentityObserver(
+                    discovery = discovery,
+                    seedRepository = hangingRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    mockSimProvider = mockSimProvider,
+                    fetcher = fetcher,
+                    scope = backgroundScope,
+                    cache = cache,
+                    permissionStateNotifier = permissionStateNotifier,
+                )
             val job = launch { observer.activeSimsCache.collect {} }
 
             // Act: Wait for SEED_TOTAL_TIMEOUT_MS (13s)
@@ -236,9 +240,10 @@ class SimIdentityObserverTest {
             observer = createObserver(backgroundScope)
 
             val emissions = mutableListOf<SeedResult>()
-            val job = launch {
-                observer.seedFlow.collect { emissions.add(it) }
-            }
+            val job =
+                launch {
+                    observer.seedFlow.collect { emissions.add(it) }
+                }
 
             testScheduler.advanceTimeBy(5000.milliseconds)
             seedFlow.emit("real_seed")
@@ -271,9 +276,10 @@ class SimIdentityObserverTest {
             observer = createObserver(backgroundScope)
 
             val emissions = mutableListOf<SeedResult>()
-            val job = launch {
-                observer.seedFlow.collect { emissions.add(it) }
-            }
+            val job =
+                launch {
+                    observer.seedFlow.collect { emissions.add(it) }
+                }
 
             testScheduler.advanceTimeBy(5000.milliseconds)
             testScheduler.runCurrent()
@@ -311,27 +317,28 @@ class SimIdentityObserverTest {
             val emissions = mutableListOf<List<String>>()
             var callCount = 0
 
-            val testFlow = flow<List<String>> {
-                while (true) {
-                    callCount++
-                    if (callCount == 1) {
-                        emit(listOf("sim1"))
-                        break // Успех
-                    } else if (callCount <= 3) {
-                        throw IOException("Transient")
+            val testFlow =
+                flow<List<String>> {
+                    while (true) {
+                        callCount++
+                        if (callCount == 1) {
+                            emit(listOf("sim1"))
+                            break // Успех
+                        } else if (callCount <= 3) {
+                            throw IOException("Transient")
+                        } else {
+                            break
+                        }
+                    }
+                }.retryWhen { cause, attempt ->
+                    if (cause !is IOException) return@retryWhen false
+                    if (attempt >= 2L) {
+                        emit(emptyList()) // Финальная эмиссия
+                        false
                     } else {
-                        break
+                        true
                     }
                 }
-            }.retryWhen { cause, attempt ->
-                if (cause !is IOException) return@retryWhen false
-                if (attempt >= 2L) {
-                    emit(emptyList()) // Финальная эмиссия
-                    false
-                } else {
-                    true
-                }
-            }
 
             // 1. Успешный запуск
             val job = launch { testFlow.collect { emissions.add(it) } }
@@ -339,17 +346,18 @@ class SimIdentityObserverTest {
             assertEquals(listOf(listOf("sim1")), emissions)
 
             // 2. Проверим поведение при ошибке (как будто flow перезапустился во flatMapLatest)
-            val failingFlow = flow<List<String>> {
-                throw IOException("Failing")
-            }.retryWhen { cause, attempt ->
-                if (attempt < 2L) {
-                    // Имитируем логику: не эмитим ничего
-                    true
-                } else {
-                    emit(emptyList())
-                    false
-                }
-            }.catch { /* swallow final exception for verification */ }
+            val failingFlow =
+                flow<List<String>> {
+                    throw IOException("Failing")
+                }.retryWhen { _, attempt ->
+                    if (attempt < 2L) {
+                        // Имитируем логику: не эмитим ничего
+                        true
+                    } else {
+                        emit(emptyList())
+                        false
+                    }
+                }.catch { /* swallow final exception for verification */ }
 
             val emissions2 = mutableListOf<List<String>>()
             launch { failingFlow.collect { emissions2.add(it) } }
@@ -366,28 +374,33 @@ class SimIdentityObserverTest {
             val seedFlow = MutableStateFlow("")
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
 
-            val hangingRepo = object : SimIdentitySeedRepository by seedRepository {
-                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-                    delay(20_000)
-                    return SeedResolutionResult.Persistent("too_late")
+            val hangingRepo =
+                object : SimIdentitySeedRepository by seedRepository {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        delay(20_000.milliseconds)
+                        return SeedResolutionResult.Persistent("too_late")
+                    }
                 }
-            }
 
-            observer = SimIdentityObserver(
-                discovery = discovery,
-                seedRepository = hangingRepo,
-                appSettingsRepository = appSettingsRepository,
-                mockSimProvider = mockSimProvider,
-                fetcher = fetcher,
-                scope = backgroundScope,
-                cache = cache,
-                permissionStateNotifier = permissionStateNotifier,
-            )
+            observer =
+                SimIdentityObserver(
+                    discovery = discovery,
+                    seedRepository = hangingRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    mockSimProvider = mockSimProvider,
+                    fetcher = fetcher,
+                    scope = backgroundScope,
+                    cache = cache,
+                    permissionStateNotifier = permissionStateNotifier,
+                )
 
             val emissions = mutableListOf<SeedResult>()
-            val job = launch {
-                observer.seedFlow.collect { emissions.add(it) }
-            }
+            val job =
+                launch {
+                    observer.seedFlow.collect { emissions.add(it) }
+                }
 
             // 1. Advance just before SEED_GENERATION_TIMEOUT_MS (10s)
             testScheduler.advanceTimeBy(9_000.milliseconds)
@@ -409,24 +422,28 @@ class SimIdentityObserverTest {
             val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 0))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
 
-            val physicalSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0,
-                    subscriptionId = 1,
-                    iccId = "icc_1",
-                    displayName = "SIM 1",
-                    carrierName = "Carrier",
-                    mccMnc = "12345",
-                    isDefaultData = true,
-                    isDefaultVoice = true,
+            val physicalSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = true),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "icc_1",
+                        displayName = "SIM 1",
+                        carrierName = "Carrier",
+                        mccMnc = "12345",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
                 )
-            )
 
             var shouldReturnData = false
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenAnswer {
-                if (shouldReturnData) SimDiscoveryResult.Available(physicalSims)
-                else SimDiscoveryResult.Available(emptyList())
+                if (shouldReturnData) {
+                    SimDiscoveryResult.Available(physicalSims)
+                } else {
+                    SimDiscoveryResult.Available(emptyList())
+                }
             }
 
             whenever(mockSimProvider.getMockSims(any())).thenAnswer { invocation ->
@@ -445,7 +462,9 @@ class SimIdentityObserverTest {
                             isDefaultVoice = i == 0,
                         )
                     }
-                } else null
+                } else {
+                    null
+                }
             }
 
             observer = createObserver(backgroundScope)

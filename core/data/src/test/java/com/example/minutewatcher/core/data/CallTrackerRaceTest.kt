@@ -59,7 +59,12 @@ class CallTrackerRaceTest {
                     attempts: Int,
                     retryDelayMs: Long,
                     reader: () -> kotlinx.coroutines.flow.Flow<T>,
-                ): Result<T> = Result.success(reader().first())
+                ): Result<T> =
+                    try {
+                        Result.success(reader().first())
+                    } catch (e: Exception) {
+                        Result.failure(e)
+                    }
             }
         val attributionResolver =
             CallAttributionResolver(
@@ -123,6 +128,7 @@ class CallTrackerRaceTest {
             // getUptime используется только в loadCallSessionData (путь endCall) и здесь не нужен.
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L), flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L), flowOf(2000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             // Launch multiple concurrent start events
@@ -154,6 +160,7 @@ class CallTrackerRaceTest {
         runTest(testDispatcher) {
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
             launch { tracker.onCallStarted(1) }

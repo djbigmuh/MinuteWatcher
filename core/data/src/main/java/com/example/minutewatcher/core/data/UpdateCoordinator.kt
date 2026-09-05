@@ -157,6 +157,19 @@ class UpdateCoordinator
                         throw e
                     } catch (e: Exception) {
                         AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
+                        val newHash =
+                            try {
+                                SnapshotUtils.calculateContentHash(snapshot)
+                            } catch (_: Exception) {
+                                0
+                            }
+                        handleUpdateResult(
+                            WidgetUpdateResult.Failure(
+                                isRetryable = false,
+                                reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                            ),
+                            newHash,
+                        )
                     }
                 }
 

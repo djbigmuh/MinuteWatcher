@@ -105,7 +105,8 @@ class SimIdentityRepositoryImplPersistenceTest {
             val seedRepository =
                 mock<SimIdentitySeedRepository> {
                     on { seedFlow } doReturn flowOf("test_seed")
-                    on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
+                    on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn
+                        SeedResolutionResult.Persistent("test_seed")
                 }
 
             val permissionManager =
@@ -175,7 +176,8 @@ class SimIdentityRepositoryImplPersistenceTest {
             val seedRepository =
                 mock<SimIdentitySeedRepository> {
                     on { seedFlow } doReturn flowOf("test_seed")
-                    on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
+                    on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn
+                        SeedResolutionResult.Persistent("test_seed")
                 }
 
             val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -266,35 +268,38 @@ class SimIdentityRepositoryImplPersistenceTest {
             val migrationStarted = CompletableDeferred<Unit>()
             val canFinishMigration = CompletableDeferred<Unit>()
 
-            val fakeMigrationService = object : IdentityMigrationService(mock(), mock()) {
-                override suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome {
-                    if (activeIdentity.stableId == "to_migrate") {
-                        migrationStarted.complete(Unit)
-                        canFinishMigration.await()
+            val fakeMigrationService =
+                object : IdentityMigrationService(mock(), mock()) {
+                    override suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome {
+                        if (activeIdentity.stableId == "to_migrate") {
+                            migrationStarted.complete(Unit)
+                            canFinishMigration.await()
+                        }
+                        return MigrationOutcome(migrated = 1)
                     }
-                    return MigrationOutcome(migrated = 1)
                 }
-            }
 
             val persistence = SimIdentityPersistence(realDataStore, fakeMigrationService)
             val identity = SimIdentity("to_migrate", 101, 0, IdentitySource.ICCID, isStable = true)
 
             // Start save that triggers migration
-            val saveJob = launch {
-                persistence.saveSimIdentitiesInfo(listOf(identity))
-            }
+            val saveJob =
+                launch {
+                    persistence.saveSimIdentitiesInfo(listOf(identity))
+                }
 
             migrationStarted.await()
 
             // At this point migration IS RUNNING.
             // If saveMutex is FREE, a second save can start.
             val secondSaveStarted = CompletableDeferred<Unit>()
-            val secondSaveJob = launch {
-                // subscriptionId = 102, slotIndex = 1
-                val otherIdentity = SimIdentity("other", 102, 1, IdentitySource.ICCID, isStable = true)
-                secondSaveStarted.complete(Unit)
-                persistence.saveSimIdentitiesInfo(listOf(otherIdentity))
-            }
+            val secondSaveJob =
+                launch {
+                    // subscriptionId = 102, slotIndex = 1
+                    val otherIdentity = SimIdentity("other", 102, 1, IdentitySource.ICCID, isStable = true)
+                    secondSaveStarted.complete(Unit)
+                    persistence.saveSimIdentitiesInfo(listOf(otherIdentity))
+                }
 
             secondSaveStarted.await()
 

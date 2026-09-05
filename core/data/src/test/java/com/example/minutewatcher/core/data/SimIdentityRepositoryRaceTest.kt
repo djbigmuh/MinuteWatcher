@@ -13,9 +13,7 @@ import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -212,8 +210,9 @@ class SimIdentityRepositoryRaceTest {
                         storedSeed.value = seed
                     }
 
-                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
-                        SeedResolutionResult.Persistent(storedSeed.value)
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
@@ -277,8 +276,9 @@ class SimIdentityRepositoryRaceTest {
                         storedSeed.value = seed
                     }
 
-                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
-                        SeedResolutionResult.Persistent(storedSeed.value)
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
             val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
@@ -334,50 +334,50 @@ class SimIdentityRepositoryRaceTest {
                 object : SimIdentitySeedRepository {
                     override val seedFlow: Flow<String> = storedSeed
                     override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
                     override suspend fun setSeed(seed: String) {}
-                    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
-                        SeedResolutionResult.Persistent(storedSeed.value)
+
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
             // Мокаем медленное обнаружение SIM
-            val discoveryStarted = CompletableDeferred<Unit>()
-
-            val slowDiscovery = object : SimIdentityDiscovery(mock()) {
-                override fun discoverSims(seed: String): SimDiscoveryResult {
-                    discoveryStarted.complete(Unit)
-                    return SimDiscoveryResult.Available(emptyList<ActiveSimInfo>())
+            val mockSub0 =
+                mock<SubscriptionInfo> {
+                    on { simSlotIndex } doReturn 0
+                    on { subscriptionId } doReturn 100
+                    on { iccId } doReturn "icc_0"
                 }
-
-                override fun observeSubscriptionChanges(): Flow<Unit> = flowOf(Unit)
-            }
-
-            val mockSub0 = mock<SubscriptionInfo> {
-                on { simSlotIndex } doReturn 0
-                on { subscriptionId } doReturn 100
-                on { iccId } doReturn "icc_0"
-            }
-            val mockSub1 = mock<SubscriptionInfo> {
-                on { simSlotIndex } doReturn 1
-                on { subscriptionId } doReturn 101
-                on { iccId } doReturn "icc_1"
-            }
+            val mockSub1 =
+                mock<SubscriptionInfo> {
+                    on { simSlotIndex } doReturn 1
+                    on { subscriptionId } doReturn 101
+                    on { iccId } doReturn "icc_1"
+                }
 
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSub0, mockSub1))
 
-            val repository = SimIdentityRepositoryTestHelper.createRepository(
-                discoveryDeps = SimDiscoveryDependencies(
-                    mock(),
-                    mock(),
-                    permissionManager,
-                    mock { on { changes } doReturn flowOf(Unit) }),
-                dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) { tmpFolder.newFile("parallel_test.pb") },
-                seedRepository = seedRepo,
-                appSettingsRepository = appSettingsRepository,
-                migrationService = migrationService,
-                mockSimProvider = mockSimProvider,
-                timeProvider = mock { on { elapsedRealtime() } doReturn 1000L },
-                scope = backgroundScope,
-            )
+            val repository =
+                SimIdentityRepositoryTestHelper.createRepository(
+                    discoveryDeps =
+                        SimDiscoveryDependencies(
+                            mock(),
+                            mock(),
+                            permissionManager,
+                            mock { on { changes } doReturn flowOf(Unit) },
+                        ),
+                    dataStore =
+                        PreferenceDataStoreFactory.create(
+                            scope = backgroundScope,
+                        ) { tmpFolder.newFile("parallel_test.pb") },
+                    seedRepository = seedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    timeProvider = mock { on { elapsedRealtime() } doReturn 1000L },
+                    scope = backgroundScope,
+                )
 
             // Запускаем два резолва параллельно
             val job0 = async { repository.getSimIdentity(0) }
@@ -399,7 +399,7 @@ class SimIdentityRepositoryRaceTest {
             val storedSeed = MutableSharedFlow<String>(replay = 0)
             val identityRepo = createRepositoryForSeedFlowTest("test_slow_seed.preferences_pb", storedSeed)
 
-            val activeSimsList = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
+            val activeSimsList = mutableListOf<List<ActiveSimInfo>>()
             val job =
                 launch {
                     identityRepo.observeActiveSims().drop(1).collect { activeSimsList.add(it) }
