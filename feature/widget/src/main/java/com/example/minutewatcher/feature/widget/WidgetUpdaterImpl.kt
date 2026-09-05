@@ -13,6 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,6 +37,7 @@ class WidgetUpdaterImpl
     ) : WidgetUpdater {
     private val updateMutex = Mutex()
     private val currentUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+    private var limitExceededHandled = AtomicBoolean(false)
 
     /**
      * Triggers an update for all application widgets.
@@ -48,17 +50,28 @@ class WidgetUpdaterImpl
      */
     override suspend fun updateAll(): WidgetUpdateResult {
         updateMutex.lock()
-        val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
-        if (activeUpdate != null) {
-            updateMutex.unlock()
-            return joinInProgressUpdate(activeUpdate)
-        }
+        val (deferred, isCoalesced) =
+            try {
+                val activeUpdate = currentUpdate.get()?.takeIf { !it.isCompleted }
+                if (activeUpdate != null) {
+                    activeUpdate to true
+                } else {
+                    val newDeferred = CompletableDeferred<WidgetUpdateResult>()
+                    currentUpdate.set(newDeferred)
+                    newDeferred to false
+                }
+            } finally {
+                updateMutex.unlock()
+            }
 
-        val deferred = CompletableDeferred<WidgetUpdateResult>()
-        currentUpdate.set(deferred)
-        updateMutex.unlock()
+        val result =
+            if (isCoalesced) {
+                joinInProgressUpdate(deferred)
+            } else {
+                startNewUpdate(deferred)
+            }
 
-        return startNewUpdate(deferred)
+        return result
     }
 
     private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
@@ -164,14 +177,21 @@ class WidgetUpdaterImpl
     }
 
         private suspend fun handleLimitExceeded(): WidgetUpdateResult {
+            if (!limitExceededHandled.compareAndSet(false, true)) {
+                return WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
+                )
+            }
             limitManager.setWidgetLimitExceeded(value = true)
 
-            var lastOutcome: UpdateOutcome? = null
+            var lastOutcome: UpdateOutcome = UpdateOutcome.Retry
             val success =
                 try {
                     retryManager.updateWithRetry { _ ->
                         when (val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)) {
-                            is UpdateResult.Success -> UpdateOutcome.Success()
+                            is UpdateResult.Success -> UpdateOutcome.Success().also { lastOutcome = it }
                             is UpdateResult.LimitExceeded -> UpdateOutcome.LimitExceeded.also { lastOutcome = it }
                             is UpdateResult.GenericFailure -> {
                                 if (result.isRetryable) {
@@ -306,6 +326,10 @@ class WidgetUpdaterImpl
 
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)
+
+    override suspend fun recover() {
+        limitExceededHandled.set(false)
+    }
 
         private enum class RenderMode {
             FULL,

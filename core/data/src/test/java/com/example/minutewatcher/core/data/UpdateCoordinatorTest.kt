@@ -932,6 +932,8 @@ class UpdateCoordinatorTest {
                         updateCanFinish.await()
                         return WidgetUpdateResult.Success()
                     }
+
+                    override suspend fun recover() {}
                 }
 
             val coordinator =
@@ -1317,6 +1319,8 @@ class UpdateCoordinatorTest {
                         canFinishUpdate.await()
                         return WidgetUpdateResult.Success()
                     }
+
+                    override suspend fun recover() {}
                 }
 
             val coordinator =

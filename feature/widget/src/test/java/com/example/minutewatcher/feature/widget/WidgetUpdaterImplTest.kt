@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,7 +55,7 @@ class WidgetUpdaterImplTest {
     }
 
     private fun createUpdater(
-        scope: kotlinx.coroutines.CoroutineScope,
+        scope: CoroutineScope,
         customRenderer: WidgetRenderer = renderer,
     ): WidgetUpdaterImpl {
         val limitManager = WidgetLimitManager(appSettingsRepository, scope)
@@ -103,7 +104,7 @@ class WidgetUpdaterImplTest {
     fun `isRemoteViewsLimitException returns true for TransactionTooLargeException cause`() {
         val updater =
             WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
-        val cause = android.os.TransactionTooLargeException()
+        val cause = TransactionTooLargeException()
         val e =
             IllegalArgumentException(
                 "Failure sending RemoteViews",
@@ -120,7 +121,7 @@ class WidgetUpdaterImplTest {
     fun `isRemoteViewsLimitException returns true for RuntimeException with TransactionTooLargeException cause`() {
         val updater =
             WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
-        val cause = android.os.TransactionTooLargeException()
+        val cause = TransactionTooLargeException()
         val e = RuntimeException("Failure sending RemoteViews", cause)
         assertTrue(updater.isRemoteViewsLimitException(e))
     }
@@ -153,7 +154,7 @@ class WidgetUpdaterImplTest {
     fun `isRemoteViewsLimitException returns true for deeply nested TransactionTooLargeException cause`() {
         val updater =
             WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier())
-        val cause = android.os.TransactionTooLargeException()
+        val cause = TransactionTooLargeException()
         val wrapper = RuntimeException("Middle wrapper", cause)
         val e = IllegalArgumentException("Top level", wrapper)
         assertTrue(updater.isRemoteViewsLimitException(e))
@@ -250,7 +251,7 @@ class WidgetUpdaterImplTest {
                             // Simulate LimitExceeded on first call
                             throw IllegalArgumentException(
                                 "RemoteViews too large",
-                                android.os.TransactionTooLargeException(),
+                                TransactionTooLargeException(),
                             )
                         }
                     }
@@ -358,7 +359,7 @@ class WidgetUpdaterImplTest {
                         callCount++
                         if (callCount == 1) {
                             assertTrue("1st attempt should be FULL", forceFull)
-                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                            throw IllegalArgumentException("Too large", TransactionTooLargeException())
                         }
                         if (callCount == 2) {
                             assertFalse("2nd attempt (fallback) should be SIMPLIFIED", forceFull)
@@ -404,7 +405,7 @@ class WidgetUpdaterImplTest {
                     ) {
                         callCount++
                         if (callCount == 1) {
-                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                            throw IllegalArgumentException("Too large", TransactionTooLargeException())
                         } else {
                             throw TestCrashException("Simplified also failed")
                         }
@@ -432,7 +433,7 @@ class WidgetUpdaterImplTest {
                     override suspend fun renderAll(
                         context: Context,
                         forceFull: Boolean,
-                    ): Unit = throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                    ): Unit = throw IllegalArgumentException("Too large", TransactionTooLargeException())
                 }
             val updater = createUpdater(backgroundScope, rendererMock)
 
@@ -465,7 +466,7 @@ class WidgetUpdaterImplTest {
                         forceFull: Boolean,
                     ) {
                         callCount++
-                        throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                        throw IllegalArgumentException("Too large", TransactionTooLargeException())
                     }
                 }
             val updaterFirst = createUpdater(backgroundScope, rendererMock)
@@ -559,7 +560,7 @@ class WidgetUpdaterImplTest {
                         callCount++
                         if (callCount == 1) {
                             // 1st call: Full update -> LimitExceeded
-                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                            throw IllegalArgumentException("Too large", TransactionTooLargeException())
                         } else {
                             // 2nd call and onwards: Simplified update -> also fails
                             error("Simplified failed")
@@ -613,7 +614,7 @@ class WidgetUpdaterImplTest {
                         if (callCount == 1) {
                             startBarrier.complete(Unit)
                             finishBarrier.await()
-                            throw IllegalArgumentException("Too large", android.os.TransactionTooLargeException())
+                            throw IllegalArgumentException("Too large", TransactionTooLargeException())
                         }
                         // Second call (simplified recovery) succeeds immediately
                     }
@@ -752,5 +753,63 @@ class WidgetUpdaterImplTest {
                 return@runTest
             }
             error("Expected CancellationException to be thrown")
+        }
+
+    @Test
+    fun `handleLimitExceeded is called only once until success`() =
+        runTest {
+            var simplifiedCallCount = 0
+            var shouldFail = true
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        if (!forceFull) {
+                            simplifiedCallCount++
+                        }
+                        if (shouldFail) {
+                            throw IllegalArgumentException("Too large", TransactionTooLargeException())
+                        }
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, rendererMock)
+
+            // 1. First call: hits LimitExceeded, handleLimitExceeded called once.
+            updater.updateAll()
+            assertEquals(1, simplifiedCallCount)
+
+            // 2. Second call: resolveRenderMode uses SIMPLIFIED.
+            // Simplified attempt fails -> handleLimitExceeded called.
+            // Flag should prevent the simplified recovery attempt inside handleLimitExceeded.
+            updater.updateAll()
+            assertEquals("Flag should prevent repeat in handleLimitExceeded", 2, simplifiedCallCount)
+
+            // 3. Third call: success, flag should NOT be reset by success anymore.
+            // Still in SIMPLIFIED mode because limitManager wasn't reset (wasFull=false).
+            shouldFail = false
+            updater.updateAll()
+            assertEquals(3, simplifiedCallCount)
+
+            // 4. Call recover() explicitly to reset the limitExceededHandled flag.
+            updater.recover()
+
+            // 5. Fifth call: set to fail again, handleLimitExceeded should be allowed once more.
+            shouldFail = true
+            updater.updateAll()
+            // 4th simplified call from performSingleUpdate (still SIMPLIFIED mode),
+            // 5th from handleLimitExceeded (allowed because recover() reset the flag).
+            assertEquals("Flag should be reset after recover", 5, simplifiedCallCount)
         }
 }

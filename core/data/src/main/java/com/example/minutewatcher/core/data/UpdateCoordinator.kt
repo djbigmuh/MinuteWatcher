@@ -88,6 +88,7 @@ class UpdateCoordinator
                 consecutiveUpdateFailures = 0
                 _status.value = TrackingStatus.Idle
             }
+            widgetUpdater.recover()
             isObservationStarted.set(false)
             ensureObservationStarted()
         }

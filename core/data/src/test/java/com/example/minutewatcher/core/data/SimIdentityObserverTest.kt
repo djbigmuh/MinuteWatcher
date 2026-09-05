@@ -489,4 +489,32 @@ class SimIdentityObserverTest {
 
             job.cancel()
         }
+
+    @Test
+    fun `seedFlow emits Fallback when internal flow fails terminally`() =
+        runTest {
+            val failingFlow =
+                flow<String> {
+                    throw IOException("Terminal failure")
+                }
+            whenever(seedRepository.seedFlow).thenReturn(failingFlow)
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any())).thenAnswer {
+                throw IOException("Initial failure")
+            }
+
+            observer = createObserver(backgroundScope)
+            val emissions = mutableListOf<SeedResult>()
+            val job =
+                launch {
+                    observer.seedFlow.collect { emissions.add(it) }
+                }
+
+            // Act: Wait for all retries to complete (MAX_SEED_RETRIES = 10)
+            testScheduler.advanceTimeBy(100_000.milliseconds)
+            testScheduler.runCurrent()
+
+            // Assert
+            assertTrue("Should have emitted Fallback", emissions.any { it is SeedResult.Fallback })
+            job.cancel()
+        }
 }

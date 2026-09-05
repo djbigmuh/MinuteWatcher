@@ -19,4 +19,9 @@ interface WidgetUpdater {
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun updateAll(): WidgetUpdateResult
+
+    /**
+     * Resets the widget update state.
+     */
+    suspend fun recover()
 }
